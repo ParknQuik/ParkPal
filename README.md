@@ -2,6 +2,18 @@
 
 A full-stack parking management solution with web and mobile applications. Users can find, book, and manage parking spots while hosts can list their available spaces.
 
+## 📄 Research Background
+
+This project is based on the research paper: **"ParkPal: a park sharing and crowdsource park monitoring mobile application"**
+
+**Reference**: [ResearchGate Publication](https://www.researchgate.net/publication/332287449_ParkPal_a_park_sharing_and_crowdsource_park_monitoring_mobile_application)
+
+The application implements a peer-to-peer parking space sharing platform with crowdsourced monitoring capabilities, allowing:
+- Private parking space owners to monetize unused spots
+- Drivers to find and reserve available parking in real-time
+- Community-driven updates on parking availability
+- Reduced urban parking congestion through efficient space utilization
+
 ## 🏗️ Project Structure
 
 ```
