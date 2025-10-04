@@ -1,52 +1,75 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-model Users {
-  id         Int      @id @default(autoincrement())
-  name       String
-  email      String   @unique
-  role       String
-  created_at DateTime @default(now())
-  Slots      Slots[]
-  Bookings   Bookings[]
-  Payments   Payments[]
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String?   @db.VarChar(100)
+  email     String    @unique @db.VarChar(100)
+  password  String
+  role      String    @db.VarChar(20)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  slots     Slot[]
+  bookings  Booking[]
+  payments  Payment[]
+
+  @@map("users")
 }
-model Slots {
-  id         Int      @id @default(autoincrement())
-  lat        Float
-  lon        Float
-  status     String
-  owner_id   Int
-  price      Float
-  created_at DateTime @default(now())
-  owner      Users    @relation(fields: [owner_id], references: [id])
-  Bookings   Bookings[]
+
+model Slot {
+  id        Int       @id @default(autoincrement())
+  lat       Float
+  lon       Float
+  status    String    @db.VarChar(20)
+  price     Decimal   @db.Decimal(10, 2)
+  address   String?
+  ownerId   Int       @map("owner_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  owner     User      @relation(fields: [ownerId], references: [id])
+  bookings  Booking[]
+
+  @@map("slots")
 }
-model Bookings {
-  id         Int      @id @default(autoincrement())
-  slot_id    Int
-  user_id    Int
-  start_time DateTime
-  end_time   DateTime
-  price      Float
-  status     String
-  created_at DateTime @default(now())
-  slot       Slots    @relation(fields: [slot_id], references: [id])
-  user       Users    @relation(fields: [user_id], references: [id])
-  Payments   Payments[]
+
+model Booking {
+  id         Int       @id @default(autoincrement())
+  slotId     Int       @map("slot_id")
+  userId     Int       @map("user_id")
+  startTime  DateTime  @map("start_time")
+  endTime    DateTime  @map("end_time")
+  price      Decimal   @db.Decimal(10, 2)
+  status     String    @default("pending") @db.VarChar(20)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  slot       Slot      @relation(fields: [slotId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+  payments   Payment[]
+
+  @@map("bookings")
 }
-model Payments {
-  id         Int      @id @default(autoincrement())
-  user_id    Int
-  booking_id Int
-  method     String
-  amount     Float
-  status     String
-  created_at DateTime @default(now())
-  user       Users    @relation(fields: [user_id], references: [id])
-  booking    Bookings @relation(fields: [booking_id], references: [id])
+
+model Payment {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  bookingId  Int       @map("booking_id")
+  method     String    @db.VarChar(20)
+  amount     Decimal   @db.Decimal(10, 2)
+  status     String    @db.VarChar(20)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user       User      @relation(fields: [userId], references: [id])
+  booking    Booking   @relation(fields: [bookingId], references: [id])
+
+  @@map("payments")
 }

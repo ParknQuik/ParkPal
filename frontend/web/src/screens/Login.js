@@ -1,52 +1,163 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Box, TextField, Button, Typography, Container, Alert, Tab, Tabs } from '@mui/material';
+import api from '../api';
 
 const Login = () => {
-	const [email, setEmail] = useState('');
-	const [password, setPassword] = useState('');
+	const navigate = useNavigate();
+	const [tab, setTab] = useState(0);
+	const [formData, setFormData] = useState({
+		email: '',
+		password: '',
+		name: ''
+	});
 	const [error, setError] = useState('');
+	const [loading, setLoading] = useState(false);
 
-	const handleSubmit = (e) => {
+	const handleChange = (e) => {
+		setFormData({ ...formData, [e.target.name]: e.target.value });
+	};
+
+	const handleLogin = async (e) => {
 		e.preventDefault();
-		// Basic validation
-		if (!email || !password) {
-			setError('Please enter both email and password.');
-			return;
-		}
+		setLoading(true);
 		setError('');
-		// TODO: Add API call for login
-		alert(`Logging in with: ${email}`);
+
+		try {
+			const { data } = await api.post('/api/auth/login', {
+				email: formData.email,
+				password: formData.password
+			});
+
+			localStorage.setItem('token', data.token);
+			localStorage.setItem('user', JSON.stringify(data.user));
+			navigate('/map');
+		} catch (err) {
+			setError(err.response?.data?.error || 'Login failed');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleRegister = async (e) => {
+		e.preventDefault();
+		setLoading(true);
+		setError('');
+
+		try {
+			const { data } = await api.post('/api/auth/register', {
+				name: formData.name,
+				email: formData.email,
+				password: formData.password
+			});
+
+			localStorage.setItem('token', data.token);
+			localStorage.setItem('user', JSON.stringify(data.user));
+			navigate('/map');
+		} catch (err) {
+			setError(err.response?.data?.error || 'Registration failed');
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	return (
-		<div style={{ maxWidth: 320, margin: '40px auto', padding: 24, border: '1px solid #ccc', borderRadius: 8 }}>
-			<h2>Login</h2>
-			<form onSubmit={handleSubmit}>
-				<div style={{ marginBottom: 16 }}>
-					<label htmlFor="email">Email</label><br />
-					<input
-						type="email"
-						id="email"
-						value={email}
-						onChange={e => setEmail(e.target.value)}
-						style={{ width: '100%', padding: 8, marginTop: 4 }}
-						required
-					/>
-				</div>
-				<div style={{ marginBottom: 16 }}>
-					<label htmlFor="password">Password</label><br />
-					<input
-						type="password"
-						id="password"
-						value={password}
-						onChange={e => setPassword(e.target.value)}
-						style={{ width: '100%', padding: 8, marginTop: 4 }}
-						required
-					/>
-				</div>
-				{error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
-				<button type="submit" style={{ width: '100%', padding: 10, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4 }}>Login</button>
-			</form>
-		</div>
+		<Container maxWidth="sm">
+			<Box sx={{ mt: 8, mb: 4 }}>
+				<Typography variant="h3" align="center" gutterBottom>
+					ParkPal
+				</Typography>
+				<Typography variant="subtitle1" align="center" color="text.secondary" gutterBottom>
+					Find and list parking spaces
+				</Typography>
+
+				<Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 4 }}>
+					<Tabs value={tab} onChange={(e, v) => setTab(v)} centered>
+						<Tab label="Login" />
+						<Tab label="Register" />
+					</Tabs>
+				</Box>
+
+				{error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+
+				{tab === 0 ? (
+					<Box component="form" onSubmit={handleLogin} sx={{ mt: 3 }}>
+						<TextField
+							fullWidth
+							label="Email"
+							name="email"
+							type="email"
+							value={formData.email}
+							onChange={handleChange}
+							margin="normal"
+							required
+						/>
+						<TextField
+							fullWidth
+							label="Password"
+							name="password"
+							type="password"
+							value={formData.password}
+							onChange={handleChange}
+							margin="normal"
+							required
+						/>
+						<Button
+							fullWidth
+							type="submit"
+							variant="contained"
+							size="large"
+							sx={{ mt: 3 }}
+							disabled={loading}
+						>
+							{loading ? 'Logging in...' : 'Login'}
+						</Button>
+					</Box>
+				) : (
+					<Box component="form" onSubmit={handleRegister} sx={{ mt: 3 }}>
+						<TextField
+							fullWidth
+							label="Name"
+							name="name"
+							value={formData.name}
+							onChange={handleChange}
+							margin="normal"
+							required
+						/>
+						<TextField
+							fullWidth
+							label="Email"
+							name="email"
+							type="email"
+							value={formData.email}
+							onChange={handleChange}
+							margin="normal"
+							required
+						/>
+						<TextField
+							fullWidth
+							label="Password"
+							name="password"
+							type="password"
+							value={formData.password}
+							onChange={handleChange}
+							margin="normal"
+							required
+						/>
+						<Button
+							fullWidth
+							type="submit"
+							variant="contained"
+							size="large"
+							sx={{ mt: 3 }}
+							disabled={loading}
+						>
+							{loading ? 'Creating account...' : 'Register'}
+						</Button>
+					</Box>
+				)}
+			</Box>
+		</Container>
 	);
 };
 

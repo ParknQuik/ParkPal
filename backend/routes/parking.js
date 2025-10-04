@@ -1,14 +1,12 @@
-module.exports = app => {
-  app.get('/parking', (req, res) => {
-    // TODO: Fetch available slots from DB/Redis
-    res.json([]);
-  });
-  app.post('/parking/reserve', (req, res) => {
-    // TODO: Reserve a slot
-    res.json({ success: true });
-  });
-  app.post('/parking/list', (req, res) => {
-    // TODO: Add user-owned slot
-    res.json({ success: true });
-  });
+const parkingController = require('../controllers/parkingController');
+const { authenticate } = require('../services/auth');
+
+module.exports = (app) => {
+  app.get('/api/slots', parkingController.getSlots);
+  app.get('/api/slots/:id', parkingController.getSlotById);
+  app.post('/api/slots', authenticate, parkingController.listSlot);
+  app.put('/api/slots/:id', authenticate, parkingController.updateSlot);
+  app.delete('/api/slots/:id', authenticate, parkingController.deleteSlot);
+  app.post('/api/bookings', authenticate, parkingController.reserveSlot);
+  app.get('/api/bookings', authenticate, parkingController.getUserBookings);
 };

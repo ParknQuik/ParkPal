@@ -1,6 +1,5 @@
-module.exports = app => {
-  app.get('/alerts', (req, res) => {
-    // TODO: Fetch weather/flood alerts
-    res.json([]);
-  });
+const alertsController = require('../controllers/alertsController');
+
+module.exports = (app) => {
+  app.get('/api/alerts', alertsController.getAlerts);
 };
