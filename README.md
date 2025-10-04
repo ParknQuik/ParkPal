@@ -1,4 +1,4 @@
-# ParkPal - Smart Parking Management System
+# ParkPal - Smart Parking
 
 A full-stack parking management solution with web and mobile applications. Users can find, book, and manage parking spots while hosts can list their available spaces.
 
