@@ -1,22 +1,43 @@
 {
   "name": "parkpal-mobile",
   "version": "1.0.0",
-  "main": "index.js",
-  "private": true,
+  "main": "index.ts",
   "scripts": {
-    "start": "expo start"
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "^50.0.0",
-    "react": "^18.2.0",
-    "react-native": "^0.73.0",
-    "react-navigation": "^6.1.7",
-    "react-native-paper": "^5.10.0",
-    "axios": "^1.6.7",
-    "@reduxjs/toolkit": "^1.9.7",
-    "react-redux": "^8.1.2",
-    "@react-navigation/native": "^6.1.7",
+    "@expo/metro-runtime": "~6.1.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-navigation/bottom-tabs": "^6.5.11",
+    "@react-navigation/native": "^6.1.9",
     "@react-navigation/stack": "^6.3.20",
-    "@react-native-async-storage/async-storage": "^1.21.0"
-  }
+    "@reduxjs/toolkit": "^2.0.1",
+    "axios": "^1.6.2",
+    "expo": "^54.0.12",
+    "expo-image-picker": "~17.0.8",
+    "expo-linear-gradient": "~15.0.7",
+    "expo-location": "~19.0.7",
+    "expo-status-bar": "~3.0.8",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.4",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-maps": "1.20.1",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-web": "^0.21.0",
+    "react-native-worklets": "^0.6.0",
+    "react-native-worklets-core": "^1.6.2",
+    "react-redux": "^9.0.4"
+  },
+  "devDependencies": {
+    "@types/react": "~18.2.45",
+    "typescript": "^5.3.3"
+  },
+  "private": true
 }

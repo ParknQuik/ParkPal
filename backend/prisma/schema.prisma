@@ -3,16 +3,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
   id        Int       @id @default(autoincrement())
-  name      String?   @db.VarChar(100)
-  email     String    @unique @db.VarChar(100)
+  name      String?
+  email     String    @unique
   password  String
-  role      String    @db.VarChar(20)
+  role      String
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
@@ -27,8 +27,8 @@ model Slot {
   id        Int       @id @default(autoincrement())
   lat       Float
   lon       Float
-  status    String    @db.VarChar(20)
-  price     Decimal   @db.Decimal(10, 2)
+  status    String
+  price     Float
   address   String?
   ownerId   Int       @map("owner_id")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -46,8 +46,8 @@ model Booking {
   userId     Int       @map("user_id")
   startTime  DateTime  @map("start_time")
   endTime    DateTime  @map("end_time")
-  price      Decimal   @db.Decimal(10, 2)
-  status     String    @default("pending") @db.VarChar(20)
+  price      Float
+  status     String    @default("pending")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
@@ -62,9 +62,9 @@ model Payment {
   id         Int       @id @default(autoincrement())
   userId     Int       @map("user_id")
   bookingId  Int       @map("booking_id")
-  method     String    @db.VarChar(20)
-  amount     Decimal   @db.Decimal(10, 2)
-  status     String    @db.VarChar(20)
+  method     String
+  amount     Float
+  status     String
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
