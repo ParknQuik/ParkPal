@@ -39,9 +39,9 @@ This document outlines the branch protection rules, pull request process, and co
 **Settings to enable in GitHub:**
 
 1. **Require pull request reviews before merging**
-   - Required approving reviews: 2
+   - Required approving reviews: 1 (solo developer)
    - Dismiss stale pull request approvals when new commits are pushed
-   - Require review from Code Owners
+   - ~~Require review from Code Owners~~ (requires GitHub Team plan)
 
 2. **Require status checks to pass before merging**
    - Require branches to be up to date before merging
@@ -95,7 +95,8 @@ This document outlines the branch protection rules, pull request process, and co
 **Settings to enable in GitHub:**
 
 1. **Require pull request reviews before merging**
-   - Required approving reviews: 1
+   - ⚠️ **OPTIONAL for solo developers** - You can disable this for faster iteration
+   - If enabled: Required approving reviews: 1
 
 2. **Require status checks to pass before merging**
    - Required status checks:
@@ -105,6 +106,74 @@ This document outlines the branch protection rules, pull request process, and co
 
 3. **Allow force pushes** - ❌ Disabled
 4. **Allow deletions** - ❌ Disabled
+
+**Note for solo developers:** Consider disabling approval requirements on dev branch to speed up development. You can still enforce quality through automated tests.
+
+## Solo Developer Workflow
+
+If you're working alone on this project, here's the recommended setup:
+
+### Recommended Branch Protection Settings
+
+**Main Branch:**
+- ✅ Require pull request (enforces PR workflow)
+- ✅ Require 1 approval (you'll need a second account or teammate)
+- ✅ Require status checks (Backend Tests, Frontend Tests, Security Scan, Branch Validation)
+- ✅ Require conversation resolution
+- ❌ Skip "Require review from Code Owners" (paid feature)
+
+**QA Branch:**
+- ✅ Require pull request
+- ⚠️ Require 1 approval (optional - can disable for solo work)
+- ✅ Require status checks
+- ❌ Skip Code Owners
+
+**Dev Branch:**
+- ✅ Require pull request
+- ❌ **Disable approval requirement** (faster iteration)
+- ✅ Require status checks (tests still run automatically)
+
+### Getting Approvals as Solo Developer
+
+**Option 1: Create a second GitHub account**
+1. Create a new GitHub account (e.g., yourname-reviewer@gmail.com)
+2. Add it as a collaborator: Settings → Collaborators → Add people
+3. Use this account to approve your PRs from your main account
+
+**Option 2: Ask for external reviews**
+- Project advisor/instructor
+- Classmate or friend
+- Add them as collaborators temporarily
+
+**Option 3: Test without approvals**
+- Temporarily disable approval requirements to test workflow
+- Re-enable before final submission/demo
+
+### Quick Test Workflow
+
+1. **Create feature branch:**
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b feature/test-pr-workflow
+   echo "test" > test.txt
+   git add test.txt
+   git commit -m "feat(test): test PR workflow"
+   git push origin feature/test-pr-workflow
+   ```
+
+2. **Create PR on GitHub:**
+   - Go to repository → Pull requests → New pull request
+   - Base: `dev` ← Compare: `feature/test-pr-workflow`
+   - Fill out PR template
+   - Wait for automated checks to pass
+
+3. **Approve with second account (if enabled):**
+   - Switch to second account
+   - Go to PR → Files changed → Review changes → Approve
+
+4. **Merge:**
+   - Once checks pass and approvals met, click "Merge pull request"
 
 ## Pull Request Process
 
