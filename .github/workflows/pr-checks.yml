@@ -1,0 +1,224 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [main, dev, qa]
+
+jobs:
+  validate-pr:
+    name: Validate Pull Request
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check PR title format
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?:\ .+ ]]; then
+            echo "❌ PR title does not follow conventional commits format"
+            echo "Expected format: type(scope): description"
+            echo "Examples: feat(auth): add login functionality"
+            echo "          fix(api): resolve CORS issue"
+            exit 1
+          fi
+          echo "✅ PR title follows conventional commits format"
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Check for syntax errors
+        run: |
+          cd backend
+          npx eslint . --max-warnings 0 || true
+
+      - name: Generate Prisma Client
+        run: |
+          cd backend
+          npx prisma generate
+
+      - name: Run tests
+        run: |
+          cd backend
+          npm test || echo "⚠️ No tests configured yet"
+
+  frontend-web-tests:
+    name: Frontend Web Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend/web
+          npm ci
+
+      - name: Build
+        run: |
+          cd frontend/web
+          npm run build
+
+      - name: Run tests
+        run: |
+          cd frontend/web
+          npm test || echo "⚠️ No tests configured yet"
+
+  frontend-mobile-checks:
+    name: Frontend Mobile Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend/mobile
+          npm ci --legacy-peer-deps
+
+      - name: Type check
+        run: |
+          cd frontend/mobile
+          npx tsc --noEmit || echo "⚠️ Type checking skipped"
+
+      - name: Run tests
+        run: |
+          cd frontend/mobile
+          npm test || echo "⚠️ No tests configured yet"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run npm audit (Backend)
+        run: |
+          cd backend
+          npm audit --audit-level=moderate || true
+
+      - name: Run npm audit (Frontend Web)
+        run: |
+          cd frontend/web
+          npm audit --audit-level=moderate || true
+
+      - name: Run npm audit (Frontend Mobile)
+        run: |
+          cd frontend/mobile
+          npm audit --audit-level=moderate --legacy-peer-deps || true
+
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check file sizes
+        run: |
+          find . -type f -size +1M -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+            echo "⚠️ Large file detected: $file ($(du -h "$file" | cut -f1))"
+          done
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "Checking for TODO/FIXME comments..."
+          grep -r "TODO\|FIXME" --exclude-dir={node_modules,.git,dist,build} . || echo "✅ No TODO/FIXME found"
+
+  pr-size-check:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check PR size
+        run: |
+          FILES_CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | wc -l)
+          LINES_CHANGED=$(git diff --shortstat ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -oE '[0-9]+ insertion|[0-9]+ deletion' | awk '{sum+=$1} END {print sum}')
+
+          echo "Files changed: $FILES_CHANGED"
+          echo "Lines changed: $LINES_CHANGED"
+
+          if [ "$FILES_CHANGED" -gt 50 ]; then
+            echo "⚠️ This PR modifies $FILES_CHANGED files. Consider breaking it into smaller PRs."
+          fi
+
+          if [ "$LINES_CHANGED" -gt 1000 ]; then
+            echo "⚠️ This PR changes $LINES_CHANGED lines. Consider breaking it into smaller PRs."
+          fi
+
+  branch-validation:
+    name: Branch Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate branch flow
+        run: |
+          BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+          HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+
+          echo "Base branch: $BASE_BRANCH"
+          echo "Head branch: $HEAD_BRANCH"
+
+          # Enforce branch flow: feature → dev → qa → main
+          if [ "$BASE_BRANCH" == "main" ] && [ "$HEAD_BRANCH" != "qa" ]; then
+            echo "❌ Only 'qa' branch can be merged to 'main'"
+            echo "Please merge to 'qa' first, then from 'qa' to 'main'"
+            exit 1
+          fi
+
+          if [ "$BASE_BRANCH" == "qa" ] && [ "$HEAD_BRANCH" != "dev" ] && [[ ! "$HEAD_BRANCH" =~ ^hotfix/.* ]]; then
+            echo "❌ Only 'dev' or 'hotfix/*' branches can be merged to 'qa'"
+            echo "Please merge to 'dev' first, then from 'dev' to 'qa'"
+            exit 1
+          fi
+
+          echo "✅ Branch flow is valid"

@@ -1,0 +1,65 @@
+# CODEOWNERS file for ParkPal Project
+#
+# This file defines who owns specific parts of the codebase
+# and will be automatically requested for review when PRs touch their areas
+#
+# Format: path/to/file @username-or-team
+#
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global fallback owners (will be requested if no specific owner matches)
+* @parkpal-team
+
+# Backend
+/backend/ @backend-team @bryanangeloyaneza
+/backend/prisma/ @database-admin @bryanangeloyaneza
+/backend/controllers/ @backend-team
+/backend/routes/ @backend-team
+/backend/services/ @backend-team
+
+# Frontend Web
+/frontend/web/ @frontend-team @bryanangeloyaneza
+/frontend/web/src/components/ @frontend-team
+/frontend/web/src/pages/ @frontend-team
+/frontend/web/src/services/ @frontend-team
+
+# Frontend Mobile
+/frontend/mobile/ @mobile-team @bryanangeloyaneza
+/frontend/mobile/src/screens/ @mobile-team
+/frontend/mobile/src/components/ @mobile-team
+/frontend/mobile/src/navigation/ @mobile-team
+/frontend/mobile/src/store/ @mobile-team
+
+# Documentation
+/docs/ @documentation-team @bryanangeloyaneza
+README.md @documentation-team @bryanangeloyaneza
+
+# DevOps & CI/CD
+/.github/ @devops-team @bryanangeloyaneza
+/.github/workflows/ @devops-team
+/backend/start.sh @devops-team
+/frontend/*/start*.sh @devops-team
+
+# Configuration Files
+*.json @backend-team @frontend-team
+*.config.js @backend-team @frontend-team
+.env.* @devops-team @backend-team
+
+# Database
+/backend/prisma/schema.prisma @database-admin @backend-team
+/backend/prisma/migrations/ @database-admin
+
+# Security
+/backend/.env.* @security-team @devops-team
+/backend/services/auth.js @security-team @backend-team
+
+# API Documentation
+/docs/API.md @backend-team @documentation-team
+/backend/swagger.js @backend-team
+
+# Tests
+**/*.test.js @qa-team
+**/*.test.ts @qa-team
+**/*.test.tsx @qa-team
+**/*.spec.js @qa-team
+**/*.spec.ts @qa-team
