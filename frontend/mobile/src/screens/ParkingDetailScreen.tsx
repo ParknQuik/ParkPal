@@ -8,10 +8,11 @@ import {
   Dimensions,
   SafeAreaView,
   TouchableOpacity,
+  FlatList,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
-import { fetchSpotById } from '../store/slices/parkingSlice';
+import { getListingById, getListingReviews } from '../store/slices/marketplaceSlice';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
 import { Avatar } from '../components/Avatar';
@@ -28,10 +29,12 @@ export const ParkingDetailScreen: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const { spotId } = route.params as { spotId: string };
-  const { selectedSpot, loading } = useAppSelector((state) => state.parking);
+  const { selectedListing, reviews, loading } = useAppSelector((state) => state.marketplace);
 
   useEffect(() => {
-    dispatch(fetchSpotById(spotId));
+    const listingId = parseInt(spotId);
+    dispatch(getListingById(listingId));
+    dispatch(getListingReviews(listingId));
   }, [spotId]);
 
   const handleReserve = () => {

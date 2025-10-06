@@ -10,7 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
-import { fetchParkingSpots, searchSpots } from '../store/slices/parkingSlice';
+import { searchListings } from '../store/slices/marketplaceSlice';
 import { getCurrentLocation } from '../store/slices/locationSlice';
 import { SearchBar } from '../components/SearchBar';
 import { ParkingCard } from '../components/ParkingCard';
@@ -24,7 +24,7 @@ export const HomeScreen: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const { user } = useAppSelector((state) => state.auth);
-  const { spots, loading } = useAppSelector((state) => state.parking);
+  const { listings, loading, filters } = useAppSelector((state) => state.marketplace);
   const { currentLocation } = useAppSelector((state) => state.location);
 
   useEffect(() => {
@@ -33,21 +33,33 @@ export const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     if (currentLocation) {
-      dispatch(fetchParkingSpots(currentLocation));
+      dispatch(
+        searchListings({
+          lat: currentLocation.latitude,
+          lon: currentLocation.longitude,
+          radius: 5,
+          sortBy: filters.sortBy,
+        })
+      );
     }
   }, [currentLocation]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      dispatch(searchSpots(query));
-    } else if (currentLocation) {
-      dispatch(fetchParkingSpots(currentLocation));
+    if (currentLocation) {
+      dispatch(
+        searchListings({
+          lat: currentLocation.latitude,
+          lon: currentLocation.longitude,
+          radius: 5,
+          sortBy: filters.sortBy,
+        })
+      );
     }
   };
 
-  const handleSpotPress = (spotId: string) => {
-    navigation.navigate('ParkingDetail' as never, { spotId } as never);
+  const handleSpotPress = (listingId: number) => {
+    navigation.navigate('ParkingDetail' as never, { spotId: listingId.toString() } as never);
   };
 
   return (
@@ -83,7 +95,7 @@ export const HomeScreen: React.FC = () => {
             <Text style={styles.statLabel}>Spent</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{spots.length}</Text>
+            <Text style={styles.statValue}>{listings.length}</Text>
             <Text style={styles.statLabel}>Nearby</Text>
           </View>
         </View>
@@ -121,17 +133,46 @@ export const HomeScreen: React.FC = () => {
         >
           {loading ? (
             <LoadingSpinner />
-          ) : spots.length === 0 ? (
+          ) : listings.length === 0 ? (
             <EmptyState
               title="No parking spots found"
               message="Try adjusting your search or location"
             />
           ) : (
-            spots.map((spot) => (
+            listings.map((listing) => (
               <ParkingCard
-                key={spot.id}
-                spot={spot}
-                onPress={() => handleSpotPress(spot.id)}
+                key={listing.id}
+                spot={{
+                  id: listing.id.toString(),
+                  title: listing.title,
+                  address: listing.address,
+                  city: '',
+                  state: '',
+                  zipCode: '',
+                  latitude: listing.latitude,
+                  longitude: listing.longitude,
+                  price: listing.pricePerHour,
+                  priceUnit: 'hour' as const,
+                  rating: listing.rating,
+                  reviews: listing.reviewCount,
+                  distance: listing.distance,
+                  availability: listing.availability ? 'available' : 'occupied' as const,
+                  images: listing.photos,
+                  amenities: listing.amenities,
+                  description: listing.description,
+                  ownerId: listing.hostId.toString(),
+                  ownerName: listing.hostName,
+                  ownerRating: listing.rating,
+                  features: {
+                    covered: listing.amenities.includes('covered'),
+                    security: listing.amenities.includes('security'),
+                    evCharging: listing.amenities.includes('ev_charging'),
+                    accessible: listing.amenities.includes('accessible'),
+                    lighting: listing.amenities.includes('lighting'),
+                    cctv: listing.amenities.includes('cctv'),
+                  },
+                }}
+                onPress={() => handleSpotPress(listing.id)}
               />
             ))
           )}

@@ -4,6 +4,7 @@ import authReducer from './slices/authSlice';
 import parkingReducer from './slices/parkingSlice';
 import bookingReducer from './slices/bookingSlice';
 import locationReducer from './slices/locationSlice';
+import marketplaceReducer from './slices/marketplaceSlice';
 import { RootState } from '../types';
 
 export const store = configureStore({
@@ -12,6 +13,7 @@ export const store = configureStore({
     parking: parkingReducer,
     booking: bookingReducer,
     location: locationReducer,
+    marketplace: marketplaceReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -15,7 +15,8 @@ exports.getAlerts = async (req, res) => {
       return res.json({
         weather: null,
         alerts: [],
-        message: 'Weather API key not configured'
+        message: 'Weather API key not configured',
+        timestamp: new Date()
       });
     }
 

@@ -31,11 +31,13 @@ const authRoutes = require('./routes/auth');
 const parkingRoutes = require('./routes/parking');
 const paymentRoutes = require('./routes/payments');
 const alertRoutes = require('./routes/alerts');
+const marketplaceRoutes = require('./routes/marketplace');
 
 authRoutes(app);
 parkingRoutes(app);
 paymentRoutes(app);
 alertRoutes(app);
+marketplaceRoutes(app);
 
 // Health check
 app.get('/', (req, res) => {

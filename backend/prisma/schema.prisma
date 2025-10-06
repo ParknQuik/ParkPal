@@ -7,69 +7,363 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int       @id @default(autoincrement())
-  name      String?
-  email     String    @unique
-  password  String
-  role      String
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+// ============================================
+// USER MANAGEMENT
+// ============================================
 
-  slots     Slot[]
-  bookings  Booking[]
-  payments  Payment[]
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String?
+  email           String    @unique
+  password        String
+  role            String    // driver, host, admin, operator
+  phone           String?
+  profileImageUrl String?   @map("profile_image_url")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  ownedSlots      ParkingSlot[]   @relation("SlotOwner")
+  parkingSessions ParkingSession[]
+  activityEvents  ActivityEvent[]
+  bookings        Booking[]
+  payments        Payment[]
+  payouts         Payout[]        @relation("HostPayouts")
+  reviews         Review[]        @relation("ReviewAuthor")
+  receivedReviews Review[]        @relation("ReviewTarget")
 
   @@map("users")
 }
 
-model Slot {
-  id        Int       @id @default(autoincrement())
-  lat       Float
-  lon       Float
-  status    String
-  price     Float
-  address   String?
-  ownerId   Int       @map("owner_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+// ============================================
+// PARKING ZONES & SLOTS
+// ============================================
 
-  owner     User      @relation(fields: [ownerId], references: [id])
-  bookings  Booking[]
+model Zone {
+  id              Int       @id @default(autoincrement())
+  name            String    // e.g., "Mall of Asia Parking Complex"
+  type            String    // commercial, roadside, residential
+  address         String
+  city            String
 
-  @@map("slots")
+  // Geofence data (GeoJSON polygon as JSON string)
+  geofencePolygon String    @map("geofence_polygon") // Store as JSON string
+  centerLat       Float     @map("center_lat")
+  centerLon       Float     @map("center_lon")
+  radiusMeters    Float?    @map("radius_meters") // Optional: for circular geofences
+
+  // Zone metadata
+  totalCapacity   Int       @default(0) @map("total_capacity")
+  pricePerHour    Float?    @map("price_per_hour")
+  operatingHours  String?   @map("operating_hours") // JSON: {"mon": "8-20", ...}
+
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  parkingSlots    ParkingSlot[]
+  parkingSessions ParkingSession[]
+  zoneMetrics     ZoneMetrics[]
+  sensorEvents    SensorEvent[]
+
+  @@map("zones")
 }
 
-model Booking {
-  id         Int       @id @default(autoincrement())
-  slotId     Int       @map("slot_id")
-  userId     Int       @map("user_id")
-  startTime  DateTime  @map("start_time")
-  endTime    DateTime  @map("end_time")
-  price      Float
-  status     String    @default("pending")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+model ParkingSlot {
+  id              Int       @id @default(autoincrement())
+  zoneId          Int?      @map("zone_id") // Optional: roadside slots may not have zones
+  slotNumber      String?   @map("slot_number") // Optional: e.g., "A-123" for commercial
 
-  slot       Slot      @relation(fields: [slotId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
-  payments   Payment[]
+  // Location
+  lat             Float
+  lon             Float
+  address         String    // Full address for marketplace listings
+  floor           String?   // For multi-level parking
+  section         String?   // e.g., "Section A", "North Wing"
+
+  // Slot type
+  slotType        String    @map("slot_type") // commercial_iot, commercial_manual, roadside_qr
+
+  // IoT/QR Configuration
+  sensorId        String?   @unique @map("sensor_id") // For IoT sensors
+  qrCode          String?   @unique @map("qr_code")   // For QR-based slots
+
+  // Status
+  status          String    @default("available") // available, occupied, reserved, out_of_service
+  price           Float     // Price per hour (simplified from pricePerHour)
+
+  // Marketplace-specific fields
+  description     String?   // Detailed description for listings
+  amenities       String?   // JSON array: ["covered", "security", "cctv"]
+  photos          String?   // JSON array of photo URLs
+  rating          Float     @default(0) // Average rating from reviews
+
+  // Ownership (for roadside/personal slots)
+  ownerId         Int?      @map("owner_id")
+
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  zone            Zone?             @relation(fields: [zoneId], references: [id])
+  owner           User?             @relation("SlotOwner", fields: [ownerId], references: [id])
+  parkingSessions ParkingSession[]
+  sensorEvents    SensorEvent[]
+  bookings        Booking[]
+  reviews         Review[]          @relation("SlotReviews")
+
+  @@map("parking_slots")
+}
+
+// ============================================
+// PARKING SESSIONS & CIRCLING TIME
+// ============================================
+
+model ParkingSession {
+  id                      Int       @id @default(autoincrement())
+  userId                  Int       @map("user_id")
+  zoneId                  Int?      @map("zone_id")     // Optional for roadside QR
+  slotId                  Int?      @map("slot_id")
+  bookingId               Int?      @map("booking_id")  // Link to pre-booking if exists
+
+  // Session Type
+  sessionType             String    @map("session_type") // commercial_iot, commercial_activity, roadside_qr
+
+  // Marketplace QR Session Timing
+  checkInTime             DateTime? @map("check_in_time")   // QR check-in
+  checkOutTime            DateTime? @map("check_out_time")  // QR check-out
+  durationMinutes         Int?      @map("duration_minutes")
+
+  // Analytics Session Timing (Circling Time Tracking)
+  zoneEntryTime           DateTime? @map("zone_entry_time")      // When user enters geofence
+  circlingStartTime       DateTime? @map("circling_start_time")  // Start tracking circling
+  parkingConfirmationTime DateTime? @map("parking_confirmation_time") // When parked (IoT/Activity/QR)
+  circlingEndTime         DateTime? @map("circling_end_time")    // End of circling
+  exitTime                DateTime? @map("exit_time")            // When user leaves
+
+  // Circling Time (calculated)
+  circlingDurationSeconds Int?      @map("circling_duration_seconds")
+
+  // Activity Recognition Status
+  lastActivityStatus      String?   @map("last_activity_status") // IN_VEHICLE, STILL, ON_FOOT, etc.
+  activityConfidenceLevel Int?      @map("activity_confidence_level") // 0-100
+
+  // Payment & Pricing
+  totalAmount             Float?    @map("total_amount")
+  status                  String    @default("active") // active, completed, cancelled
+
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user                    User              @relation(fields: [userId], references: [id])
+  zone                    Zone?             @relation(fields: [zoneId], references: [id])
+  slot                    ParkingSlot?      @relation(fields: [slotId], references: [id])
+  booking                 Booking?          @relation(fields: [bookingId], references: [id])
+  activityEvents          ActivityEvent[]
+  payments                Payment[]
+
+  @@map("parking_sessions")
+}
+
+// ============================================
+// IoT SENSOR & ACTIVITY TRACKING
+// ============================================
+
+model SensorEvent {
+  id           Int       @id @default(autoincrement())
+  sensorId     String    @map("sensor_id")
+  zoneId       Int?      @map("zone_id")
+  slotId       Int?      @map("slot_id")
+
+  eventType    String    @map("event_type") // occupied, vacant, malfunction
+  eventData    String?   @map("event_data") // JSON metadata
+
+  timestamp    DateTime  @default(now())
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  zone         Zone?         @relation(fields: [zoneId], references: [id])
+  slot         ParkingSlot?  @relation(fields: [slotId], references: [id])
+
+  @@map("sensor_events")
+}
+
+model ActivityEvent {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @map("user_id")
+  sessionId         Int?      @map("session_id")
+
+  activityType      String    @map("activity_type") // IN_VEHICLE, STILL, ON_FOOT, WALKING, RUNNING
+  confidence        Int       // 0-100
+
+  latitude          Float?
+  longitude         Float?
+
+  timestamp         DateTime  @default(now())
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user              User              @relation(fields: [userId], references: [id])
+  session           ParkingSession?   @relation(fields: [sessionId], references: [id])
+
+  @@map("activity_events")
+}
+
+// ============================================
+// ZONE ANALYTICS & PREDICTIONS
+// ============================================
+
+model ZoneMetrics {
+  id                      Int       @id @default(autoincrement())
+  zoneId                  Int       @map("zone_id")
+
+  // Time period
+  timestamp               DateTime  // Start of the hour/day
+  periodType              String    @map("period_type") // hourly, daily
+
+  // Occupancy Metrics
+  totalSlots              Int       @map("total_slots")
+  occupiedSlots           Int       @map("occupied_slots")
+  availableSlots          Int       @map("available_slots")
+  occupancyPercentage     Float     @map("occupancy_percentage")
+
+  // Circling Time Metrics
+  avgCirclingTimeSeconds  Int?      @map("avg_circling_time_seconds")
+  minCirclingTimeSeconds  Int?      @map("min_circling_time_seconds")
+  maxCirclingTimeSeconds  Int?      @map("max_circling_time_seconds")
+  totalSessions           Int       @default(0) @map("total_sessions")
+
+  // Revenue
+  totalRevenue            Float?    @map("total_revenue")
+
+  createdAt               DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  zone                    Zone      @relation(fields: [zoneId], references: [id])
+
+  @@map("zone_metrics")
+}
+
+// ============================================
+// MARKETPLACE BOOKINGS & PAYOUTS
+// ============================================
+
+model Booking {
+  id              Int       @id @default(autoincrement())
+  slotId          Int       @map("slot_id")
+  userId          Int       @map("user_id")
+
+  // Booking time window
+  startTime       DateTime  @map("start_time")
+  endTime         DateTime  @map("end_time")
+
+  // Pricing
+  price           Float     // Total price for the booking
+  platformFee     Float     @default(0) @map("platform_fee") // 5-7% commission
+  hostEarnings    Float     @map("host_earnings") // price - platformFee
+
+  // Status
+  status          String    @default("pending") // pending, confirmed, active, completed, cancelled
+
+  // Cancellation
+  cancelledAt     DateTime? @map("cancelled_at")
+  cancellationReason String? @map("cancellation_reason")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  slot            ParkingSlot      @relation(fields: [slotId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  sessions        ParkingSession[]
+  payments        Payment[]
+  review          Review?          @relation("BookingReview")
 
   @@map("bookings")
 }
 
-model Payment {
-  id         Int       @id @default(autoincrement())
-  userId     Int       @map("user_id")
-  bookingId  Int       @map("booking_id")
-  method     String
-  amount     Float
-  status     String
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+model Payout {
+  id              Int       @id @default(autoincrement())
+  hostId          Int       @map("host_id")
 
-  user       User      @relation(fields: [userId], references: [id])
-  booking    Booking   @relation(fields: [bookingId], references: [id])
+  // Payout details
+  amount          Float
+  currency        String    @default("PHP")
+  status          String    @default("pending") // pending, processing, completed, failed
+
+  // Payout period
+  periodStart     DateTime  @map("period_start")
+  periodEnd       DateTime  @map("period_end")
+
+  // Payment method
+  paymentMethod   String?   @map("payment_method") // bank_transfer, gcash, paymaya
+  accountDetails  String?   @map("account_details") // Encrypted account info
+
+  // Processing
+  processedAt     DateTime? @map("processed_at")
+  transactionId   String?   @unique @map("transaction_id")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  host            User      @relation("HostPayouts", fields: [hostId], references: [id])
+
+  @@map("payouts")
+}
+
+// ============================================
+// PAYMENTS & REVIEWS
+// ============================================
+
+model Payment {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @map("user_id")
+  sessionId       Int?      @map("session_id")  // Optional: for walk-up parking
+  bookingId       Int?      @map("booking_id")  // Optional: for pre-reservations
+
+  amount          Float
+  currency        String    @default("PHP")
+  paymentMethod   String    @map("payment_method") // card, cash, gcash, paymaya, paymongo
+  status          String    @default("pending") // pending, completed, failed, refunded
+
+  transactionId   String?   @unique @map("transaction_id")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user            User             @relation(fields: [userId], references: [id])
+  session         ParkingSession?  @relation(fields: [sessionId], references: [id])
+  booking         Booking?         @relation(fields: [bookingId], references: [id])
 
   @@map("payments")
+}
+
+model Review {
+  id              Int       @id @default(autoincrement())
+  authorId        Int       @map("author_id")
+  targetId        Int?      @map("target_id") // Optional: Can be zone owner, slot owner, etc.
+
+  // Review target (one of these)
+  slotId          Int?      @map("slot_id")
+  bookingId       Int?      @unique @map("booking_id")
+
+  rating          Int       // 1-5
+  comment         String?
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  author          User          @relation("ReviewAuthor", fields: [authorId], references: [id])
+  target          User?         @relation("ReviewTarget", fields: [targetId], references: [id])
+  slot            ParkingSlot?  @relation("SlotReviews", fields: [slotId], references: [id])
+  booking         Booking?      @relation("BookingReview", fields: [bookingId], references: [id])
+
+  @@map("reviews")
 }

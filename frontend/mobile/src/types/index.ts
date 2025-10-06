@@ -124,13 +124,6 @@ export interface LocationState {
   error: string | null;
 }
 
-export interface RootState {
-  auth: AuthState;
-  parking: ParkingState;
-  booking: BookingState;
-  location: LocationState;
-}
-
 // Component Props types
 export interface ButtonProps {
   title: string;
@@ -178,4 +171,95 @@ export interface AvatarProps {
   name: string;
   size?: number;
   style?: any;
+}
+
+// Marketplace types
+export interface MarketplaceListing {
+  id: number;
+  title: string;
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  pricePerHour: number;
+  photos: string[];
+  amenities: string[];
+  hostId: number;
+  hostName: string;
+  hostAvatar?: string;
+  rating: number;
+  reviewCount: number;
+  distance?: number;
+  availability: boolean;
+}
+
+export interface MarketplaceBooking {
+  id: number;
+  listingId: number;
+  listingTitle: string;
+  listingAddress: string;
+  listingPhoto?: string;
+  startTime: string;
+  endTime: string;
+  totalAmount: number;
+  platformFee: number;
+  status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+  qrCode?: string;
+  sessionId?: number;
+  createdAt: string;
+}
+
+export interface Review {
+  id: number;
+  listingId: number;
+  userId: number;
+  userName: string;
+  userAvatar?: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface HostEarnings {
+  totalEarnings: number;
+  pendingPayouts: number;
+  completedPayouts: number;
+  bookingsCount: number;
+  listings: Array<{
+    id: number;
+    title: string;
+    earnings: number;
+    bookings: number;
+  }>;
+}
+
+export interface SearchFilters {
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  amenities?: string[];
+  sortBy?: 'price' | 'distance' | 'rating';
+}
+
+export interface MarketplaceState {
+  listings: MarketplaceListing[];
+  selectedListing: MarketplaceListing | null;
+  myListings: MarketplaceListing[];
+  bookings: MarketplaceBooking[];
+  activeBooking: MarketplaceBooking | null;
+  reviews: Review[];
+  hostEarnings: HostEarnings | null;
+  filters: SearchFilters;
+  loading: boolean;
+  error: string | null;
+}
+
+export interface RootState {
+  auth: AuthState;
+  parking: ParkingState;
+  booking: BookingState;
+  location: LocationState;
+  marketplace: MarketplaceState;
 }
