@@ -118,6 +118,15 @@ const Profile = () => {
 				>
 					Back to Map
 				</Button>
+				{user?.role === 'host' && (
+					<Button
+						variant="outlined"
+						onClick={() => navigate('/host-dashboard')}
+						fullWidth
+					>
+						Host Dashboard
+					</Button>
+				)}
 				<Button
 					variant="contained"
 					color="error"

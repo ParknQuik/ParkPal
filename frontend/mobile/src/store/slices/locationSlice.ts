@@ -22,6 +22,13 @@ export const requestLocationPermission = createAsyncThunk(
 export const getCurrentLocation = createAsyncThunk(
   'location/getCurrentLocation',
   async () => {
+    // Request permission first
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Location permission denied');
+    }
+
+    // Get current location
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Balanced,
     });

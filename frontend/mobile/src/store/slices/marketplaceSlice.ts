@@ -29,7 +29,8 @@ export const searchListings = createAsyncThunk(
   'marketplace/searchListings',
   async (params?: SearchFilters) => {
     const response = await marketplaceAPI.searchListings(params);
-    return response.data;
+    // Backend returns { count, listings }, we just need the listings array
+    return response.data.listings || [];
   }
 );
 
@@ -159,11 +160,12 @@ const marketplaceSlice = createSlice({
     });
     builder.addCase(searchListings.fulfilled, (state, action) => {
       state.loading = false;
-      state.listings = action.payload;
+      state.listings = Array.isArray(action.payload) ? action.payload : [];
     });
     builder.addCase(searchListings.rejected, (state, action) => {
       state.loading = false;
       state.error = action.error.message || 'Failed to search listings';
+      state.listings = []; // Reset to empty array on error
     });
 
     // Get listing by ID

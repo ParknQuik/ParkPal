@@ -5,9 +5,9 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, Camera } from 'expo-camera';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { marketplaceAPI } from '../services/api';

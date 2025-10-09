@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { AuthState, User } from '../../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../../services/api';
 
 const initialState: AuthState = {
   user: null,
@@ -13,21 +14,10 @@ const initialState: AuthState = {
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: { email: string; password: string }) => {
-    // TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const response = await authAPI.login(credentials.email, credentials.password);
 
-    const user: User = {
-      id: '1',
-      email: credentials.email,
-      name: 'John Doe',
-      phone: '+1234567890',
-      avatar: 'https://i.pravatar.cc/150?img=1',
-      totalBookings: 24,
-      totalSpent: 1250,
-      activeSince: '2023-01-15',
-    };
+    const { token, user } = response.data;
 
-    const token = 'mock-jwt-token';
     await AsyncStorage.setItem('token', token);
     await AsyncStorage.setItem('user', JSON.stringify(user));
 
@@ -38,19 +28,10 @@ export const login = createAsyncThunk(
 export const signup = createAsyncThunk(
   'auth/signup',
   async (data: { email: string; password: string; name: string }) => {
-    // TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const response = await authAPI.signup(data.name, data.email, data.password);
 
-    const user: User = {
-      id: '1',
-      email: data.email,
-      name: data.name,
-      totalBookings: 0,
-      totalSpent: 0,
-      activeSince: new Date().toISOString(),
-    };
+    const { token, user } = response.data;
 
-    const token = 'mock-jwt-token';
     await AsyncStorage.setItem('token', token);
     await AsyncStorage.setItem('user', JSON.stringify(user));
 

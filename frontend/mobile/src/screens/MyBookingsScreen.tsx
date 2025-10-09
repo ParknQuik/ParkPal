@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { fetchBookings, cancelBooking } from '../store/slices/bookingSlice';
 import { Card } from '../components/Card';
@@ -30,6 +31,7 @@ export const MyBookingsScreen: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const { bookings, loading } = useAppSelector((state) => state.booking);
@@ -124,19 +126,44 @@ export const MyBookingsScreen: React.FC = () => {
           </View>
         </View>
 
+        {isUpcoming && (
+          <Button
+            title="Scan QR to Check In"
+            variant="gradient"
+            onPress={() =>
+              navigation.navigate('QRScanner' as never, {
+                mode: 'checkin',
+                bookingId: booking.id,
+              } as never)
+            }
+            style={styles.checkInButton}
+          />
+        )}
+
         {isActive && (
           <View style={styles.qrContainer}>
             <View style={styles.qrPlaceholder}>
-              <Text style={styles.qrText}>QR Code</Text>
+              <Text style={styles.qrText}>Parking Session Active</Text>
               <Text style={styles.qrCode}>{booking.qrCode}</Text>
             </View>
             <Text style={styles.qrInstruction}>
-              Show this QR code at the parking entrance
+              You are currently parked. Scan QR again to check out.
             </Text>
+            <Button
+              title="Scan QR to Check Out"
+              variant="outline"
+              onPress={() =>
+                navigation.navigate('QRScanner' as never, {
+                  mode: 'checkout',
+                  sessionId: booking.id,
+                } as never)
+              }
+              style={styles.checkOutButton}
+            />
           </View>
         )}
 
-        {canCancel && (
+        {canCancel && !isActive && (
           <Button
             title="Cancel Booking"
             variant="outline"
@@ -369,6 +396,13 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.textSecondary,
     textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  checkInButton: {
+    marginTop: spacing.lg,
+  },
+  checkOutButton: {
+    marginTop: spacing.md,
   },
   cancelButton: {
     marginTop: spacing.lg,

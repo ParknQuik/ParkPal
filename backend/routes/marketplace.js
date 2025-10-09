@@ -127,6 +127,27 @@ module.exports = (app) => {
 
   /**
    * @swagger
+   * /api/marketplace/listings/{id}:
+   *   get:
+   *     summary: Get listing details by ID
+   *     tags: [Marketplace]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         example: 1
+   *     responses:
+   *       200:
+   *         description: Listing details with owner and reviews
+   *       404:
+   *         description: Listing not found
+   */
+  app.get('/api/marketplace/listings/:id', marketplaceController.getListingById);
+
+  /**
+   * @swagger
    * /api/marketplace/bookings:
    *   post:
    *     summary: Create a new booking for a parking slot
@@ -322,5 +343,32 @@ module.exports = (app) => {
     '/api/marketplace/host/earnings',
     authenticate,
     marketplaceController.getHostEarnings
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/verify/{slotId}:
+   *   get:
+   *     summary: Get verification report for a listing (Admin)
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: slotId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         example: 1
+   *     responses:
+   *       200:
+   *         description: Verification report with score and issues
+   *       404:
+   *         description: Listing not found
+   */
+  app.get(
+    '/api/marketplace/verify/:slotId',
+    authenticate,
+    marketplaceController.verifyListingById
   );
 };

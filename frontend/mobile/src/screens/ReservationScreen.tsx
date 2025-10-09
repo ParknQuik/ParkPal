@@ -11,7 +11,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
-import { fetchSpotById } from '../store/slices/parkingSlice';
+import { getListingById } from '../store/slices/marketplaceSlice';
 import { createBooking } from '../store/slices/bookingSlice';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -37,14 +37,14 @@ export const ReservationScreen: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const { spotId } = route.params as { spotId: string };
-  const { selectedSpot, loading: spotLoading } = useAppSelector(
-    (state) => state.parking
+  const { selectedListing, loading: spotLoading } = useAppSelector(
+    (state) => state.marketplace
   );
   const { loading: bookingLoading } = useAppSelector((state) => state.booking);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    dispatch(fetchSpotById(spotId));
+    dispatch(getListingById(parseInt(spotId)));
   }, [spotId]);
 
   const calculateDuration = () => {
@@ -53,13 +53,13 @@ export const ReservationScreen: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    if (!selectedSpot) return 0;
+    if (!selectedListing) return 0;
     const duration = calculateDuration();
-    return duration * selectedSpot.price;
+    return duration * selectedListing.price;
   };
 
   const handleReserve = async () => {
-    if (!selectedSpot || !user) return;
+    if (!selectedListing || !user) return;
 
     const paymentMethod = mockPaymentMethods.find(
       (p) => p.id === selectedPayment
@@ -68,10 +68,10 @@ export const ReservationScreen: React.FC = () => {
     try {
       await dispatch(
         createBooking({
-          spotId: selectedSpot.id,
-          spotTitle: selectedSpot.title,
-          spotAddress: `${selectedSpot.address}, ${selectedSpot.city}`,
-          spotImage: selectedSpot.images[0],
+          spotId: selectedListing.id.toString(),
+          spotTitle: selectedListing.description || selectedListing.address,
+          spotAddress: selectedListing.address,
+          spotImage: selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos[0] : '',
           userId: user.id,
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
@@ -93,7 +93,7 @@ export const ReservationScreen: React.FC = () => {
     }
   };
 
-  if (spotLoading || !selectedSpot) {
+  if (spotLoading || !selectedListing) {
     return <LoadingSpinner />;
   }
 
@@ -104,7 +104,7 @@ export const ReservationScreen: React.FC = () => {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Reserve Parking</Text>
-            <Text style={styles.spotName}>{selectedSpot.title}</Text>
+            <Text style={styles.spotName}>{selectedListing.description || selectedListing.address}</Text>
           </View>
 
           {/* Date & Time Selection */}
@@ -141,7 +141,13 @@ export const ReservationScreen: React.FC = () => {
                 mode="datetime"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={(event, date) => {
-                  setShowStartPicker(Platform.OS === 'ios');
+                  if (Platform.OS === 'android') {
+                    setShowStartPicker(false);
+                  }
+                  if (event?.type === 'dismissed') {
+                    setShowStartPicker(false);
+                    return;
+                  }
                   if (date) {
                     setStartDate(date);
                     if (date >= endDate) {
@@ -159,7 +165,13 @@ export const ReservationScreen: React.FC = () => {
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 minimumDate={startDate}
                 onChange={(event, date) => {
-                  setShowEndPicker(Platform.OS === 'ios');
+                  if (Platform.OS === 'android') {
+                    setShowEndPicker(false);
+                  }
+                  if (event?.type === 'dismissed') {
+                    setShowEndPicker(false);
+                    return;
+                  }
                   if (date) setEndDate(date);
                 }}
               />
@@ -211,7 +223,7 @@ export const ReservationScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>Price Summary</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>
-                {formatCurrency(selectedSpot.price)} × {calculateDuration()} hours
+                {formatCurrency(selectedListing.price)} × {calculateDuration()} hours
               </Text>
               <Text style={styles.summaryValue}>
                 {formatCurrency(calculateTotal())}

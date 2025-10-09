@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -25,10 +25,28 @@ export const HomeScreen: React.FC = () => {
 
   const { user } = useAppSelector((state) => state.auth);
   const { listings, loading, filters } = useAppSelector((state) => state.marketplace);
-  const { currentLocation } = useAppSelector((state) => state.location);
+  const { currentLocation, loading: locationLoading, error: locationError } = useAppSelector((state) => state.location);
 
   useEffect(() => {
     dispatch(getCurrentLocation());
+
+    // Fallback: Load listings after 3 seconds even without location
+    const fallbackTimer = setTimeout(() => {
+      if (!currentLocation) {
+        // Use default Manila location if user location not available
+        dispatch(
+          searchListings({
+            lat: 14.5995,
+            lon: 120.9842,
+            radius: 10,
+            status: 'available',
+            sortBy: filters.sortBy,
+          })
+        );
+      }
+    }, 3000);
+
+    return () => clearTimeout(fallbackTimer);
   }, []);
 
   useEffect(() => {
@@ -38,6 +56,7 @@ export const HomeScreen: React.FC = () => {
           lat: currentLocation.latitude,
           lon: currentLocation.longitude,
           radius: 5,
+          status: 'available',
           sortBy: filters.sortBy,
         })
       );
@@ -52,6 +71,7 @@ export const HomeScreen: React.FC = () => {
           lat: currentLocation.latitude,
           lon: currentLocation.longitude,
           radius: 5,
+          status: 'available',
           sortBy: filters.sortBy,
         })
       );
@@ -79,7 +99,17 @@ export const HomeScreen: React.FC = () => {
             style={styles.locationButton}
             onPress={() => dispatch(getCurrentLocation())}
           >
-            <Text style={styles.locationText}>📍 Current Location</Text>
+            {locationLoading ? (
+              <Text style={styles.locationText}>📍 Getting location...</Text>
+            ) : locationError ? (
+              <Text style={styles.locationText}>📍 Tap to enable</Text>
+            ) : currentLocation ? (
+              <Text style={styles.locationText}>
+                📍 {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+              </Text>
+            ) : (
+              <Text style={styles.locationText}>📍 Get Location</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -90,7 +120,7 @@ export const HomeScreen: React.FC = () => {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              ${user?.totalSpent.toFixed(0) || 0}
+              ${user?.totalSpent ? user.totalSpent.toFixed(0) : '0'}
             </Text>
             <Text style={styles.statLabel}>Spent</Text>
           </View>
@@ -133,43 +163,43 @@ export const HomeScreen: React.FC = () => {
         >
           {loading ? (
             <LoadingSpinner />
-          ) : listings.length === 0 ? (
+          ) : !Array.isArray(listings) || listings.length === 0 ? (
             <EmptyState
               title="No parking spots found"
               message="Try adjusting your search or location"
             />
           ) : (
-            listings.map((listing) => (
+            listings.map((listing: any) => (
               <ParkingCard
                 key={listing.id}
                 spot={{
                   id: listing.id.toString(),
-                  title: listing.title,
+                  title: listing.description || listing.address || 'Parking Spot',
                   address: listing.address,
                   city: '',
                   state: '',
                   zipCode: '',
-                  latitude: listing.latitude,
-                  longitude: listing.longitude,
-                  price: listing.pricePerHour,
+                  latitude: listing.lat,
+                  longitude: listing.lon,
+                  price: listing.price,
                   priceUnit: 'hour' as const,
-                  rating: listing.rating,
-                  reviews: listing.reviewCount,
+                  rating: listing.rating || 0,
+                  reviews: listing.reviews?.length || 0,
                   distance: listing.distance,
-                  availability: listing.availability ? 'available' : 'occupied' as const,
-                  images: listing.photos,
-                  amenities: listing.amenities,
-                  description: listing.description,
-                  ownerId: listing.hostId.toString(),
-                  ownerName: listing.hostName,
-                  ownerRating: listing.rating,
+                  availability: listing.status === 'available' ? 'available' : 'occupied' as const,
+                  images: listing.photos || [],
+                  amenities: listing.amenities || [],
+                  description: listing.description || '',
+                  ownerId: listing.owner?.id?.toString() || listing.ownerId?.toString() || '',
+                  ownerName: listing.owner?.name || 'Host',
+                  ownerRating: listing.rating || 0,
                   features: {
-                    covered: listing.amenities.includes('covered'),
-                    security: listing.amenities.includes('security'),
-                    evCharging: listing.amenities.includes('ev_charging'),
-                    accessible: listing.amenities.includes('accessible'),
-                    lighting: listing.amenities.includes('lighting'),
-                    cctv: listing.amenities.includes('cctv'),
+                    covered: (listing.amenities || []).includes('covered'),
+                    security: (listing.amenities || []).includes('security'),
+                    evCharging: (listing.amenities || []).includes('ev_charging'),
+                    accessible: (listing.amenities || []).includes('accessible'),
+                    lighting: (listing.amenities || []).includes('lighting'),
+                    cctv: (listing.amenities || []).includes('cctv'),
                   },
                 }}
                 onPress={() => handleSpotPress(listing.id)}

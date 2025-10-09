@@ -6,10 +6,10 @@ import {
   ScrollView,
   Image,
   Dimensions,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { getListingById, getListingReviews } from '../store/slices/marketplaceSlice';
@@ -41,9 +41,13 @@ export const ParkingDetailScreen: React.FC = () => {
     navigation.navigate('Reservation' as never, { spotId } as never);
   };
 
-  if (loading || !selectedSpot) {
+  if (loading || !selectedListing) {
     return <LoadingSpinner />;
   }
+
+  const displayImages = selectedListing.photos.length > 0
+    ? selectedListing.photos
+    : ['https://via.placeholder.com/400x300?text=No+Image'];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,7 +66,7 @@ export const ParkingDetailScreen: React.FC = () => {
             }}
             scrollEventThrottle={16}
           >
-            {selectedSpot.images.map((image, index) => (
+            {displayImages.map((image, index) => (
               <Image
                 key={index}
                 source={{ uri: image }}
@@ -72,7 +76,7 @@ export const ParkingDetailScreen: React.FC = () => {
             ))}
           </ScrollView>
           <View style={styles.imagePagination}>
-            {selectedSpot.images.map((_, index) => (
+            {displayImages.map((_, index) => (
               <View
                 key={index}
                 style={[
@@ -94,30 +98,26 @@ export const ParkingDetailScreen: React.FC = () => {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>{selectedSpot.title}</Text>
+              <Text style={styles.title}>{selectedListing.title}</Text>
               <Badge
-                text={selectedSpot.availability}
-                variant={
-                  selectedSpot.availability === 'available' ? 'success' : 'error'
-                }
+                text={selectedListing.status === 'available' ? 'available' : 'occupied'}
+                variant={selectedListing.status === 'available' ? 'success' : 'error'}
               />
             </View>
-            <Text style={styles.address}>
-              {selectedSpot.address}, {selectedSpot.city}, {selectedSpot.state}
-            </Text>
+            <Text style={styles.address}>{selectedListing.address}</Text>
           </View>
 
           {/* Price and Rating */}
           <View style={styles.statsRow}>
             <View style={styles.priceContainer}>
               <Text style={styles.price}>
-                {formatCurrency(selectedSpot.price)}
+                ₱{selectedListing.price}
               </Text>
-              <Text style={styles.priceUnit}>/{selectedSpot.priceUnit}</Text>
+              <Text style={styles.priceUnit}>/hour</Text>
             </View>
             <View style={styles.ratingContainer}>
-              <Text style={styles.rating}>★ {selectedSpot.rating}</Text>
-              <Text style={styles.reviews}>({selectedSpot.reviews} reviews)</Text>
+              <Text style={styles.rating}>★ {(selectedListing.rating || 0).toFixed(1)}</Text>
+              <Text style={styles.reviewsText}>({selectedListing.reviews?.length || 0} reviews)</Text>
             </View>
           </View>
 
@@ -125,40 +125,47 @@ export const ParkingDetailScreen: React.FC = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Amenities</Text>
             <View style={styles.amenitiesGrid}>
-              {Object.entries(selectedSpot.features).map(([key, value]) => {
-                if (!value) return null;
-                const labels: Record<string, string> = {
-                  covered: '🏠 Covered',
-                  security: '🔒 Security',
-                  evCharging: '⚡ EV Charging',
-                  accessible: '♿ Accessible',
-                  lighting: '💡 Well Lit',
-                  cctv: '📹 CCTV',
-                };
-                return (
-                  <View key={key} style={styles.amenityItem}>
-                    <Text style={styles.amenityText}>{labels[key]}</Text>
-                  </View>
-                );
-              })}
+              {selectedListing.amenities.length > 0 ? (
+                selectedListing.amenities.map((amenity, index) => {
+                  const icons: Record<string, string> = {
+                    covered: '🏠',
+                    security: '🔒',
+                    ev_charging: '⚡',
+                    accessible: '♿',
+                    lighting: '💡',
+                    cctv: '📹',
+                    wifi: '📶',
+                    restroom: '🚻',
+                  };
+                  return (
+                    <View key={index} style={styles.amenityItem}>
+                      <Text style={styles.amenityText}>
+                        {icons[amenity] || '✓'} {amenity.replace(/_/g, ' ').toUpperCase()}
+                      </Text>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.noAmenities}>No amenities listed</Text>
+              )}
             </View>
           </View>
 
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{selectedSpot.description}</Text>
+            <Text style={styles.description}>{selectedListing.description}</Text>
           </View>
 
           {/* Owner Info */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Owner</Text>
+            <Text style={styles.sectionTitle}>Host</Text>
             <View style={styles.ownerCard}>
-              <Avatar name={selectedSpot.ownerName} size={50} />
+              <Avatar name={selectedListing.owner?.name || 'Host'} uri={selectedListing.owner?.profileImageUrl} size={50} />
               <View style={styles.ownerInfo}>
-                <Text style={styles.ownerName}>{selectedSpot.ownerName}</Text>
+                <Text style={styles.ownerName}>{selectedListing.owner?.name || 'Host'}</Text>
                 <Text style={styles.ownerRating}>
-                  ★ {selectedSpot.ownerRating} rating
+                  ★ {(selectedListing.rating || 0).toFixed(1)} rating
                 </Text>
               </View>
               <TouchableOpacity style={styles.contactButton}>
@@ -167,13 +174,56 @@ export const ParkingDetailScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Reviews Section */}
+          <View style={styles.section}>
+            <View style={styles.reviewsHeader}>
+              <Text style={styles.sectionTitle}>Reviews</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Review' as never, { listingId: selectedListing.id } as never)}
+              >
+                <Text style={styles.writeReviewText}>Write Review</Text>
+              </TouchableOpacity>
+            </View>
+
+            {reviews.length > 0 ? (
+              <View style={styles.reviewsList}>
+                {reviews.slice(0, 3).map((review) => (
+                  <View key={review.id} style={styles.reviewCard}>
+                    <View style={styles.reviewHeader}>
+                      <Avatar name={review.userName} uri={review.userAvatar} size={40} />
+                      <View style={styles.reviewerInfo}>
+                        <Text style={styles.reviewerName}>{review.userName}</Text>
+                        <Text style={styles.reviewDate}>
+                          {new Date(review.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <View style={styles.reviewRating}>
+                        <Text style={styles.reviewRatingText}>★ {review.rating}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                  </View>
+                ))}
+                {reviews.length > 3 && (
+                  <TouchableOpacity style={styles.seeAllReviews}>
+                    <Text style={styles.seeAllReviewsText}>
+                      See all {reviews.length} reviews
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.noReviews}>No reviews yet. Be the first to review!</Text>
+            )}
+          </View>
+
           {/* Location */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location</Text>
             <View style={styles.mapPlaceholder}>
               <Text style={styles.mapText}>Map View</Text>
               <Text style={styles.coordinates}>
-                {selectedSpot.latitude.toFixed(4)}, {selectedSpot.longitude.toFixed(4)}
+                {(selectedListing.lat || 0).toFixed(4)}, {(selectedListing.lon || 0).toFixed(4)}
               </Text>
             </View>
           </View>
@@ -185,7 +235,7 @@ export const ParkingDetailScreen: React.FC = () => {
         <View style={styles.bottomPriceContainer}>
           <Text style={styles.bottomPriceLabel}>Total</Text>
           <Text style={styles.bottomPrice}>
-            {formatCurrency(selectedSpot.price)}/{selectedSpot.priceUnit}
+            ₱{selectedListing.price}/hour
           </Text>
         </View>
         <Button
@@ -302,7 +352,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: spacing.xs,
   },
-  reviews: {
+  reviewsText: {
     ...typography.bodySmall,
     color: colors.textSecondary,
   },
@@ -414,5 +464,82 @@ const styles = StyleSheet.create({
   },
   reserveButton: {
     flex: 1,
+  },
+  noAmenities: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  writeReviewText: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  reviewsList: {
+    gap: spacing.lg,
+  },
+  reviewCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  reviewerInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  reviewerName: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  reviewDate: {
+    ...typography.small,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  reviewRating: {
+    backgroundColor: colors.warning + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  reviewRatingText: {
+    ...typography.small,
+    color: colors.warning,
+    fontWeight: '600',
+  },
+  reviewComment: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  noReviews: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
+  },
+  seeAllReviews: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  seeAllReviewsText: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: '600',
   },
 });

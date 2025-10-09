@@ -4,15 +4,16 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { logout } from '../store/slices/authSlice';
 import { Avatar } from '../components/Avatar';
 import { Card } from '../components/Card';
+import { AuthScreen } from './AuthScreen';
 import { colors, typography, spacing, borderRadius } from '../theme';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
@@ -21,7 +22,10 @@ export const ProfileScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
 
-  if (!user) return null;
+  // Show login/signup screen if not authenticated
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   const handleLogout = () => {
     dispatch(logout());
@@ -44,6 +48,11 @@ export const ProfileScreen: React.FC = () => {
           icon: '📋',
           label: 'My Listings',
           action: () => navigation.navigate('ListSpot' as never),
+        },
+        {
+          icon: '📱',
+          label: 'Generate QR Code',
+          action: () => navigation.navigate('QRGenerator' as never),
         },
         { icon: '⭐', label: 'Reviews', action: () => {} },
       ],
@@ -77,13 +86,13 @@ export const ProfileScreen: React.FC = () => {
 
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.totalBookings}</Text>
+              <Text style={styles.statValue}>{user.totalBookings || 0}</Text>
               <Text style={styles.statLabel}>Bookings</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
-                {formatCurrency(user.totalSpent)}
+                {formatCurrency(user.totalSpent || 0)}
               </Text>
               <Text style={styles.statLabel}>Spent</Text>
             </View>
