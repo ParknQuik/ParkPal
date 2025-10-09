@@ -3,7 +3,7 @@ const { broadcast } = require('../services/websocket');
 
 exports.processPayment = async (req, res) => {
   try {
-    const { bookingId, method, amount } = req.body;
+    const { bookingId, paymentMethod, amount } = req.body;
     const userId = req.user.id;
 
     const booking = await prisma.booking.findUnique({
@@ -18,7 +18,7 @@ exports.processPayment = async (req, res) => {
       data: {
         userId,
         bookingId: parseInt(bookingId),
-        method,
+        paymentMethod: paymentMethod || 'pending',
         amount: parseFloat(amount),
         status: 'completed'
       }

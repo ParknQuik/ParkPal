@@ -1,9 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// TODO: Update this with your computer's local IP when running on physical device
-// For now using localhost (works with iOS simulator)
-const API_BASE_URL = 'http://localhost:3001/api';
+// Use local IP address for physical devices/Android emulator
+// Use localhost only for iOS simulator
+// Back to local network since we're on same network
+const API_BASE_URL = 'http://192.168.100.222:3001/api';
 
 // Create axios instance
 const api = axios.create({
@@ -47,7 +48,7 @@ export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
   signup: (name: string, email: string, password: string) =>
-    api.post('/auth/signup', { name, email, password }),
+    api.post('/auth/register', { name, email, password, role: 'driver' }),
   logout: () => api.post('/auth/logout'),
   getCurrentUser: () => api.get('/auth/me'),
 };
@@ -83,6 +84,69 @@ export const bookingAPI = {
   cancelBooking: (id: string) => api.patch(`/bookings/${id}/cancel`),
 };
 
+// Marketplace endpoints
+export const marketplaceAPI = {
+  // Listings
+  createListing: (data: {
+    lat: number;
+    lon: number;
+    price: number;
+    address: string;
+    slotType: 'roadside_qr' | 'commercial_manual' | 'commercial_iot';
+    description?: string;
+    amenities?: string[];
+    photos?: string[];
+    zoneId?: number;
+  }) => api.post('/marketplace/listings', data),
+
+  getListingById: (id: number) => api.get(`/marketplace/listings/${id}`),
+
+  getMyListings: () => api.get('/marketplace/host/listings'),
+
+  // Search with filters
+  searchListings: (params?: {
+    lat?: number;
+    lon?: number;
+    radius?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    amenities?: string;
+    slotType?: string;
+    status?: string;
+  }) => api.get('/marketplace/search', { params }),
+
+  // Bookings
+  createBookingMarketplace: (data: {
+    slotId: number;
+    startTime: string;
+    endTime: string;
+  }) => api.post('/marketplace/bookings', data),
+
+  getMyBookings: () => api.get('/marketplace/bookings'),
+
+  // QR Code operations
+  qrCheckIn: (data: { qrData: string; bookingId?: number }) =>
+    api.post('/marketplace/qr/checkin', data),
+
+  qrCheckOut: (data: { sessionId: number }) =>
+    api.post('/marketplace/qr/checkout', data),
+
+  // Reviews
+  createReview: (data: {
+    slotId: number;
+    bookingId?: number;
+    rating: number;
+    comment?: string;
+  }) => api.post('/marketplace/reviews', data),
+
+  getListingReviews: (listingId: number) =>
+    api.get(`/marketplace/listings/${listingId}/reviews`),
+
+  // Host earnings
+  getHostEarnings: (params?: { startDate?: string; endDate?: string }) =>
+    api.get('/marketplace/host/earnings', { params }),
+};
+
 // User endpoints
 export const userAPI = {
   updateProfile: (data: { name?: string; phone?: string; avatar?: string }) =>
@@ -91,6 +155,12 @@ export const userAPI = {
   addPaymentMethod: (data: any) => api.post('/users/payment-methods', data),
   deletePaymentMethod: (id: string) =>
     api.delete(`/users/payment-methods/${id}`),
+};
+
+// Config endpoints
+export const configAPI = {
+  getGoogleMapsApiKey: () => api.get('/config/maps-api-key'),
+  getAppConfig: () => api.get('/config/app'),
 };
 
 export default api;
