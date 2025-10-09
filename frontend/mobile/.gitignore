@@ -30,7 +30,11 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+
+# Google Maps API key (now fetched from backend - no need to store locally)
+# API keys should never be committed
 
 # typescript
 *.tsbuildinfo

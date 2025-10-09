@@ -1,9 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// TODO: Update this with your computer's local IP when running on physical device
-// For now using localhost (works with iOS simulator)
-const API_BASE_URL = 'http://localhost:3001/api';
+// Use local IP address for physical devices/Android emulator
+// Use localhost only for iOS simulator
+// Back to local network since we're on same network
+const API_BASE_URL = 'http://192.168.100.222:3001/api';
 
 // Create axios instance
 const api = axios.create({
@@ -47,7 +48,7 @@ export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
   signup: (name: string, email: string, password: string) =>
-    api.post('/auth/signup', { name, email, password }),
+    api.post('/auth/register', { name, email, password, role: 'driver' }),
   logout: () => api.post('/auth/logout'),
   getCurrentUser: () => api.get('/auth/me'),
 };
@@ -154,6 +155,12 @@ export const userAPI = {
   addPaymentMethod: (data: any) => api.post('/users/payment-methods', data),
   deletePaymentMethod: (id: string) =>
     api.delete(`/users/payment-methods/${id}`),
+};
+
+// Config endpoints
+export const configAPI = {
+  getGoogleMapsApiKey: () => api.get('/config/maps-api-key'),
+  getAppConfig: () => api.get('/config/app'),
 };
 
 export default api;

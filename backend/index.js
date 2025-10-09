@@ -5,9 +5,14 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 require('dotenv').config();
 
+const secretManager = require('./config/secretManager');
+
 const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 3001;
+
+// Initialize Secret Manager
+secretManager.initialize();
 
 // Middleware
 app.use(cors());
@@ -32,12 +37,14 @@ const parkingRoutes = require('./routes/parking');
 const paymentRoutes = require('./routes/payments');
 const alertRoutes = require('./routes/alerts');
 const marketplaceRoutes = require('./routes/marketplace');
+const configRoutes = require('./routes/config');
 
 authRoutes(app);
 parkingRoutes(app);
 paymentRoutes(app);
 alertRoutes(app);
 marketplaceRoutes(app);
+configRoutes(app);
 
 // Health check
 app.get('/', (req, res) => {
