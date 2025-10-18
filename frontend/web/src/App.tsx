@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './screens/Login.jsx';
 import MapView from './screens/MapView.jsx';
 import Reservation from './screens/Reservation.jsx';
@@ -24,21 +25,23 @@ const theme = createTheme({
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/map" element={<MapView />} />
-          <Route path="/reserve" element={<Reservation />} />
-          <Route path="/payment" element={<Payment />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/list-slot" element={<ListSlot />} />
-          <Route path="/host-dashboard" element={<HostDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/map" element={<MapView />} />
+            <Route path="/reserve" element={<Reservation />} />
+            <Route path="/payment" element={<Payment />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/list-slot" element={<ListSlot />} />
+            <Route path="/host-dashboard" element={<HostDashboard />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 export default App;
