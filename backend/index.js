@@ -61,6 +61,7 @@ app.use((err, req, res, next) => {
 const websocketService = require('./services/websocket');
 websocketService.init(server);
 
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`Backend listening at http://localhost:${port}`);
+  console.log(`Network access: http://192.168.100.233:${port}`);
 });
