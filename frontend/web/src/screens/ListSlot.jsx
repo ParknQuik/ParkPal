@@ -16,7 +16,7 @@ import {
 	Paper,
 	Grid,
 } from '@mui/material';
-import api from '../api.jsx';
+import api from '../api';
 
 const SLOT_TYPES = [
 	{ value: 'roadside_qr', label: 'Roadside (QR)' },
@@ -64,7 +64,7 @@ const ListSlot = () => {
 		setSuccess('');
 
 		try {
-			const response = await api.post('/api/marketplace/listings', {
+			const response = await api.post('/marketplace/listings', {
 				...formData,
 				lat: parseFloat(formData.lat),
 				lon: parseFloat(formData.lon),

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ export const HomeScreen: React.FC = () => {
 
   const { user } = useAppSelector((state) => state.auth);
   const { listings, loading, filters } = useAppSelector((state) => state.marketplace);
-  const { currentLocation } = useAppSelector((state) => state.location);
+  const { currentLocation, loading: locationLoading, error: locationError } = useAppSelector((state) => state.location);
 
   useEffect(() => {
     dispatch(getCurrentLocation());
@@ -47,7 +47,7 @@ export const HomeScreen: React.FC = () => {
     }, 3000);
 
     return () => clearTimeout(fallbackTimer);
-  }, []);
+  }, [dispatch, currentLocation, filters.sortBy]);
 
   useEffect(() => {
     if (currentLocation) {
@@ -60,9 +60,9 @@ export const HomeScreen: React.FC = () => {
         })
       );
     }
-  }, [currentLocation]);
+  }, [currentLocation, filters.sortBy, dispatch]);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (currentLocation) {
       dispatch(
@@ -74,11 +74,49 @@ export const HomeScreen: React.FC = () => {
         })
       );
     }
-  };
+  }, [currentLocation, filters.sortBy, dispatch]);
 
-  const handleSpotPress = (listingId: number) => {
+  const handleSpotPress = useCallback((listingId: number) => {
     navigation.navigate('ParkingDetail' as never, { spotId: listingId.toString() } as never);
-  };
+  }, [navigation]);
+
+  const handleLocationRefresh = useCallback(() => {
+    dispatch(getCurrentLocation());
+  }, [dispatch]);
+
+  // Memoize transformed listings to prevent unnecessary recalculations
+  const transformedListings = useMemo(() => {
+    return listings.map((listing) => ({
+      id: listing.id.toString(),
+      title: listing.title,
+      address: listing.address,
+      city: '',
+      state: '',
+      zipCode: '',
+      latitude: listing.latitude,
+      longitude: listing.longitude,
+      price: listing.pricePerHour,
+      priceUnit: 'hour' as const,
+      rating: listing.rating,
+      reviews: listing.reviewCount,
+      distance: listing.distance,
+      availability: listing.availability ? 'available' : 'occupied' as const,
+      images: listing.photos,
+      amenities: listing.amenities,
+      description: listing.description,
+      ownerId: listing.hostId.toString(),
+      ownerName: listing.hostName,
+      ownerRating: listing.rating,
+      features: {
+        covered: listing.amenities.includes('covered'),
+        security: listing.amenities.includes('security'),
+        evCharging: listing.amenities.includes('ev_charging'),
+        accessible: listing.amenities.includes('accessible'),
+        lighting: listing.amenities.includes('lighting'),
+        cctv: listing.amenities.includes('cctv'),
+      },
+    }));
+  }, [listings]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,7 +133,7 @@ export const HomeScreen: React.FC = () => {
           </View>
           <TouchableOpacity
             style={styles.locationButton}
-            onPress={() => dispatch(getCurrentLocation())}
+            onPress={handleLocationRefresh}
           >
             {locationLoading ? (
               <Text style={styles.locationText}>📍 Getting location...</Text>
@@ -167,40 +205,11 @@ export const HomeScreen: React.FC = () => {
               message="Try adjusting your search or location"
             />
           ) : (
-            listings.map((listing) => (
+            transformedListings.map((spot) => (
               <ParkingCard
-                key={listing.id}
-                spot={{
-                  id: listing.id.toString(),
-                  title: listing.title,
-                  address: listing.address,
-                  city: '',
-                  state: '',
-                  zipCode: '',
-                  latitude: listing.latitude,
-                  longitude: listing.longitude,
-                  price: listing.pricePerHour,
-                  priceUnit: 'hour' as const,
-                  rating: listing.rating,
-                  reviews: listing.reviewCount,
-                  distance: listing.distance,
-                  availability: listing.availability ? 'available' : 'occupied' as const,
-                  images: listing.photos,
-                  amenities: listing.amenities,
-                  description: listing.description,
-                  ownerId: listing.hostId.toString(),
-                  ownerName: listing.hostName,
-                  ownerRating: listing.rating,
-                  features: {
-                    covered: listing.amenities.includes('covered'),
-                    security: listing.amenities.includes('security'),
-                    evCharging: listing.amenities.includes('ev_charging'),
-                    accessible: listing.amenities.includes('accessible'),
-                    lighting: listing.amenities.includes('lighting'),
-                    cctv: listing.amenities.includes('cctv'),
-                  },
-                }}
-                onPress={() => handleSpotPress(listing.id)}
+                key={spot.id}
+                spot={spot}
+                onPress={() => handleSpotPress(parseInt(spot.id))}
               />
             ))
           )}

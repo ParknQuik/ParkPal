@@ -1,10 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// Use local IP address for physical devices/Android emulator
-// Use localhost only for iOS simulator
-// Back to local network since we're on same network
-const API_BASE_URL = 'http://192.168.100.222:3001/api';
+// Get API URL from app config, fallback to dev URL
+const API_BASE_URL =
+  Constants.expoConfig?.extra?.apiUrl ||
+  (__DEV__ ? 'http://192.168.100.222:3001/api' : 'https://api.parkpal.com/api');
 
 // Create axios instance
 const api = axios.create({

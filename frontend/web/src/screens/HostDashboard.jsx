@@ -58,14 +58,14 @@ export default function HostDashboard() {
 
       // Fetch host's listings
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const listingsRes = await api.get('/api/marketplace/search');
+      const listingsRes = await api.get('/marketplace/search');
       const hostListings = (listingsRes.data.listings || listingsRes.data || []).filter(
         (slot) => slot.ownerId === user.id
       );
       setListings(hostListings);
 
       // Fetch earnings
-      const earningsRes = await api.get('/api/marketplace/host/earnings');
+      const earningsRes = await api.get('/marketplace/host/earnings');
       setEarnings(earningsRes.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load data');
