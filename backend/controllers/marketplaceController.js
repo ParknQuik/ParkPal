@@ -1,7 +1,6 @@
 const prisma = require('../config/prisma');
 const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, validateQRCode } = require('../services/qrcode');
-const { verifyListing } = require('../services/listingVerification');
 
 /**
  * @swagger
@@ -73,24 +72,6 @@ exports.createListing = async (req, res) => {
       });
     }
 
-    // Run verification checks
-    const verification = await verifyListing(
-      { lat, lon, price, address, description, photos, slotType },
-      ownerId
-    );
-
-    // Block listings that don't pass minimum requirements
-    if (!verification.passed) {
-      return res.status(400).json({
-        error: 'Listing verification failed',
-        verification,
-        message: 'Please fix the issues before submitting',
-      });
-    }
-
-    // Auto-approve high-quality listings
-    const autoApprove = verification.shouldAutoApprove;
-
     // Create parking slot
     const slot = await prisma.parkingSlot.create({
       data: {
@@ -99,7 +80,6 @@ exports.createListing = async (req, res) => {
         price: parseFloat(price),
         address,
         status: 'available',
-        isActive: autoApprove, // Auto-approve if verification passed
         ownerId,
         slotType,
         description: description || null,
@@ -110,17 +90,13 @@ exports.createListing = async (req, res) => {
       },
     });
 
-    // Generate QR code data and image for the slot
-    const { generateQRCodeData } = require('../services/qrcode');
-    const qrCodeData = generateQRCodeData(slot.id.toString());
+    // Generate QR code for the slot
     const qrCodeImage = await generateQRCodeImage(slot.id.toString());
 
-    // Update slot with QR code data (for validation)
+    // Update slot with QR code
     const updatedSlot = await prisma.parkingSlot.update({
       where: { id: slot.id },
-      data: {
-        qrCode: qrCodeData, // Store the raw data for validation
-      },
+      data: { qrCode: qrCodeImage },
       include: {
         owner: {
           select: { id: true, name: true, email: true },
@@ -129,21 +105,8 @@ exports.createListing = async (req, res) => {
       },
     });
 
-    // Add QR image and verification report to response
-    const response = {
-      ...updatedSlot,
-      qrCodeImage, // Base64 image for display
-      verification: {
-        score: verification.score,
-        autoApproved: autoApprove,
-        requiresReview: verification.requiresManualReview,
-        issues: verification.issues,
-        summary: verification.summary,
-      },
-    };
-
     broadcast({ type: 'listing_created', listing: updatedSlot });
-    res.status(201).json(response);
+    res.status(201).json(updatedSlot);
   } catch (error) {
     console.error('Create listing error:', error);
     res.status(500).json({ error: error.message });
@@ -302,64 +265,6 @@ exports.searchListings = async (req, res) => {
     res.json({ count: slots.length, listings: slots });
   } catch (error) {
     console.error('Search listings error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-/**
- * Get listing by ID
- */
-exports.getListingById = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const listing = await prisma.parkingSlot.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            profileImageUrl: true,
-          },
-        },
-        reviews: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                profileImageUrl: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-      },
-    });
-
-    if (!listing) {
-      return res.status(404).json({ error: 'Listing not found' });
-    }
-
-    // Generate QR code data for this listing
-    const { generateQRCodeData } = require('../services/qrcode');
-    const qrCodeData = generateQRCodeData(listing.id.toString());
-
-    // Parse JSON fields
-    const formattedListing = {
-      ...listing,
-      amenities: listing.amenities ? JSON.parse(listing.amenities) : [],
-      photos: listing.photos ? JSON.parse(listing.photos) : [],
-      qrCodeData, // Add the properly signed QR code data
-    };
-
-    res.json(formattedListing);
-  } catch (error) {
-    console.error('Get listing by ID error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -548,17 +453,8 @@ exports.qrCheckIn = async (req, res) => {
       data: { status: 'occupied' },
     });
 
-    broadcast({ type: 'qr_checkin', session, slot });
-    res.json({
-      message: 'Check-in successful',
-      session,
-      slot: {
-        id: slot.id,
-        address: slot.address,
-        status: 'occupied',
-        price: slot.price,
-      },
-    });
+    broadcast({ type: 'qr_checkin', session });
+    res.json({ message: 'Check-in successful', session });
   } catch (error) {
     console.error('QR check-in error:', error);
     res.status(500).json({ error: error.message });
@@ -653,11 +549,6 @@ exports.qrCheckOut = async (req, res) => {
     res.json({
       message: 'Check-out successful',
       session: updatedSession,
-      slot: {
-        id: session.slotId,
-        status: 'available',
-        address: session.slot.address,
-      },
       payment,
       totalAmount,
       durationMinutes,
@@ -893,62 +784,3 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
-
-/**
- * @swagger
- * /api/marketplace/verify/{slotId}:
- *   get:
- *     summary: Re-verify a listing (Admin only)
- *     tags: [Marketplace]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: slotId
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Verification report
- */
-exports.verifyListingById = async (req, res) => {
-  try {
-    const { slotId } = req.params;
-
-    const slot = await prisma.parkingSlot.findUnique({
-      where: { id: parseInt(slotId) },
-    });
-
-    if (!slot) {
-      return res.status(404).json({ error: 'Listing not found' });
-    }
-
-    // Parse JSON fields
-    const photos = slot.photos ? JSON.parse(slot.photos) : [];
-    const amenities = slot.amenities ? JSON.parse(slot.amenities) : [];
-
-    const verification = await verifyListing(
-      {
-        lat: slot.lat,
-        lon: slot.lon,
-        price: slot.price,
-        address: slot.address,
-        description: slot.description,
-        photos,
-        slotType: slot.slotType,
-      },
-      slot.ownerId,
-      slot.id
-    );
-
-    res.json({
-      slotId: slot.id,
-      address: slot.address,
-      verification,
-    });
-  } catch (error) {
-    console.error('Verify listing error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
