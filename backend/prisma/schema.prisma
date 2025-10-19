@@ -115,6 +115,13 @@ model ParkingSlot {
   bookings        Booking[]
   reviews         Review[]          @relation("SlotReviews")
 
+  // Performance indexes
+  @@index([lat, lon])
+  @@index([isActive, status])
+  @@index([ownerId])
+  @@index([createdAt])
+  @@index([price])
+  @@index([zoneId])
   @@map("parking_slots")
 }
 
@@ -166,6 +173,13 @@ model ParkingSession {
   activityEvents          ActivityEvent[]
   payments                Payment[]
 
+  // Performance indexes
+  @@index([userId])
+  @@index([slotId])
+  @@index([zoneId])
+  @@index([status])
+  @@index([checkInTime])
+  @@index([createdAt])
   @@map("parking_sessions")
 }
 
@@ -283,6 +297,12 @@ model Booking {
   payments        Payment[]
   review          Review?          @relation("BookingReview")
 
+  // Performance indexes
+  @@index([userId])
+  @@index([slotId])
+  @@index([status])
+  @@index([startTime, endTime])
+  @@index([createdAt])
   @@map("bookings")
 }
 
@@ -365,5 +385,9 @@ model Review {
   slot            ParkingSlot?  @relation("SlotReviews", fields: [slotId], references: [id])
   booking         Booking?      @relation("BookingReview", fields: [bookingId], references: [id])
 
+  // Performance indexes
+  @@index([slotId])
+  @@index([authorId])
+  @@index([createdAt])
   @@map("reviews")
 }
