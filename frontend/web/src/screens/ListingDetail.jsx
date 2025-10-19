@@ -20,7 +20,7 @@ import {
 	Star as StarIcon,
 	LocationOn as LocationIcon,
 } from '@mui/icons-material';
-import api from '../api.jsx';
+import api from '../api';
 
 const ListingDetail = () => {
 	const { id } = useParams();

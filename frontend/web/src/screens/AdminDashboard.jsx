@@ -75,7 +75,7 @@ export default function AdminDashboard() {
       setError('');
 
       // Fetch all listings using marketplace search
-      const listingsRes = await api.get('/api/marketplace/search');
+      const listingsRes = await api.get('/marketplace/search');
       const allListings = listingsRes.data.listings || listingsRes.data || [];
       setListings(allListings);
 

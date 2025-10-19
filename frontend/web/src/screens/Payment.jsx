@@ -14,7 +14,7 @@ import {
 	Button,
 	Alert
 } from '@mui/material';
-import api from '../api.jsx';
+import api from '../api';
 
 const Payment = () => {
 	const navigate = useNavigate();
@@ -42,7 +42,7 @@ const Payment = () => {
 		setError('');
 
 		try {
-			await api.post('/api/payments', {
+			await api.post('/payments', {
 				bookingId: booking.id,
 				method,
 				amount: booking.price

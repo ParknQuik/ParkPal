@@ -36,7 +36,7 @@ import {
 	Star,
 	Refresh,
 } from '@mui/icons-material';
-import api from '../api.jsx';
+import api from '../api';
 
 const MapView = () => {
 	const navigate = useNavigate();
@@ -145,7 +145,7 @@ const MapView = () => {
 			// Use searchCenter if set (user moved map), otherwise use userLocation
 			const center = searchCenter || userLocation || defaultCenter;
 
-			const { data } = await api.get('/api/marketplace/search', {
+			const { data } = await api.get('/marketplace/search', {
 				params: {
 					lat: center.lat,
 					lon: center.lng || center.lon,

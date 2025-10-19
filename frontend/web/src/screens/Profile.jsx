@@ -14,7 +14,7 @@ import {
 	Chip,
 	CircularProgress
 } from '@mui/material';
-import api from '../api.jsx';
+import api from '../api';
 
 const Profile = () => {
 	const navigate = useNavigate();
@@ -33,7 +33,7 @@ const Profile = () => {
 	const fetchBookings = async () => {
 		try {
 			setLoading(true);
-			const { data } = await api.get('/api/bookings');
+			const { data } = await api.get('/bookings');
 			setBookings(data);
 		} catch (error) {
 			console.error('Error fetching bookings:', error);

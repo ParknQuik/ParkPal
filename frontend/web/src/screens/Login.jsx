@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, TextField, Button, Typography, Container, Alert, Tab, Tabs } from '@mui/material';
-import api from '../api.jsx';
+import api from '../api';
 
 const Login = () => {
 	const navigate = useNavigate();
@@ -19,23 +19,28 @@ const Login = () => {
 	};
 
 	const handleLogin = async (e) => {
+		console.log('handleLogin called!');
 		e.preventDefault();
 		setLoading(true);
 		setError('');
 
 		try {
-			const { data } = await api.post('/api/auth/login', {
+			console.log('Attempting login with:', formData.email);
+			const { data } = await api.post('/auth/login', {
 				email: formData.email,
 				password: formData.password
 			});
 
+			console.log('Login successful:', data);
 			localStorage.setItem('token', data.token);
 			localStorage.setItem('user', JSON.stringify(data.user));
 
+			console.log('Navigating to /map...');
 			// Always redirect to map
 			navigate('/map');
 		} catch (err) {
-			setError(err.response?.data?.error || 'Login failed');
+			console.error('Login error:', err);
+			setError(err.response?.data?.error || err.message || 'Login failed');
 		} finally {
 			setLoading(false);
 		}
@@ -47,7 +52,7 @@ const Login = () => {
 		setError('');
 
 		try {
-			const { data } = await api.post('/api/auth/register', {
+			const { data } = await api.post('/auth/register', {
 				name: formData.name,
 				email: formData.email,
 				password: formData.password
