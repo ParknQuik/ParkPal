@@ -1,5 +1,5 @@
 const prisma = require('../config/prisma');
-const { generateToken, hashPassword, comparePassword } = require('../services/auth');
+const { generateToken, hashPassword, comparePassword, validatePassword } = require('../services/auth');
 
 exports.register = async (req, res) => {
   try {
@@ -7,6 +7,18 @@ exports.register = async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Async password validation
+    const passwordValidation = await validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -30,7 +42,7 @@ exports.register = async (req, res) => {
 
     const token = generateToken(user);
 
-    res.status(201).json({
+    const response = {
       user: {
         id: user.id,
         name: user.name,
@@ -38,9 +50,79 @@ exports.register = async (req, res) => {
         role: user.role
       },
       token
-    });
+    };
+
+    // Include warnings if any
+    if (passwordValidation.warnings) {
+      response.warnings = passwordValidation.warnings;
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        error: 'Both old and new passwords are required'
+      });
+    }
+
+    // Get user
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify old password
+    const isValidOldPassword = await comparePassword(oldPassword, user.password);
+    if (!isValidOldPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Check new password isn't same as old
+    const isSamePassword = await comparePassword(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        error: 'New password must be different from current password'
+      });
+    }
+
+    // Validate new password
+    const passwordValidation = await validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
+    }
+
+    // Hash and update
+    const hashedPassword = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        updatedAt: new Date()
+      }
+    });
+
+    const response = { message: 'Password changed successfully' };
+
+    if (passwordValidation.warnings) {
+      response.warnings = passwordValidation.warnings;
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
   }
 };
 

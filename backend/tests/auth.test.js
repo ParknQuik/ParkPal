@@ -1,6 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { cleanDatabase, prisma } = require('./setup');
 
 // Create test app
@@ -8,9 +9,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Create a mock rate limiter for tests
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests, please try again later.',
+});
+
 // Import routes
 const authRoutes = require('../routes/auth');
-authRoutes(app);
+authRoutes(app, authLimiter);
 
 beforeAll(async () => {
   await cleanDatabase();
@@ -25,7 +33,7 @@ describe('Auth API Tests', () => {
   const testUser = {
     name: 'Test User',
     email: 'test@example.com',
-    password: 'testpass123',
+    password: 'TestPass123!',
     role: 'driver',
   };
 
@@ -65,17 +73,17 @@ describe('Auth API Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should accept any email format (validation TODO)', async () => {
+    it('should reject invalid email format', async () => {
       const response = await request(app)
         .post('/api/auth/register')
         .send({
           name: 'Test User',
           email: 'novalid@test',
-          password: 'testpass123',
+          password: 'TestPass123!',
         });
 
-      // Email validation not implemented yet, so this will succeed
-      expect([201, 400]).toContain(response.status);
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('email');
     });
 
     it('should hash password before storing', async () => {
@@ -93,7 +101,7 @@ describe('Auth API Tests', () => {
         .send({
           name: 'Another User',
           email: 'another@example.com',
-          password: 'testpass123',
+          password: 'TestPass123!',
           // No role specified
         });
 
@@ -194,7 +202,7 @@ describe('Auth API Tests', () => {
         .send({
           name: 'Host User',
           email: 'host@example.com',
-          password: 'testpass123',
+          password: 'TestPass123!',
           role: 'host',
         });
 
@@ -208,7 +216,7 @@ describe('Auth API Tests', () => {
         .send({
           name: 'Admin User',
           email: 'admin@example.com',
-          password: 'testpass123',
+          password: 'TestPass123!',
           role: 'admin',
         });
 
@@ -224,7 +232,7 @@ describe('Auth API Tests', () => {
         .send({
           name: 'Security Test',
           email: 'security@example.com',
-          password: 'testpass123',
+          password: 'TestPass123!',
         });
 
       expect(registerResponse.body.user).not.toHaveProperty('password');
@@ -233,7 +241,7 @@ describe('Auth API Tests', () => {
         .post('/api/auth/login')
         .send({
           email: 'security@example.com',
-          password: 'testpass123',
+          password: 'TestPass123!',
         });
 
       expect(loginResponse.body.user).not.toHaveProperty('password');
@@ -258,6 +266,182 @@ describe('Auth API Tests', () => {
       // This test depends on implementation (if timestamp is included, they'll differ)
       expect(response1.body.token).toBeDefined();
       expect(response2.body.token).toBeDefined();
+    });
+  });
+
+  describe('Password Validation', () => {
+    it('should reject passwords shorter than 8 characters', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test',
+          email: 'short@test.com',
+          password: 'Pass1',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('at least 8 characters');
+    });
+
+    it('should reject passwords without uppercase letters', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test',
+          email: 'lower@test.com',
+          password: 'password123',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('uppercase');
+    });
+
+    it('should reject passwords without lowercase letters', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test',
+          email: 'upper@test.com',
+          password: 'PASSWORD123',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('lowercase');
+    });
+
+    it('should reject passwords without numbers', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test',
+          email: 'nonum@test.com',
+          password: 'PasswordOnly',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('number');
+    });
+
+    it('should reject passwords exceeding 72 characters', async () => {
+      const longPassword = 'A1' + 'a'.repeat(71); // 73 chars
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test',
+          email: 'toolong@test.com',
+          password: longPassword,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('72 characters');
+    });
+
+    it('should accept strong valid passwords', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Strong User',
+          email: 'strong@test.com',
+          password: 'MyStr0ng!P@ssw0rd2024',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('token');
+    });
+
+    it('should return warnings for weak but valid passwords', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Weak User',
+          email: 'weak@test.com',
+          password: 'Short1Aa', // 8 chars, no special chars
+        });
+
+      expect(response.status).toBe(201);
+      // May include warnings
+      if (response.body.warnings) {
+        expect(Array.isArray(response.body.warnings)).toBe(true);
+      }
+    });
+  });
+
+  describe('Password Change', () => {
+    let userToken;
+
+    beforeAll(async () => {
+      // Create a user and get token
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Change Test User',
+          email: 'change@test.com',
+          password: 'OldPass123!',
+        });
+      userToken = response.body.token;
+    });
+
+    it('should change password successfully', async () => {
+      const response = await request(app)
+        .put('/api/auth/password')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          oldPassword: 'OldPass123!',
+          newPassword: 'NewPass456!',
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toContain('successfully');
+    });
+
+    it('should reject password change with incorrect old password', async () => {
+      const response = await request(app)
+        .put('/api/auth/password')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          oldPassword: 'WrongPassword123',
+          newPassword: 'AnotherNewPass789!',
+        });
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toContain('incorrect');
+    });
+
+    it('should reject changing to same password', async () => {
+      const response = await request(app)
+        .put('/api/auth/password')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          oldPassword: 'NewPass456!',
+          newPassword: 'NewPass456!',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('different');
+    });
+
+    it('should reject weak new password', async () => {
+      const response = await request(app)
+        .put('/api/auth/password')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          oldPassword: 'NewPass456!',
+          newPassword: 'weak',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBeDefined();
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .put('/api/auth/password')
+        .send({
+          oldPassword: 'NewPass456!',
+          newPassword: 'AnotherPass789!',
+        });
+
+      expect(response.status).toBe(401);
     });
   });
 });

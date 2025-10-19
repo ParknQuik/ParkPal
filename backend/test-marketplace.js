@@ -3,8 +3,8 @@ const axios = require('axios');
 const API_URL = 'http://localhost:3001/api';
 
 // Test credentials from seed
-const DRIVER_CREDS = { email: 'juan@example.com', password: 'password123' };
-const HOST_CREDS = { email: 'pedro@example.com', password: 'password123' };
+const DRIVER_CREDS = { email: 'juan@example.com', password: 'TestDev2024!SecurePass' };
+const HOST_CREDS = { email: 'pedro@example.com', password: 'TestDev2024!SecurePass' };
 
 let driverToken = '';
 let hostToken = '';

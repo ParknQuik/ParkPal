@@ -21,7 +21,7 @@ async function main() {
   console.log('✅ Cleared existing data');
 
   // Create test users
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  const hashedPassword = await bcrypt.hash('TestDev2024!SecurePass', 10);
 
   const users = await Promise.all([
     // Drivers
@@ -399,11 +399,11 @@ async function main() {
 - Parking Slots: ${slots.length} (various types)
 
 🔑 Test Credentials:
-Driver 1: juan@example.com / password123
-Driver 2: maria@example.com / password123
-Host 1: pedro@example.com / password123
-Host 2: ana@example.com / password123
-Host 3: carlos@example.com / password123
+Driver 1: juan@example.com / TestDev2024!SecurePass
+Driver 2: maria@example.com / TestDev2024!SecurePass
+Host 1: pedro@example.com / TestDev2024!SecurePass
+Host 2: ana@example.com / TestDev2024!SecurePass
+Host 3: carlos@example.com / TestDev2024!SecurePass
   `);
 }
 

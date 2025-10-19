@@ -10,7 +10,7 @@ async function main() {
   console.log('\n=== HOST ACCOUNT (ID 86) ===');
   console.log('Name:', host.name);
   console.log('Email:', host.email);
-  console.log('Password: password123');
+  console.log('Password: TestDev2024!SecurePass');
   console.log('Role:', host.role);
 
   const listings = await prisma.parkingSlots.findMany({

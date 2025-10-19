@@ -63,12 +63,15 @@ const corsOptions = {
       ]
     : [
         'http://localhost:3000',
+        'http://localhost:5173', // Vite dev server
         'http://localhost:19006', // Expo web
         'http://192.168.100.233:3000',
         'http://192.168.100.233:19006',
+        'http://192.168.100.241:5173', // Vite dev server on network
+        /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d{4,5}$/, // Allow all local network IPs
       ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 

@@ -220,7 +220,7 @@ async function seedListings() {
 
     if (!owner) {
       console.log('Creating test host user...');
-      const hashedPassword = await bcrypt.hash('Password123', 10);
+      const hashedPassword = await bcrypt.hash('TestDev2024!SecurePass', 10);
       owner = await prisma.user.create({
         data: {
           name: 'ParkPal Host',

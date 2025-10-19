@@ -1,4 +1,5 @@
 const authController = require('../controllers/authController');
+const { authenticate } = require('../services/auth');
 
 module.exports = (app, authLimiter) => {
   /**
@@ -97,4 +98,40 @@ module.exports = (app, authLimiter) => {
    *               $ref: '#/components/schemas/Error'
    */
   app.post('/api/auth/login', authLimiter, authController.login);
+
+  /**
+   * @swagger
+   * /api/auth/password:
+   *   put:
+   *     summary: Change user password
+   *     tags: [Authentication]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - oldPassword
+   *               - newPassword
+   *             properties:
+   *               oldPassword:
+   *                 type: string
+   *                 format: password
+   *                 example: OldPassword123
+   *               newPassword:
+   *                 type: string
+   *                 format: password
+   *                 example: NewSecurePass456!
+   *     responses:
+   *       200:
+   *         description: Password changed successfully
+   *       400:
+   *         description: Invalid password or same as old password
+   *       401:
+   *         description: Incorrect current password or unauthorized
+   */
+  app.put('/api/auth/password', authenticate, authLimiter, authController.changePassword);
 };
