@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
-import { fetchParkingSpots, setSelectedSpot } from '../store/slices/parkingSlice';
+import { searchListings } from '../store/slices/marketplaceSlice';
 import { getCurrentLocation } from '../store/slices/locationSlice';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
@@ -26,40 +26,66 @@ if (Platform.OS !== 'web') {
 }
 
 export const MapViewScreen: React.FC = () => {
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState<string[]>([]);
+  const [selectedSpot, setSelectedSpot] = useState<any>(null);
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
 
-  const { spots, selectedSpot } = useAppSelector((state) => state.parking);
+  const { listings, filters } = useAppSelector((state) => state.marketplace);
   const { currentLocation } = useAppSelector((state) => state.location);
 
   useEffect(() => {
     dispatch(getCurrentLocation());
+
+    // Fallback: Use default location after 3 seconds if user location not available
+    const fallbackTimer = setTimeout(() => {
+      if (!currentLocation) {
+        // Use default Manila location if user location not available
+        dispatch(
+          searchListings({
+            lat: 14.5995,
+            lon: 120.9842,
+            radius: 10,
+            status: 'available',
+            sortBy: filters.sortBy,
+          })
+        );
+      }
+    }, 3000);
+
+    return () => clearTimeout(fallbackTimer);
   }, []);
 
   useEffect(() => {
     if (currentLocation) {
-      dispatch(fetchParkingSpots(currentLocation));
+      dispatch(
+        searchListings({
+          lat: currentLocation.latitude,
+          lon: currentLocation.longitude,
+          radius: 10,
+          status: 'available',
+          sortBy: filters.sortBy,
+        })
+      );
     }
   }, [currentLocation]);
 
-  const handleMarkerPress = (spotId: string) => {
-    const spot = spots.find((s) => s.id === spotId);
-    if (spot) {
-      dispatch(setSelectedSpot(spot));
+  const handleMarkerPress = (listingId: number) => {
+    const listing = listings.find((l: any) => l.id === listingId);
+    if (listing) {
+      setSelectedSpot(listing);
     }
   };
 
   const handleReserve = () => {
     if (selectedSpot) {
-      dispatch(setSelectedSpot(null));
-      navigation.navigate('Reservation' as never, { spotId: selectedSpot.id } as never);
+      setSelectedSpot(null);
+      navigation.navigate('Reservation' as never, { spotId: selectedSpot.id.toString() } as never);
     }
   };
 
   const toggleFilter = (filter: string) => {
-    setSelectedFilters((prev) =>
+    setShowFilters((prev) =>
       prev.includes(filter)
         ? prev.filter((f) => f !== filter)
         : [...prev, filter]
@@ -84,86 +110,85 @@ export const MapViewScreen: React.FC = () => {
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           initialRegion={{
-            latitude: currentLocation?.latitude || 37.7749,
-            longitude: currentLocation?.longitude || -122.4194,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
+            latitude: currentLocation?.latitude || 14.8136,
+            longitude: currentLocation?.longitude || 121.0453,
+            latitudeDelta: 0.1,
+            longitudeDelta: 0.1,
           }}
           showsUserLocation
           showsMyLocationButton
+          mapPadding={{
+            top: 120,
+            right: 20,
+            bottom: 20,
+            left: 20,
+          }}
         >
-          {spots.map((spot) => (
+          {listings.map((listing: any) => (
             <Marker
-              key={spot.id}
+              key={listing.id}
               coordinate={{
-                latitude: spot.latitude,
-                longitude: spot.longitude,
+                latitude: listing.lat,
+                longitude: listing.lon,
               }}
-              onPress={() => handleMarkerPress(spot.id)}
-            >
-              <View style={styles.markerContainer}>
-                <View
-                  style={[
-                    styles.marker,
-                    spot.availability === 'available'
-                      ? styles.markerAvailable
-                      : styles.markerOccupied,
-                  ]}
-                >
-                  <Text style={styles.markerText}>
-                    {formatCurrency(spot.price)}
-                  </Text>
-                </View>
-              </View>
-            </Marker>
+              title={`₱${listing.price}/hr`}
+              description={listing.address}
+              pinColor={listing.status === 'available' ? '#22c55e' : '#ef4444'}
+              onPress={() => handleMarkerPress(listing.id)}
+            />
           ))}
         </MapView>
       )}
 
       <View style={styles.filterContainer}>
-        <View style={styles.filterScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterScrollContent}
+        >
           {filterOptions.map((filter) => (
             <Chip
               key={filter}
               label={filter}
-              selected={selectedFilters.includes(filter)}
+              selected={showFilters.includes(filter)}
               onPress={() => toggleFilter(filter)}
             />
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       <BottomSheet
         visible={!!selectedSpot}
-        onClose={() => dispatch(setSelectedSpot(null))}
+        onClose={() => setSelectedSpot(null)}
         height={400}
       >
         {selectedSpot && (
           <View style={styles.sheetContent}>
-            <Text style={styles.spotTitle}>{selectedSpot.title}</Text>
+            <Text style={styles.spotTitle}>{selectedSpot.description || selectedSpot.address}</Text>
             <Text style={styles.spotAddress}>
-              {selectedSpot.address}, {selectedSpot.city}
+              {selectedSpot.address}
             </Text>
 
             <View style={styles.spotDetails}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Rating</Text>
                 <Text style={styles.detailValue}>
-                  ★ {selectedSpot.rating} ({selectedSpot.reviews} reviews)
+                  ★ {selectedSpot.rating?.toFixed(1) || '0.0'} ({selectedSpot.reviews?.length || 0} reviews)
                 </Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Price</Text>
                 <Text style={styles.priceText}>
-                  {formatCurrency(selectedSpot.price)}/{selectedSpot.priceUnit}
+                  ₱{selectedSpot.price}/hour
                 </Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Availability</Text>
                 <Badge
-                  text={selectedSpot.availability}
+                  text={selectedSpot.status}
                   variant={
-                    selectedSpot.availability === 'available'
+                    selectedSpot.status === 'available'
                       ? 'success'
                       : 'error'
                   }
@@ -172,7 +197,7 @@ export const MapViewScreen: React.FC = () => {
             </View>
 
             <View style={styles.amenities}>
-              {selectedSpot.amenities.slice(0, 4).map((amenity) => (
+              {(Array.isArray(selectedSpot.amenities) ? selectedSpot.amenities : JSON.parse(selectedSpot.amenities || '[]')).slice(0, 4).map((amenity: string) => (
                 <View key={amenity} style={styles.amenityChip}>
                   <Text style={styles.amenityText}>{amenity}</Text>
                 </View>
@@ -184,9 +209,9 @@ export const MapViewScreen: React.FC = () => {
                 title="View Details"
                 variant="outline"
                 onPress={() => {
-                  dispatch(setSelectedSpot(null));
+                  setSelectedSpot(null);
                   navigation.navigate('ParkingDetail' as never, {
-                    spotId: selectedSpot.id,
+                    spotId: selectedSpot.id.toString(),
                   } as never);
                 }}
                 style={styles.button}
@@ -233,12 +258,18 @@ const styles = StyleSheet.create({
   },
   markerContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   marker: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   markerAvailable: {
     backgroundColor: colors.success,
@@ -261,15 +292,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   filterScroll: {
-    flexDirection: 'row',
     backgroundColor: colors.white,
-    padding: spacing.md,
     borderRadius: borderRadius.lg,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  filterScrollContent: {
+    flexDirection: 'row',
+    padding: spacing.md,
+    gap: spacing.sm,
   },
   sheetContent: {
     flex: 1,

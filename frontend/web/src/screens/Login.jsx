@@ -31,6 +31,8 @@ const Login = () => {
 
 			localStorage.setItem('token', data.token);
 			localStorage.setItem('user', JSON.stringify(data.user));
+
+			// Always redirect to map
 			navigate('/map');
 		} catch (err) {
 			setError(err.response?.data?.error || 'Login failed');

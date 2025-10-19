@@ -5,8 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppDispatch, useAppSelector } from '../store';
 import { login, signup } from '../store/slices/authSlice';
@@ -27,7 +27,7 @@ export const AuthScreen: React.FC = () => {
   }>({});
 
   const dispatch = useAppDispatch();
-  const { loading } = useAppSelector((state) => state.auth);
+  const { loading, error: authError } = useAppSelector((state) => state.auth);
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {};
@@ -119,6 +119,12 @@ export const AuthScreen: React.FC = () => {
             </View>
 
             <View style={styles.form}>
+              {authError && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{authError}</Text>
+                </View>
+              )}
+
               {activeTab === 'signup' && (
                 <Input
                   label="Full Name"
@@ -239,6 +245,17 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing.xl,
+  },
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: '#dc2626',
+    ...typography.bodySmall,
+    textAlign: 'center',
   },
   submitButton: {
     marginTop: spacing.md,

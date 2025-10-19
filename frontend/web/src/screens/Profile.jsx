@@ -11,7 +11,8 @@ import {
 	ListItem,
 	ListItemText,
 	Divider,
-	Chip
+	Chip,
+	CircularProgress
 } from '@mui/material';
 import api from '../api.jsx';
 
@@ -19,6 +20,7 @@ const Profile = () => {
 	const navigate = useNavigate();
 	const [user, setUser] = useState(null);
 	const [bookings, setBookings] = useState([]);
+	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		const userData = localStorage.getItem('user');
@@ -30,10 +32,13 @@ const Profile = () => {
 
 	const fetchBookings = async () => {
 		try {
+			setLoading(true);
 			const { data } = await api.get('/api/bookings');
 			setBookings(data);
 		} catch (error) {
 			console.error('Error fetching bookings:', error);
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -42,6 +47,16 @@ const Profile = () => {
 		localStorage.removeItem('user');
 		navigate('/');
 	};
+
+	if (loading) {
+		return (
+			<Container maxWidth="md" sx={{ mt: 4 }}>
+				<Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+					<CircularProgress />
+				</Box>
+			</Container>
+		);
+	}
 
 	return (
 		<Container maxWidth="md" sx={{ mt: 4 }}>
@@ -118,6 +133,15 @@ const Profile = () => {
 				>
 					Back to Map
 				</Button>
+				{user?.role === 'host' && (
+					<Button
+						variant="outlined"
+						onClick={() => navigate('/host-dashboard')}
+						fullWidth
+					>
+						Host Dashboard
+					</Button>
+				)}
 				<Button
 					variant="contained"
 					color="error"

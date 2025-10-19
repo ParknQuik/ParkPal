@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -29,6 +29,24 @@ export const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     dispatch(getCurrentLocation());
+
+    // Fallback: Load listings after 3 seconds even without location
+    const fallbackTimer = setTimeout(() => {
+      if (!currentLocation) {
+        // Use default Manila location if user location not available
+        dispatch(
+          searchListings({
+            lat: 14.5995,
+            lon: 120.9842,
+            radius: 10,
+            status: 'available',
+            sortBy: filters.sortBy,
+          })
+        );
+      }
+    }, 3000);
+
+    return () => clearTimeout(fallbackTimer);
   }, []);
 
   useEffect(() => {
@@ -79,7 +97,17 @@ export const HomeScreen: React.FC = () => {
             style={styles.locationButton}
             onPress={() => dispatch(getCurrentLocation())}
           >
-            <Text style={styles.locationText}>📍 Current Location</Text>
+            {locationLoading ? (
+              <Text style={styles.locationText}>📍 Getting location...</Text>
+            ) : locationError ? (
+              <Text style={styles.locationText}>📍 Tap to enable</Text>
+            ) : currentLocation ? (
+              <Text style={styles.locationText}>
+                📍 {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+              </Text>
+            ) : (
+              <Text style={styles.locationText}>📍 Get Location</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -90,7 +118,7 @@ export const HomeScreen: React.FC = () => {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              ${user?.totalSpent.toFixed(0) || 0}
+              ${user?.totalSpent ? user.totalSpent.toFixed(0) : '0'}
             </Text>
             <Text style={styles.statLabel}>Spent</Text>
           </View>
