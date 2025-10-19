@@ -52,7 +52,7 @@ class MapsConfigService {
       const stored = await AsyncStorage.getItem(MAPS_API_KEY_STORAGE);
       if (stored) {
         const config: MapsConfig = JSON.parse(stored);
-        console.log('Using expired cached API key as fallback');
+        console.warn('Using expired cached API key as fallback');
         return config.apiKey;
       }
 

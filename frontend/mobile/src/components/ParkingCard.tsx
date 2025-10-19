@@ -10,7 +10,7 @@ interface ParkingCardProps {
   onPress: () => void;
 }
 
-export const ParkingCard: React.FC<ParkingCardProps> = ({ spot, onPress }) => {
+export const ParkingCard: React.FC<ParkingCardProps> = React.memo(({ spot, onPress }) => {
   return (
     <TouchableOpacity
       style={styles.card}
@@ -52,7 +52,7 @@ export const ParkingCard: React.FC<ParkingCardProps> = ({ spot, onPress }) => {
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {
