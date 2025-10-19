@@ -106,10 +106,10 @@ export const getListingReviews = createAsyncThunk(
 export const createReview = createAsyncThunk(
   'marketplace/createReview',
   async (data: {
-    listingId: number;
-    bookingId: number;
+    slotId: number;
+    bookingId?: number;
     rating: number;
-    comment: string;
+    comment?: string;
   }) => {
     const response = await marketplaceAPI.createReview(data);
     return response.data;

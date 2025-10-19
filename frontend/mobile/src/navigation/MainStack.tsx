@@ -6,6 +6,7 @@ import { ReservationScreen } from '../screens/ReservationScreen';
 import { ListSpotScreen } from '../screens/ListSpotScreen';
 import { QRScannerScreen } from '../screens/QRScannerScreen';
 import { QRGeneratorScreen } from '../screens/QRGeneratorScreen';
+import { ReviewScreen } from '../screens/ReviewScreen';
 
 const Stack = createStackNavigator();
 
@@ -52,6 +53,14 @@ export const MainStack: React.FC = () => {
       <Stack.Screen
         name="ListSpot"
         component={ListSpotScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="Review"
+        component={ReviewScreen}
         options={{
           headerShown: false,
           presentation: 'modal',
