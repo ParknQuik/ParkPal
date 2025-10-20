@@ -4,7 +4,7 @@ This guide explains how to set up and use Google Cloud Platform (GCP) Secret Man
 
 ## Overview
 
-The ParkPal backend uses GCP Secret Manager to store sensitive credentials like API keys, preventing them from being exposed in code or environment files. The mobile app fetches these credentials from the backend via secure API endpoints.
+The ParknQuik backend uses GCP Secret Manager to store sensitive credentials like API keys, preventing them from being exposed in code or environment files. The mobile app fetches these credentials from the backend via secure API endpoints.
 
 ## Architecture
 
@@ -36,7 +36,7 @@ Mobile App → Backend API (/api/config/maps-api-key) → GCP Secret Manager →
 1. Navigate to **IAM & Admin** > **Service Accounts**
 2. Click **Create Service Account**
 3. Name: `parkpal-backend-service`
-4. Description: `Service account for ParkPal backend to access Secret Manager`
+4. Description: `Service account for ParknQuik backend to access Secret Manager`
 5. Click **Create and Continue**
 
 ### 3. Grant Permissions
@@ -272,7 +272,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 - Secret versions: $0.06 per active secret version per month
 - Access operations: $0.03 per 10,000 operations
 
-**Estimated monthly cost for ParkPal:**
+**Estimated monthly cost for ParknQuik:**
 - 5 secrets × $0.06 = $0.30/month
 - ~100,000 API key fetches (1 per user session) = $0.30/month
 - **Total: ~$0.60/month** (negligible)

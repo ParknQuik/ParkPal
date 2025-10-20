@@ -1,4 +1,4 @@
-# ParkPal Setup Guide
+# ParknQuik Setup Guide
 
 ## Prerequisites
 - Node.js (v16+)

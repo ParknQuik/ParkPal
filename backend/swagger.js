@@ -4,11 +4,11 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'ParkPal API',
+      title: 'ParknQuik API',
       version: '1.0.0',
       description: 'Smart Parking Management System API - A peer-to-peer parking space sharing platform with crowdsourced monitoring capabilities',
       contact: {
-        name: 'ParkPal Team',
+        name: 'ParknQuik Team',
       },
     },
     servers: [

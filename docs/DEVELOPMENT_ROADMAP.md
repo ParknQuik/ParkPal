@@ -1,4 +1,4 @@
-# ParkPal Development Roadmap
+# ParknQuik Development Roadmap
 
 > **Phased approach to building both services**
 

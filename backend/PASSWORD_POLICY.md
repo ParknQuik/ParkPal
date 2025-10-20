@@ -2,7 +2,7 @@
 
 ## Password Requirements
 
-All user passwords in the ParkPal application must meet the following requirements:
+All user passwords in the ParknQuik application must meet the following requirements:
 
 ### Mandatory Requirements
 
@@ -286,4 +286,4 @@ If hitting rate limits during development:
 
 **Last Updated**: October 19, 2025
 **Version**: 1.0.0
-**Maintained By**: ParkPal Backend Team
+**Maintained By**: ParknQuik Backend Team

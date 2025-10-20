@@ -1,4 +1,4 @@
-# Prisma Studio Guide - ParkPal Database Management
+# Prisma Studio Guide - ParknQuik Database Management
 
 **Tool:** Prisma Studio
 **URL:** http://localhost:5555

@@ -1,6 +1,6 @@
 # Google Maps API Setup Guide
 
-This guide will help you set up Google Maps for the ParkPal web dashboard.
+This guide will help you set up Google Maps for the ParknQuik web dashboard.
 
 ---
 
@@ -14,7 +14,7 @@ This guide will help you set up Google Maps for the ParkPal web dashboard.
 2. **Create or Select Project:**
    - Click "Select a project" dropdown
    - Click "New Project"
-   - Name: "ParkPal" (or your choice)
+   - Name: "ParknQuik" (or your choice)
    - Click "Create"
 
 3. **Enable Maps JavaScript API:**
@@ -171,7 +171,7 @@ If no API key is configured, the app still works:
 - Advanced markers: Included
 - Geolocation API: $5 per 1,000 requests
 
-**For ParkPal:**
+**For ParknQuik:**
 - Development: Free tier sufficient
 - Production: Monitor usage, estimate ~$10-50/month for 1,000 users
 

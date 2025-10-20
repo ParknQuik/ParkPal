@@ -1,8 +1,8 @@
-# ParkPal - Project Summary
+# ParknQuik - Project Summary
 
 ## 🎯 Vision & Mission
 
-**ParkPal** is a comprehensive smart parking solution that addresses urban parking challenges through two innovative services:
+**ParknQuik** is a comprehensive smart parking solution that addresses urban parking challenges through two innovative services:
 
 1. **Service 2 (Marketplace)** - P2P parking space sharing platform
 2. **Service 1 (Analytics)** - Crowdsourced parking availability monitoring with predictive insights
@@ -12,7 +12,7 @@ Transform urban parking from a frustration into a seamless experience by connect
 
 ---
 
-## 🌟 What ParkPal Aims to Achieve
+## 🌟 What ParknQuik Aims to Achieve
 
 ### For Drivers
 - **Find parking faster** - Real-time availability and smart recommendations
@@ -175,7 +175,7 @@ Transform urban parking from a frustration into a seamless experience by connect
 ## 🚀 Competitive Advantages
 
 ### 1. **Dual-Service Model**
-- Unlike competitors who focus on either marketplace OR analytics, ParkPal provides both
+- Unlike competitors who focus on either marketplace OR analytics, ParknQuik provides both
 - Marketplace builds user base → Analytics leverages that data → Creates moat
 
 ### 2. **Philippines-First Approach**
@@ -246,12 +246,12 @@ Transform urban parking from a frustration into a seamless experience by connect
 
 ---
 
-## 🎯 Why ParkPal Will Succeed
+## 🎯 Why ParknQuik Will Succeed
 
 ### 1. **Real Problem, Real Solution**
 - Parking is a daily frustration for millions
 - Current solutions are fragmented or expensive
-- ParkPal addresses both supply (marketplace) and information (analytics)
+- ParknQuik addresses both supply (marketplace) and information (analytics)
 
 ### 2. **Strong Business Model**
 - Multiple revenue streams
@@ -278,9 +278,9 @@ Transform urban parking from a frustration into a seamless experience by connect
 ## 🎓 Research Foundation
 
 This project is based on the research paper:
-**"ParkPal: a park sharing and crowdsource park monitoring mobile application"**
+**"ParknQuik: a park sharing and crowdsource park monitoring mobile application"**
 
-**Reference**: [ResearchGate Publication](https://www.researchgate.net/publication/332287449_ParkPal_a_park_sharing_and_crowdsource_park_monitoring_mobile_application)
+**Reference**: [ResearchGate Publication](https://www.researchgate.net/publication/332287449_ParknQuik_a_park_sharing_and_crowdsource_park_monitoring_mobile_application)
 
 The research validates:
 - ✅ Peer-to-peer parking sharing reduces congestion
@@ -333,6 +333,6 @@ The research validates:
 
 ## 💡 Conclusion
 
-**ParkPal is positioned to revolutionize parking in the Philippines and beyond** by combining a marketplace that monetizes unused spaces with analytics that predict availability. With a clear roadmap, proven technology, and strong market demand, ParkPal aims to become the go-to solution for urban parking, generating ₱100M+ annual revenue by Year 2 while making cities more livable.
+**ParknQuik is positioned to revolutionize parking in the Philippines and beyond** by combining a marketplace that monetizes unused spaces with analytics that predict availability. With a clear roadmap, proven technology, and strong market demand, ParknQuik aims to become the go-to solution for urban parking, generating ₱100M+ annual revenue by Year 2 while making cities more livable.
 
-**The future of parking is smart, shared, and seamless. ParkPal makes it happen.** 🚗🅿️
+**The future of parking is smart, shared, and seamless. ParknQuik makes it happen.** 🚗🅿️

@@ -1,16 +1,16 @@
-# ParkPal Azure Deployment Guide
+# ParknQuik Azure Deployment Guide
 
 > **Optimized for Azure Data Engineers - Leverage Your Expertise!**
 
 ---
 
-## Why Azure is Perfect for ParkPal
+## Why Azure is Perfect for ParknQuik
 
-As an **Azure Data Engineer**, you already have the skills to build ParkPal's most complex feature: **Service 1 Analytics**!
+As an **Azure Data Engineer**, you already have the skills to build ParknQuik's most complex feature: **Service 1 Analytics**!
 
-### Your Azure Skills → ParkPal Features
+### Your Azure Skills → ParknQuik Features
 
-| Your Experience | ParkPal Use Case |
+| Your Experience | ParknQuik Use Case |
 |-----------------|------------------|
 | Azure Data Factory | ETL pipeline for parking events |
 | Azure Synapse Analytics | Data warehouse for circling time analytics |
@@ -700,7 +700,7 @@ CREATE TABLE agg_zone_metrics_hourly (
 
 **Better for advanced analytics, ML, and large-scale processing**
 
-#### Why Databricks > Synapse for ParkPal:
+#### Why Databricks > Synapse for ParknQuik:
 
 | Feature | Synapse | Databricks |
 |---------|---------|------------|
@@ -987,12 +987,12 @@ client.create_endpoint(
 # Create job via Databricks REST API or UI
 
 {
-  "name": "ParkPal Analytics Pipeline",
+  "name": "ParknQuik Analytics Pipeline",
   "tasks": [
     {
       "task_key": "ingest_bronze",
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/02_bronze_ingestion"
+        "notebook_path": "/Workspace/ParknQuik/02_bronze_ingestion"
       },
       "new_cluster": {
         "spark_version": "13.3.x-scala2.12",
@@ -1005,21 +1005,21 @@ client.create_endpoint(
       "task_key": "transform_silver",
       "depends_on": [{"task_key": "ingest_bronze"}],
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/03_silver_transformation"
+        "notebook_path": "/Workspace/ParknQuik/03_silver_transformation"
       }
     },
     {
       "task_key": "aggregate_gold",
       "depends_on": [{"task_key": "transform_silver"}],
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/04_gold_aggregations"
+        "notebook_path": "/Workspace/ParknQuik/04_gold_aggregations"
       }
     },
     {
       "task_key": "ml_predictions",
       "depends_on": [{"task_key": "aggregate_gold"}],
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/05_ml_occupancy_prediction"
+        "notebook_path": "/Workspace/ParknQuik/05_ml_occupancy_prediction"
       }
     }
   ],
@@ -1121,7 +1121,7 @@ databricks_host = "https://adb-<workspace-id>.azuredatabricks.net"
 databricks_token = "<your-token>"
 
 workflow = {
-  "name": "ParkPal Analytics Pipeline",
+  "name": "ParknQuik Analytics Pipeline",
   "email_notifications": {
     "on_failure": ["your-email@example.com"]
   },
@@ -1132,7 +1132,7 @@ workflow = {
     {
       "task_key": "streaming_ingestion",
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/02_bronze_ingestion",
+        "notebook_path": "/Workspace/ParknQuik/02_bronze_ingestion",
         "base_parameters": {}
       },
       "job_cluster_key": "streaming_cluster",
@@ -1143,7 +1143,7 @@ workflow = {
     {
       "task_key": "hourly_aggregation",
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/04_gold_aggregations",
+        "notebook_path": "/Workspace/ParknQuik/04_gold_aggregations",
         "base_parameters": {
           "window": "1 hour"
         }
@@ -1156,7 +1156,7 @@ workflow = {
       "task_key": "ml_training",
       "depends_on": [{"task_key": "hourly_aggregation"}],
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/05_ml_occupancy_prediction"
+        "notebook_path": "/Workspace/ParknQuik/05_ml_occupancy_prediction"
       },
       "job_cluster_key": "ml_cluster"
     },
@@ -1166,7 +1166,7 @@ workflow = {
       "task_key": "data_quality",
       "depends_on": [{"task_key": "hourly_aggregation"}],
       "notebook_task": {
-        "notebook_path": "/Workspace/ParkPal/06_data_quality_checks"
+        "notebook_path": "/Workspace/ParknQuik/06_data_quality_checks"
       },
       "job_cluster_key": "batch_cluster"
     }
@@ -1236,7 +1236,7 @@ print(f"Created job: {job_id}")
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  ParkPal Analytics Pipeline (Hourly)                │
+│  ParknQuik Analytics Pipeline (Hourly)                │
 ├─────────────────────────────────────────────────────┤
 │                                                      │
 │  [Streaming Ingestion] (Continuous)                 │

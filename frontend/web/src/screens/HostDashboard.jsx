@@ -113,7 +113,7 @@ export default function HostDashboard() {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            ParkPal - Host Dashboard
+            ParknQuik - Host Dashboard
           </Typography>
           <Button color="inherit" onClick={() => navigate('/profile')} startIcon={<PersonIcon />}>
             Profile
