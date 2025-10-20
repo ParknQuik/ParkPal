@@ -1,5 +1,5 @@
 const alertsController = require('../controllers/alertsController');
 
 module.exports = (app) => {
-  app.get('/api/alerts', alertsController.getAlerts);
+  app.get('/alerts', alertsController.getAlerts);
 };

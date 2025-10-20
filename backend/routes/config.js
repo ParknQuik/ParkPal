@@ -25,7 +25,7 @@ module.exports = (app) => {
    *         description: Failed to retrieve API key
    */
   app.get(
-    '/api/config/maps-api-key',
+    '/config/maps-api-key',
     authenticate,
     configController.getGoogleMapsApiKey
   );
@@ -62,5 +62,5 @@ module.exports = (app) => {
    *                   type: string
    *                   example: "1.0.0"
    */
-  app.get('/api/config/app', configController.getAppConfig);
+  app.get('/config/app', configController.getAppConfig);
 };
