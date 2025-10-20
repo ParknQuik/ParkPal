@@ -102,6 +102,11 @@ const paymentRoutes = require('./routes/payments');
 const alertRoutes = require('./routes/alerts');
 const marketplaceRoutes = require('./routes/marketplace');
 const configRoutes = require('./routes/config');
+const healthRoutes = require('./routes/health');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+
+// Health check routes (before other routes)
+healthRoutes(app);
 
 // Auth routes get stricter rate limiting
 authRoutes(app, authLimiter);
@@ -111,16 +116,16 @@ alertRoutes(app);
 marketplaceRoutes(app);
 configRoutes(app);
 
-// Health check
+// Root endpoint
 app.get('/', (req, res) => {
   res.json({ message: 'ParknQuik API is running', status: 'healthy' });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-});
+// 404 handler (must be after all routes)
+app.use(notFoundHandler);
+
+// Global error handler (must be last)
+app.use(errorHandler);
 
 // WebSocket setup
 const websocketService = require('./services/websocket');
