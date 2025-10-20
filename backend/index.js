@@ -64,6 +64,7 @@ const corsOptions = {
     : [
         'http://localhost:3000',
         'http://localhost:5173', // Vite dev server
+        'http://localhost:5174', // Vite dev server (alternate port)
         'http://localhost:19006', // Expo web
         'http://192.168.100.233:3000',
         'http://192.168.100.233:19006',

@@ -5,9 +5,6 @@ import {
 	Paper,
 	Typography,
 	Button,
-	AppBar,
-	Toolbar,
-	IconButton,
 	Chip,
 	Card,
 	CardContent,
@@ -27,7 +24,6 @@ import {
 	MenuItem,
 } from '@mui/material';
 import {
-	AccountCircle,
 	Add,
 	LocationOn,
 	Search,
@@ -320,21 +316,6 @@ const MapView = () => {
 
 	return (
 		<Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-			{/* App Bar */}
-			<AppBar position="static">
-				<Toolbar>
-					<Typography variant="h6" sx={{ flexGrow: 1 }}>
-						ParkPal - Find Parking
-					</Typography>
-					<Button color="inherit" onClick={() => navigate('/list-slot')}>
-						List Your Spot
-					</Button>
-					<IconButton color="inherit" onClick={() => navigate('/profile')}>
-						<AccountCircle />
-					</IconButton>
-				</Toolbar>
-			</AppBar>
-
 			{/* Error Alert */}
 			{error && (
 				<Alert severity="warning" onClose={() => setError('')}>
