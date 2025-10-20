@@ -193,60 +193,83 @@ exports.searchListings = async (req, res) => {
       if (maxPrice) where.price.lte = parseFloat(maxPrice);
     }
 
-    // Get all matching slots
-    let slots = await prisma.parkingSlot.findMany({
-      where,
-      include: {
-        owner: {
-          select: { id: true, name: true, email: true },
-        },
-        zone: true,
-        reviews: {
-          select: {
-            id: true,
-            rating: true,
-            comment: true,
-            createdAt: true,
-            author: {
-              select: { id: true, name: true },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        },
-      },
-    });
-
-    // Filter by location (basic distance calculation)
+    // Apply location filtering in WHERE clause if possible
     if (lat && lon && radius) {
       const userLat = parseFloat(lat);
       const userLon = parseFloat(lon);
       const radiusKm = parseFloat(radius);
 
-      slots = slots.filter((slot) => {
-        const distance = calculateDistance(
-          userLat,
-          userLon,
-          slot.lat,
-          slot.lon
-        );
-        return distance <= radiusKm;
-      });
+      // Calculate approximate lat/lon bounds (much faster than filtering all records)
+      // 1 degree latitude ≈ 111km, 1 degree longitude ≈ 111km * cos(latitude)
+      const latDelta = radiusKm / 111;
+      const lonDelta = radiusKm / (111 * Math.cos((userLat * Math.PI) / 180));
 
-      // Add distance to each slot
-      slots = slots.map((slot) => ({
-        ...slot,
-        distance: calculateDistance(userLat, userLon, slot.lat, slot.lon),
-      }));
-
-      // Sort by distance
-      slots.sort((a, b) => a.distance - b.distance);
+      where.lat = {
+        gte: userLat - latDelta,
+        lte: userLat + latDelta,
+      };
+      where.lon = {
+        gte: userLon - lonDelta,
+        lte: userLon + lonDelta,
+      };
     }
 
-    // Filter by amenities
+    // Get pagination info from middleware
+    const { skip, take } = req.pagination || { skip: 0, take: 20 };
+    const sortOptions = req.sort?.prisma || { createdAt: 'desc' };
+
+    // Query with pagination - MUCH more efficient
+    const [slots, totalCount] = await prisma.$transaction([
+      prisma.parkingSlot.findMany({
+        where,
+        skip,
+        take: take * 2, // Get extra records to account for distance filtering
+        orderBy: sortOptions,
+        include: {
+          owner: {
+            select: { id: true, name: true, email: true },
+          },
+          zone: true,
+          reviews: {
+            select: {
+              id: true,
+              rating: true,
+              comment: true,
+              createdAt: true,
+              author: {
+                select: { id: true, name: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          },
+        },
+      }),
+      prisma.parkingSlot.count({ where }),
+    ]);
+
+    // Post-process: precise distance filtering and calculation
+    let processedSlots = slots;
+
+    if (lat && lon && radius) {
+      const userLat = parseFloat(lat);
+      const userLon = parseFloat(lon);
+      const radiusKm = parseFloat(radius);
+
+      processedSlots = slots
+        .map((slot) => ({
+          ...slot,
+          distance: calculateDistance(userLat, userLon, slot.lat, slot.lon),
+        }))
+        .filter((slot) => slot.distance <= radiusKm)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, take); // Apply pagination limit after filtering
+    }
+
+    // Filter by amenities if specified
     if (amenities) {
       const requiredAmenities = amenities.split(',').map((a) => a.trim());
-      slots = slots.filter((slot) => {
+      processedSlots = processedSlots.filter((slot) => {
         if (!slot.amenities) return false;
         const slotAmenities = JSON.parse(slot.amenities);
         return requiredAmenities.every((amenity) =>
@@ -256,13 +279,18 @@ exports.searchListings = async (req, res) => {
     }
 
     // Parse JSON fields for response
-    slots = slots.map((slot) => ({
+    processedSlots = processedSlots.map((slot) => ({
       ...slot,
       amenities: slot.amenities ? JSON.parse(slot.amenities) : [],
       photos: slot.photos ? JSON.parse(slot.photos) : [],
     }));
 
-    res.json({ count: slots.length, listings: slots });
+    // Use helper from pagination middleware if available
+    const response = req.buildPaginatedResponse
+      ? req.buildPaginatedResponse(processedSlots, totalCount)
+      : { count: processedSlots.length, listings: processedSlots, total: totalCount };
+
+    res.json(response);
   } catch (error) {
     console.error('Search listings error:', error);
     res.status(500).json({ error: error.message });
