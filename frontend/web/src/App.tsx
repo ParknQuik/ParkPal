@@ -3,6 +3,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { NavBar } from './components/NavBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './screens/Login';
 // @ts-ignore - TODO: Convert remaining screens to TypeScript
@@ -38,6 +39,7 @@ function App() {
         <CssBaseline />
         <Router>
           <AuthProvider>
+            <NavBar />
             <Routes>
               <Route path="/" element={<Login />} />
               <Route
