@@ -99,7 +99,7 @@ const Login: React.FC = () => {
 				</Typography>
 
 				<Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 4 }}>
-					<Tabs value={tab} onChange={(e, v) => setTab(v)} centered>
+					<Tabs value={tab} onChange={(_e, v) => setTab(v)} centered>
 						<Tab label="Login" />
 						<Tab label="Register" />
 					</Tabs>
