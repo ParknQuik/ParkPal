@@ -1,6 +1,6 @@
 # Branch Protection & Pull Request Guidelines
 
-This document outlines the branch protection rules, pull request process, and code review guidelines for the ParkPal project.
+This document outlines the branch protection rules, pull request process, and code review guidelines for the ParknQuik project.
 
 ## Branch Strategy
 

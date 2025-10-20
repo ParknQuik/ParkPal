@@ -1,8 +1,8 @@
-# ParkPal System Architecture
+# ParknQuik System Architecture
 
 ## Overview
 
-ParkPal is a full-stack parking management system built with a microservices-inspired architecture, consisting of three main components:
+ParknQuik is a full-stack parking management system built with a microservices-inspired architecture, consisting of three main components:
 
 1. **Backend API** - Node.js/Express REST API
 2. **Web Frontend** - React SPA with Vite

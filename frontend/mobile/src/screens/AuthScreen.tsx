@@ -78,7 +78,7 @@ export const AuthScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.logo}>ParkPal</Text>
+            <Text style={styles.logo}>ParknQuik</Text>
             <Text style={styles.tagline}>Find & Reserve Parking Instantly</Text>
           </View>
 

@@ -1,4 +1,4 @@
-# ParkPal API Documentation
+# ParknQuik API Documentation
 
 ## Base URL
 - **Development**: `http://localhost:3001/api`

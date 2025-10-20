@@ -1,6 +1,6 @@
 # Environment Configuration Guide
 
-This document explains how to manage different environments (development, QA, production) in the ParkPal application.
+This document explains how to manage different environments (development, QA, production) in the ParknQuik application.
 
 ## Branch Strategy
 
@@ -87,7 +87,7 @@ cp .env.production .env
 |----------|-------------|-----|-----|------|
 | `VITE_API_BASE_URL` | Backend API URL | localhost:3001 | qa-api.parkpal.com | api.parkpal.com |
 | `VITE_GOOGLE_MAPS_API_KEY` | Google Maps key | - | QA key | Prod key |
-| `VITE_APP_NAME` | Application name | ParkPal Dev | ParkPal QA | ParkPal |
+| `VITE_APP_NAME` | Application name | ParknQuik Dev | ParknQuik QA | ParknQuik |
 | `VITE_ENVIRONMENT` | Environment name | development | qa | production |
 
 ## Development Workflow

@@ -335,6 +335,6 @@ The web frontend is now more robust, type-safe, and user-friendly. The app is pr
 
 ---
 
-**Author:** ParkPal Development Team
+**Author:** ParknQuik Development Team
 **Date:** October 19, 2025
 **Review Status:** Complete

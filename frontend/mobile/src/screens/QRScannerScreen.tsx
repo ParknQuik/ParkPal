@@ -101,7 +101,7 @@ export const QRScannerScreen: React.FC = () => {
         'Check-out Successful! ✅',
         `Duration: ${durationMinutes} minutes\nTotal: ₱${totalAmount.toFixed(
           2
-        )}\n\nThank you for using ParkPal!`,
+        )}\n\nThank you for using ParknQuik!`,
         [
           {
             text: 'OK',

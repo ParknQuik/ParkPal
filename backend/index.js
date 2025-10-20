@@ -83,7 +83,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'ParkPal API Documentation',
+  customSiteTitle: 'ParknQuik API Documentation',
 }));
 
 // Swagger JSON endpoint
@@ -113,7 +113,7 @@ configRoutes(app);
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ message: 'ParkPal API is running', status: 'healthy' });
+  res.json({ message: 'ParknQuik API is running', status: 'healthy' });
 });
 
 // Error handling middleware

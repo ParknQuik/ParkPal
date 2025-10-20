@@ -34,9 +34,9 @@ describe('NavBar', () => {
     localStorage.clear();
   });
 
-  it('should render ParkPal logo', () => {
+  it('should render ParknQuik logo', () => {
     renderNavBar();
-    expect(screen.getByText('ParkPal')).toBeInTheDocument();
+    expect(screen.getByText('ParknQuik')).toBeInTheDocument();
   });
 
   it('should show login button when not authenticated', () => {
@@ -77,7 +77,7 @@ describe('NavBar', () => {
     const user = userEvent.setup();
     renderNavBar();
 
-    await user.click(screen.getByText('ParkPal'));
+    await user.click(screen.getByText('ParknQuik'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/map');
   });

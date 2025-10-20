@@ -27,7 +27,7 @@ describe('Login Component', () => {
     it('should render login form by default', () => {
       render(<Login />);
 
-      expect(screen.getByText('ParkPal')).toBeInTheDocument();
+      expect(screen.getByText('ParknQuik')).toBeInTheDocument();
       expect(screen.getByText('Find and list parking spaces')).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: /login/i })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: /register/i })).toBeInTheDocument();

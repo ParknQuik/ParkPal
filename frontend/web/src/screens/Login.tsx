@@ -66,7 +66,7 @@ const Login: React.FC = () => {
 		<Container maxWidth="sm">
 			<Box sx={{ mt: 8, mb: 4 }}>
 				<Typography variant="h3" align="center" gutterBottom>
-					ParkPal
+					ParknQuik
 				</Typography>
 				<Typography variant="subtitle1" align="center" color="text.secondary" gutterBottom>
 					Find and list parking spaces

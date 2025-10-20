@@ -12,8 +12,7 @@ import MapView from './screens/MapView.jsx';
 import Reservation from './screens/Reservation.jsx';
 // @ts-ignore - TODO: Convert remaining screens to TypeScript
 import Payment from './screens/Payment.jsx';
-// @ts-ignore - TODO: Convert remaining screens to TypeScript
-import Profile from './screens/Profile.jsx';
+import Profile from './screens/Profile';
 // @ts-ignore - TODO: Convert remaining screens to TypeScript
 import ListSlot from './screens/ListSlot.jsx';
 // @ts-ignore - TODO: Convert remaining screens to TypeScript

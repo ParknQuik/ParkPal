@@ -65,7 +65,7 @@ export const NavBar: React.FC = () => {
           sx={{ flexGrow: 1, cursor: 'pointer' }}
           onClick={() => navigate('/map')}
         >
-          ParkPal
+          ParknQuik
         </Typography>
 
         {user && (
