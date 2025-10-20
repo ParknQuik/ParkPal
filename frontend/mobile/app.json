@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ParkPal",
-    "slug": "parkpal-mobile",
+    "name": "ParknQuik",
+    "slug": "parknquik-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.parkpal.mobile",
+      "bundleIdentifier": "com.parknquik.mobile",
       "config": {
         "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
       }
@@ -29,7 +29,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.parkpal.mobile",
+      "package": "com.parknquik.mobile",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -51,7 +51,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow ParkPal to access your photos to upload parking spot images."
+          "photosPermission": "Allow ParknQuik to access your photos to upload parking spot images."
         }
       ]
     ]

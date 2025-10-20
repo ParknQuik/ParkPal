@@ -1,4 +1,4 @@
-# ParkPal Mobile App
+# ParknQuik Mobile App
 
 A complete React Native (Expo) mobile application for parking management system built with TypeScript, Redux Toolkit, and React Navigation.
 

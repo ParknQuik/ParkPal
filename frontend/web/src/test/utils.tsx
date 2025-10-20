@@ -1,10 +1,17 @@
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '../contexts/AuthContext';
 
-// Custom render function with router
+// Custom render function with router and AuthProvider
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
-  return <BrowserRouter>{children}</BrowserRouter>;
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        {children}
+      </AuthProvider>
+    </BrowserRouter>
+  );
 };
 
 const customRender = (

@@ -1,4 +1,4 @@
-# ParkPal Codebase Review
+# ParknQuik Codebase Review
 
 > **Current State Analysis - What's Already Built**
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-ParkPal has a **solid foundation** with:
+ParknQuik has a **solid foundation** with:
 - ✅ **Backend:** Express.js API with auth, basic parking slot CRUD, booking system, WebSocket, Swagger docs
 - ✅ **Database:** Prisma ORM with User, Slot, Booking, Payment models (ready for expansion)
 - ✅ **Frontend Web:** React app with core screens (Login, Map, Listing, Payment, Profile)

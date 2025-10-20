@@ -1,4 +1,4 @@
-# ParkPal Deployment Guide
+# ParknQuik Deployment Guide
 
 ## Table of Contents
 1. [Development Setup](#development-setup)

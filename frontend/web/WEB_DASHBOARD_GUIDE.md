@@ -1,4 +1,4 @@
-# ParkPal Web Dashboard Guide
+# ParknQuik Web Dashboard Guide
 
 **Version:** 1.0.0
 **Date:** October 2025
@@ -7,7 +7,7 @@
 
 ## Overview
 
-The ParkPal Web Dashboard is a comprehensive management interface for hosts and administrators. It provides tools for listing management, earnings tracking, and platform administration.
+The ParknQuik Web Dashboard is a comprehensive management interface for hosts and administrators. It provides tools for listing management, earnings tracking, and platform administration.
 
 ---
 
@@ -464,4 +464,4 @@ For issues or feature requests:
 ---
 
 **Last Updated:** October 2025
-**Maintained By:** ParkPal Development Team
+**Maintained By:** ParknQuik Development Team

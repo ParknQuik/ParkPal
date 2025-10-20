@@ -8,7 +8,7 @@ function init(server) {
     console.log('New WebSocket connection established');
     ws.send(JSON.stringify({
       type: 'connected',
-      message: 'Connected to ParkPal WebSocket'
+      message: 'Connected to ParknQuik WebSocket'
     }));
 
     ws.on('message', (message) => {

@@ -1,15 +1,23 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { NavBar } from './components/NavBar';
 import ErrorBoundary from './components/ErrorBoundary';
-import Login from './screens/Login.jsx';
+import Login from './screens/Login';
+// @ts-ignore - TODO: Convert remaining screens to TypeScript
 import MapView from './screens/MapView.jsx';
+// @ts-ignore - TODO: Convert remaining screens to TypeScript
 import Reservation from './screens/Reservation.jsx';
+// @ts-ignore - TODO: Convert remaining screens to TypeScript
 import Payment from './screens/Payment.jsx';
-import Profile from './screens/Profile.jsx';
+import Profile from './screens/Profile';
+// @ts-ignore - TODO: Convert remaining screens to TypeScript
 import ListSlot from './screens/ListSlot.jsx';
+// @ts-ignore - TODO: Convert remaining screens to TypeScript
 import HostDashboard from './screens/HostDashboard.jsx';
+// @ts-ignore - TODO: Convert remaining screens to TypeScript
 import AdminDashboard from './screens/AdminDashboard.jsx';
 
 const theme = createTheme({
@@ -29,16 +37,68 @@ function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Router>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/map" element={<MapView />} />
-            <Route path="/reserve" element={<Reservation />} />
-            <Route path="/payment" element={<Payment />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/list-slot" element={<ListSlot />} />
-            <Route path="/host-dashboard" element={<HostDashboard />} />
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          </Routes>
+          <AuthProvider>
+            <NavBar />
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route
+                path="/map"
+                element={
+                  <ProtectedRoute>
+                    <MapView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reserve"
+                element={
+                  <ProtectedRoute>
+                    <Reservation />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/payment"
+                element={
+                  <ProtectedRoute>
+                    <Payment />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/list-slot"
+                element={
+                  <ProtectedRoute>
+                    <ListSlot />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/host-dashboard"
+                element={
+                  <ProtectedRoute>
+                    <HostDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin-dashboard"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </AuthProvider>
         </Router>
       </ThemeProvider>
     </ErrorBoundary>

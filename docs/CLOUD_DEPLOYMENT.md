@@ -1,4 +1,4 @@
-# ParkPal Cloud Deployment Guide
+# ParknQuik Cloud Deployment Guide
 
 > **Production-Ready Infrastructure for Dual-Service Platform**
 

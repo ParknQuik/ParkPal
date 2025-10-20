@@ -1,6 +1,6 @@
 # Project Overview
 
-You are to generate a complete codebase plan and scaffolding for an application called *ParkPal*, a parking management and discovery system.
+You are to generate a complete codebase plan and scaffolding for an application called *ParknQuik*, a parking management and discovery system.
 
 System Requirements:
 

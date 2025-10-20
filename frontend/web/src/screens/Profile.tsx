@@ -15,25 +15,44 @@ import {
 	CircularProgress
 } from '@mui/material';
 import api from '../api';
+import type { User } from '../types';
 
-const Profile = () => {
+interface BookingSlot {
+	id: number;
+	address: string;
+	lat: number;
+	lon: number;
+}
+
+interface Booking {
+	id: number;
+	slotId: number;
+	userId: number;
+	status: string;
+	startTime: string;
+	endTime: string;
+	price: number;
+	slot?: BookingSlot;
+}
+
+const Profile: React.FC = () => {
 	const navigate = useNavigate();
-	const [user, setUser] = useState(null);
-	const [bookings, setBookings] = useState([]);
-	const [loading, setLoading] = useState(true);
+	const [user, setUser] = useState<User | null>(null);
+	const [bookings, setBookings] = useState<Booking[]>([]);
+	const [loading, setLoading] = useState<boolean>(true);
 
 	useEffect(() => {
 		const userData = localStorage.getItem('user');
 		if (userData) {
-			setUser(JSON.parse(userData));
+			setUser(JSON.parse(userData) as User);
 		}
 		fetchBookings();
 	}, []);
 
-	const fetchBookings = async () => {
+	const fetchBookings = async (): Promise<void> => {
 		try {
 			setLoading(true);
-			const { data } = await api.get('/bookings');
+			const { data } = await api.get<Booking[]>('/bookings');
 			setBookings(data);
 		} catch (error) {
 			console.error('Error fetching bookings:', error);
@@ -42,7 +61,7 @@ const Profile = () => {
 		}
 	};
 
-	const handleLogout = () => {
+	const handleLogout = (): void => {
 		localStorage.removeItem('token');
 		localStorage.removeItem('user');
 		navigate('/');
