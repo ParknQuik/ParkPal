@@ -1,47 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Box, TextField, Button, Typography, Container, Alert, Tab, Tabs } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
-
-interface FormData {
-	email: string;
-	password: string;
-	name: string;
-}
+import { loginSchema, registerSchema, LoginFormData, RegisterFormData } from '../schemas/auth.schema';
 
 const Login: React.FC = () => {
 	const navigate = useNavigate();
-	const { login, register, isLoading } = useAuth();
+	const { login, register: registerUser, isLoading } = useAuth();
 	const [tab, setTab] = useState<number>(0);
-	const [formData, setFormData] = useState<FormData>({
-		email: '',
-		password: '',
-		name: ''
-	});
 	const [error, setError] = useState<string>('');
+
+	const {
+		register: registerLogin,
+		handleSubmit: handleSubmitLogin,
+		formState: { errors: loginErrors },
+		reset: resetLogin,
+	} = useForm<LoginFormData>({
+		resolver: zodResolver(loginSchema),
+		mode: 'onBlur',
+	});
+
+	const {
+		register: registerRegister,
+		handleSubmit: handleSubmitRegister,
+		formState: { errors: registerErrors },
+		reset: resetRegister,
+	} = useForm<RegisterFormData>({
+		resolver: zodResolver(registerSchema),
+		mode: 'onBlur',
+	});
 
 	// Clear form when tab changes
 	useEffect(() => {
-		setFormData({
-			email: '',
-			password: '',
-			name: ''
-		});
+		resetLogin();
+		resetRegister();
 		setError('');
-	}, [tab]);
+	}, [tab, resetLogin, resetRegister]);
 
-	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setFormData({ ...formData, [e.target.name]: e.target.value });
-	};
-
-	const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+	const onLoginSubmit = async (data: LoginFormData) => {
 		console.log('handleLogin called!');
-		e.preventDefault();
 		setError('');
 
 		try {
-			console.log('Attempting login with:', formData.email);
-			await login(formData.email, formData.password);
+			console.log('Attempting login with:', data.email);
+			await login(data.email, data.password);
 			console.log('Login successful, navigating to /map...');
 			navigate('/map');
 		} catch (err) {
@@ -50,12 +54,11 @@ const Login: React.FC = () => {
 		}
 	};
 
-	const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
+	const onRegisterSubmit = async (data: RegisterFormData) => {
 		setError('');
 
 		try {
-			await register(formData.name, formData.email, formData.password);
+			await registerUser(data.name, data.email, data.password);
 			navigate('/map');
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Registration failed');
@@ -82,26 +85,24 @@ const Login: React.FC = () => {
 				{error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
 				{tab === 0 ? (
-					<Box component="form" onSubmit={handleLogin} sx={{ mt: 3 }}>
+					<Box component="form" onSubmit={handleSubmitLogin(onLoginSubmit)} sx={{ mt: 3 }}>
 						<TextField
 							fullWidth
 							label="Email"
-							name="email"
 							type="email"
-							value={formData.email}
-							onChange={handleChange}
+							{...registerLogin('email')}
+							error={!!loginErrors.email}
+							helperText={loginErrors.email?.message}
 							margin="normal"
-							required
 						/>
 						<TextField
 							fullWidth
 							label="Password"
-							name="password"
 							type="password"
-							value={formData.password}
-							onChange={handleChange}
+							{...registerLogin('password')}
+							error={!!loginErrors.password}
+							helperText={loginErrors.password?.message}
 							margin="normal"
-							required
 						/>
 						<Button
 							fullWidth
@@ -115,35 +116,32 @@ const Login: React.FC = () => {
 						</Button>
 					</Box>
 				) : (
-					<Box component="form" onSubmit={handleRegister} sx={{ mt: 3 }}>
+					<Box component="form" onSubmit={handleSubmitRegister(onRegisterSubmit)} sx={{ mt: 3 }}>
 						<TextField
 							fullWidth
 							label="Name"
-							name="name"
-							value={formData.name}
-							onChange={handleChange}
+							{...registerRegister('name')}
+							error={!!registerErrors.name}
+							helperText={registerErrors.name?.message}
 							margin="normal"
-							required
 						/>
 						<TextField
 							fullWidth
 							label="Email"
-							name="email"
 							type="email"
-							value={formData.email}
-							onChange={handleChange}
-							margin="normal"
-							required
+							{...registerRegister('email')}
+							error={!!registerErrors.email}
+							helperText={registerErrors.email?.message}
+			margin="normal"
 						/>
 						<TextField
 							fullWidth
 							label="Password"
-							name="password"
 							type="password"
-							value={formData.password}
-			onChange={handleChange}
+							{...registerRegister('password')}
+							error={!!registerErrors.password}
+							helperText={registerErrors.password?.message}
 							margin="normal"
-							required
 						/>
 						<Button
 							fullWidth

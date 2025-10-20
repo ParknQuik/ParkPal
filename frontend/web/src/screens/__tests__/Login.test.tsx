@@ -144,14 +144,18 @@ describe('Login Component', () => {
       });
     });
 
-    it('should require email and password fields', () => {
+    it('should show validation errors for empty fields', async () => {
+      const user = userEvent.setup();
       render(<Login />);
 
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /^login$/i });
+      await user.click(submitButton);
 
-      expect(emailInput).toBeRequired();
-      expect(passwordInput).toBeRequired();
+      // react-hook-form validation will show error messages
+      await waitFor(() => {
+        expect(screen.getByText('Email is required')).toBeInTheDocument();
+        expect(screen.getByText('Password is required')).toBeInTheDocument();
+      });
     });
   });
 
@@ -217,20 +221,20 @@ describe('Login Component', () => {
       });
     });
 
-    it('should require all fields in registration', () => {
+    it('should show validation errors for empty registration fields', async () => {
+      const user = userEvent.setup();
       render(<Login />);
 
       const registerTab = screen.getByRole('tab', { name: /register/i });
-      userEvent.click(registerTab);
+      await user.click(registerTab);
 
-      waitFor(() => {
-        const nameInput = screen.getByLabelText(/name/i);
-        const emailInput = screen.getByLabelText(/email/i);
-        const passwordInput = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /^register$/i });
+      await user.click(submitButton);
 
-        expect(nameInput).toBeRequired();
-        expect(emailInput).toBeRequired();
-        expect(passwordInput).toBeRequired();
+      await waitFor(() => {
+        expect(screen.getByText('Name is required')).toBeInTheDocument();
+        expect(screen.getByText('Email is required')).toBeInTheDocument();
+        expect(screen.getByText('Password is required')).toBeInTheDocument();
       });
     });
   });
