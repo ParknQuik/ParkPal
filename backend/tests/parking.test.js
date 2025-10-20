@@ -13,12 +13,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Import routes
-const authRoutes = require('../routes/auth');
-const parkingRoutes = require('../routes/parking');
+// Create a mock rate limiter for tests
+const rateLimit = require('express-rate-limit');
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests, please try again later.',
+});
 
-authRoutes(app);
-parkingRoutes(app);
+// Import v1 router
+const v1Router = require('../routes/v1');
+app.use('/api/v1', v1Router(authLimiter));
 
 let testData = {};
 let authTokens = {};
@@ -49,9 +54,9 @@ afterAll(async () => {
 });
 
 describe('Parking API Tests', () => {
-  describe('GET /api/slots', () => {
+  describe('GET /api/v1/slots', () => {
     it('should return all parking slots', async () => {
-      const response = await request(app).get('/api/slots');
+      const response = await request(app).get('/api/v1/slots');
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
@@ -59,7 +64,7 @@ describe('Parking API Tests', () => {
     });
 
     it('should filter slots by status', async () => {
-      const response = await request(app).get('/api/slots?status=available');
+      const response = await request(app).get('/api/v1/slots?status=available');
 
       expect(response.status).toBe(200);
       response.body.forEach((slot) => {
@@ -68,7 +73,7 @@ describe('Parking API Tests', () => {
     });
 
     it('should include owner information', async () => {
-      const response = await request(app).get('/api/slots');
+      const response = await request(app).get('/api/v1/slots');
 
       expect(response.status).toBe(200);
       if (response.body.length > 0) {
@@ -80,9 +85,9 @@ describe('Parking API Tests', () => {
     });
   });
 
-  describe('GET /api/slots/:id', () => {
+  describe('GET /api/v1/slots/:id', () => {
     it('should return a specific parking slot', async () => {
-      const response = await request(app).get(`/api/slots/${testData.slot.id}`);
+      const response = await request(app).get(`/api/v1/slots/${testData.slot.id}`);
 
       expect(response.status).toBe(200);
       expect(response.body.id).toBe(testData.slot.id);
@@ -92,7 +97,7 @@ describe('Parking API Tests', () => {
     });
 
     it('should include owner information', async () => {
-      const response = await request(app).get(`/api/slots/${testData.slot.id}`);
+      const response = await request(app).get(`/api/v1/slots/${testData.slot.id}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('owner');
@@ -100,7 +105,7 @@ describe('Parking API Tests', () => {
     });
 
     it('should return 404 for non-existent slot', async () => {
-      const response = await request(app).get('/api/slots/99999');
+      const response = await request(app).get('/api/v1/slots/99999');
 
       expect(response.status).toBe(404);
       expect(response.body).toHaveProperty('error');
@@ -108,7 +113,7 @@ describe('Parking API Tests', () => {
     });
   });
 
-  describe('POST /api/slots', () => {
+  describe('POST /api/v1/slots', () => {
     it('should create a new parking slot', async () => {
       const newSlot = {
         lat: 14.5555,
@@ -119,7 +124,7 @@ describe('Parking API Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/slots')
+        .post('/api/v1/slots')
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send(newSlot);
 
@@ -135,7 +140,7 @@ describe('Parking API Tests', () => {
 
     it('should fail without authentication', async () => {
       const response = await request(app)
-        .post('/api/slots')
+        .post('/api/v1/slots')
         .send({
           lat: 14.5555,
           lon: 120.9999,
@@ -148,7 +153,7 @@ describe('Parking API Tests', () => {
 
     it('should default slotType to roadside_qr', async () => {
       const response = await request(app)
-        .post('/api/slots')
+        .post('/api/v1/slots')
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send({
           lat: 14.5556,
@@ -163,7 +168,7 @@ describe('Parking API Tests', () => {
     });
   });
 
-  describe('PUT /api/slots/:id', () => {
+  describe('PUT /api/v1/slots/:id', () => {
     it('should update a parking slot', async () => {
       const updates = {
         price: 100,
@@ -172,7 +177,7 @@ describe('Parking API Tests', () => {
       };
 
       const response = await request(app)
-        .put(`/api/slots/${testData.slot.id}`)
+        .put(`/api/v1/slots/${testData.slot.id}`)
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send(updates);
 
@@ -190,7 +195,7 @@ describe('Parking API Tests', () => {
 
     it('should fail without authentication', async () => {
       const response = await request(app)
-        .put(`/api/slots/${testData.slot.id}`)
+        .put(`/api/v1/slots/${testData.slot.id}`)
         .send({
           price: 100,
         });
@@ -200,7 +205,7 @@ describe('Parking API Tests', () => {
 
     it('should fail when updating another users slot', async () => {
       const response = await request(app)
-        .put(`/api/slots/${testData.slot.id}`)
+        .put(`/api/v1/slots/${testData.slot.id}`)
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           price: 100,
@@ -213,7 +218,7 @@ describe('Parking API Tests', () => {
 
     it('should allow partial updates', async () => {
       const response = await request(app)
-        .put(`/api/slots/${testData.slot.id}`)
+        .put(`/api/v1/slots/${testData.slot.id}`)
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send({
           price: 85,
@@ -231,7 +236,7 @@ describe('Parking API Tests', () => {
     });
   });
 
-  describe('DELETE /api/slots/:id', () => {
+  describe('DELETE /api/v1/slots/:id', () => {
     it('should delete a parking slot', async () => {
       // Create a slot to delete
       const slotToDelete = await prisma.parkingSlot.create({
@@ -247,7 +252,7 @@ describe('Parking API Tests', () => {
       });
 
       const response = await request(app)
-        .delete(`/api/slots/${slotToDelete.id}`)
+        .delete(`/api/v1/slots/${slotToDelete.id}`)
         .set('Authorization', `Bearer ${authTokens.host}`);
 
       expect(response.status).toBe(200);
@@ -263,7 +268,7 @@ describe('Parking API Tests', () => {
 
     it('should fail without authentication', async () => {
       const response = await request(app).delete(
-        `/api/slots/${testData.slot.id}`
+        `/api/v1/slots/${testData.slot.id}`
       );
 
       expect(response.status).toBe(401);
@@ -271,7 +276,7 @@ describe('Parking API Tests', () => {
 
     it('should fail when deleting another users slot', async () => {
       const response = await request(app)
-        .delete(`/api/slots/${testData.slot.id}`)
+        .delete(`/api/v1/slots/${testData.slot.id}`)
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(403);
@@ -281,14 +286,14 @@ describe('Parking API Tests', () => {
 
     it('should fail for non-existent slot', async () => {
       const response = await request(app)
-        .delete('/api/slots/99999')
+        .delete('/api/v1/slots/99999')
         .set('Authorization', `Bearer ${authTokens.host}`);
 
       expect(response.status).toBe(403);
     });
   });
 
-  describe('POST /api/bookings', () => {
+  describe('POST /api/v1/bookings', () => {
     beforeEach(async () => {
       // Ensure slot is available
       await prisma.parkingSlot.update({
@@ -302,7 +307,7 @@ describe('Parking API Tests', () => {
       const endTime = new Date(Date.now() + 7200000); // 2 hours from now
 
       const response = await request(app)
-        .post('/api/bookings')
+        .post('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -325,7 +330,7 @@ describe('Parking API Tests', () => {
       const endTime = new Date(Date.now() + 7200000); // 1 hour duration
 
       const response = await request(app)
-        .post('/api/bookings')
+        .post('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -344,7 +349,7 @@ describe('Parking API Tests', () => {
       const endTime = new Date(Date.now() + 7200000);
 
       await request(app)
-        .post('/api/bookings')
+        .post('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -370,7 +375,7 @@ describe('Parking API Tests', () => {
       const endTime = new Date(Date.now() + 7200000);
 
       const response = await request(app)
-        .post('/api/bookings')
+        .post('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -388,7 +393,7 @@ describe('Parking API Tests', () => {
       const endTime = new Date(Date.now() + 7200000);
 
       const response = await request(app)
-        .post('/api/bookings')
+        .post('/api/v1/bookings')
         .send({
           slotId: testData.slot.id,
           startTime: startTime.toISOString(),
@@ -399,7 +404,7 @@ describe('Parking API Tests', () => {
     });
   });
 
-  describe('GET /api/bookings', () => {
+  describe('GET /api/v1/bookings', () => {
     beforeEach(async () => {
       // Clean up bookings
       await prisma.booking.deleteMany({
@@ -418,7 +423,7 @@ describe('Parking API Tests', () => {
       const endTime = new Date(Date.now() + 7200000);
 
       await request(app)
-        .post('/api/bookings')
+        .post('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -427,7 +432,7 @@ describe('Parking API Tests', () => {
         });
 
       const response = await request(app)
-        .get('/api/bookings')
+        .get('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -449,7 +454,7 @@ describe('Parking API Tests', () => {
         const endTime = new Date(Date.now() + 7200000 * (i + 1));
 
         await request(app)
-          .post('/api/bookings')
+          .post('/api/v1/bookings')
           .set('Authorization', `Bearer ${authTokens.driver}`)
           .send({
             slotId: testData.slot.id,
@@ -467,7 +472,7 @@ describe('Parking API Tests', () => {
       }
 
       const response = await request(app)
-        .get('/api/bookings')
+        .get('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -482,14 +487,14 @@ describe('Parking API Tests', () => {
     });
 
     it('should fail without authentication', async () => {
-      const response = await request(app).get('/api/bookings');
+      const response = await request(app).get('/api/v1/bookings');
 
       expect(response.status).toBe(401);
     });
 
     it('should only return bookings for authenticated user', async () => {
       const response = await request(app)
-        .get('/api/bookings')
+        .get('/api/v1/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);

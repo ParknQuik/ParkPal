@@ -13,12 +13,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Import routes
-const marketplaceRoutes = require('../routes/marketplace');
-const authRoutes = require('../routes/auth');
+// Create a mock rate limiter for tests
+const rateLimit = require('express-rate-limit');
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests, please try again later.',
+});
 
-authRoutes(app);
-marketplaceRoutes(app);
+// Import v1 router
+const v1Router = require('../routes/v1');
+app.use('/api/v1', v1Router(authLimiter));
 
 let testData = {};
 let authTokens = {};
@@ -49,10 +54,10 @@ afterAll(async () => {
 });
 
 describe('Marketplace API Tests', () => {
-  describe('POST /api/marketplace/listings', () => {
+  describe('POST /api/v1/marketplace/listings', () => {
     it('should create a new listing with QR code', async () => {
       const response = await request(app)
-        .post('/api/marketplace/listings')
+        .post('/api/v1/marketplace/listings')
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send({
           lat: 14.5320,
@@ -77,7 +82,7 @@ describe('Marketplace API Tests', () => {
 
     it('should fail without authentication', async () => {
       const response = await request(app)
-        .post('/api/marketplace/listings')
+        .post('/api/v1/marketplace/listings')
         .send({
           lat: 14.5320,
           lon: 120.9850,
@@ -91,7 +96,7 @@ describe('Marketplace API Tests', () => {
 
     it('should fail with missing required fields', async () => {
       const response = await request(app)
-        .post('/api/marketplace/listings')
+        .post('/api/v1/marketplace/listings')
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send({
           lat: 14.5320,
@@ -103,9 +108,9 @@ describe('Marketplace API Tests', () => {
     });
   });
 
-  describe('GET /api/marketplace/search', () => {
+  describe('GET /api/v1/marketplace/search', () => {
     it('should return available listings', async () => {
-      const response = await request(app).get('/api/marketplace/search');
+      const response = await request(app).get('/api/v1/marketplace/search');
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('count');
@@ -115,7 +120,7 @@ describe('Marketplace API Tests', () => {
 
     it('should filter by location and radius', async () => {
       const response = await request(app).get(
-        '/api/marketplace/search?lat=14.5312&lon=120.9844&radius=10'
+        '/api/v1/marketplace/search?lat=14.5312&lon=120.9844&radius=10'
       );
 
       expect(response.status).toBe(200);
@@ -128,7 +133,7 @@ describe('Marketplace API Tests', () => {
 
     it('should filter by price range', async () => {
       const response = await request(app).get(
-        '/api/marketplace/search?minPrice=40&maxPrice=60'
+        '/api/v1/marketplace/search?minPrice=40&maxPrice=60'
       );
 
       expect(response.status).toBe(200);
@@ -140,7 +145,7 @@ describe('Marketplace API Tests', () => {
 
     it('should filter by slot type', async () => {
       const response = await request(app).get(
-        '/api/marketplace/search?slotType=roadside_qr'
+        '/api/v1/marketplace/search?slotType=roadside_qr'
       );
 
       expect(response.status).toBe(200);
@@ -151,7 +156,7 @@ describe('Marketplace API Tests', () => {
 
     it('should filter by amenities', async () => {
       const response = await request(app).get(
-        '/api/marketplace/search?amenities=covered,security'
+        '/api/v1/marketplace/search?amenities=covered,security'
       );
 
       expect(response.status).toBe(200);
@@ -163,7 +168,7 @@ describe('Marketplace API Tests', () => {
     });
 
     it('should parse JSON fields correctly', async () => {
-      const response = await request(app).get('/api/marketplace/search');
+      const response = await request(app).get('/api/v1/marketplace/search');
 
       expect(response.status).toBe(200);
       if (response.body.listings.length > 0) {
@@ -174,13 +179,13 @@ describe('Marketplace API Tests', () => {
     });
   });
 
-  describe('POST /api/marketplace/bookings', () => {
+  describe('POST /api/v1/marketplace/bookings', () => {
     it('should create a booking with correct pricing', async () => {
       const startTime = new Date(Date.now() + 3600000); // 1 hour from now
       const endTime = new Date(Date.now() + 7200000); // 2 hours from now
 
       const response = await request(app)
-        .post('/api/marketplace/bookings')
+        .post('/api/v1/marketplace/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -208,7 +213,7 @@ describe('Marketplace API Tests', () => {
       const endTime = new Date(Date.now() + 7200000);
 
       const response = await request(app)
-        .post('/api/marketplace/bookings')
+        .post('/api/v1/marketplace/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -231,7 +236,7 @@ describe('Marketplace API Tests', () => {
       const endTime = new Date(Date.now() + 7200000);
 
       const response = await request(app)
-        .post('/api/marketplace/bookings')
+        .post('/api/v1/marketplace/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: 99999,
@@ -247,7 +252,7 @@ describe('Marketplace API Tests', () => {
       const endTime = new Date(Date.now() + 7200000);
 
       await request(app)
-        .post('/api/marketplace/bookings')
+        .post('/api/v1/marketplace/bookings')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -272,7 +277,7 @@ describe('Marketplace API Tests', () => {
     });
   });
 
-  describe('POST /api/marketplace/qr/checkin', () => {
+  describe('POST /api/v1/marketplace/qr/checkin', () => {
     let qrCode;
 
     beforeEach(async () => {
@@ -290,7 +295,7 @@ describe('Marketplace API Tests', () => {
 
     it('should check in successfully with valid QR code', async () => {
       const response = await request(app)
-        .post('/api/marketplace/qr/checkin')
+        .post('/api/v1/marketplace/qr/checkin')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           qrData: qrCode,
@@ -305,7 +310,7 @@ describe('Marketplace API Tests', () => {
 
     it('should fail with invalid QR code format', async () => {
       const response = await request(app)
-        .post('/api/marketplace/qr/checkin')
+        .post('/api/v1/marketplace/qr/checkin')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           qrData: 'INVALID:QR:CODE',
@@ -317,7 +322,7 @@ describe('Marketplace API Tests', () => {
 
     it('should update slot status to occupied', async () => {
       await request(app)
-        .post('/api/marketplace/qr/checkin')
+        .post('/api/v1/marketplace/qr/checkin')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           qrData: qrCode,
@@ -331,7 +336,7 @@ describe('Marketplace API Tests', () => {
     });
   });
 
-  describe('POST /api/marketplace/qr/checkout', () => {
+  describe('POST /api/v1/marketplace/qr/checkout', () => {
     let sessionId;
 
     beforeEach(async () => {
@@ -340,7 +345,7 @@ describe('Marketplace API Tests', () => {
       const qrCode = generateQRCodeData(testData.slot.id.toString());
 
       const checkinResponse = await request(app)
-        .post('/api/marketplace/qr/checkin')
+        .post('/api/v1/marketplace/qr/checkin')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           qrData: qrCode,
@@ -354,7 +359,7 @@ describe('Marketplace API Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const response = await request(app)
-        .post('/api/marketplace/qr/checkout')
+        .post('/api/v1/marketplace/qr/checkout')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           sessionId,
@@ -370,7 +375,7 @@ describe('Marketplace API Tests', () => {
 
     it('should fail for non-existent session', async () => {
       const response = await request(app)
-        .post('/api/marketplace/qr/checkout')
+        .post('/api/v1/marketplace/qr/checkout')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           sessionId: 99999,
@@ -381,7 +386,7 @@ describe('Marketplace API Tests', () => {
 
     it('should fail if session belongs to different user', async () => {
       const response = await request(app)
-        .post('/api/marketplace/qr/checkout')
+        .post('/api/v1/marketplace/qr/checkout')
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send({
           sessionId,
@@ -392,7 +397,7 @@ describe('Marketplace API Tests', () => {
 
     it('should update slot status to available after checkout', async () => {
       await request(app)
-        .post('/api/marketplace/qr/checkout')
+        .post('/api/v1/marketplace/qr/checkout')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           sessionId,
@@ -406,7 +411,7 @@ describe('Marketplace API Tests', () => {
     });
   });
 
-  describe('POST /api/marketplace/reviews', () => {
+  describe('POST /api/v1/marketplace/reviews', () => {
     beforeEach(async () => {
       // Clean up reviews before each test
       await prisma.review.deleteMany({
@@ -421,7 +426,7 @@ describe('Marketplace API Tests', () => {
 
     it('should create a review and update slot rating', async () => {
       const response = await request(app)
-        .post('/api/marketplace/reviews')
+        .post('/api/v1/marketplace/reviews')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -444,7 +449,7 @@ describe('Marketplace API Tests', () => {
 
     it('should fail with invalid rating', async () => {
       const response = await request(app)
-        .post('/api/marketplace/reviews')
+        .post('/api/v1/marketplace/reviews')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -457,7 +462,7 @@ describe('Marketplace API Tests', () => {
 
     it('should fail for non-existent slot', async () => {
       const response = await request(app)
-        .post('/api/marketplace/reviews')
+        .post('/api/v1/marketplace/reviews')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: 99999,
@@ -491,7 +496,7 @@ describe('Marketplace API Tests', () => {
 
       // First review: 5 stars
       await request(app)
-        .post('/api/marketplace/reviews')
+        .post('/api/v1/marketplace/reviews')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           slotId: testData.slot.id,
@@ -500,7 +505,7 @@ describe('Marketplace API Tests', () => {
 
       // Second review: 3 stars
       await request(app)
-        .post('/api/marketplace/reviews')
+        .post('/api/v1/marketplace/reviews')
         .set('Authorization', `Bearer ${token2}`)
         .send({
           slotId: testData.slot.id,
@@ -516,7 +521,7 @@ describe('Marketplace API Tests', () => {
     });
   });
 
-  describe('GET /api/marketplace/host/earnings', () => {
+  describe('GET /api/v1/marketplace/host/earnings', () => {
     let booking;
 
     beforeEach(async () => {
@@ -544,7 +549,7 @@ describe('Marketplace API Tests', () => {
 
     it('should return host earnings summary', async () => {
       const response = await request(app)
-        .get('/api/marketplace/host/earnings')
+        .get('/api/v1/marketplace/host/earnings')
         .set('Authorization', `Bearer ${authTokens.host}`);
 
       expect(response.status).toBe(200);
@@ -563,7 +568,7 @@ describe('Marketplace API Tests', () => {
       const tomorrow = new Date(Date.now() + 86400000);
 
       const response = await request(app)
-        .get('/api/marketplace/host/earnings')
+        .get('/api/v1/marketplace/host/earnings')
         .query({
           startDate: yesterday.toISOString().split('T')[0],
           endDate: tomorrow.toISOString().split('T')[0],
@@ -576,7 +581,7 @@ describe('Marketplace API Tests', () => {
 
     it('should calculate pending payout correctly', async () => {
       const response = await request(app)
-        .get('/api/marketplace/host/earnings')
+        .get('/api/v1/marketplace/host/earnings')
         .set('Authorization', `Bearer ${authTokens.host}`);
 
       expect(response.status).toBe(200);
@@ -618,7 +623,7 @@ describe('Marketplace API Tests', () => {
       });
 
       const response = await request(app)
-        .get('/api/marketplace/host/earnings')
+        .get('/api/v1/marketplace/host/earnings')
         .set('Authorization', `Bearer ${authTokens.host}`);
 
       expect(response.status).toBe(200);
