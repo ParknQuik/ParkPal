@@ -1,5 +1,7 @@
 const authController = require('../controllers/authController');
 const { authenticate } = require('../services/auth');
+const { validateBody } = require('../middleware/validation');
+const { registerSchema, loginSchema, changePasswordSchema } = require('../validators/auth');
 
 module.exports = (app, authLimiter) => {
   /**
@@ -52,7 +54,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/api/auth/register', authLimiter, authController.register);
+  app.post('/api/auth/register', authLimiter, validateBody(registerSchema), authController.register);
 
   /**
    * @swagger
@@ -97,7 +99,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/api/auth/login', authLimiter, authController.login);
+  app.post('/api/auth/login', authLimiter, validateBody(loginSchema), authController.login);
 
   /**
    * @swagger
@@ -133,5 +135,5 @@ module.exports = (app, authLimiter) => {
    *       401:
    *         description: Incorrect current password or unauthorized
    */
-  app.put('/api/auth/password', authenticate, authLimiter, authController.changePassword);
+  app.put('/api/auth/password', authenticate, authLimiter, validateBody(changePasswordSchema), authController.changePassword);
 };
