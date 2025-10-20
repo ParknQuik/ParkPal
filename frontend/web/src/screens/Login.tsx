@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, TextField, Button, Typography, Container, Alert, Tab, Tabs } from '@mui/material';
-import api from '../api';
-import type { AuthResponse } from '../types';
-import { AxiosError } from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 interface FormData {
 	email: string;
@@ -13,6 +11,7 @@ interface FormData {
 
 const Login: React.FC = () => {
 	const navigate = useNavigate();
+	const { login, register, isLoading } = useAuth();
 	const [tab, setTab] = useState<number>(0);
 	const [formData, setFormData] = useState<FormData>({
 		email: '',
@@ -20,7 +19,6 @@ const Login: React.FC = () => {
 		name: ''
 	});
 	const [error, setError] = useState<string>('');
-	const [loading, setLoading] = useState<boolean>(false);
 
 	// Clear form when tab changes
 	useEffect(() => {
@@ -39,52 +37,28 @@ const Login: React.FC = () => {
 	const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
 		console.log('handleLogin called!');
 		e.preventDefault();
-		setLoading(true);
 		setError('');
 
 		try {
 			console.log('Attempting login with:', formData.email);
-			const { data } = await api.post<AuthResponse>('/auth/login', {
-				email: formData.email,
-				password: formData.password
-			});
-
-			console.log('Login successful:', data);
-			localStorage.setItem('token', data.token);
-			localStorage.setItem('user', JSON.stringify(data.user));
-
-			console.log('Navigating to /map...');
-			// Always redirect to map
+			await login(formData.email, formData.password);
+			console.log('Login successful, navigating to /map...');
 			navigate('/map');
 		} catch (err) {
 			console.error('Login error:', err);
-			const axiosError = err as AxiosError<{ error: string }>;
-			setError(axiosError.response?.data?.error || axiosError.message || 'Login failed');
-		} finally {
-			setLoading(false);
+			setError(err instanceof Error ? err.message : 'Login failed');
 		}
 	};
 
 	const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setLoading(true);
 		setError('');
 
 		try {
-			const { data } = await api.post<AuthResponse>('/auth/register', {
-				name: formData.name,
-				email: formData.email,
-				password: formData.password
-			});
-
-			localStorage.setItem('token', data.token);
-			localStorage.setItem('user', JSON.stringify(data.user));
+			await register(formData.name, formData.email, formData.password);
 			navigate('/map');
 		} catch (err) {
-			const axiosError = err as AxiosError<{ error: string }>;
-			setError(axiosError.response?.data?.error || 'Registration failed');
-		} finally {
-			setLoading(false);
+			setError(err instanceof Error ? err.message : 'Registration failed');
 		}
 	};
 
@@ -135,9 +109,9 @@ const Login: React.FC = () => {
 							variant="contained"
 							size="large"
 							sx={{ mt: 3 }}
-							disabled={loading}
+							disabled={isLoading}
 						>
-							{loading ? 'Logging in...' : 'Login'}
+							{isLoading ? 'Logging in...' : 'Login'}
 						</Button>
 					</Box>
 				) : (
@@ -177,9 +151,9 @@ const Login: React.FC = () => {
 							variant="contained"
 							size="large"
 							sx={{ mt: 3 }}
-							disabled={loading}
+							disabled={isLoading}
 						>
-							{loading ? 'Creating account...' : 'Register'}
+							{isLoading ? 'Creating account...' : 'Register'}
 						</Button>
 					</Box>
 				)}
