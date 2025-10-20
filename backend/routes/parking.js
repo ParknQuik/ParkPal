@@ -1,5 +1,6 @@
 const parkingController = require('../controllers/parkingController');
 const { authenticate } = require('../services/auth');
+const { deprecate } = require('../middleware/deprecation');
 
 module.exports = (app) => {
   /**
@@ -113,7 +114,16 @@ module.exports = (app) => {
    *       401:
    *         description: Unauthorized
    */
-  app.post('/api/slots', authenticate, parkingController.listSlot);
+  app.post(
+    '/api/slots',
+    deprecate({
+      alternative: 'POST /api/marketplace/listings',
+      sunset: '2026-06-01',
+      message: 'Use the new Marketplace API for creating listings with QR codes and enhanced features.'
+    }),
+    authenticate,
+    parkingController.listSlot
+  );
 
   /**
    * @swagger
@@ -149,7 +159,16 @@ module.exports = (app) => {
    *       403:
    *         description: Not authorized to update this slot
    */
-  app.put('/api/slots/:id', authenticate, parkingController.updateSlot);
+  app.put(
+    '/api/slots/:id',
+    deprecate({
+      alternative: 'PUT /api/marketplace/listings/:id',
+      sunset: '2026-06-01',
+      message: 'Use the Marketplace API for updating listings.'
+    }),
+    authenticate,
+    parkingController.updateSlot
+  );
 
   /**
    * @swagger

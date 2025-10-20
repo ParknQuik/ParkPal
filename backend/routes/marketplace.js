@@ -1,5 +1,6 @@
 const marketplaceController = require('../controllers/marketplaceController');
 const { authenticate } = require('../services/auth');
+const { paginate, validateSort } = require('../middleware/pagination');
 
 module.exports = (app) => {
   /**
@@ -123,7 +124,12 @@ module.exports = (app) => {
    *       200:
    *         description: List of matching parking slots
    */
-  app.get('/api/marketplace/search', marketplaceController.searchListings);
+  app.get(
+    '/api/marketplace/search',
+    paginate({ defaultLimit: 20, maxLimit: 100 }),
+    validateSort(['price', 'createdAt', 'averageRating'], 'createdAt', 'desc'),
+    marketplaceController.searchListings
+  );
 
   /**
    * @swagger
