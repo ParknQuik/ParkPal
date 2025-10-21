@@ -96,29 +96,54 @@ app.get('/api-docs.json', (req, res) => {
 app.use('/api/', globalLimiter);
 
 // Routes
-const authRoutes = require('./routes/auth');
-const parkingRoutes = require('./routes/parking');
-const paymentRoutes = require('./routes/payments');
-const alertRoutes = require('./routes/alerts');
-const marketplaceRoutes = require('./routes/marketplace');
-const configRoutes = require('./routes/config');
 const healthRoutes = require('./routes/health');
+const v1Router = require('./routes/v1');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { deprecate } = require('./middleware/deprecation');
 
 // Health check routes (before other routes)
 healthRoutes(app);
 
-// Auth routes get stricter rate limiting
-authRoutes(app, authLimiter);
-parkingRoutes(app);
-paymentRoutes(app);
-alertRoutes(app);
-marketplaceRoutes(app);
-configRoutes(app);
+// API v1 Routes - Primary endpoints
+app.use('/api/v1', v1Router(authLimiter));
+
+// Legacy /api routes - Deprecated but maintained for backward compatibility
+app.use('/api',
+  deprecate({
+    alternative: '/api/v1',
+    sunset: '2026-12-31',
+    message: 'Please migrate to /api/v1. The /api prefix without version will be removed on December 31, 2026.'
+  }),
+  v1Router(authLimiter)
+);
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'ParknQuik API is running', status: 'healthy' });
+  res.json({
+    name: 'ParknQuik API',
+    status: 'healthy',
+    version: '1.0.0',
+    apiVersions: {
+      current: 'v1',
+      available: ['v1'],
+      deprecated: {
+        '/api': {
+          alternative: '/api/v1',
+          sunset: '2026-12-31'
+        }
+      }
+    },
+    endpoints: {
+      health: '/health',
+      docs: '/api-docs',
+      apiV1: '/api/v1',
+      legacyApi: '/api (deprecated)'
+    },
+    documentation: {
+      swagger: '/api-docs',
+      swaggerJson: '/api-docs.json'
+    }
+  });
 });
 
 // 404 handler (must be after all routes)

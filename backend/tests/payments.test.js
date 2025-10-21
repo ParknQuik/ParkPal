@@ -12,14 +12,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Import routes
-const authRoutes = require('../routes/auth');
-const parkingRoutes = require('../routes/parking');
-const paymentRoutes = require('../routes/payments');
+// Create a mock rate limiter for tests
+const rateLimit = require('express-rate-limit');
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests, please try again later.',
+});
 
-authRoutes(app);
-parkingRoutes(app);
-paymentRoutes(app);
+// Import v1 router
+const v1Router = require('../routes/v1');
+app.use('/api/v1', v1Router(authLimiter));
 
 let testData = {};
 let authTokens = {};
@@ -68,10 +71,10 @@ afterAll(async () => {
 });
 
 describe('Payment API Tests', () => {
-  describe('POST /api/payments', () => {
+  describe('POST /api/v1/payments', () => {
     it('should process a payment successfully', async () => {
       const response = await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           bookingId: testBooking.id,
@@ -107,7 +110,7 @@ describe('Payment API Tests', () => {
       });
 
       await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           bookingId: newBooking.id,
@@ -124,7 +127,7 @@ describe('Payment API Tests', () => {
 
     it('should fail without authentication', async () => {
       const response = await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .send({
           bookingId: testBooking.id,
           paymentMethod: 'card',
@@ -136,7 +139,7 @@ describe('Payment API Tests', () => {
 
     it('should fail when paying for another users booking', async () => {
       const response = await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.host}`)
         .send({
           bookingId: testBooking.id,
@@ -151,7 +154,7 @@ describe('Payment API Tests', () => {
 
     it('should fail for non-existent booking', async () => {
       const response = await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           bookingId: 99999,
@@ -183,7 +186,7 @@ describe('Payment API Tests', () => {
         });
 
         const response = await request(app)
-          .post('/api/payments')
+          .post('/api/v1/payments')
           .set('Authorization', `Bearer ${authTokens.driver}`)
           .send({
             bookingId: booking.id,
@@ -197,7 +200,7 @@ describe('Payment API Tests', () => {
     });
   });
 
-  describe('GET /api/payments', () => {
+  describe('GET /api/v1/payments', () => {
     beforeAll(async () => {
       // Create some payments for testing
       await prisma.payment.deleteMany({
@@ -237,7 +240,7 @@ describe('Payment API Tests', () => {
 
     it('should return user payments', async () => {
       const response = await request(app)
-        .get('/api/payments')
+        .get('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -247,7 +250,7 @@ describe('Payment API Tests', () => {
 
     it('should include booking and slot information', async () => {
       const response = await request(app)
-        .get('/api/payments')
+        .get('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -259,7 +262,7 @@ describe('Payment API Tests', () => {
 
     it('should order payments by creation date (newest first)', async () => {
       const response = await request(app)
-        .get('/api/payments')
+        .get('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -273,7 +276,7 @@ describe('Payment API Tests', () => {
 
     it('should only return payments for authenticated user', async () => {
       const response = await request(app)
-        .get('/api/payments')
+        .get('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -283,13 +286,13 @@ describe('Payment API Tests', () => {
     });
 
     it('should fail without authentication', async () => {
-      const response = await request(app).get('/api/payments');
+      const response = await request(app).get('/api/v1/payments');
 
       expect(response.status).toBe(401);
     });
   });
 
-  describe('GET /api/payments/:id', () => {
+  describe('GET /api/v1/payments/:id', () => {
     let testPayment;
 
     beforeAll(async () => {
@@ -322,7 +325,7 @@ describe('Payment API Tests', () => {
 
     it('should return a specific payment', async () => {
       const response = await request(app)
-        .get(`/api/payments/${testPayment.id}`)
+        .get(`/api/v1/payments/${testPayment.id}`)
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -333,7 +336,7 @@ describe('Payment API Tests', () => {
 
     it('should include booking and slot information', async () => {
       const response = await request(app)
-        .get(`/api/payments/${testPayment.id}`)
+        .get(`/api/v1/payments/${testPayment.id}`)
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
@@ -342,14 +345,14 @@ describe('Payment API Tests', () => {
     });
 
     it('should fail without authentication', async () => {
-      const response = await request(app).get(`/api/payments/${testPayment.id}`);
+      const response = await request(app).get(`/api/v1/payments/${testPayment.id}`);
 
       expect(response.status).toBe(401);
     });
 
     it('should fail when accessing another users payment', async () => {
       const response = await request(app)
-        .get(`/api/payments/${testPayment.id}`)
+        .get(`/api/v1/payments/${testPayment.id}`)
         .set('Authorization', `Bearer ${authTokens.host}`);
 
       expect(response.status).toBe(403);
@@ -359,7 +362,7 @@ describe('Payment API Tests', () => {
 
     it('should fail for non-existent payment', async () => {
       const response = await request(app)
-        .get('/api/payments/99999')
+        .get('/api/v1/payments/99999')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(403);

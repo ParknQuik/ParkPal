@@ -142,7 +142,7 @@ const MapView = () => {
 			// Use searchCenter if set (user moved map), otherwise use userLocation
 			const center = searchCenter || userLocation || defaultCenter;
 
-			const { data } = await api.get('/marketplace/search', {
+			const response = await api.get('/marketplace/search', {
 				params: {
 					lat: center.lat,
 					lon: center.lng || center.lon,
@@ -150,8 +150,10 @@ const MapView = () => {
 					status: 'available',
 				},
 			});
-			setSlots(data.listings || data || []);
-			setFilteredSlots(data.listings || data || []);
+			// Handle v1 API response format: { data: [...], pagination: {...} }
+			const slotsData = response.data?.data || response.data?.listings || response.data || [];
+			setSlots(slotsData);
+			setFilteredSlots(slotsData);
 		} catch (error) {
 			console.error('Error fetching slots:', error);
 			setError('Failed to load parking slots');

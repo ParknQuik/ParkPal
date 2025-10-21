@@ -63,7 +63,7 @@ module.exports = (app) => {
    *         description: Invalid input
    */
   app.post(
-    '/api/marketplace/listings',
+    '/marketplace/listings',
     authenticate,
     marketplaceController.createListing
   );
@@ -125,7 +125,7 @@ module.exports = (app) => {
    *         description: List of matching parking slots
    */
   app.get(
-    '/api/marketplace/search',
+    '/marketplace/search',
     paginate({ defaultLimit: 20, maxLimit: 100 }),
     validateSort(['price', 'createdAt', 'averageRating'], 'createdAt', 'desc'),
     marketplaceController.searchListings
@@ -170,7 +170,7 @@ module.exports = (app) => {
    *         description: Slot not found
    */
   app.post(
-    '/api/marketplace/bookings',
+    '/marketplace/bookings',
     authenticate,
     marketplaceController.createBooking
   );
@@ -210,7 +210,7 @@ module.exports = (app) => {
    *         description: Slot not found
    */
   app.post(
-    '/api/marketplace/qr/checkin',
+    '/marketplace/qr/checkin',
     authenticate,
     marketplaceController.qrCheckIn
   );
@@ -246,7 +246,7 @@ module.exports = (app) => {
    *         description: Session not found
    */
   app.post(
-    '/api/marketplace/qr/checkout',
+    '/marketplace/qr/checkout',
     authenticate,
     marketplaceController.qrCheckOut
   );
@@ -294,7 +294,7 @@ module.exports = (app) => {
    *         description: Slot not found
    */
   app.post(
-    '/api/marketplace/reviews',
+    '/marketplace/reviews',
     authenticate,
     marketplaceController.createReview
   );
@@ -325,7 +325,7 @@ module.exports = (app) => {
    *         description: Host earnings data with summary and detailed bookings
    */
   app.get(
-    '/api/marketplace/host/earnings',
+    '/marketplace/host/earnings',
     authenticate,
     marketplaceController.getHostEarnings
   );

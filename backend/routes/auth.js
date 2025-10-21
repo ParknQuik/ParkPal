@@ -54,7 +54,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/api/auth/register', authLimiter, validateBody(registerSchema), authController.register);
+  app.post('/auth/register', authLimiter, validateBody(registerSchema), authController.register);
 
   /**
    * @swagger
@@ -99,7 +99,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/api/auth/login', authLimiter, validateBody(loginSchema), authController.login);
+  app.post('/auth/login', authLimiter, validateBody(loginSchema), authController.login);
 
   /**
    * @swagger
@@ -135,5 +135,5 @@ module.exports = (app, authLimiter) => {
    *       401:
    *         description: Incorrect current password or unauthorized
    */
-  app.put('/api/auth/password', authenticate, authLimiter, validateBody(changePasswordSchema), authController.changePassword);
+  app.put('/auth/password', authenticate, authLimiter, validateBody(changePasswordSchema), authController.changePassword);
 };

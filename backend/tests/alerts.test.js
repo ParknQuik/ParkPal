@@ -7,14 +7,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Import routes
-const alertRoutes = require('../routes/alerts');
-alertRoutes(app);
+// Create a mock rate limiter for tests
+const rateLimit = require('express-rate-limit');
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests, please try again later.',
+});
+
+// Import v1 router
+const v1Router = require('../routes/v1');
+app.use('/api/v1', v1Router(authLimiter));
 
 describe('Alerts API Tests', () => {
-  describe('GET /api/alerts', () => {
+  describe('GET /api/v1/alerts', () => {
     it('should require latitude and longitude parameters', async () => {
-      const response = await request(app).get('/api/alerts');
+      const response = await request(app).get('/api/v1/alerts');
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('error');
@@ -22,20 +30,20 @@ describe('Alerts API Tests', () => {
     });
 
     it('should fail with only latitude', async () => {
-      const response = await request(app).get('/api/alerts?lat=14.5995');
+      const response = await request(app).get('/api/v1/alerts?lat=14.5995');
 
       expect(response.status).toBe(400);
     });
 
     it('should fail with only longitude', async () => {
-      const response = await request(app).get('/api/alerts?lon=120.9842');
+      const response = await request(app).get('/api/v1/alerts?lon=120.9842');
 
       expect(response.status).toBe(400);
     });
 
     it('should return response with valid coordinates (may not have API key)', async () => {
       const response = await request(app).get(
-        '/api/alerts?lat=14.5995&lon=120.9842'
+        '/api/v1/alerts?lat=14.5995&lon=120.9842'
       );
 
       expect(response.status).toBe(200);
@@ -65,7 +73,7 @@ describe('Alerts API Tests', () => {
 
       for (const coord of coords) {
         const response = await request(app).get(
-          `/api/alerts?lat=${coord.lat}&lon=${coord.lon}`
+          `/api/v1/alerts?lat=${coord.lat}&lon=${coord.lon}`
         );
 
         expect(response.status).toBe(200);
@@ -75,7 +83,7 @@ describe('Alerts API Tests', () => {
 
     it('should return timestamp in ISO format', async () => {
       const response = await request(app).get(
-        '/api/alerts?lat=14.5995&lon=120.9842'
+        '/api/v1/alerts?lat=14.5995&lon=120.9842'
       );
 
       expect(response.status).toBe(200);
@@ -88,7 +96,7 @@ describe('Alerts API Tests', () => {
 
     it('should handle invalid latitude format gracefully', async () => {
       const response = await request(app).get(
-        '/api/alerts?lat=invalid&lon=120.9842'
+        '/api/v1/alerts?lat=invalid&lon=120.9842'
       );
 
       // Should either work (if API handles it) or fail gracefully
@@ -97,7 +105,7 @@ describe('Alerts API Tests', () => {
 
     it('should handle invalid longitude format gracefully', async () => {
       const response = await request(app).get(
-        '/api/alerts?lat=14.5995&lon=invalid'
+        '/api/v1/alerts?lat=14.5995&lon=invalid'
       );
 
       // Should either work (if API handles it) or fail gracefully
@@ -113,7 +121,7 @@ describe('Alerts API Tests', () => {
 
       for (const coord of extremes) {
         const response = await request(app).get(
-          `/api/alerts?lat=${coord.lat}&lon=${coord.lon}`
+          `/api/v1/alerts?lat=${coord.lat}&lon=${coord.lon}`
         );
 
         // Should handle gracefully even if out of normal range
@@ -124,7 +132,7 @@ describe('Alerts API Tests', () => {
     it('should not require authentication', async () => {
       // Alerts endpoint should be public
       const response = await request(app).get(
-        '/api/alerts?lat=14.5995&lon=120.9842'
+        '/api/v1/alerts?lat=14.5995&lon=120.9842'
       );
 
       expect(response.status).toBe(200);
@@ -133,7 +141,7 @@ describe('Alerts API Tests', () => {
 
     it('should return alerts as an array', async () => {
       const response = await request(app).get(
-        '/api/alerts?lat=14.5995&lon=120.9842'
+        '/api/v1/alerts?lat=14.5995&lon=120.9842'
       );
 
       expect(response.status).toBe(200);

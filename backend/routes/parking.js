@@ -35,7 +35,7 @@ module.exports = (app) => {
    *               items:
    *                 $ref: '#/components/schemas/Slot'
    */
-  app.get('/api/slots', parkingController.getSlots);
+  app.get('/slots', parkingController.getSlots);
 
   /**
    * @swagger
@@ -60,7 +60,7 @@ module.exports = (app) => {
    *       404:
    *         description: Slot not found
    */
-  app.get('/api/slots/:id', parkingController.getSlotById);
+  app.get('/slots/:id', parkingController.getSlotById);
 
   /**
    * @swagger
@@ -115,7 +115,7 @@ module.exports = (app) => {
    *         description: Unauthorized
    */
   app.post(
-    '/api/slots',
+    '/slots',
     deprecate({
       alternative: 'POST /api/marketplace/listings',
       sunset: '2026-06-01',
@@ -160,7 +160,7 @@ module.exports = (app) => {
    *         description: Not authorized to update this slot
    */
   app.put(
-    '/api/slots/:id',
+    '/slots/:id',
     deprecate({
       alternative: 'PUT /api/marketplace/listings/:id',
       sunset: '2026-06-01',
@@ -190,7 +190,7 @@ module.exports = (app) => {
    *       403:
    *         description: Not authorized to delete this slot
    */
-  app.delete('/api/slots/:id', authenticate, parkingController.deleteSlot);
+  app.delete('/slots/:id', authenticate, parkingController.deleteSlot);
 
   /**
    * @swagger
@@ -232,7 +232,7 @@ module.exports = (app) => {
    *       400:
    *         description: Slot not available
    */
-  app.post('/api/bookings', authenticate, parkingController.reserveSlot);
+  app.post('/bookings', authenticate, parkingController.reserveSlot);
 
   /**
    * @swagger
@@ -252,5 +252,5 @@ module.exports = (app) => {
    *               items:
    *                 $ref: '#/components/schemas/Booking'
    */
-  app.get('/api/bookings', authenticate, parkingController.getUserBookings);
+  app.get('/bookings', authenticate, parkingController.getUserBookings);
 };
