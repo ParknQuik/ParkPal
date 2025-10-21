@@ -35,10 +35,10 @@ exports.registerSchema = Joi.object({
     }),
 
   role: Joi.string()
-    .valid('driver', 'host', 'admin', 'operator')
-    .default('driver')
+    .valid('driver', 'host', 'admin', 'operator', 'user')
+    .default('user')
     .messages({
-      'any.only': 'Role must be one of: driver, host, admin, operator'
+      'any.only': 'Role must be one of: driver, host, admin, operator, user'
     }),
 
   phone: Joi.string()
@@ -83,10 +83,10 @@ exports.updateProfileSchema = Joi.object({
 });
 
 exports.changePasswordSchema = Joi.object({
-  currentPassword: Joi.string()
+  oldPassword: Joi.string()
     .required()
     .messages({
-      'any.required': 'Current password is required'
+      'any.required': 'Old password is required'
     }),
 
   newPassword: Joi.string()
@@ -94,7 +94,7 @@ exports.changePasswordSchema = Joi.object({
     .max(72)
     .pattern(passwordRegex)
     .required()
-    .invalid(Joi.ref('currentPassword'))
+    .invalid(Joi.ref('oldPassword'))
     .messages({
       'string.min': 'New password must be at least 8 characters',
       'string.max': 'New password must be less than 72 characters',
