@@ -47,7 +47,7 @@ export const HomeScreen: React.FC = () => {
     }, 3000);
 
     return () => clearTimeout(fallbackTimer);
-  }, [dispatch, currentLocation, filters.sortBy]);
+  }, [dispatch]);
 
   useEffect(() => {
     if (currentLocation) {

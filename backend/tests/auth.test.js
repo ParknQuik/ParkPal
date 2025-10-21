@@ -16,9 +16,9 @@ const authLimiter = rateLimit({
   message: 'Too many requests, please try again later.',
 });
 
-// Import routes
-const authRoutes = require('../routes/auth');
-authRoutes(app, authLimiter);
+// Import v1 router
+const v1Router = require('../routes/v1');
+app.use('/api/v1', v1Router(authLimiter));
 
 beforeAll(async () => {
   await cleanDatabase();
@@ -37,10 +37,10 @@ describe('Auth API Tests', () => {
     role: 'driver',
   };
 
-  describe('POST /api/auth/register', () => {
+  describe('POST /api/v1/auth/register', () => {
     it('should register a new user successfully', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send(testUser);
 
       expect(response.status).toBe(201);
@@ -54,7 +54,7 @@ describe('Auth API Tests', () => {
 
     it('should fail with duplicate email', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send(testUser);
 
       expect(response.status).toBe(400);
@@ -64,7 +64,7 @@ describe('Auth API Tests', () => {
 
     it('should fail without required fields', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Test',
           // Missing email and password
@@ -75,7 +75,7 @@ describe('Auth API Tests', () => {
 
     it('should reject invalid email format', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Test User',
           email: 'novalid@test',
@@ -97,7 +97,7 @@ describe('Auth API Tests', () => {
 
     it('should default role to user if not provided', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Another User',
           email: 'another@example.com',
@@ -110,10 +110,10 @@ describe('Auth API Tests', () => {
     });
   });
 
-  describe('POST /api/auth/login', () => {
+  describe('POST /api/v1/auth/login', () => {
     it('should login successfully with correct credentials', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testUser.email,
           password: testUser.password,
@@ -128,7 +128,7 @@ describe('Auth API Tests', () => {
 
     it('should fail with incorrect password', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testUser.email,
           password: 'wrongpassword',
@@ -141,7 +141,7 @@ describe('Auth API Tests', () => {
 
     it('should fail with non-existent email', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: 'nonexistent@example.com',
           password: 'testpass123',
@@ -153,7 +153,7 @@ describe('Auth API Tests', () => {
 
     it('should fail without email', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           password: 'testpass123',
         });
@@ -163,7 +163,7 @@ describe('Auth API Tests', () => {
 
     it('should fail without password', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testUser.email,
         });
@@ -173,7 +173,7 @@ describe('Auth API Tests', () => {
 
     it('should return valid JWT token', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testUser.email,
           password: testUser.password,
@@ -184,7 +184,7 @@ describe('Auth API Tests', () => {
 
     it('should login case-insensitively for email', async () => {
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testUser.email.toUpperCase(),
           password: testUser.password,
@@ -198,7 +198,7 @@ describe('Auth API Tests', () => {
   describe('User Roles', () => {
     it('should create user with host role', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Host User',
           email: 'host@example.com',
@@ -212,7 +212,7 @@ describe('Auth API Tests', () => {
 
     it('should create user with admin role', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Admin User',
           email: 'admin@example.com',
@@ -228,7 +228,7 @@ describe('Auth API Tests', () => {
   describe('Security', () => {
     it('should not expose password in response', async () => {
       const registerResponse = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Security Test',
           email: 'security@example.com',
@@ -238,7 +238,7 @@ describe('Auth API Tests', () => {
       expect(registerResponse.body.user).not.toHaveProperty('password');
 
       const loginResponse = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: 'security@example.com',
           password: 'TestPass123!',
@@ -249,14 +249,14 @@ describe('Auth API Tests', () => {
 
     it('should generate unique tokens for each login', async () => {
       const response1 = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testUser.email,
           password: testUser.password,
         });
 
       const response2 = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testUser.email,
           password: testUser.password,
@@ -272,7 +272,7 @@ describe('Auth API Tests', () => {
   describe('Password Validation', () => {
     it('should reject passwords shorter than 8 characters', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Test',
           email: 'short@test.com',
@@ -285,7 +285,7 @@ describe('Auth API Tests', () => {
 
     it('should reject passwords without uppercase letters', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Test',
           email: 'lower@test.com',
@@ -298,7 +298,7 @@ describe('Auth API Tests', () => {
 
     it('should reject passwords without lowercase letters', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Test',
           email: 'upper@test.com',
@@ -311,7 +311,7 @@ describe('Auth API Tests', () => {
 
     it('should reject passwords without numbers', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Test',
           email: 'nonum@test.com',
@@ -325,7 +325,7 @@ describe('Auth API Tests', () => {
     it('should reject passwords exceeding 72 characters', async () => {
       const longPassword = 'A1' + 'a'.repeat(71); // 73 chars
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Test',
           email: 'toolong@test.com',
@@ -338,7 +338,7 @@ describe('Auth API Tests', () => {
 
     it('should accept strong valid passwords', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Strong User',
           email: 'strong@test.com',
@@ -351,7 +351,7 @@ describe('Auth API Tests', () => {
 
     it('should return warnings for weak but valid passwords', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Weak User',
           email: 'weak@test.com',
@@ -372,7 +372,7 @@ describe('Auth API Tests', () => {
     beforeAll(async () => {
       // Create a user and get token
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           name: 'Change Test User',
           email: 'change@test.com',
@@ -383,7 +383,7 @@ describe('Auth API Tests', () => {
 
     it('should change password successfully', async () => {
       const response = await request(app)
-        .put('/api/auth/password')
+        .put('/api/v1/auth/password')
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           oldPassword: 'OldPass123!',
@@ -396,7 +396,7 @@ describe('Auth API Tests', () => {
 
     it('should reject password change with incorrect old password', async () => {
       const response = await request(app)
-        .put('/api/auth/password')
+        .put('/api/v1/auth/password')
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           oldPassword: 'WrongPassword123',
@@ -409,7 +409,7 @@ describe('Auth API Tests', () => {
 
     it('should reject changing to same password', async () => {
       const response = await request(app)
-        .put('/api/auth/password')
+        .put('/api/v1/auth/password')
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           oldPassword: 'NewPass456!',
@@ -422,7 +422,7 @@ describe('Auth API Tests', () => {
 
     it('should reject weak new password', async () => {
       const response = await request(app)
-        .put('/api/auth/password')
+        .put('/api/v1/auth/password')
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           oldPassword: 'NewPass456!',
@@ -435,7 +435,7 @@ describe('Auth API Tests', () => {
 
     it('should require authentication', async () => {
       const response = await request(app)
-        .put('/api/auth/password')
+        .put('/api/v1/auth/password')
         .send({
           oldPassword: 'NewPass456!',
           newPassword: 'AnotherPass789!',

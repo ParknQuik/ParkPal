@@ -29,7 +29,28 @@ export const searchListings = createAsyncThunk(
   'marketplace/searchListings',
   async (params?: SearchFilters) => {
     const response = await marketplaceAPI.searchListings(params);
-    return response.data;
+    // Handle v1 API response format: { data: [...], pagination: {...} }
+    const listings = response.data?.data || response.data || [];
+
+    // Transform API response to match mobile app interface
+    return listings.map((listing: any) => ({
+      id: listing.id,
+      title: listing.address, // Use address as title
+      description: listing.description || '',
+      address: listing.address,
+      latitude: listing.lat,
+      longitude: listing.lon,
+      pricePerHour: listing.price,
+      photos: listing.photos || [],
+      amenities: listing.amenities || [],
+      hostId: listing.ownerId || listing.owner?.id,
+      hostName: listing.owner?.name || 'Unknown Host',
+      hostAvatar: listing.owner?.profileImageUrl,
+      rating: listing.rating || 0,
+      reviewCount: 0, // API doesn't return this, would need separate query
+      distance: listing.distance,
+      availability: listing.status === 'available',
+    }));
   }
 );
 

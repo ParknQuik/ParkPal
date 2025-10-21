@@ -124,19 +124,21 @@ export const MapViewScreen: React.FC = () => {
             left: 20,
           }}
         >
-          {listings.map((listing: any) => (
-            <Marker
-              key={listing.id}
-              coordinate={{
-                latitude: listing.lat,
-                longitude: listing.lon,
-              }}
-              title={`₱${listing.price}/hr`}
-              description={listing.address}
-              pinColor={listing.status === 'available' ? '#22c55e' : '#ef4444'}
-              onPress={() => handleMarkerPress(listing.id)}
-            />
-          ))}
+          {listings
+            .filter((listing: any) => listing.latitude != null && listing.longitude != null)
+            .map((listing: any) => (
+              <Marker
+                key={listing.id}
+                coordinate={{
+                  latitude: listing.latitude,
+                  longitude: listing.longitude,
+                }}
+                title={`₱${listing.pricePerHour}/hr`}
+                description={listing.address}
+                pinColor={listing.availability ? '#22c55e' : '#ef4444'}
+                onPress={() => handleMarkerPress(listing.id)}
+              />
+            ))}
         </MapView>
       )}
 
@@ -180,15 +182,15 @@ export const MapViewScreen: React.FC = () => {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Price</Text>
                 <Text style={styles.priceText}>
-                  ₱{selectedSpot.price}/hour
+                  ₱{selectedSpot.pricePerHour}/hour
                 </Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Availability</Text>
                 <Badge
-                  text={selectedSpot.status}
+                  text={selectedSpot.availability ? 'available' : 'occupied'}
                   variant={
-                    selectedSpot.status === 'available'
+                    selectedSpot.availability
                       ? 'success'
                       : 'error'
                   }
