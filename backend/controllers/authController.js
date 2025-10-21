@@ -3,19 +3,9 @@ const { generateToken, hashPassword, comparePassword, validatePassword } = requi
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role = 'user' } = req.body;
+    const { name, email, password, role } = req.validatedData;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-
-    // Async password validation
+    // Async password validation (for breached password check)
     const passwordValidation = await validatePassword(password);
     if (!passwordValidation.valid) {
       return res.status(400).json({ error: passwordValidation.error });
@@ -65,14 +55,8 @@ exports.register = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
+    const { oldPassword, newPassword } = req.validatedData;
     const userId = req.user.id;
-
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({
-        error: 'Both old and new passwords are required'
-      });
-    }
 
     // Get user
     const user = await prisma.user.findUnique({
@@ -89,15 +73,7 @@ exports.changePassword = async (req, res) => {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    // Check new password isn't same as old
-    const isSamePassword = await comparePassword(newPassword, user.password);
-    if (isSamePassword) {
-      return res.status(400).json({
-        error: 'New password must be different from current password'
-      });
-    }
-
-    // Validate new password
+    // Validate new password (for breached password check)
     const passwordValidation = await validatePassword(newPassword);
     if (!passwordValidation.valid) {
       return res.status(400).json({ error: passwordValidation.error });

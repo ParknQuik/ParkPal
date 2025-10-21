@@ -33,7 +33,7 @@ beforeAll(async () => {
 
   // Login test users to get tokens
   const driverLogin = await request(app)
-    .post('/api/auth/login')
+    .post('/api/v1/auth/login')
     .send({
       email: 'test-driver@example.com',
       password: 'testpass123',
@@ -41,7 +41,7 @@ beforeAll(async () => {
   authTokens.driver = driverLogin.body.token;
 
   const hostLogin = await request(app)
-    .post('/api/auth/login')
+    .post('/api/v1/auth/login')
     .send({
       email: 'test-host@example.com',
       password: 'testpass123',
@@ -113,9 +113,9 @@ describe('Marketplace API Tests', () => {
       const response = await request(app).get('/api/v1/marketplace/search');
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('count');
-      expect(response.body).toHaveProperty('listings');
-      expect(Array.isArray(response.body.listings)).toBe(true);
+      expect(response.body).toHaveProperty('data');
+      expect(response.body).toHaveProperty('pagination');
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should filter by location and radius', async () => {
@@ -124,10 +124,10 @@ describe('Marketplace API Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      expect(response.body.listings).toBeDefined();
+      expect(response.body.data).toBeDefined();
       // Should include distance field when location provided
-      if (response.body.listings.length > 0) {
-        expect(response.body.listings[0]).toHaveProperty('distance');
+      if (response.body.data.length > 0) {
+        expect(response.body.data[0]).toHaveProperty('distance');
       }
     });
 
@@ -137,7 +137,7 @@ describe('Marketplace API Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      response.body.listings.forEach((listing) => {
+      response.body.data.forEach((listing) => {
         expect(listing.price).toBeGreaterThanOrEqual(40);
         expect(listing.price).toBeLessThanOrEqual(60);
       });
@@ -149,7 +149,7 @@ describe('Marketplace API Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      response.body.listings.forEach((listing) => {
+      response.body.data.forEach((listing) => {
         expect(listing.slotType).toBe('roadside_qr');
       });
     });
@@ -160,7 +160,7 @@ describe('Marketplace API Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      response.body.listings.forEach((listing) => {
+      response.body.data.forEach((listing) => {
         const amenities = listing.amenities;
         expect(amenities).toContain('covered');
         expect(amenities).toContain('security');
@@ -171,8 +171,8 @@ describe('Marketplace API Tests', () => {
       const response = await request(app).get('/api/v1/marketplace/search');
 
       expect(response.status).toBe(200);
-      if (response.body.listings.length > 0) {
-        const firstListing = response.body.listings[0];
+      if (response.body.data.length > 0) {
+        const firstListing = response.body.data[0];
         expect(Array.isArray(firstListing.amenities)).toBe(true);
         expect(Array.isArray(firstListing.photos)).toBe(true);
       }
@@ -486,7 +486,7 @@ describe('Marketplace API Tests', () => {
       });
 
       const loginResponse = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: 'test-driver2@example.com',
           password: 'testpass123',

@@ -33,7 +33,7 @@ beforeAll(async () => {
 
   // Login test users to get tokens
   const driverLogin = await request(app)
-    .post('/api/auth/login')
+    .post('/api/v1/auth/login')
     .send({
       email: 'test-driver@example.com',
       password: 'testpass123',
@@ -41,7 +41,7 @@ beforeAll(async () => {
   authTokens.driver = driverLogin.body.token;
 
   const hostLogin = await request(app)
-    .post('/api/auth/login')
+    .post('/api/v1/auth/login')
     .send({
       email: 'test-host@example.com',
       password: 'testpass123',
