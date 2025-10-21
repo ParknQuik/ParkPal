@@ -83,7 +83,9 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('email');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details.some(d => d.field === 'email')).toBe(true);
     });
 
     it('should hash password before storing', async () => {
@@ -280,7 +282,9 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('at least 8 characters');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details.some(d => d.message.includes('at least 8 characters'))).toBe(true);
     });
 
     it('should reject passwords without uppercase letters', async () => {
@@ -293,7 +297,9 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('uppercase');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details.some(d => d.message.includes('uppercase'))).toBe(true);
     });
 
     it('should reject passwords without lowercase letters', async () => {
@@ -306,7 +312,9 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('lowercase');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details.some(d => d.message.includes('lowercase'))).toBe(true);
     });
 
     it('should reject passwords without numbers', async () => {
@@ -319,7 +327,9 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('number');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details.some(d => d.message.includes('number'))).toBe(true);
     });
 
     it('should reject passwords exceeding 72 characters', async () => {
@@ -333,7 +343,9 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('72 characters');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details.some(d => d.message.includes('72 characters'))).toBe(true);
     });
 
     it('should accept strong valid passwords', async () => {
@@ -417,7 +429,9 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('different');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details.some(d => d.message.includes('different'))).toBe(true);
     });
 
     it('should reject weak new password', async () => {
