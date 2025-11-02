@@ -7,6 +7,7 @@ import { ListSpotScreen } from '../screens/ListSpotScreen';
 import { QRScannerScreen } from '../screens/QRScannerScreen';
 import { QRGeneratorScreen } from '../screens/QRGeneratorScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
+import { EditProfileScreen } from '../screens/EditProfileScreen';
 
 const Stack = createStackNavigator();
 
@@ -64,6 +65,14 @@ export const MainStack: React.FC = () => {
         options={{
           headerShown: false,
           presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
         }}
       />
     </Stack.Navigator>

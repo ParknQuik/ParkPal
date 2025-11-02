@@ -12,8 +12,18 @@ import {
 	ListItemText,
 	Divider,
 	Chip,
-	CircularProgress
+	CircularProgress,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	TextField,
+	Alert,
+	Snackbar,
+	IconButton,
+	Grid
 } from '@mui/material';
+import { Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
 import api from '../api';
 import type { User } from '../types';
 
@@ -35,27 +45,47 @@ interface Booking {
 	slot?: BookingSlot;
 }
 
+interface UserStats {
+	totalBookings: number;
+	activeBookings: number;
+	completedBookings: number;
+	totalSpent: number;
+	totalListings?: number;
+	totalEarnings?: number;
+	totalHostBookings?: number;
+}
+
 const Profile: React.FC = () => {
 	const navigate = useNavigate();
 	const [user, setUser] = useState<User | null>(null);
 	const [bookings, setBookings] = useState<Booking[]>([]);
+	const [stats, setStats] = useState<UserStats | null>(null);
 	const [loading, setLoading] = useState<boolean>(true);
+	const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
+	const [editForm, setEditForm] = useState({ name: '', phone: '' });
+	const [saving, setSaving] = useState<boolean>(false);
+	const [error, setError] = useState<string>('');
+	const [success, setSuccess] = useState<string>('');
 
 	useEffect(() => {
 		const userData = localStorage.getItem('user');
 		if (userData) {
 			setUser(JSON.parse(userData) as User);
 		}
-		fetchBookings();
+		fetchData();
 	}, []);
 
-	const fetchBookings = async (): Promise<void> => {
+	const fetchData = async (): Promise<void> => {
 		try {
 			setLoading(true);
-			const { data } = await api.get<Booking[]>('/bookings');
-			setBookings(data);
+			const [bookingsRes, statsRes] = await Promise.all([
+				api.get<Booking[]>('/bookings'),
+				api.get<UserStats>('/users/stats')
+			]);
+			setBookings(bookingsRes.data);
+			setStats(statsRes.data);
 		} catch (error) {
-			console.error('Error fetching bookings:', error);
+			console.error('Error fetching data:', error);
 		} finally {
 			setLoading(false);
 		}
@@ -65,6 +95,45 @@ const Profile: React.FC = () => {
 		localStorage.removeItem('token');
 		localStorage.removeItem('user');
 		navigate('/');
+	};
+
+	const handleEditOpen = (): void => {
+		setEditForm({
+			name: user?.name || '',
+			phone: user?.phone || ''
+		});
+		setEditDialogOpen(true);
+	};
+
+	const handleEditClose = (): void => {
+		setEditDialogOpen(false);
+		setError('');
+	};
+
+	const handleEditSave = async (): Promise<void> => {
+		try {
+			setSaving(true);
+			setError('');
+
+			if (!editForm.name.trim()) {
+				setError('Name is required');
+				return;
+			}
+
+			const { data } = await api.patch<User>('/users/profile', {
+				name: editForm.name.trim(),
+				phone: editForm.phone.trim() || null
+			});
+
+			setUser(data);
+			localStorage.setItem('user', JSON.stringify(data));
+			setSuccess('Profile updated successfully');
+			setEditDialogOpen(false);
+		} catch (err: any) {
+			setError(err.response?.data?.error || 'Failed to update profile');
+		} finally {
+			setSaving(false);
+		}
 	};
 
 	if (loading) {
@@ -83,16 +152,118 @@ const Profile: React.FC = () => {
 				Profile
 			</Typography>
 
+			{/* User Stats */}
+			{stats && (
+				<Grid container spacing={2} sx={{ mt: 2 }}>
+					<Grid item xs={6} sm={3}>
+						<Card>
+							<CardContent sx={{ textAlign: 'center' }}>
+								<Typography variant="h4" color="primary">
+									{stats.totalBookings}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Total Bookings
+								</Typography>
+							</CardContent>
+						</Card>
+					</Grid>
+					<Grid item xs={6} sm={3}>
+						<Card>
+							<CardContent sx={{ textAlign: 'center' }}>
+								<Typography variant="h4" color="success.main">
+									{stats.activeBookings}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Active
+								</Typography>
+							</CardContent>
+						</Card>
+					</Grid>
+					<Grid item xs={6} sm={3}>
+						<Card>
+							<CardContent sx={{ textAlign: 'center' }}>
+								<Typography variant="h4" color="text.secondary">
+									{stats.completedBookings}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Completed
+								</Typography>
+							</CardContent>
+						</Card>
+					</Grid>
+					<Grid item xs={6} sm={3}>
+						<Card>
+							<CardContent sx={{ textAlign: 'center' }}>
+								<Typography variant="h4" color="secondary">
+									₱{stats.totalSpent.toFixed(2)}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Total Spent
+								</Typography>
+							</CardContent>
+						</Card>
+					</Grid>
+					{user?.role === 'host' && stats.totalListings !== undefined && (
+						<>
+							<Grid item xs={6} sm={4}>
+								<Card>
+									<CardContent sx={{ textAlign: 'center' }}>
+										<Typography variant="h4" color="primary">
+											{stats.totalListings}
+										</Typography>
+										<Typography variant="body2" color="text.secondary">
+											Listings
+										</Typography>
+									</CardContent>
+								</Card>
+							</Grid>
+							<Grid item xs={6} sm={4}>
+								<Card>
+									<CardContent sx={{ textAlign: 'center' }}>
+										<Typography variant="h4" color="success.main">
+											₱{(stats.totalEarnings || 0).toFixed(2)}
+										</Typography>
+										<Typography variant="body2" color="text.secondary">
+											Earnings
+										</Typography>
+									</CardContent>
+								</Card>
+							</Grid>
+							<Grid item xs={6} sm={4}>
+								<Card>
+									<CardContent sx={{ textAlign: 'center' }}>
+										<Typography variant="h4" color="text.secondary">
+											{stats.totalHostBookings || 0}
+										</Typography>
+										<Typography variant="body2" color="text.secondary">
+											Host Bookings
+										</Typography>
+									</CardContent>
+								</Card>
+							</Grid>
+						</>
+					)}
+				</Grid>
+			)}
+
 			<Card sx={{ mt: 3 }}>
 				<CardContent>
-					<Typography variant="h6" gutterBottom>
-						User Information
-					</Typography>
+					<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+						<Typography variant="h6">
+							User Information
+						</Typography>
+						<IconButton onClick={handleEditOpen} size="small" aria-label="Edit profile">
+							<EditIcon />
+						</IconButton>
+					</Box>
 					<Typography variant="body1">
 						<strong>Name:</strong> {user?.name || 'N/A'}
 					</Typography>
 					<Typography variant="body1">
 						<strong>Email:</strong> {user?.email || 'N/A'}
+					</Typography>
+					<Typography variant="body1">
+						<strong>Phone:</strong> {user?.phone || 'Not set'}
 					</Typography>
 					<Typography variant="body1">
 						<strong>Role:</strong> {user?.role || 'N/A'}
@@ -170,6 +341,74 @@ const Profile: React.FC = () => {
 					Logout
 				</Button>
 			</Box>
+
+			{/* Edit Profile Dialog */}
+			<Dialog open={editDialogOpen} onClose={handleEditClose} maxWidth="sm" fullWidth>
+				<DialogTitle>
+					<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+						Edit Profile
+						<IconButton onClick={handleEditClose} size="small" aria-label="Close">
+							<CloseIcon />
+						</IconButton>
+					</Box>
+				</DialogTitle>
+				<DialogContent>
+					{error && (
+						<Alert severity="error" sx={{ mb: 2 }}>
+							{error}
+						</Alert>
+					)}
+					<TextField
+						label="Name"
+						value={editForm.name}
+						onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+						fullWidth
+						margin="normal"
+						required
+						autoFocus
+					/>
+					<TextField
+						label="Phone"
+						value={editForm.phone}
+						onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+						fullWidth
+						margin="normal"
+						placeholder="Optional"
+					/>
+					<TextField
+						label="Email"
+						value={user?.email || ''}
+						fullWidth
+						margin="normal"
+						disabled
+						helperText="Email cannot be changed"
+					/>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={handleEditClose} disabled={saving}>
+						Cancel
+					</Button>
+					<Button
+						onClick={handleEditSave}
+						variant="contained"
+						disabled={saving}
+					>
+						{saving ? 'Saving...' : 'Save Changes'}
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			{/* Success Snackbar */}
+			<Snackbar
+				open={!!success}
+				autoHideDuration={3000}
+				onClose={() => setSuccess('')}
+				anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+			>
+				<Alert severity="success" onClose={() => setSuccess('')}>
+					{success}
+				</Alert>
+			</Snackbar>
 		</Container>
 	);
 };
