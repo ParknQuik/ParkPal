@@ -56,9 +56,37 @@ export const searchListings = createAsyncThunk(
 
 export const getListingById = createAsyncThunk(
   'marketplace/getListingById',
-  async (listingId: number) => {
+  async (listingId: number, { getState }) => {
+    // Check if listing already exists in state from search results
+    const state = getState() as any;
+    const existingListing = state.marketplace.listings.find((l: any) => l.id === listingId);
+    if (existingListing) {
+      return existingListing;
+    }
+
+    // Fetch from API - backend now has /marketplace/listings/:id endpoint
     const response = await marketplaceAPI.getListingById(listingId);
-    return response.data;
+    const listing = response.data;
+
+    // Transform to match mobile interface
+    return {
+      id: listing.id,
+      title: listing.address,
+      description: listing.description || '',
+      address: listing.address,
+      latitude: listing.lat,
+      longitude: listing.lon,
+      pricePerHour: listing.price,
+      photos: listing.photos || [],
+      amenities: listing.amenities || [],
+      hostId: listing.ownerId || listing.owner?.id,
+      hostName: listing.owner?.name || 'Unknown Host',
+      hostAvatar: listing.owner?.profileImageUrl,
+      rating: listing.rating || 0,
+      reviewCount: listing.reviews?.length || 0,
+      distance: listing.distance,
+      availability: listing.status === 'available',
+    };
   }
 );
 

@@ -139,3 +139,43 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * Get current user
+ */
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        phone: true,
+        createdAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Logout user
+ */
+exports.logout = async (req, res) => {
+  try {
+    // If using JWT blacklist or refresh tokens, invalidate them here
+    // For now, logout is handled client-side by removing the token
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

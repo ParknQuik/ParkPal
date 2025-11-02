@@ -9,8 +9,6 @@ import {
   Button,
   CircularProgress,
   Alert,
-  AppBar,
-  Toolbar,
   Table,
   TableBody,
   TableCell,
@@ -29,7 +27,6 @@ import {
   Add as AddIcon,
   AttachMoney as MoneyIcon,
   ListAlt as ListIcon,
-  Person as PersonIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as ViewIcon,
@@ -110,16 +107,6 @@ export default function HostDashboard() {
 
   return (
     <Box>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            ParknQuik - Host Dashboard
-          </Typography>
-          <Button color="inherit" onClick={() => navigate('/profile')} startIcon={<PersonIcon />}>
-            Profile
-          </Button>
-        </Toolbar>
-      </AppBar>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" gutterBottom>

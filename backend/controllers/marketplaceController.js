@@ -794,6 +794,124 @@ exports.getHostEarnings = async (req, res) => {
   }
 };
 
+/**
+ * Get a single listing by ID
+ */
+exports.getListingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const listing = await prisma.parkingSlot.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        owner: {
+          select: { id: true, name: true, email: true },
+        },
+        zone: true,
+        reviews: {
+          include: {
+            author: { select: { id: true, name: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    res.json({
+      ...listing,
+      amenities: listing.amenities || [],
+      photos: listing.photos || [],
+    });
+  } catch (error) {
+    console.error('Get listing by ID error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get host's own listings
+ */
+exports.getHostListings = async (req, res) => {
+  try {
+    const hostId = req.user.id;
+
+    const listings = await prisma.parkingSlot.findMany({
+      where: { ownerId: hostId },
+      include: {
+        zone: true,
+        reviews: {
+          select: { id: true, rating: true, comment: true, createdAt: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(
+      listings.map((l) => ({
+        ...l,
+        amenities: l.amenities || [],
+        photos: l.photos || [],
+      }))
+    );
+  } catch (error) {
+    console.error('Get host listings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get user's marketplace bookings
+ */
+exports.getUserBookings = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const bookings = await prisma.booking.findMany({
+      where: { userId },
+      include: {
+        slot: {
+          include: {
+            owner: { select: { id: true, name: true, email: true } },
+            zone: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(bookings);
+  } catch (error) {
+    console.error('Get user bookings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get reviews for a specific listing
+ */
+exports.getListingReviews = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const reviews = await prisma.review.findMany({
+      where: { slotId: parseInt(id) },
+      include: {
+        author: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(reviews);
+  } catch (error) {
+    console.error('Get listing reviews error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Helper function to calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth's radius in km
