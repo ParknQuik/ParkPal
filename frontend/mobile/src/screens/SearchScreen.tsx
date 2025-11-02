@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   TouchableOpacity,
-  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import api from '../services/api';
 import { colors, typography, spacing, borderRadius } from '../theme';
 import { Card } from '../components/Card';
 
@@ -31,24 +32,50 @@ const popularLocations = [
 
 export const SearchScreen: React.FC = () => {
   const navigation = useNavigation();
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [location, setLocation] = useState('');
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const response = await api.get('/config/google-maps-api-key');
+        setGoogleMapsApiKey(response.data.apiKey);
+      } catch (error) {
+        console.error('Failed to fetch Google Maps API key:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApiKey();
+  }, []);
 
   const handleSearch = () => {
-    if (!location) return;
+    if (!latitude || !longitude) {
+      alert('Please select a valid location from the suggestions');
+      return;
+    }
 
     // Navigate to map with search parameters
     navigation.navigate('Map' as never, {
       location,
-      checkIn,
-      checkOut,
+      latitude,
+      longitude,
     } as never);
   };
 
-  const handleQuickLocation = (loc: string) => {
-    setLocation(loc);
-  };
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,78 +98,80 @@ export const SearchScreen: React.FC = () => {
           <Card style={styles.searchCard}>
             <Text style={styles.sectionTitle}>Where do you need parking?</Text>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>📍</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter city or area"
-                value={location}
-                onChangeText={setLocation}
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
+            <GooglePlacesAutocomplete
+              placeholder="Enter address or location"
+              onPress={(data, details = null) => {
+                setLocation(data.description);
+                if (details?.geometry?.location) {
+                  setLatitude(details.geometry.location.lat);
+                  setLongitude(details.geometry.location.lng);
+                }
+              }}
+              query={{
+                key: googleMapsApiKey,
+                language: 'en',
+                components: 'country:ph',
+              }}
+              fetchDetails={true}
+              enablePoweredByContainer={false}
+              styles={{
+                container: {
+                  flex: 0,
+                  marginBottom: spacing.lg,
+                },
+                textInputContainer: {
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: borderRadius.md,
+                  paddingHorizontal: spacing.sm,
+                },
+                textInput: {
+                  ...typography.body,
+                  color: colors.textPrimary,
+                  backgroundColor: 'transparent',
+                  height: 48,
+                },
+                listView: {
+                  backgroundColor: colors.white,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: borderRadius.md,
+                  marginTop: spacing.xs,
+                },
+                row: {
+                  padding: spacing.md,
+                },
+                description: {
+                  ...typography.body,
+                  color: colors.textPrimary,
+                },
+              }}
+            />
 
-            <Text style={styles.label}>Check-in (Optional)</Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>📅</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 2024-01-15 09:00"
-                value={checkIn}
-                onChangeText={setCheckIn}
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
-
-            <Text style={styles.label}>Check-out (Optional)</Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>📅</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 2024-01-15 17:00"
-                value={checkOut}
-                onChangeText={setCheckOut}
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
+            {location && latitude && (
+              <Text style={styles.selectedLocation}>
+                ✓ Selected: {location}
+              </Text>
+            )}
 
             <TouchableOpacity
               style={[
                 styles.searchButton,
-                !location && styles.searchButtonDisabled,
+                (!latitude || !longitude) && styles.searchButtonDisabled,
               ]}
               onPress={handleSearch}
-              disabled={!location}
+              disabled={!latitude || !longitude}
             >
               <Text style={styles.searchButtonText}>🔍 Search Parking</Text>
             </TouchableOpacity>
-          </Card>
 
-          {/* Popular Locations */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Popular Locations</Text>
-            <View style={styles.chipsContainer}>
-              {popularLocations.map((loc) => (
-                <TouchableOpacity
-                  key={loc}
-                  style={[
-                    styles.chip,
-                    location === loc && styles.chipActive,
-                  ]}
-                  onPress={() => handleQuickLocation(loc)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      location === loc && styles.chipTextActive,
-                    ]}
-                  >
-                    {loc}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+            {location && !latitude && (
+              <Text style={styles.helperText}>
+                Please select a location from the dropdown suggestions
+              </Text>
+            )}
+          </Card>
 
           {/* How It Works */}
           <View style={styles.section}>
@@ -182,6 +211,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
   hero: {
     padding: spacing.xxxl,
@@ -257,33 +296,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  selectedLocation: {
+    ...typography.bodySmall,
+    color: colors.success,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  helperText: {
+    ...typography.small,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
   section: {
     marginBottom: spacing.xl,
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    ...typography.bodySmall,
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  chipTextActive: {
-    color: colors.white,
   },
   stepCard: {
     alignItems: 'center',
