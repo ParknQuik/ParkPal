@@ -1,5 +1,5 @@
 const userController = require('../controllers/userController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate } = require('../services/auth');
 
 /**
  * User Management Routes
