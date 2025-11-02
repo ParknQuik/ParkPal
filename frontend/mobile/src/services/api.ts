@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 // Updated for API v1 versioning
 const API_BASE_URL =
   Constants.expoConfig?.extra?.apiUrl ||
-  (__DEV__ ? 'http://192.168.100.236:3001/api/v1' : 'https://api.parkpal.com/api/v1');
+  (__DEV__ ? 'http://192.168.100.221:3001/api/v1' : 'https://api.parkpal.com/api/v1');
 
 // Create axios instance
 const api = axios.create({

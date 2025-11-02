@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "extra": {
-      "apiUrl": "http://192.168.100.236:3001/api/v1"
+      "apiUrl": "http://192.168.100.221:3001/api/v1"
     },
     "splash": {
       "image": "./assets/splash-icon.png",

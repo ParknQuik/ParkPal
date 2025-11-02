@@ -136,4 +136,38 @@ module.exports = (app, authLimiter) => {
    *         description: Incorrect current password or unauthorized
    */
   app.put('/auth/password', authenticate, authLimiter, validateBody(changePasswordSchema), authController.changePassword);
+
+  /**
+   * @swagger
+   * /api/auth/me:
+   *   get:
+   *     summary: Get current user information
+   *     tags: [Authentication]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Current user data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       401:
+   *         description: Unauthorized
+   */
+  app.get('/auth/me', authenticate, authController.getCurrentUser);
+
+  /**
+   * @swagger
+   * /api/auth/logout:
+   *   post:
+   *     summary: Logout user
+   *     tags: [Authentication]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Logged out successfully
+   */
+  app.post('/auth/logout', authenticate, authController.logout);
 };

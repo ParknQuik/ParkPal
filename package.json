@@ -1,4 +1,13 @@
 {
+  "name": "parknquik-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "contract:generate": "cd backend && node scripts/generate-api-contract.js",
+    "contract:validate": "node scripts/validate-api-contract.js",
+    "contract:test": "npm run contract:generate && npm run contract:validate",
+    "pretest": "npm run contract:test"
+  },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4"
   }

@@ -329,4 +329,83 @@ module.exports = (app) => {
     authenticate,
     marketplaceController.getHostEarnings
   );
+
+  /**
+   * @swagger
+   * /api/marketplace/listings/:id:
+   *   get:
+   *     summary: Get a single listing by ID
+   *     tags: [Marketplace]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         example: 1
+   *     responses:
+   *       200:
+   *         description: Listing details with owner and reviews
+   *       404:
+   *         description: Listing not found
+   */
+  app.get('/marketplace/listings/:id', marketplaceController.getListingById);
+
+  /**
+   * @swagger
+   * /api/marketplace/host/listings:
+   *   get:
+   *     summary: Get host's own listings
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List of host's parking listings
+   */
+  app.get(
+    '/marketplace/host/listings',
+    authenticate,
+    marketplaceController.getHostListings
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/bookings:
+   *   get:
+   *     summary: Get user's marketplace bookings
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List of user's bookings
+   */
+  app.get(
+    '/marketplace/bookings',
+    authenticate,
+    marketplaceController.getUserBookings
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/listings/:id/reviews:
+   *   get:
+   *     summary: Get reviews for a specific listing
+   *     tags: [Marketplace]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         example: 1
+   *     responses:
+   *       200:
+   *         description: List of reviews for the listing
+   */
+  app.get(
+    '/marketplace/listings/:id/reviews',
+    marketplaceController.getListingReviews
+  );
 };
