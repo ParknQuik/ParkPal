@@ -46,8 +46,8 @@ const Login: React.FC = () => {
 		try {
 			console.log('Attempting login with:', data.email);
 			await login(data.email, data.password);
-			console.log('Login successful, navigating to /map...');
-			navigate('/map');
+			console.log('Login successful, navigating to /search...');
+			navigate('/search');
 		} catch (err) {
 			console.error('Login error:', err);
 			setError(err instanceof Error ? err.message : 'Login failed');
@@ -59,7 +59,7 @@ const Login: React.FC = () => {
 
 		try {
 			await registerUser(data.name, data.email, data.password);
-			navigate('/map');
+			navigate('/search');
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Registration failed');
 		}

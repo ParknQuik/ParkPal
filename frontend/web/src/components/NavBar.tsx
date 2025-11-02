@@ -63,7 +63,7 @@ export const NavBar: React.FC = () => {
           variant="h6"
           component="div"
           sx={{ flexGrow: 1, cursor: 'pointer' }}
-          onClick={() => navigate('/map')}
+          onClick={() => navigate(user ? '/search' : '/')}
         >
           ParknQuik
         </Typography>

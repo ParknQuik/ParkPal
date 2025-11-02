@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { HomeScreen } from '../screens/HomeScreen';
+import { SearchScreen } from '../screens/SearchScreen';
 import { MapViewScreen } from '../screens/MapViewScreen';
 import { MyBookingsScreen } from '../screens/MyBookingsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -31,11 +31,11 @@ export const BottomTabNavigator: React.FC = () => {
       }}
     >
       <Tab.Screen
-        name="Home"
-        component={HomeScreen}
+        name="Search"
+        component={SearchScreen}
         options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <HomeIcon color={color} />,
+          tabBarLabel: 'Search',
+          tabBarIcon: ({ color }) => <SearchIcon color={color} />,
         }}
       />
       <Tab.Screen
@@ -67,8 +67,8 @@ export const BottomTabNavigator: React.FC = () => {
 };
 
 // Simple icon components (you can replace with actual icon library)
-const HomeIcon: React.FC<{ color: string }> = ({ color }) => (
-  <Text style={{ fontSize: 24, color }}>🏠</Text>
+const SearchIcon: React.FC<{ color: string }> = ({ color }) => (
+  <Text style={{ fontSize: 24, color }}>🔍</Text>
 );
 
 const MapIcon: React.FC<{ color: string }> = ({ color }) => (
