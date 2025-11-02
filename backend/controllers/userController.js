@@ -1,4 +1,4 @@
-const prisma = require('../config/database');
+const prisma = require('../config/prisma');
 
 /**
  * Get current user profile
