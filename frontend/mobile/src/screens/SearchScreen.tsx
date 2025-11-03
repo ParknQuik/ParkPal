@@ -41,7 +41,7 @@ export const SearchScreen: React.FC = () => {
   useEffect(() => {
     const fetchApiKey = async () => {
       try {
-        const response = await api.get('/config/google-maps-api-key');
+        const response = await api.get('/config/maps-api-key');
         setGoogleMapsApiKey(response.data.apiKey);
       } catch (error) {
         console.error('Failed to fetch Google Maps API key:', error);
