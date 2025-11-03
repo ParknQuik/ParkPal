@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
 	Container,
@@ -20,7 +20,6 @@ import {
 	CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
-import api from '../api';
 
 interface SearchParams {
 	location: string;
@@ -49,7 +48,6 @@ const popularLocations = [
 
 const Search: React.FC = () => {
 	const navigate = useNavigate();
-	const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>('');
 	const [searchParams, setSearchParams] = useState<SearchParams>({
 		location: '',
 		latitude: null,
@@ -60,22 +58,9 @@ const Search: React.FC = () => {
 	const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
 
 	const { isLoaded, loadError } = useJsApiLoader({
-		googleMapsApiKey: googleMapsApiKey,
+		googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
 		libraries,
 	});
-
-	// Fetch Google Maps API key
-	useEffect(() => {
-		const fetchApiKey = async () => {
-			try {
-				const { data } = await api.get('/config/google-maps-api-key');
-				setGoogleMapsApiKey(data.apiKey);
-			} catch (error) {
-				console.error('Failed to fetch Google Maps API key:', error);
-			}
-		};
-		fetchApiKey();
-	}, []);
 
 	const onLoad = (autocompleteInstance: google.maps.places.Autocomplete) => {
 		setAutocomplete(autocompleteInstance);
@@ -120,7 +105,7 @@ const Search: React.FC = () => {
 		return <Container><Typography color="error">Error loading Google Maps</Typography></Container>;
 	}
 
-	if (!isLoaded || !googleMapsApiKey) {
+	if (!isLoaded) {
 		return (
 			<Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
 				<CircularProgress />
