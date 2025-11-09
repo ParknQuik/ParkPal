@@ -53,6 +53,8 @@ export const authAPI = {
     api.post('/auth/register', { name, email, password, role: 'driver' }),
   logout: () => api.post('/auth/logout'),
   getCurrentUser: () => api.get('/auth/me'),
+  updateProfile: (data: { name: string; phone: string | null }) =>
+    api.patch('/users/profile', data),
 };
 
 // Parking endpoints

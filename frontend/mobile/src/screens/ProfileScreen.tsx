@@ -35,7 +35,11 @@ export const ProfileScreen: React.FC = () => {
     {
       title: 'Account',
       items: [
-        { icon: '👤', label: 'Edit Profile', action: () => {} },
+        {
+          icon: '👤',
+          label: 'Edit Profile',
+          action: () => navigation.navigate('EditProfile' as never),
+        },
         { icon: '💳', label: 'Payment Methods', action: () => {} },
         { icon: '📍', label: 'Saved Addresses', action: () => {} },
       ],

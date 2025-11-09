@@ -1,5 +1,10 @@
-# Environment variables
+# Environment variables - NEVER COMMIT THESE
 .env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.qa
 
 # Database files
 *.db

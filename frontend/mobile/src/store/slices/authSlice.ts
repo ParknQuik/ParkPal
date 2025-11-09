@@ -56,6 +56,18 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async () => {
   throw new Error('Not authenticated');
 });
 
+export const updateUserProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (data: { name: string; phone: string | null }) => {
+    const response = await authAPI.updateProfile(data);
+    const updatedUser = response.data;
+
+    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+
+    return updatedUser;
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -114,6 +126,20 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
       state.token = null;
+    });
+
+    // Update Profile
+    builder.addCase(updateUserProfile.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(updateUserProfile.fulfilled, (state, action) => {
+      state.loading = false;
+      state.user = action.payload;
+    });
+    builder.addCase(updateUserProfile.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message || 'Failed to update profile';
     });
   },
 });

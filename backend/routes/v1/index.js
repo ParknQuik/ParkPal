@@ -19,16 +19,18 @@ module.exports = (authLimiter) => {
   const alertRoutes = require('../alerts');
   const marketplaceRoutes = require('../marketplace');
   const configRoutes = require('../config');
+  const userRoutes = require('../users');
 
   // Auth routes get stricter rate limiting
   authRoutes(router, authLimiter);
-  
+
   // Other routes
   parkingRoutes(router);
   paymentRoutes(router);
   alertRoutes(router);
   marketplaceRoutes(router);
   configRoutes(router);
+  userRoutes(router);
 
   return router;
 };

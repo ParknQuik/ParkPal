@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.100.233:3001/api',
+  baseURL: 'http://192.168.100.233:3001/api',
 });
 
 // Add auth token to requests

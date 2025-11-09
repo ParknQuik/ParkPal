@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { NavBar } from './components/NavBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './screens/Login';
+import Search from './screens/Search';
 // @ts-ignore - TODO: Convert remaining screens to TypeScript
 import MapView from './screens/MapView.jsx';
 // @ts-ignore - TODO: Convert remaining screens to TypeScript
@@ -41,6 +42,14 @@ function App() {
             <NavBar />
             <Routes>
               <Route path="/" element={<Login />} />
+              <Route
+                path="/search"
+                element={
+                  <ProtectedRoute>
+                    <Search />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/map"
                 element={
