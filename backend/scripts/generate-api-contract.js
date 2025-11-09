@@ -52,7 +52,6 @@ function generateContract() {
     { file: 'marketplace.js', prefix: '/marketplace' },
     { file: 'parking.js', prefix: '' }, // Has /slots and /bookings
     { file: 'config.js', prefix: '/config' },
-    { file: 'users.js', prefix: '/users' },
   ];
 
   console.log('🔍 Scanning backend routes...\n');
