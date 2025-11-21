@@ -12,7 +12,16 @@ Handshake tests verify end-to-end connectivity between the ParkPal backend API a
 
 ---
 
-## Test Coverage
+## Test Coverage Summary
+
+**Total Handshake Tests:** 40 (24 basic + 16 critical)
+**Test Files:**
+- `tests/handshake.test.js` - 24 basic handshake tests
+- `tests/handshake-critical.test.js` - 16 critical production tests
+
+**Combined with Existing Tests:** 150 total tests (110 unit/integration + 40 handshake)
+
+---
 
 ### 1. Backend Health & Connectivity (3 tests)
 

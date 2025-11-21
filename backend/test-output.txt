@@ -1,0 +1,4 @@
+
+> parknquik-backend@1.0.0 test
+> jest --detectOpenHandles --forceExit
+
