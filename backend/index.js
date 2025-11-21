@@ -156,7 +156,13 @@ app.use(errorHandler);
 const websocketService = require('./services/websocket');
 websocketService.init(server);
 
-server.listen(port, '0.0.0.0', () => {
-  console.log(`Backend listening at http://localhost:${port}`);
-  console.log(`Network access: http://192.168.100.233:${port}`);
-});
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`Backend listening at http://localhost:${port}`);
+    console.log(`Network access: http://192.168.100.233:${port}`);
+  });
+}
+
+// Export app for testing
+module.exports = app;

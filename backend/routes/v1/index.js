@@ -20,6 +20,10 @@ module.exports = (authLimiter) => {
   const marketplaceRoutes = require('../marketplace');
   const configRoutes = require('../config');
   const userRoutes = require('../users');
+  const healthRoutes = require('../health');
+
+  // Health routes (no auth required)
+  healthRoutes(router);
 
   // Auth routes get stricter rate limiting
   authRoutes(router, authLimiter);
