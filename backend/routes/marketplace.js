@@ -1,6 +1,14 @@
 const marketplaceController = require('../controllers/marketplaceController');
 const { authenticate } = require('../services/auth');
 const { paginate, validateSort } = require('../middleware/pagination');
+const { validateBody, validateQuery } = require('../middleware/validation');
+const {
+  createListingSchema,
+  updateListingSchema,
+  createBookingSchema,
+  reviewSchema,
+  searchListingsSchema
+} = require('../validators/marketplace');
 
 module.exports = (app) => {
   /**
@@ -65,6 +73,7 @@ module.exports = (app) => {
   app.post(
     '/marketplace/listings',
     authenticate,
+    validateBody(createListingSchema),
     marketplaceController.createListing
   );
 
@@ -126,6 +135,7 @@ module.exports = (app) => {
    */
   app.get(
     '/marketplace/search',
+    validateQuery(searchListingsSchema),
     paginate({ defaultLimit: 20, maxLimit: 100 }),
     validateSort(['price', 'createdAt', 'averageRating'], 'createdAt', 'desc'),
     marketplaceController.searchListings
@@ -172,6 +182,7 @@ module.exports = (app) => {
   app.post(
     '/marketplace/bookings',
     authenticate,
+    validateBody(createBookingSchema),
     marketplaceController.createBooking
   );
 
@@ -296,6 +307,7 @@ module.exports = (app) => {
   app.post(
     '/marketplace/reviews',
     authenticate,
+    validateBody(reviewSchema),
     marketplaceController.createReview
   );
 

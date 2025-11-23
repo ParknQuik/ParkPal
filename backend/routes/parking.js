@@ -1,6 +1,13 @@
 const parkingController = require('../controllers/parkingController');
 const { authenticate } = require('../services/auth');
 const { deprecate } = require('../middleware/deprecation');
+const { validateBody, validateQuery } = require('../middleware/validation');
+const {
+  createSlotSchema,
+  updateSlotSchema,
+  createBookingSchema,
+  getSlotsQuerySchema
+} = require('../validators/parking');
 
 module.exports = (app) => {
   /**
@@ -35,7 +42,11 @@ module.exports = (app) => {
    *               items:
    *                 $ref: '#/components/schemas/Slot'
    */
-  app.get('/slots', parkingController.getSlots);
+  app.get(
+    '/slots',
+    validateQuery(getSlotsQuerySchema),
+    parkingController.getSlots
+  );
 
   /**
    * @swagger
@@ -122,6 +133,7 @@ module.exports = (app) => {
       message: 'Use the new Marketplace API for creating listings with QR codes and enhanced features.'
     }),
     authenticate,
+    validateBody(createSlotSchema),
     parkingController.listSlot
   );
 
@@ -167,6 +179,7 @@ module.exports = (app) => {
       message: 'Use the Marketplace API for updating listings.'
     }),
     authenticate,
+    validateBody(updateSlotSchema),
     parkingController.updateSlot
   );
 
@@ -232,7 +245,12 @@ module.exports = (app) => {
    *       400:
    *         description: Slot not available
    */
-  app.post('/bookings', authenticate, parkingController.reserveSlot);
+  app.post(
+    '/bookings',
+    authenticate,
+    validateBody(createBookingSchema),
+    parkingController.reserveSlot
+  );
 
   /**
    * @swagger
