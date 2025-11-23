@@ -457,7 +457,8 @@ describe('Marketplace API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('between 1 and 5');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details[0].message).toContain('between 1 and 5');
     });
 
     it('should fail for non-existent slot', async () => {

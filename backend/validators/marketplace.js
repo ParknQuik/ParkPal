@@ -93,7 +93,16 @@ exports.createListingSchema = Joi.object({
     .messages({
       'number.min': 'Max height must be positive',
       'number.max': 'Max height must be less than 10 meters'
-    })
+    }),
+
+  zoneId: Joi.number()
+    .integer()
+    .positive()
+    .optional(),
+
+  slotType: Joi.string()
+    .valid('roadside_qr', 'commercial_manual', 'commercial_iot')
+    .optional()
 });
 
 exports.updateListingSchema = Joi.object({
@@ -196,9 +205,14 @@ exports.searchListingsSchema = Joi.object({
   minPrice: Joi.number().min(0).optional(),
   maxPrice: Joi.number().max(10000).optional(),
   vehicleType: Joi.string().valid('car', 'motorcycle', 'suv', 'van', 'truck').optional(),
-  amenities: Joi.array().items(Joi.string()).optional(),
+  amenities: Joi.alternatives().try(
+    Joi.array().items(Joi.string()),
+    Joi.string() // Allow comma-separated string from query params
+  ).optional(),
   availableFrom: Joi.date().iso().optional(),
   availableTo: Joi.date().iso().optional(),
+  slotType: Joi.string().optional(),
+  status: Joi.string().valid('available', 'occupied', 'reserved').optional(),
   page: Joi.number().integer().min(1).default(1).optional(),
   limit: Joi.number().integer().min(1).max(100).default(20).optional()
 });
