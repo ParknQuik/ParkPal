@@ -188,6 +188,66 @@ module.exports = (app) => {
 
   /**
    * @swagger
+   * /api/marketplace/bookings/{id}:
+   *   get:
+   *     summary: Get a single booking by ID
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *     responses:
+   *       200:
+   *         description: Booking details
+   *       403:
+   *         description: Unauthorized access
+   *       404:
+   *         description: Booking not found
+   */
+  app.get(
+    '/marketplace/bookings/:id',
+    authenticate,
+    marketplaceController.getBookingById
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/bookings/{id}/cancel:
+   *   patch:
+   *     summary: Cancel a booking
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *     responses:
+   *       200:
+   *         description: Booking cancelled successfully
+   *       400:
+   *         description: Booking already cancelled or completed
+   *       403:
+   *         description: Unauthorized
+   *       404:
+   *         description: Booking not found
+   */
+  app.patch(
+    '/marketplace/bookings/:id/cancel',
+    authenticate,
+    marketplaceController.cancelBooking
+  );
+
+  /**
+   * @swagger
    * /api/marketplace/qr/checkin:
    *   post:
    *     summary: Check in to a parking slot using QR code

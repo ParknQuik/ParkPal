@@ -142,3 +142,56 @@ exports.getUserStats = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * Get user's payment methods
+ * TODO: Implement when PayMongo integration is complete
+ */
+exports.getPaymentMethods = async (req, res) => {
+  try {
+    // Stub implementation - to be completed with PayMongo integration
+    res.json({
+      paymentMethods: [],
+      message: 'Payment methods feature coming soon. PayMongo integration in progress.',
+    });
+  } catch (error) {
+    console.error('Get payment methods error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Add a new payment method
+ * TODO: Implement when PayMongo integration is complete
+ */
+exports.addPaymentMethod = async (req, res) => {
+  try {
+    // Stub implementation - to be completed with PayMongo integration
+    res.status(501).json({
+      error: 'Payment methods feature not yet implemented',
+      message: 'PayMongo integration coming soon',
+    });
+  } catch (error) {
+    console.error('Add payment method error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Delete a payment method
+ * TODO: Implement when PayMongo integration is complete
+ */
+exports.deletePaymentMethod = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Stub implementation - to be completed with PayMongo integration
+    res.status(501).json({
+      error: 'Payment methods feature not yet implemented',
+      message: 'PayMongo integration coming soon',
+    });
+  } catch (error) {
+    console.error('Delete payment method error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
