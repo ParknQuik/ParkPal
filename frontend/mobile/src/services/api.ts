@@ -57,7 +57,7 @@ export const authAPI = {
     api.patch('/users/profile', data),
 };
 
-// Parking endpoints
+// Parking endpoints (using /slots to match backend)
 export const parkingAPI = {
   getSpots: (params?: {
     latitude?: number;
@@ -65,27 +65,27 @@ export const parkingAPI = {
     radius?: number;
     minPrice?: number;
     maxPrice?: number;
-  }) => api.get('/parking/spots', { params }),
-  getSpotById: (id: string) => api.get(`/parking/spots/${id}`),
+  }) => api.get('/slots', { params }),
+  getSpotById: (id: string) => api.get(`/slots/${id}`),
   searchSpots: (query: string) =>
-    api.get('/parking/spots/search', { params: { q: query } }),
-  createSpot: (data: any) => api.post('/parking/spots', data),
-  updateSpot: (id: string, data: any) => api.put(`/parking/spots/${id}`, data),
-  deleteSpot: (id: string) => api.delete(`/parking/spots/${id}`),
+    api.get('/marketplace/search', { params: { q: query } }),
+  createSpot: (data: any) => api.post('/slots', data),
+  updateSpot: (id: string, data: any) => api.put(`/slots/${id}`, data),
+  deleteSpot: (id: string) => api.delete(`/slots/${id}`),
 };
 
-// Booking endpoints
+// Booking endpoints (using /marketplace/bookings to match backend)
 export const bookingAPI = {
   getBookings: (userId: string) =>
-    api.get('/bookings', { params: { userId } }),
-  getBookingById: (id: string) => api.get(`/bookings/${id}`),
+    api.get('/marketplace/bookings', { params: { userId } }),
+  getBookingById: (id: string) => api.get(`/marketplace/bookings/${id}`),
   createBooking: (data: {
     spotId: string;
     startDate: string;
     endDate: string;
     paymentMethodId: string;
-  }) => api.post('/bookings', data),
-  cancelBooking: (id: string) => api.patch(`/bookings/${id}/cancel`),
+  }) => api.post('/marketplace/bookings', data),
+  cancelBooking: (id: string) => api.patch(`/marketplace/bookings/${id}/cancel`),
 };
 
 // Marketplace endpoints

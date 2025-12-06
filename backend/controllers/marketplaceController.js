@@ -912,6 +912,124 @@ exports.getListingReviews = async (req, res) => {
   }
 };
 
+/**
+ * Get a single booking by ID
+ */
+exports.getBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        slot: {
+          select: {
+            id: true,
+            address: true,
+            lat: true,
+            lon: true,
+            price: true,
+            slotType: true,
+            status: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Ensure user can only access their own bookings
+    if (booking.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized access to this booking' });
+    }
+
+    res.json(booking);
+  } catch (error) {
+    console.error('Get booking error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Cancel a booking
+ */
+exports.cancelBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Find the booking
+    const booking = await prisma.booking.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        slot: true,
+      },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Ensure user can only cancel their own bookings
+    if (booking.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to cancel this booking' });
+    }
+
+    // Check if booking is already cancelled or completed
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ error: 'Booking is already cancelled' });
+    }
+
+    if (booking.status === 'completed') {
+      return res.status(400).json({ error: 'Cannot cancel a completed booking' });
+    }
+
+    // Update booking status to cancelled
+    const updatedBooking = await prisma.booking.update({
+      where: { id: parseInt(id) },
+      data: {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      },
+      include: {
+        slot: {
+          select: {
+            id: true,
+            address: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    // If slot was reserved for this booking, make it available again
+    if (booking.slot.status === 'reserved') {
+      await prisma.parkingSlot.update({
+        where: { id: booking.slotId },
+        data: { status: 'available' },
+      });
+    }
+
+    res.json({
+      message: 'Booking cancelled successfully',
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    console.error('Cancel booking error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Helper function to calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth's radius in km

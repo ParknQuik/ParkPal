@@ -1,9 +1,10 @@
 const paymentsController = require('../controllers/paymentsController');
 const { authenticate } = require('../services/auth');
-const { validateBody, validateQuery } = require('../middleware/validation');
+const { validateBody, validateQuery, validateParams } = require('../middleware/validation');
 const {
   createPaymentSchema,
-  getPaymentsQuerySchema
+  getPaymentsQuerySchema,
+  idParamSchema
 } = require('../validators/payments');
 
 module.exports = (app) => {
@@ -21,5 +22,10 @@ module.exports = (app) => {
     paymentsController.getUserPayments
   );
 
-  app.get('/payments/:id', authenticate, paymentsController.getPaymentById);
+  app.get(
+    '/payments/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    paymentsController.getPaymentById
+  );
 };

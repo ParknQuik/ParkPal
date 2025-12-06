@@ -1,12 +1,13 @@
 const parkingController = require('../controllers/parkingController');
 const { authenticate } = require('../services/auth');
 const { deprecate } = require('../middleware/deprecation');
-const { validateBody, validateQuery } = require('../middleware/validation');
+const { validateBody, validateQuery, validateParams } = require('../middleware/validation');
 const {
   createSlotSchema,
   updateSlotSchema,
   createBookingSchema,
-  getSlotsQuerySchema
+  getSlotsQuerySchema,
+  idParamSchema
 } = require('../validators/parking');
 
 module.exports = (app) => {
@@ -71,7 +72,11 @@ module.exports = (app) => {
    *       404:
    *         description: Slot not found
    */
-  app.get('/slots/:id', parkingController.getSlotById);
+  app.get(
+    '/slots/:id',
+    validateParams(idParamSchema),
+    parkingController.getSlotById
+  );
 
   /**
    * @swagger
@@ -179,6 +184,7 @@ module.exports = (app) => {
       message: 'Use the Marketplace API for updating listings.'
     }),
     authenticate,
+    validateParams(idParamSchema),
     validateBody(updateSlotSchema),
     parkingController.updateSlot
   );
@@ -203,7 +209,12 @@ module.exports = (app) => {
    *       403:
    *         description: Not authorized to delete this slot
    */
-  app.delete('/slots/:id', authenticate, parkingController.deleteSlot);
+  app.delete(
+    '/slots/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    parkingController.deleteSlot
+  );
 
   /**
    * @swagger

@@ -1,13 +1,17 @@
 const marketplaceController = require('../controllers/marketplaceController');
 const { authenticate } = require('../services/auth');
 const { paginate, validateSort } = require('../middleware/pagination');
-const { validateBody, validateQuery } = require('../middleware/validation');
+const { validateBody, validateQuery, validateParams } = require('../middleware/validation');
 const {
   createListingSchema,
   updateListingSchema,
   createBookingSchema,
   reviewSchema,
-  searchListingsSchema
+  searchListingsSchema,
+  qrCheckinSchema,
+  qrCheckoutSchema,
+  idParamSchema,
+  hostEarningsQuerySchema
 } = require('../validators/marketplace');
 
 module.exports = (app) => {
@@ -188,6 +192,68 @@ module.exports = (app) => {
 
   /**
    * @swagger
+   * /api/marketplace/bookings/{id}:
+   *   get:
+   *     summary: Get a single booking by ID
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *     responses:
+   *       200:
+   *         description: Booking details
+   *       403:
+   *         description: Unauthorized access
+   *       404:
+   *         description: Booking not found
+   */
+  app.get(
+    '/marketplace/bookings/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.getBookingById
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/bookings/{id}/cancel:
+   *   patch:
+   *     summary: Cancel a booking
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *     responses:
+   *       200:
+   *         description: Booking cancelled successfully
+   *       400:
+   *         description: Booking already cancelled or completed
+   *       403:
+   *         description: Unauthorized
+   *       404:
+   *         description: Booking not found
+   */
+  app.patch(
+    '/marketplace/bookings/:id/cancel',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.cancelBooking
+  );
+
+  /**
+   * @swagger
    * /api/marketplace/qr/checkin:
    *   post:
    *     summary: Check in to a parking slot using QR code
@@ -223,6 +289,7 @@ module.exports = (app) => {
   app.post(
     '/marketplace/qr/checkin',
     authenticate,
+    validateBody(qrCheckinSchema),
     marketplaceController.qrCheckIn
   );
 
@@ -259,6 +326,7 @@ module.exports = (app) => {
   app.post(
     '/marketplace/qr/checkout',
     authenticate,
+    validateBody(qrCheckoutSchema),
     marketplaceController.qrCheckOut
   );
 
@@ -339,6 +407,7 @@ module.exports = (app) => {
   app.get(
     '/marketplace/host/earnings',
     authenticate,
+    validateQuery(hostEarningsQuerySchema),
     marketplaceController.getHostEarnings
   );
 
@@ -361,7 +430,11 @@ module.exports = (app) => {
    *       404:
    *         description: Listing not found
    */
-  app.get('/marketplace/listings/:id', marketplaceController.getListingById);
+  app.get(
+    '/marketplace/listings/:id',
+    validateParams(idParamSchema),
+    marketplaceController.getListingById
+  );
 
   /**
    * @swagger
@@ -418,6 +491,7 @@ module.exports = (app) => {
    */
   app.get(
     '/marketplace/listings/:id/reviews',
+    validateParams(idParamSchema),
     marketplaceController.getListingReviews
   );
 };
