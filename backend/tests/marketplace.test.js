@@ -317,7 +317,9 @@ describe('Marketplace API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('Invalid QR code');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details[0].message).toContain('Invalid QR code format');
     });
 
     it('should update slot status to occupied', async () => {
