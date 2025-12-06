@@ -152,3 +152,18 @@ exports.getSlotsQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1).optional(),
   limit: Joi.number().integer().min(1).max(100).default(20).optional()
 });
+
+/**
+ * Validator for ID path parameter
+ */
+exports.idParamSchema = Joi.object({
+  id: Joi.number()
+    .integer()
+    .positive()
+    .required()
+    .messages({
+      'number.base': 'ID must be a number',
+      'number.positive': 'ID must be positive',
+      'any.required': 'ID is required'
+    })
+});

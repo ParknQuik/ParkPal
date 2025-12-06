@@ -216,3 +216,61 @@ exports.searchListingsSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1).optional(),
   limit: Joi.number().integer().min(1).max(100).default(20).optional()
 });
+
+// QR Code validation schemas
+exports.qrCheckinSchema = Joi.object({
+  qrData: Joi.string()
+    .pattern(/^PARKPAL:[0-9]+:[0-9]+:[a-zA-Z0-9]+$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Invalid QR code format',
+      'any.required': 'QR code data is required'
+    }),
+  bookingId: Joi.number()
+    .integer()
+    .positive()
+    .optional()
+});
+
+exports.qrCheckoutSchema = Joi.object({
+  sessionId: Joi.number()
+    .integer()
+    .positive()
+    .required()
+    .messages({
+      'number.base': 'Session ID must be a number',
+      'number.positive': 'Session ID must be positive',
+      'any.required': 'Session ID is required'
+    })
+});
+
+// ID parameter validation
+exports.idParamSchema = Joi.object({
+  id: Joi.number()
+    .integer()
+    .positive()
+    .required()
+    .messages({
+      'number.base': 'ID must be a number',
+      'number.positive': 'ID must be positive',
+      'any.required': 'ID is required'
+    })
+});
+
+// Host earnings query parameters
+exports.hostEarningsQuerySchema = Joi.object({
+  startDate: Joi.date()
+    .iso()
+    .optional()
+    .messages({
+      'date.format': 'Start date must be in ISO format (YYYY-MM-DD)'
+    }),
+  endDate: Joi.date()
+    .iso()
+    .min(Joi.ref('startDate'))
+    .optional()
+    .messages({
+      'date.format': 'End date must be in ISO format (YYYY-MM-DD)',
+      'date.min': 'End date must be after start date'
+    })
+});
