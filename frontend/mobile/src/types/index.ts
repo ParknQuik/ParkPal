@@ -71,6 +71,30 @@ export interface PaymentMethod {
   isDefault: boolean;
 }
 
+// PayMongo Payment types
+export type PayMongoPaymentMethod = 'gcash' | 'card' | 'grab_pay' | 'paymaya';
+
+export interface PaymentIntent {
+  paymentId: number;
+  paymentIntentId: string;
+  clientKey: string;
+  amount: number;
+  status: string;
+  message?: string;
+}
+
+export interface Payment {
+  id: number;
+  userId: number;
+  bookingId: number;
+  paymentMethod: string;
+  amount: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  metadata: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Navigation types
 export type RootStackParamList = {
   Auth: undefined;
@@ -78,6 +102,9 @@ export type RootStackParamList = {
   ParkingDetail: { spotId: string };
   Reservation: { spotId: string };
   ListSpot: undefined;
+  Payment: { bookingId: number; amount: number };
+  PaymentSuccess: { paymentId: number; bookingId: number };
+  PaymentFailed: { error: string; bookingId: number };
 };
 
 export type MainTabParamList = {
