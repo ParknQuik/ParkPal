@@ -209,6 +209,10 @@ describe('Parking API Tests', () => {
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           price: 100,
+          address: 'Test Address',
+          lat: 14.5,
+          lon: 120.9,
+          slotType: 'roadside_qr'
         });
 
       expect(response.status).toBe(403);
