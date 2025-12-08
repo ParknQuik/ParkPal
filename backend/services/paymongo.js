@@ -8,29 +8,65 @@
  */
 
 const axios = require('axios');
+const secretManager = require('../config/secretManager');
 
 class PayMongoService {
   constructor() {
     // PayMongo API configuration
     this.baseUrl = 'https://api.paymongo.com/v1';
-    this.secretKey = process.env.PAYMONGO_SECRET_KEY;
-    this.publicKey = process.env.PAYMONGO_PUBLIC_KEY;
+    this.secretKey = null;
+    this.publicKey = null;
+    this.webhookSecret = null;
+    this.initialized = false;
+  }
 
-    if (!this.secretKey) {
-      console.warn('⚠️  PAYMONGO_SECRET_KEY not set - payment processing will fail');
+  /**
+   * Initialize PayMongo service with secrets from GCP Secret Manager
+   * Falls back to environment variables if Secret Manager is disabled
+   */
+  async initialize() {
+    if (this.initialized) {
+      return;
     }
 
-    // Create axios instance with auth
-    this.client = axios.create({
-      baseURL: this.baseUrl,
-      auth: {
-        username: this.secretKey,
-        password: '' // PayMongo uses secret key as username, password empty
-      },
-      headers: {
-        'Content-Type': 'application/json'
+    try {
+      // Get secrets from GCP Secret Manager or fallback to env vars
+      this.secretKey = await secretManager.getSecret('paymongo-secret-key');
+      this.publicKey = await secretManager.getSecret('paymongo-public-key');
+      this.webhookSecret = await secretManager.getSecret('paymongo-webhook-secret');
+
+      if (!this.secretKey) {
+        console.warn('⚠️  PAYMONGO_SECRET_KEY not set - payment processing will fail');
       }
-    });
+
+      // Create axios instance with auth
+      this.client = axios.create({
+        baseURL: this.baseUrl,
+        auth: {
+          username: this.secretKey,
+          password: '' // PayMongo uses secret key as username, password empty
+        },
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      this.initialized = true;
+      console.log('✅ PayMongo service initialized with Secret Manager');
+    } catch (error) {
+      console.error('Failed to initialize PayMongo service:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure service is initialized before making API calls
+   * @private
+   */
+  async ensureInitialized() {
+    if (!this.initialized) {
+      await this.initialize();
+    }
   }
 
   /**
@@ -43,6 +79,8 @@ class PayMongoService {
    * @returns {Promise<Object>} PaymentIntent object
    */
   async createPaymentIntent({ amount, currency = 'PHP', description, metadata = {} }) {
+    await this.ensureInitialized();
+
     try {
       // Convert amount to cents (PayMongo requires smallest currency unit)
       const amountInCents = Math.round(amount * 100);
@@ -93,6 +131,8 @@ class PayMongoService {
    * @returns {Promise<Object>} PaymentMethod object
    */
   async createPaymentMethod({ type, details, billing }) {
+    await this.ensureInitialized();
+
     try {
       const payload = {
         data: {
@@ -134,6 +174,8 @@ class PayMongoService {
    * @returns {Promise<Object>} Updated PaymentIntent
    */
   async attachPaymentMethod(paymentIntentId, paymentMethodId, returnUrl) {
+    await this.ensureInitialized();
+
     try {
       const response = await this.client.post(`/payment_intents/${paymentIntentId}/attach`, {
         data: {
@@ -164,6 +206,8 @@ class PayMongoService {
    * @returns {Promise<Object>} PaymentIntent object
    */
   async getPaymentIntent(paymentIntentId) {
+    await this.ensureInitialized();
+
     try {
       const response = await this.client.get(`/payment_intents/${paymentIntentId}`);
 
@@ -189,6 +233,8 @@ class PayMongoService {
    * @returns {Promise<Object>} Source object
    */
   async createSource({ amount, type, redirect }) {
+    await this.ensureInitialized();
+
     try {
       const amountInCents = Math.round(amount * 100);
 
@@ -228,6 +274,8 @@ class PayMongoService {
    * @returns {Promise<Object>} Payment object
    */
   async createPayment({ amount, sourceId, description }) {
+    await this.ensureInitialized();
+
     try {
       const amountInCents = Math.round(amount * 100);
 
@@ -264,6 +312,8 @@ class PayMongoService {
    * @returns {Promise<Object>} Payment object
    */
   async getPayment(paymentId) {
+    await this.ensureInitialized();
+
     try {
       const response = await this.client.get(`/payments/${paymentId}`);
 
@@ -287,6 +337,8 @@ class PayMongoService {
    * @returns {Promise<Object>} List of payments
    */
   async listPayments({ limit = 20 } = {}) {
+    await this.ensureInitialized();
+
     try {
       const response = await this.client.get('/payments', {
         params: { limit }
@@ -316,7 +368,7 @@ class PayMongoService {
     const crypto = require('crypto');
 
     // PayMongo webhook verification
-    const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    const webhookSecret = this.webhookSecret;
 
     if (!webhookSecret) {
       console.warn('⚠️  PAYMONGO_WEBHOOK_SECRET not set - webhook verification disabled');
