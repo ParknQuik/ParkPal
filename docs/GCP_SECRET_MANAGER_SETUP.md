@@ -97,6 +97,14 @@ curl -X POST http://localhost:3001/api/config/secrets \
   }'
 ```
 
+**Option C: Using Upload Script (Recommended for Multiple Secrets)**
+```bash
+cd backend
+node scripts/upload-secrets.js
+```
+
+This script will upload all secrets from your `.env` file to GCP Secret Manager.
+
 ### 7. Configure Backend Environment Variables
 
 Update your `.env` file:
@@ -312,10 +320,108 @@ The backend will use environment variables as fallback automatically.
 
 ---
 
+## PayMongo API Keys Setup
+
+### Required Secrets
+
+The PayMongo integration requires three secrets to be stored in Secret Manager:
+
+1. **paymongo-secret-key** - PayMongo Secret Key (starts with `sk_test_` or `sk_live_`)
+2. **paymongo-public-key** - PayMongo Public Key (starts with `pk_test_` or `pk_live_`)
+3. **paymongo-webhook-secret** - PayMongo Webhook Secret (starts with `whsec_`)
+
+### Quick Setup
+
+1. **Get PayMongo API Keys:**
+   - Sign up at https://dashboard.paymongo.com/signup
+   - Complete business verification
+   - Go to **Developers** → **API Keys**
+   - Copy your Test or Live keys
+
+2. **Add to .env file:**
+   ```bash
+   PAYMONGO_SECRET_KEY="sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   PAYMONGO_PUBLIC_KEY="pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   PAYMONGO_WEBHOOK_SECRET="whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ```
+
+3. **Upload to GCP Secret Manager:**
+   ```bash
+   cd backend
+   node scripts/upload-secrets.js
+   ```
+
+4. **Verify Upload:**
+   ```bash
+   gcloud secrets list | grep paymongo
+   ```
+
+   Expected output:
+   ```
+   paymongo-secret-key        automatic
+   paymongo-public-key        automatic
+   paymongo-webhook-secret    automatic
+   ```
+
+5. **Enable Secret Manager:**
+   ```bash
+   # In backend/.env
+   USE_SECRET_MANAGER="true"
+   ```
+
+6. **Restart backend and test:**
+   ```bash
+   npm run dev
+   ```
+
+   Expected log:
+   ```
+   ✅ PayMongo service initialized with Secret Manager
+   ```
+
+### Manual Upload (Alternative)
+
+```bash
+# Upload PayMongo secret key
+echo -n "sk_test_your_key" | gcloud secrets create paymongo-secret-key \
+  --data-file=- \
+  --replication-policy="automatic"
+
+# Upload PayMongo public key
+echo -n "pk_test_your_key" | gcloud secrets create paymongo-public-key \
+  --data-file=- \
+  --replication-policy="automatic"
+
+# Upload webhook secret
+echo -n "whsec_your_secret" | gcloud secrets create paymongo-webhook-secret \
+  --data-file=- \
+  --replication-policy="automatic"
+```
+
+### Rotating PayMongo Keys
+
+When rotating PayMongo API keys:
+
+1. **Create new keys in PayMongo dashboard**
+2. **Add new version to Secret Manager:**
+   ```bash
+   echo -n "sk_live_new_key" | gcloud secrets versions add paymongo-secret-key \
+     --data-file=-
+   ```
+3. **Restart backend** (picks up latest version automatically)
+4. **Test payment flow**
+5. **Disable old version:**
+   ```bash
+   gcloud secrets versions disable 1 --secret="paymongo-secret-key"
+   ```
+6. **Revoke old key in PayMongo dashboard**
+
+---
+
 ## Next Steps
 
 1. **Rotate secrets regularly:** Set up a calendar reminder to rotate API keys every 90 days
-2. **Add more secrets:** Migrate JWT_SECRET, database passwords, payment keys to Secret Manager
+2. **Add more secrets:** Migrate JWT_SECRET, database passwords, and other sensitive data to Secret Manager
 3. **Set up monitoring:** Enable GCP audit logs to track secret access
 4. **Automate rotation:** Consider using GCP Secret Manager rotation features for automatic key rotation
 
@@ -326,3 +432,4 @@ The backend will use environment variables as fallback automatically.
 - [GCP Secret Manager Documentation](https://cloud.google.com/secret-manager/docs)
 - [Service Account Best Practices](https://cloud.google.com/iam/docs/best-practices-service-accounts)
 - [Google Maps Platform API Security](https://developers.google.com/maps/api-security-best-practices)
+- [PayMongo Security Best Practices](https://developers.paymongo.com/docs/security)
