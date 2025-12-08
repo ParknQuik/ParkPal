@@ -8,6 +8,9 @@ import { QRScannerScreen } from '../screens/QRScannerScreen';
 import { QRGeneratorScreen } from '../screens/QRGeneratorScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
+import { PaymentScreen } from '../screens/PaymentScreen';
+import { PaymentSuccessScreen } from '../screens/PaymentSuccessScreen';
+import { PaymentFailedScreen } from '../screens/PaymentFailedScreen';
 
 const Stack = createStackNavigator();
 
@@ -73,6 +76,32 @@ export const MainStack: React.FC = () => {
         options={{
           headerShown: false,
           presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="Payment"
+        component={PaymentScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="PaymentSuccess"
+        component={PaymentSuccessScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen
+        name="PaymentFailed"
+        component={PaymentFailedScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false,
         }}
       />
     </Stack.Navigator>

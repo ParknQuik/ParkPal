@@ -161,6 +161,30 @@ export const userAPI = {
     api.delete(`/users/payment-methods/${id}`),
 };
 
+// Payment endpoints (PayMongo integration)
+export const paymentAPI = {
+  // Create payment intent for booking
+  createPaymentIntent: (data: {
+    bookingId: number;
+    amount: number;
+    paymentMethod: 'gcash' | 'card' | 'grab_pay' | 'paymaya';
+  }) => api.post('/payments/intent', data),
+
+  // Confirm payment after completion
+  confirmPayment: (data: { paymentIntentId: string }) =>
+    api.post('/payments/confirm', data),
+
+  // Create GCash payment (alternative flow)
+  createGCashPayment: (data: { bookingId: number; amount: number }) =>
+    api.post('/payments/gcash', data),
+
+  // Get all user payments
+  getPayments: () => api.get('/payments'),
+
+  // Get specific payment by ID
+  getPaymentById: (id: number) => api.get(`/payments/${id}`),
+};
+
 // Config endpoints
 export const configAPI = {
   getGoogleMapsApiKey: () => api.get('/config/maps-api-key'),
