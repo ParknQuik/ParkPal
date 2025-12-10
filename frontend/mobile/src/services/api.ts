@@ -6,16 +6,19 @@ import Constants from 'expo-constants';
 // Updated for API v1 versioning
 const API_BASE_URL =
   Constants.expoConfig?.extra?.apiUrl ||
-  (__DEV__ ? 'http://192.168.100.221:3001/api/v1' : 'https://api.parkpal.com/api/v1');
+  (__DEV__ ? 'http://192.168.100.176:3001/api/v1' : 'https://api.parkpal.com/api/v1');
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased to 30 seconds
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Log API URL for debugging
+console.log('API Base URL:', API_BASE_URL);
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -127,6 +130,9 @@ export const marketplaceAPI = {
   }) => api.post('/marketplace/bookings', data),
 
   getMyBookings: () => api.get('/marketplace/bookings'),
+
+  cancelBooking: (bookingId: number) =>
+    api.patch(`/marketplace/bookings/${bookingId}/cancel`),
 
   // QR Code operations
   qrCheckIn: (data: { qrData: string; bookingId?: number }) =>

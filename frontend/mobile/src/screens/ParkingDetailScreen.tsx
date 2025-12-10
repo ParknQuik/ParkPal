@@ -28,10 +28,13 @@ export const ParkingDetailScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
 
-  const { spotId } = route.params as { spotId: string };
+  // Handle both 'id' and 'spotId' params for compatibility
+  const params = route.params as { spotId?: string; id?: string };
+  const spotId = params.spotId || params.id;
   const { selectedListing, reviews, loading } = useAppSelector((state) => state.marketplace);
 
   useEffect(() => {
+    if (!spotId) return;
     const listingId = parseInt(spotId);
     dispatch(getListingById(listingId));
     dispatch(getListingReviews(listingId));

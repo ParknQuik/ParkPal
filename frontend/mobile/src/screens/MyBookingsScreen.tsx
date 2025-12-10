@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { fetchBookings, cancelBooking } from '../store/slices/bookingSlice';
 import { Card } from '../components/Card';
@@ -36,11 +36,15 @@ export const MyBookingsScreen: React.FC = () => {
   const { user } = useAppSelector((state) => state.auth);
   const { bookings, loading } = useAppSelector((state) => state.booking);
 
-  useEffect(() => {
-    if (user) {
-      dispatch(fetchBookings(user.id));
-    }
-  }, [user]);
+  // Refetch bookings when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        console.log('MyBookingsScreen focused - fetching bookings for user:', user.id);
+        dispatch(fetchBookings(user.id));
+      }
+    }, [user, dispatch])
+  );
 
   const handleCancelBooking = async (bookingId: string) => {
     try {
