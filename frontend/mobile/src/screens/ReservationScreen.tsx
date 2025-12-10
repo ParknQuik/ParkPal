@@ -22,10 +22,21 @@ import { formatCurrency, formatDate, formatTime } from '../utils/helpers';
 import { mockPaymentMethods } from '../services/mockData';
 
 export const ReservationScreen: React.FC = () => {
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date(Date.now() + 3600000));
+  // Set default start time to 1 hour from now (rounded to next hour)
+  const getDefaultStartTime = () => {
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    now.setMinutes(0);
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    return now;
+  };
+
+  const [startDate, setStartDate] = useState(getDefaultStartTime());
+  const [endDate, setEndDate] = useState(new Date(getDefaultStartTime().getTime() + 3600000));
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
   const [selectedPayment, setSelectedPayment] = useState(
     mockPaymentMethods[0].id
   );
@@ -66,6 +77,17 @@ export const ReservationScreen: React.FC = () => {
     );
 
     try {
+      console.log('Creating booking with:', {
+        spotId: selectedListing.id.toString(),
+        spotTitle: selectedListing.description || selectedListing.address,
+        spotAddress: selectedListing.address,
+        userId: user.id,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        duration: calculateDuration(),
+        price: calculateTotal(),
+      });
+
       await dispatch(
         createBooking({
           spotId: selectedListing.id.toString(),
@@ -87,8 +109,11 @@ export const ReservationScreen: React.FC = () => {
       setTimeout(() => {
         navigation.navigate('Bookings' as never);
       }, 2000);
-    } catch (error) {
-      setToastMessage('Reservation failed. Please try again.');
+    } catch (error: any) {
+      console.error('Booking creation failed:', error);
+      const errorMessage = error?.message || error?.response?.data?.error || error?.toString() || 'Unknown error';
+      console.error('Error details:', errorMessage);
+      setToastMessage(`Reservation failed: ${errorMessage}`);
       setShowToast(true);
     }
   };
@@ -138,20 +163,38 @@ export const ReservationScreen: React.FC = () => {
             {showStartPicker && (
               <DateTimePicker
                 value={startDate}
-                mode="datetime"
+                mode={Platform.OS === 'ios' ? 'datetime' : pickerMode}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                minimumDate={new Date()}
                 onChange={(event, date) => {
-                  if (Platform.OS === 'android') {
-                    setShowStartPicker(false);
-                  }
                   if (event?.type === 'dismissed') {
                     setShowStartPicker(false);
+                    setPickerMode('date');
                     return;
                   }
-                  if (date) {
-                    setStartDate(date);
-                    if (date >= endDate) {
-                      setEndDate(new Date(date.getTime() + 3600000));
+
+                  if (Platform.OS === 'android') {
+                    if (pickerMode === 'date' && date) {
+                      // After date selected, show time picker
+                      setStartDate(date);
+                      setPickerMode('time');
+                      return;
+                    } else if (pickerMode === 'time' && date) {
+                      // After time selected, combine and close
+                      setStartDate(date);
+                      setShowStartPicker(false);
+                      setPickerMode('date');
+                      if (date >= endDate) {
+                        setEndDate(new Date(date.getTime() + 3600000));
+                      }
+                    }
+                  } else {
+                    // iOS: single datetime picker
+                    if (date) {
+                      setStartDate(date);
+                      if (date >= endDate) {
+                        setEndDate(new Date(date.getTime() + 3600000));
+                      }
                     }
                   }
                 }}
@@ -161,18 +204,32 @@ export const ReservationScreen: React.FC = () => {
             {showEndPicker && (
               <DateTimePicker
                 value={endDate}
-                mode="datetime"
+                mode={Platform.OS === 'ios' ? 'datetime' : pickerMode}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 minimumDate={startDate}
                 onChange={(event, date) => {
-                  if (Platform.OS === 'android') {
-                    setShowEndPicker(false);
-                  }
                   if (event?.type === 'dismissed') {
                     setShowEndPicker(false);
+                    setPickerMode('date');
                     return;
                   }
-                  if (date) setEndDate(date);
+
+                  if (Platform.OS === 'android') {
+                    if (pickerMode === 'date' && date) {
+                      // After date selected, show time picker
+                      setEndDate(date);
+                      setPickerMode('time');
+                      return;
+                    } else if (pickerMode === 'time' && date) {
+                      // After time selected, combine and close
+                      setEndDate(date);
+                      setShowEndPicker(false);
+                      setPickerMode('date');
+                    }
+                  } else {
+                    // iOS: single datetime picker
+                    if (date) setEndDate(date);
+                  }
                 }}
               />
             )}

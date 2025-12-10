@@ -116,6 +116,18 @@ describe('Critical Handshake Tests', () => {
       const ws = new WebSocket(wsUrl);
       let completed = false;
 
+      const cleanup = (err) => {
+        if (!completed) {
+          completed = true;
+          ws.removeAllListeners();
+          if (err) {
+            done(err);
+          } else {
+            done();
+          }
+        }
+      };
+
       ws.on('open', () => {
         // Connection established
         expect(ws.readyState).toBe(WebSocket.OPEN);
@@ -123,17 +135,11 @@ describe('Critical Handshake Tests', () => {
       });
 
       ws.on('close', () => {
-        if (!completed) {
-          completed = true;
-          done();
-        }
+        cleanup();
       });
 
       ws.on('error', (error) => {
-        if (!completed) {
-          completed = true;
-          done(error);
-        }
+        cleanup(error);
       });
     }, 10000);
 
@@ -143,13 +149,18 @@ describe('Critical Handshake Tests', () => {
 
       let completed = false;
 
+      const cleanup = () => {
+        if (!completed) {
+          completed = true;
+          ws.removeAllListeners();
+          done();
+        }
+      };
+
       ws.on('close', (code, reason) => {
         // WebSocket closed - either rejected by server or connection failed
         // Both are acceptable for invalid token
-        if (!completed) {
-          completed = true;
-          done();
-        }
+        cleanup();
       });
 
       ws.on('open', () => {
@@ -159,6 +170,7 @@ describe('Critical Handshake Tests', () => {
           if (!completed) {
             completed = true;
             ws.close();
+            ws.removeAllListeners();
             done();
           }
         }, 1000);
@@ -166,10 +178,7 @@ describe('Critical Handshake Tests', () => {
 
       ws.on('error', () => {
         // Error is expected for invalid token
-        if (!completed) {
-          completed = true;
-          done();
-        }
+        cleanup();
       });
     }, 10000);
 
@@ -179,12 +188,17 @@ describe('Critical Handshake Tests', () => {
 
       let completed = false;
 
-      ws.on('close', (code) => {
-        // WebSocket closed - connection rejected
+      const cleanup = () => {
         if (!completed) {
           completed = true;
+          ws.removeAllListeners();
           done();
         }
+      };
+
+      ws.on('close', (code) => {
+        // WebSocket closed - connection rejected
+        cleanup();
       });
 
       ws.on('open', () => {
@@ -193,6 +207,7 @@ describe('Critical Handshake Tests', () => {
           if (!completed) {
             completed = true;
             ws.close();
+            ws.removeAllListeners();
             done();
           }
         }, 1000);
@@ -200,10 +215,7 @@ describe('Critical Handshake Tests', () => {
 
       ws.on('error', () => {
         // Error is expected for missing token
-        if (!completed) {
-          completed = true;
-          done();
-        }
+        cleanup();
       });
     }, 10000);
 
