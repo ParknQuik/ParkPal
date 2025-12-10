@@ -1,8 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SearchScreen } from '../screens/SearchScreen';
-import { MapViewScreen } from '../screens/MapViewScreen';
+import { ExploreScreen } from '../screens/ExploreScreen';
 import { MyBookingsScreen } from '../screens/MyBookingsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { colors, typography, spacing } from '../theme';
@@ -31,19 +30,11 @@ export const BottomTabNavigator: React.FC = () => {
       }}
     >
       <Tab.Screen
-        name="Search"
-        component={SearchScreen}
+        name="Explore"
+        component={ExploreScreen}
         options={{
-          tabBarLabel: 'Search',
-          tabBarIcon: ({ color }) => <SearchIcon color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Map"
-        component={MapViewScreen}
-        options={{
-          tabBarLabel: 'Map',
-          tabBarIcon: ({ color }) => <MapIcon color={color} />,
+          tabBarLabel: 'Explore',
+          tabBarIcon: ({ color }) => <ExploreIcon color={color} />,
         }}
       />
       <Tab.Screen
@@ -67,12 +58,8 @@ export const BottomTabNavigator: React.FC = () => {
 };
 
 // Simple icon components (you can replace with actual icon library)
-const SearchIcon: React.FC<{ color: string }> = ({ color }) => (
+const ExploreIcon: React.FC<{ color: string }> = ({ color }) => (
   <Text style={{ fontSize: 24, color }}>🔍</Text>
-);
-
-const MapIcon: React.FC<{ color: string }> = ({ color }) => (
-  <Text style={{ fontSize: 24, color }}>🗺️</Text>
 );
 
 const BookingsIcon: React.FC<{ color: string }> = ({ color }) => (
