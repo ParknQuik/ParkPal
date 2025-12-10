@@ -8,8 +8,6 @@ module.exports = (app) => {
    *   get:
    *     summary: Get Google Maps API key for the mobile app
    *     tags: [Config]
-   *     security:
-   *       - bearerAuth: []
    *     responses:
    *       200:
    *         description: Google Maps API key
@@ -26,7 +24,6 @@ module.exports = (app) => {
    */
   app.get(
     '/config/maps-api-key',
-    authenticate,
     configController.getGoogleMapsApiKey
   );
 

@@ -6,9 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "extra": {
-      "apiUrl": "http://192.168.100.221:3001/api/v1"
+      "apiUrl": "http://192.168.100.176:3001/api/v1"
     },
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -37,6 +36,7 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
       ],
+      "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
           "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
