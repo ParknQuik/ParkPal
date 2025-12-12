@@ -66,7 +66,7 @@ export const ReservationScreen: React.FC = () => {
   const calculateTotal = () => {
     if (!selectedListing) return 0;
     const duration = calculateDuration();
-    return duration * selectedListing.price;
+    return duration * selectedListing.pricePerHour;
   };
 
   const handleReserve = async () => {
@@ -88,7 +88,7 @@ export const ReservationScreen: React.FC = () => {
         price: calculateTotal(),
       });
 
-      await dispatch(
+      const result = await dispatch(
         createBooking({
           spotId: selectedListing.id.toString(),
           spotTitle: selectedListing.description || selectedListing.address,
@@ -103,12 +103,17 @@ export const ReservationScreen: React.FC = () => {
         })
       ).unwrap();
 
-      setToastMessage('Reservation successful!');
-      setShowToast(true);
+      console.log('Booking created successfully:', result);
 
-      setTimeout(() => {
-        navigation.navigate('Bookings' as never);
-      }, 2000);
+      // Calculate total amount including service fee
+      const totalAmount = calculateTotal() + 2; // Service fee is $2.00
+
+      // Navigate to Payment screen with bookingId and amount
+      navigation.navigate('Payment' as never, {
+        bookingId: parseInt(result.id),
+        amount: totalAmount * 100 // Convert to cents for PayMongo
+      } as never);
+
     } catch (error: any) {
       console.error('Booking creation failed:', error);
       const errorMessage = error?.message || error?.response?.data?.error || error?.toString() || 'Unknown error';
@@ -280,7 +285,7 @@ export const ReservationScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>Price Summary</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>
-                {formatCurrency(selectedListing.price)} × {calculateDuration()} hours
+                {formatCurrency(selectedListing.pricePerHour)} × {calculateDuration()} hours
               </Text>
               <Text style={styles.summaryValue}>
                 {formatCurrency(calculateTotal())}
