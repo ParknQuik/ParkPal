@@ -12,10 +12,12 @@ When the user says "start", follow these steps:
   - Action items or TODOs
 
 ## 2. Key Files to Check
-- `PROJECT_SUMMARY.md` - Overall project status
-- `BACKEND_ARCHITECTURE_REVIEW.md` - Backend architecture decisions
-- `BACKEND_SECURITY_PERFORMANCE_AUDIT.md` - Security and performance findings
-- `PASSWORD_POLICY.md` - Password requirements
+- `frontend/mobile/PROJECT_SUMMARY.md` - Mobile app status
+- `BACKEND_SECURITY_PERFORMANCE_AUDIT.md` - Security audit (note: some issues already fixed)
+- `backend/PASSWORD_POLICY.md` - Password requirements
+- `backend/POSTGRESQL_MIGRATION.md` - Database migration status
+- `CONTRACT_TESTING_SUMMARY.md` - API contract testing
+- `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` - System architecture
 - Any other `.md` files in the project root or subdirectories
 
 ## 3. Provide Summary
@@ -27,6 +29,40 @@ After reviewing, provide a concise summary of:
 
 ## 4. Ask What to Work On
 Conclude by asking the user what they'd like to focus on in this session.
+
+---
+
+## Project Status Quick Reference (Updated: 2025-12-11)
+
+### ✅ Completed Major Items
+- **Mobile App**: Complete with PayMongo payment integration (GCash + Cards)
+- **PostgreSQL Migration**: Migrated from SQLite to PostgreSQL
+- **Security Hardening**: Rate limiting, CORS, helmet.js, request size limits
+- **Password Policy**: OWASP-compliant with breach checking
+- **Contract Testing**: Automated frontend-backend API validation system
+- **API Versioning**: /api/v1 with legacy /api support
+- **GCP Integration**: Secret Manager for credentials
+
+### 🔴 Critical Issues (Production Blockers)
+1. **JWT Secret**: Still using development placeholder (needs rotation for production)
+2. **Input Validation**: Joi installed but not fully implemented across all endpoints
+3. **WebSocket Authentication**: Not implemented yet
+
+### 🟡 Performance Optimizations (P1)
+1. Database indexes - not yet added (10-100x speed improvement expected)
+2. Redis caching - not implemented (50% DB load reduction potential)
+3. N+1 query problems in controllers
+4. Pagination missing on some list endpoints
+
+### 📋 API Contract Gaps
+- 31 mismatches between mobile frontend and backend
+- Need to align paths (`/parking/spots` vs `/slots`)
+- Missing endpoints: bookings detail/cancel, user payment methods
+
+### 🎯 Current Branch
+- Branch: `feat/mobile-payment-ui`
+- Status: Clean working directory
+- Last commit: "Complete booking flow and marketplace integration"
 
 ---
 
