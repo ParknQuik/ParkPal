@@ -40,7 +40,11 @@ export const ProfileScreen: React.FC = () => {
           label: 'Edit Profile',
           action: () => navigation.navigate('EditProfile' as never),
         },
-        { icon: '💳', label: 'Payment Methods', action: () => {} },
+        {
+          icon: '💳',
+          label: 'Payment Methods',
+          action: () => navigation.navigate('PaymentMethods' as never),
+        },
         { icon: '📍', label: 'Saved Addresses', action: () => {} },
       ],
     },
@@ -52,6 +56,11 @@ export const ProfileScreen: React.FC = () => {
           icon: '📋',
           label: 'My Listings',
           action: () => navigation.navigate('ListSpot' as never),
+        },
+        {
+          icon: '💰',
+          label: 'My Earnings',
+          action: () => navigation.navigate('Earnings' as never),
         },
         {
           icon: '📱',

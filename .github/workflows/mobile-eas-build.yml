@@ -1,0 +1,122 @@
+name: Mobile EAS Build
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - 'frontend/mobile/**'
+      - '.github/workflows/mobile-eas-build.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - staging
+          - production
+
+jobs:
+  build:
+    name: EAS Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd frontend/mobile
+          npm ci
+
+      - name: Determine build configuration
+        id: build-config
+        run: |
+          # Determine profile based on branch or manual input
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "profile=${{ github.event.inputs.profile }}" >> $GITHUB_OUTPUT
+            echo "platform=${{ github.event.inputs.platform }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "profile=production" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+            echo "profile=staging" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+          else
+            echo "profile=preview" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build app
+        run: |
+          cd frontend/mobile
+          eas build \
+            --platform ${{ steps.build-config.outputs.platform }} \
+            --profile ${{ steps.build-config.outputs.profile }} \
+            --non-interactive \
+            --no-wait
+
+      - name: Post build summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 EAS Build Started"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Platform: ${{ steps.build-config.outputs.platform }}"
+          echo "Profile:  ${{ steps.build-config.outputs.profile }}"
+          echo "Branch:   ${{ github.ref_name }}"
+          echo ""
+          echo "View build status at: https://expo.dev"
+          echo ""
+          echo "Note: API keys are loaded from EAS Secrets"
+          echo "      (not from .env files)"
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `
+              ## 🚀 EAS Build Started
+
+              **Platform**: ${{ steps.build-config.outputs.platform }}
+              **Profile**: ${{ steps.build-config.outputs.profile }}
+
+              View build status at [Expo Dashboard](https://expo.dev)
+
+              > 📝 Note: Google Maps API keys are securely loaded from EAS Secrets
+              `
+            })

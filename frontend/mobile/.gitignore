@@ -29,12 +29,14 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files - NEVER commit these
 .env
+.env.local
 .env*.local
 
-# Google Maps API key (now fetched from backend - no need to store locally)
-# API keys should never be committed
+# Google Maps API keys - NEVER commit actual keys
+# Keep .env.development, .env.staging, .env.production with placeholders only
+# Individual developers use .env.local for their actual keys
 
 # typescript
 *.tsbuildinfo
