@@ -3,10 +3,23 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "npx expo start",
-    "android": "npx expo start --android",
-    "ios": "npx expo start --ios",
-    "web": "npx expo start --web"
+    "start": "npm run fetch:secrets && npx expo start",
+    "start:dev": "npm run fetch:secrets && EXPO_PUBLIC_ENV=development npx expo start",
+    "start:staging": "npm run fetch:secrets && EXPO_PUBLIC_ENV=staging npx expo start",
+    "start:no-fetch": "npx expo start",
+    "android": "npm run fetch:secrets && npx expo start --android",
+    "ios": "npm run fetch:secrets && npx expo start --ios",
+    "web": "npm run fetch:secrets && npx expo start --web",
+    "build:dev:ios": "npm run fetch:secrets && eas build --platform ios --profile development",
+    "build:dev:android": "npm run fetch:secrets && eas build --platform android --profile development",
+    "build:staging:ios": "npm run fetch:secrets && eas build --platform ios --profile staging",
+    "build:staging:android": "npm run fetch:secrets && eas build --platform android --profile staging",
+    "build:prod:ios": "npm run fetch:secrets && eas build --platform ios --profile production",
+    "build:prod:android": "npm run fetch:secrets && eas build --platform android --profile production",
+    "fetch:secrets": "node scripts/fetch-secrets-from-gcp.js",
+    "setup:eas": "./scripts/setup-eas-secrets.sh",
+    "env:check": "node scripts/check-env.js",
+    "doctor": "npx expo doctor"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -45,6 +58,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "dotenv": "^16.3.1",
     "typescript": "^5.3.3"
   },
   "private": true

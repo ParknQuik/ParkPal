@@ -1,0 +1,140 @@
+name: Mobile Environment Check
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/mobile/**'
+      - '.github/workflows/mobile-env-check.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/mobile/**'
+
+jobs:
+  env-security-check:
+    name: Check for Exposed API Keys
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for security scanning
+
+      - name: Check for committed .env files
+        run: |
+          echo "🔍 Checking for accidentally committed environment files..."
+
+          # Check if .env or .env.local are committed
+          if git ls-files | grep -E "frontend/mobile/\.env$|frontend/mobile/\.env\.local$"; then
+            echo "❌ ERROR: .env or .env.local files found in git!"
+            echo "These files should never be committed as they contain sensitive API keys."
+            exit 1
+          fi
+
+          echo "✅ No .env or .env.local files found in git"
+
+      - name: Check for hardcoded API keys in code
+        run: |
+          echo "🔍 Scanning for hardcoded Google Maps API keys..."
+
+          cd frontend/mobile
+
+          # Search for potential API key patterns (excluding config files and docs)
+          if grep -r --exclude-dir={node_modules,.expo,dist} \
+                     --exclude={"*.md","*.json","app.config.js",".env.*"} \
+                     -E "AIza[0-9A-Za-z_-]{35}" .; then
+            echo "❌ ERROR: Potential hardcoded Google Maps API key found!"
+            echo "API keys should only be in .env files (which are gitignored)"
+            exit 1
+          fi
+
+          echo "✅ No hardcoded API keys found"
+
+      - name: Verify .env.example is up to date
+        run: |
+          echo "🔍 Checking .env.example completeness..."
+
+          cd frontend/mobile
+
+          # Check if .env.example exists
+          if [ ! -f .env.example ]; then
+            echo "❌ ERROR: .env.example not found!"
+            exit 1
+          fi
+
+          # Check for required variables in .env.example
+          required_vars=(
+            "EXPO_PUBLIC_ENV"
+            "EXPO_PUBLIC_API_URL"
+            "GOOGLE_MAPS_API_KEY_IOS"
+            "GOOGLE_MAPS_API_KEY_ANDROID"
+          )
+
+          missing_vars=()
+          for var in "${required_vars[@]}"; do
+            if ! grep -q "^$var=" .env.example; then
+              missing_vars+=("$var")
+            fi
+          done
+
+          if [ ${#missing_vars[@]} -ne 0 ]; then
+            echo "❌ ERROR: Missing variables in .env.example:"
+            printf '%s\n' "${missing_vars[@]}"
+            exit 1
+          fi
+
+          echo "✅ .env.example contains all required variables"
+
+      - name: Check .gitignore configuration
+        run: |
+          echo "🔍 Verifying .gitignore configuration..."
+
+          cd frontend/mobile
+
+          # Check if .env is gitignored
+          if ! grep -q "^\.env$" .gitignore; then
+            echo "❌ ERROR: .env not found in .gitignore!"
+            exit 1
+          fi
+
+          if ! grep -q "^\.env\.local$\|^\.env\*\.local$" .gitignore; then
+            echo "⚠️  WARNING: .env.local may not be properly gitignored"
+          fi
+
+          echo "✅ .gitignore properly configured"
+
+      - name: Verify app.config.js exists
+        run: |
+          echo "🔍 Checking for app.config.js (required for env variables)..."
+
+          cd frontend/mobile
+
+          if [ ! -f app.config.js ]; then
+            echo "❌ ERROR: app.config.js not found!"
+            echo "app.config.js is required to load environment variables"
+            exit 1
+          fi
+
+          # Check if app.config.js uses dotenv
+          if ! grep -q "require('dotenv')" app.config.js; then
+            echo "⚠️  WARNING: app.config.js may not be loading dotenv"
+          fi
+
+          echo "✅ app.config.js found and configured"
+
+      - name: Security scan summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Environment Security Check Passed"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "✓ No .env files committed to git"
+          echo "✓ No hardcoded API keys found"
+          echo "✓ .env.example is complete"
+          echo "✓ .gitignore properly configured"
+          echo "✓ app.config.js properly set up"
+          echo ""
+          echo "🔒 Your API keys are secure!"
