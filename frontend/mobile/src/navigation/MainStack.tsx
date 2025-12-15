@@ -11,6 +11,8 @@ import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { PaymentScreen } from '../screens/PaymentScreen';
 import { PaymentSuccessScreen } from '../screens/PaymentSuccessScreen';
 import { PaymentFailedScreen } from '../screens/PaymentFailedScreen';
+import { PaymentMethodsScreen } from '../screens/PaymentMethodsScreen';
+import { EarningsScreen } from '../screens/EarningsScreen';
 
 const Stack = createStackNavigator();
 
@@ -102,6 +104,22 @@ export const MainStack: React.FC = () => {
           headerShown: false,
           presentation: 'modal',
           gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen
+        name="PaymentMethods"
+        component={PaymentMethodsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="Earnings"
+        component={EarningsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
         }}
       />
     </Stack.Navigator>
