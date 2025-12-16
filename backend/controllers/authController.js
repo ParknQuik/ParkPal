@@ -30,7 +30,7 @@ exports.register = async (req, res) => {
       }
     });
 
-    const token = generateToken(user);
+    const token = await generateToken(user);
 
     const response = {
       user: {
@@ -124,7 +124,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = generateToken(user);
+    const token = await generateToken(user);
 
     res.json({
       user: {

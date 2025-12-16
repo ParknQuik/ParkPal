@@ -1,15 +1,35 @@
 const QRCode = require('qrcode');
 const crypto = require('crypto');
+const secretManager = require('../config/secretManager');
+
+// Cache QR secret
+let qrSecretCache = null;
+
+async function getQRSecret() {
+  if (qrSecretCache) {
+    return qrSecretCache;
+  }
+
+  const secret = await secretManager.getSecret('qr-secret');
+
+  // Validate QR secret
+  if (!secret || secret === 'parkpal-secret' || secret === 'your-qr-secret-here') {
+    console.warn('⚠️  QR_SECRET is not properly configured - using development fallback');
+  }
+
+  qrSecretCache = secret || 'parkpal-development-secret';
+  return qrSecretCache;
+}
 
 /**
  * Generate a unique QR code string for a parking slot
  * @param {string} slotId - The parking slot ID
- * @returns {string} Unique QR code string
+ * @returns {Promise<string>} Unique QR code string
  */
-exports.generateQRCodeData = (slotId) => {
+exports.generateQRCodeData = async (slotId) => {
   // Create a unique identifier combining slot ID and timestamp
   const timestamp = Date.now();
-  const secret = process.env.QR_SECRET || 'parkpal-secret';
+  const secret = await getQRSecret();
 
   // Create hash for verification
   const hash = crypto
@@ -29,7 +49,7 @@ exports.generateQRCodeData = (slotId) => {
  */
 exports.generateQRCodeImage = async (slotId) => {
   try {
-    const qrData = exports.generateQRCodeData(slotId);
+    const qrData = await exports.generateQRCodeData(slotId);
 
     // Generate QR code as data URL (base64)
     const qrImage = await QRCode.toDataURL(qrData, {
@@ -50,7 +70,7 @@ exports.generateQRCodeImage = async (slotId) => {
  * @param {string} qrData - The scanned QR code data
  * @returns {object} Validation result with slotId if valid
  */
-exports.validateQRCode = (qrData) => {
+exports.validateQRCode = async (qrData) => {
   try {
     // Expected format: PARKPAL:{slotId}:{timestamp}:{hash}
     const parts = qrData.split(':');
@@ -60,7 +80,7 @@ exports.validateQRCode = (qrData) => {
     }
 
     const [, slotId, timestamp, providedHash] = parts;
-    const secret = process.env.QR_SECRET || 'parkpal-secret';
+    const secret = await getQRSecret();
 
     // Verify hash
     const expectedHash = crypto
@@ -98,7 +118,7 @@ exports.validateQRCode = (qrData) => {
  */
 exports.generateQRCodeBuffer = async (slotId) => {
   try {
-    const qrData = exports.generateQRCodeData(slotId);
+    const qrData = await exports.generateQRCodeData(slotId);
     const buffer = await QRCode.toBuffer(qrData, {
       errorCorrectionLevel: 'H',
       type: 'png',
