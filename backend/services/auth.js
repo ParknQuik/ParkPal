@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const secretManager = require('../config/secretManager');
 
 // Optional: Load hibp package for breached password checking
 let pwnedPassword;
@@ -9,21 +10,55 @@ try {
   console.warn('hibp package not installed - skipping breached password checking');
 }
 
-exports.authenticate = (req, res, next) => {
-  const token = req.headers['authorization']?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'No token provided' });
+// Cache JWT secret to avoid fetching on every request
+let jwtSecretCache = null;
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-    req.user = decoded;
-    next();
-  });
+async function getJwtSecret() {
+  if (jwtSecretCache) {
+    return jwtSecretCache;
+  }
+
+  const secret = await secretManager.getSecret('jwt-secret');
+
+  // Validate JWT secret
+  if (!secret ||
+      secret === 'test_jwt_secret_for_development_only_do_not_use_in_production_12345678' ||
+      secret === 'your-super-secret-jwt-key-min-128-characters-here') {
+    console.warn('⚠️  JWT_SECRET is not properly configured - using development fallback');
+  }
+
+  if (!secret) {
+    throw new Error('JWT_SECRET not configured');
+  }
+
+  jwtSecretCache = secret;
+  return secret;
+}
+
+exports.authenticate = async (req, res, next) => {
+  try {
+    const token = req.headers['authorization']?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+
+    const jwtSecret = await getJwtSecret();
+
+    jwt.verify(token, jwtSecret, (err, decoded) => {
+      if (err) return res.status(401).json({ error: 'Invalid token' });
+      req.user = decoded;
+      next();
+    });
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+    return res.status(500).json({ error: 'Authentication system error' });
+  }
 };
 
-exports.generateToken = (user) => {
+exports.generateToken = async (user) => {
+  const jwtSecret = await getJwtSecret();
+
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET,
+    jwtSecret,
     { expiresIn: '24h' }
   );
 };
