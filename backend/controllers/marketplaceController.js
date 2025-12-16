@@ -429,7 +429,7 @@ exports.qrCheckIn = async (req, res) => {
     const userId = req.user.id;
 
     // Validate QR code
-    const qrValidation = validateQRCode(qrData);
+    const qrValidation = await validateQRCode(qrData);
 
     if (!qrValidation.valid) {
       return res.status(400).json({ error: qrValidation.error });
