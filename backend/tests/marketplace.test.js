@@ -290,7 +290,7 @@ describe('Marketplace API Tests', () => {
       // Extract QR data (format: data:image/png;base64,...)
       // We need to generate valid QR data
       const { generateQRCodeData } = require('../services/qrcode');
-      qrCode = generateQRCodeData(testData.slot.id.toString());
+      qrCode = await generateQRCodeData(testData.slot.id.toString());
     });
 
     it('should check in successfully with valid QR code', async () => {
@@ -344,7 +344,7 @@ describe('Marketplace API Tests', () => {
     beforeEach(async () => {
       // Create an active session first
       const { generateQRCodeData } = require('../services/qrcode');
-      const qrCode = generateQRCodeData(testData.slot.id.toString());
+      const qrCode = await generateQRCodeData(testData.slot.id.toString());
 
       const checkinResponse = await request(app)
         .post('/api/v1/marketplace/qr/checkin')
