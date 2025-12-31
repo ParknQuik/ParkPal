@@ -282,4 +282,148 @@ module.exports = (app) => {
    *                 $ref: '#/components/schemas/Booking'
    */
   app.get('/bookings', authenticate, parkingController.getUserBookings);
+
+  // =============================================================================
+  // MOBILE APP COMPATIBILITY ALIASES
+  // /parking/spots/* routes are aliases for /slots/* for mobile app compatibility
+  // =============================================================================
+
+  /**
+   * @swagger
+   * /api/parking/spots:
+   *   get:
+   *     summary: Get all parking spots (alias for /slots)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for GET /slots
+   *     parameters:
+   *       - in: query
+   *         name: latitude
+   *         schema:
+   *           type: number
+   *       - in: query
+   *         name: longitude
+   *         schema:
+   *           type: number
+   *       - in: query
+   *         name: radius
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: List of parking spots
+   */
+  app.get(
+    '/parking/spots',
+    validateQuery(getSlotsQuerySchema),
+    parkingController.getSlots
+  );
+
+  /**
+   * @swagger
+   * /api/parking/spots/{id}:
+   *   get:
+   *     summary: Get parking spot by ID (alias for /slots/:id)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for GET /slots/:id
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Parking spot details
+   *       404:
+   *         description: Spot not found
+   */
+  app.get(
+    '/parking/spots/:id',
+    validateParams(idParamSchema),
+    parkingController.getSlotById
+  );
+
+  /**
+   * @swagger
+   * /api/parking/spots:
+   *   post:
+   *     summary: Create a new parking spot (alias for /slots)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for POST /slots
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       201:
+   *         description: Spot created successfully
+   */
+  app.post(
+    '/parking/spots',
+    authenticate,
+    validateBody(createSlotSchema),
+    parkingController.listSlot
+  );
+
+  /**
+   * @swagger
+   * /api/parking/spots/{id}:
+   *   put:
+   *     summary: Update parking spot (alias for /slots/:id)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for PUT /slots/:id
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Spot updated successfully
+   */
+  app.put(
+    '/parking/spots/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    validateBody(updateSlotSchema),
+    parkingController.updateSlot
+  );
+
+  /**
+   * @swagger
+   * /api/parking/spots/{id}:
+   *   delete:
+   *     summary: Delete parking spot (alias for /slots/:id)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for DELETE /slots/:id
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Spot deleted successfully
+   */
+  app.delete(
+    '/parking/spots/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    parkingController.deleteSlot
+  );
 };

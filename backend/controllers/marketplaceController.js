@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, validateQRCode } = require('../services/qrcode');
+const cache = require('../services/cache');
 
 /**
  * @swagger
@@ -105,6 +106,9 @@ exports.createListing = async (req, res) => {
       },
     });
 
+    // Invalidate listings cache when new listing is created
+    await cache.invalidateListingsCache();
+
     broadcast({ type: 'listing_created', listing: updatedSlot });
     res.status(201).json(updatedSlot);
   } catch (error) {
@@ -172,6 +176,34 @@ exports.searchListings = async (req, res) => {
       status,
     } = req.query;
 
+    // Get pagination and sort info
+    const { skip, take } = req.pagination || { skip: 0, take: 20 };
+    const sortOptions = req.sort?.prisma || { createdAt: 'desc' };
+
+    // Generate cache key
+    const cacheKey = cache.getListingsCacheKey({
+      lat,
+      lon,
+      radius,
+      minPrice,
+      maxPrice,
+      amenities,
+      slotType,
+      status,
+      offset: skip,
+      limit: take,
+      sort: JSON.stringify(sortOptions),
+    });
+
+    // Try to get from cache first (5 minute TTL)
+    const cachedResult = await cache.get(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache HIT for listings: ${cacheKey}`);
+      return res.json(cachedResult);
+    }
+
+    console.log(`Cache MISS for listings: ${cacheKey}`);
+
     const where = {};
 
     // Filter by status
@@ -213,10 +245,6 @@ exports.searchListings = async (req, res) => {
         lte: userLon + lonDelta,
       };
     }
-
-    // Get pagination info from middleware
-    const { skip, take } = req.pagination || { skip: 0, take: 20 };
-    const sortOptions = req.sort?.prisma || { createdAt: 'desc' };
 
     // Query with pagination - MUCH more efficient
     const [slots, totalCount] = await prisma.$transaction([
@@ -289,6 +317,9 @@ exports.searchListings = async (req, res) => {
     const response = req.buildPaginatedResponse
       ? req.buildPaginatedResponse(processedSlots, totalCount)
       : { count: processedSlots.length, listings: processedSlots, total: totalCount };
+
+    // Cache the result (5 minute TTL)
+    await cache.set(cacheKey, response, cache.CACHE_TTL.MEDIUM);
 
     res.json(response);
   } catch (error) {
