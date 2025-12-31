@@ -6,16 +6,19 @@ import Constants from 'expo-constants';
 // Updated for API v1 versioning
 const API_BASE_URL =
   Constants.expoConfig?.extra?.apiUrl ||
-  (__DEV__ ? 'http://192.168.100.221:3001/api/v1' : 'https://api.parkpal.com/api/v1');
+  (__DEV__ ? 'http://192.168.100.176:3001/api/v1' : 'https://api.parkpal.com/api/v1');
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased to 30 seconds
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Log API URL for debugging
+console.log('API Base URL:', API_BASE_URL);
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -128,6 +131,9 @@ export const marketplaceAPI = {
 
   getMyBookings: () => api.get('/marketplace/bookings'),
 
+  cancelBooking: (bookingId: number) =>
+    api.patch(`/marketplace/bookings/${bookingId}/cancel`),
+
   // QR Code operations
   qrCheckIn: (data: { qrData: string; bookingId?: number }) =>
     api.post('/marketplace/qr/checkin', data),
@@ -159,6 +165,30 @@ export const userAPI = {
   addPaymentMethod: (data: any) => api.post('/users/payment-methods', data),
   deletePaymentMethod: (id: string) =>
     api.delete(`/users/payment-methods/${id}`),
+};
+
+// Payment endpoints (PayMongo integration)
+export const paymentAPI = {
+  // Create payment intent for booking
+  createPaymentIntent: (data: {
+    bookingId: number;
+    amount: number;
+    paymentMethod: 'gcash' | 'card' | 'grab_pay' | 'paymaya';
+  }) => api.post('/payments/intent', data),
+
+  // Confirm payment after completion
+  confirmPayment: (data: { paymentIntentId: string }) =>
+    api.post('/payments/confirm', data),
+
+  // Create GCash payment (alternative flow)
+  createGCashPayment: (data: { bookingId: number; amount: number }) =>
+    api.post('/payments/gcash', data),
+
+  // Get all user payments
+  getPayments: () => api.get('/payments'),
+
+  // Get specific payment by ID
+  getPaymentById: (id: number) => api.get(`/payments/${id}`),
 };
 
 // Config endpoints

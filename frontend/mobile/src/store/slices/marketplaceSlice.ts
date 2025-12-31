@@ -28,29 +28,56 @@ const initialState: MarketplaceState = {
 export const searchListings = createAsyncThunk(
   'marketplace/searchListings',
   async (params?: SearchFilters) => {
+    console.log('🔄 API Request params:', params);
     const response = await marketplaceAPI.searchListings(params);
+    console.log('✅ API Response:', {
+      status: response.status,
+      dataLength: response.data?.data?.length || response.data?.length || 0
+    });
+
     // Handle v1 API response format: { data: [...], pagination: {...} }
     const listings = response.data?.data || response.data || [];
+    console.log('📦 Raw listings count:', listings.length);
 
     // Transform API response to match mobile app interface
-    return listings.map((listing: any) => ({
+    const transformed = listings.map((listing: any) => ({
       id: listing.id,
       title: listing.address, // Use address as title
       description: listing.description || '',
       address: listing.address,
       latitude: listing.lat,
       longitude: listing.lon,
+      lat: listing.lat,
+      lon: listing.lon,
+      price: listing.price,
       pricePerHour: listing.price,
       photos: listing.photos || [],
       amenities: listing.amenities || [],
       hostId: listing.ownerId || listing.owner?.id,
       hostName: listing.owner?.name || 'Unknown Host',
       hostAvatar: listing.owner?.profileImageUrl,
+      owner: listing.owner,
       rating: listing.rating || 0,
       reviewCount: 0, // API doesn't return this, would need separate query
+      reviews: listing.reviews || [],
       distance: listing.distance,
       availability: listing.status === 'available',
+      status: listing.status,
+      slotType: listing.slotType,
     }));
+
+    console.log('🎯 Transformed listings count:', transformed.length);
+    if (transformed.length > 0) {
+      console.log('🎯 First transformed:', {
+        id: transformed[0].id,
+        address: transformed[0].address,
+        lat: transformed[0].latitude,
+        lon: transformed[0].longitude,
+        price: transformed[0].pricePerHour,
+      });
+    }
+
+    return transformed;
   }
 );
 
@@ -76,16 +103,22 @@ export const getListingById = createAsyncThunk(
       address: listing.address,
       latitude: listing.lat,
       longitude: listing.lon,
+      lat: listing.lat,
+      lon: listing.lon,
+      price: listing.price,
       pricePerHour: listing.price,
       photos: listing.photos || [],
       amenities: listing.amenities || [],
       hostId: listing.ownerId || listing.owner?.id,
       hostName: listing.owner?.name || 'Unknown Host',
       hostAvatar: listing.owner?.profileImageUrl,
+      owner: listing.owner,
       rating: listing.rating || 0,
       reviewCount: listing.reviews?.length || 0,
+      reviews: listing.reviews || [],
       distance: listing.distance,
       availability: listing.status === 'available',
+      status: listing.status,
     };
   }
 );

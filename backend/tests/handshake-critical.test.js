@@ -114,6 +114,19 @@ describe('Critical Handshake Tests', () => {
     test('should establish WebSocket connection with valid token', (done) => {
       const wsUrl = `ws://localhost:3001?token=${authToken}`;
       const ws = new WebSocket(wsUrl);
+      let completed = false;
+
+      const cleanup = (err) => {
+        if (!completed) {
+          completed = true;
+          ws.removeAllListeners();
+          if (err) {
+            done(err);
+          } else {
+            done();
+          }
+        }
+      };
 
       ws.on('open', () => {
         // Connection established
@@ -122,11 +135,11 @@ describe('Critical Handshake Tests', () => {
       });
 
       ws.on('close', () => {
-        done();
+        cleanup();
       });
 
       ws.on('error', (error) => {
-        done(error);
+        cleanup(error);
       });
     }, 10000);
 
@@ -134,21 +147,30 @@ describe('Critical Handshake Tests', () => {
       const wsUrl = 'ws://localhost:3001?token=invalid_token_12345';
       const ws = new WebSocket(wsUrl);
 
-      let receivedClose = false;
+      let completed = false;
+
+      const cleanup = () => {
+        if (!completed) {
+          completed = true;
+          ws.removeAllListeners();
+          done();
+        }
+      };
 
       ws.on('close', (code, reason) => {
-        receivedClose = true;
         // WebSocket closed - either rejected by server or connection failed
         // Both are acceptable for invalid token
-        done();
+        cleanup();
       });
 
       ws.on('open', () => {
         // If it opens, it should close shortly after auth check
         // Give server 1 second to close connection
         setTimeout(() => {
-          if (!receivedClose) {
+          if (!completed) {
+            completed = true;
             ws.close();
+            ws.removeAllListeners();
             done();
           }
         }, 1000);
@@ -156,9 +178,7 @@ describe('Critical Handshake Tests', () => {
 
       ws.on('error', () => {
         // Error is expected for invalid token
-        if (!receivedClose) {
-          done();
-        }
+        cleanup();
       });
     }, 10000);
 
@@ -166,19 +186,28 @@ describe('Critical Handshake Tests', () => {
       const wsUrl = 'ws://localhost:3001';
       const ws = new WebSocket(wsUrl);
 
-      let receivedClose = false;
+      let completed = false;
+
+      const cleanup = () => {
+        if (!completed) {
+          completed = true;
+          ws.removeAllListeners();
+          done();
+        }
+      };
 
       ws.on('close', (code) => {
-        receivedClose = true;
         // WebSocket closed - connection rejected
-        done();
+        cleanup();
       });
 
       ws.on('open', () => {
         // If it opens, server should close it soon
         setTimeout(() => {
-          if (!receivedClose) {
+          if (!completed) {
+            completed = true;
             ws.close();
+            ws.removeAllListeners();
             done();
           }
         }, 1000);
@@ -186,9 +215,7 @@ describe('Critical Handshake Tests', () => {
 
       ws.on('error', () => {
         // Error is expected for missing token
-        if (!receivedClose) {
-          done();
-        }
+        cleanup();
       });
     }, 10000);
 

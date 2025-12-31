@@ -290,7 +290,7 @@ describe('Marketplace API Tests', () => {
       // Extract QR data (format: data:image/png;base64,...)
       // We need to generate valid QR data
       const { generateQRCodeData } = require('../services/qrcode');
-      qrCode = generateQRCodeData(testData.slot.id.toString());
+      qrCode = await generateQRCodeData(testData.slot.id.toString());
     });
 
     it('should check in successfully with valid QR code', async () => {
@@ -317,7 +317,9 @@ describe('Marketplace API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('Invalid QR code');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      expect(response.body.details[0].message).toContain('Invalid QR code format');
     });
 
     it('should update slot status to occupied', async () => {
@@ -342,7 +344,7 @@ describe('Marketplace API Tests', () => {
     beforeEach(async () => {
       // Create an active session first
       const { generateQRCodeData } = require('../services/qrcode');
-      const qrCode = generateQRCodeData(testData.slot.id.toString());
+      const qrCode = await generateQRCodeData(testData.slot.id.toString());
 
       const checkinResponse = await request(app)
         .post('/api/v1/marketplace/qr/checkin')

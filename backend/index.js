@@ -160,7 +160,7 @@ websocketService.init(server);
 if (process.env.NODE_ENV !== 'test') {
   server.listen(port, '0.0.0.0', () => {
     console.log(`Backend listening at http://localhost:${port}`);
-    console.log(`Network access: http://192.168.100.233:${port}`);
+    console.log(`Network access: http://192.168.100.176:${port}`);
   });
 }
 

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { BookingState, Booking } from '../../types';
-import { mockBookings } from '../../services/mockData';
+import { marketplaceAPI } from '../../services/api';
 
 const initialState: BookingState = {
   bookings: [],
@@ -12,9 +12,36 @@ const initialState: BookingState = {
 export const fetchBookings = createAsyncThunk(
   'booking/fetchBookings',
   async (userId: string) => {
-    // TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockBookings.filter(b => b.userId === userId);
+    console.log('Fetching bookings for user:', userId);
+    const response = await marketplaceAPI.getMyBookings();
+    console.log('Bookings response:', response.data);
+    const apiBookings = response.data.bookings || response.data;
+
+    // Transform API bookings to match Booking type
+    const bookings = apiBookings.map((booking: any) => {
+      const slot = booking.slot || {};
+      const photos = slot.photos ? JSON.parse(slot.photos) : [];
+
+      return {
+        id: booking.id.toString(),
+        spotId: booking.slotId.toString(),
+        spotTitle: slot.description || slot.address || 'Parking Spot',
+        spotAddress: slot.address || '',
+        spotImage: photos.length > 0 ? photos[0] : '',
+        userId: booking.userId.toString(),
+        startDate: booking.startTime,
+        endDate: booking.endTime,
+        duration: 0, // Calculate if needed
+        price: booking.price,
+        paymentMethod: 'Card', // Default, actual payment method not in API
+        status: booking.status === 'confirmed' ? 'upcoming' : booking.status,
+        qrCode: slot.qrCode || `QR-${booking.id}`,
+        createdAt: booking.createdAt,
+      };
+    });
+
+    console.log('Transformed bookings:', bookings);
+    return bookings;
   }
 );
 
@@ -32,26 +59,50 @@ export const createBooking = createAsyncThunk(
     price: number;
     paymentMethod: string;
   }) => {
-    // TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('Creating booking with API call:', {
+      slotId: parseInt(bookingData.spotId),
+      startTime: bookingData.startDate,
+      endTime: bookingData.endDate,
+    });
 
-    const newBooking: Booking = {
-      ...bookingData,
-      id: Date.now().toString(),
-      status: 'upcoming',
-      qrCode: `QR-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
+    const response = await marketplaceAPI.createBookingMarketplace({
+      slotId: parseInt(bookingData.spotId),
+      startTime: bookingData.startDate,
+      endTime: bookingData.endDate,
+    });
 
-    return newBooking;
+    console.log('Booking created - API response:', response.data);
+    const booking = response.data.booking || response.data;
+
+    // Transform API response to match Booking type
+    const transformed = {
+      id: booking.id.toString(),
+      spotId: booking.slotId.toString(),
+      spotTitle: bookingData.spotTitle,
+      spotAddress: bookingData.spotAddress,
+      spotImage: bookingData.spotImage,
+      userId: bookingData.userId,
+      startDate: booking.startTime,
+      endDate: booking.endTime,
+      duration: bookingData.duration,
+      price: booking.totalPrice || bookingData.price,
+      paymentMethod: bookingData.paymentMethod,
+      status: booking.status,
+      qrCode: booking.qrCode || `QR-${booking.id}`,
+      createdAt: booking.createdAt,
+    } as Booking;
+
+    console.log('Transformed booking:', transformed);
+    return transformed;
   }
 );
 
 export const cancelBooking = createAsyncThunk(
   'booking/cancelBooking',
   async (bookingId: string) => {
-    // TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log('Cancelling booking:', bookingId);
+    const response = await marketplaceAPI.cancelBooking(parseInt(bookingId));
+    console.log('Cancel response:', response.data);
     return bookingId;
   }
 );

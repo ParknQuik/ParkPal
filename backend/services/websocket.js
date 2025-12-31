@@ -1,12 +1,30 @@
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 const url = require('url');
+const secretManager = require('../config/secretManager');
+
 let wss;
+let jwtSecretCache = null;
+
+async function getJwtSecret() {
+  if (jwtSecretCache) {
+    return jwtSecretCache;
+  }
+
+  const secret = await secretManager.getSecret('jwt-secret');
+
+  if (!secret) {
+    throw new Error('JWT_SECRET not configured');
+  }
+
+  jwtSecretCache = secret;
+  return secret;
+}
 
 function init(server) {
   wss = new WebSocket.Server({ server });
 
-  wss.on('connection', (ws, req) => {
+  wss.on('connection', async (ws, req) => {
     // Extract token from query parameter
     const queryParams = url.parse(req.url, true).query;
     const token = queryParams.token;
@@ -19,7 +37,8 @@ function init(server) {
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const jwtSecret = await getJwtSecret();
+      const decoded = jwt.verify(token, jwtSecret);
 
       // Attach user info to WebSocket connection
       ws.userId = decoded.id;

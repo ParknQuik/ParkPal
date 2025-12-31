@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +37,20 @@ export const SearchScreen: React.FC = () => {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [listViewDisplayed, setListViewDisplayed] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const autocompleteRef = useRef<any>(null);
+
+  const handleClearSearch = () => {
+    setLocation('');
+    setLatitude(null);
+    setLongitude(null);
+    setSearchText('');
+    setListViewDisplayed(false);
+    if (autocompleteRef.current) {
+      autocompleteRef.current.setAddressText('');
+    }
+  };
 
   useEffect(() => {
     const fetchApiKey = async () => {
@@ -77,10 +91,17 @@ export const SearchScreen: React.FC = () => {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero Section */}
+  const sections = [
+    { type: 'hero' },
+    { type: 'search' },
+    { type: 'step', icon: '🔍', title: '1. Search', description: 'Enter your location and desired parking time' },
+    { type: 'step', icon: '📍', title: '2. Choose', description: 'Browse available parking spots on the map' },
+    { type: 'step', icon: '📅', title: '3. Book', description: 'Reserve your spot and park with confidence' },
+  ];
+
+  const renderItem = ({ item }: any) => {
+    if (item.type === 'hero') {
+      return (
         <LinearGradient
           colors={colors.gradientPrimary}
           style={styles.hero}
@@ -92,32 +113,54 @@ export const SearchScreen: React.FC = () => {
             Book parking spaces in advance. Save time, save money.
           </Text>
         </LinearGradient>
+      );
+    }
 
+    if (item.type === 'search') {
+      return (
         <View style={styles.content}>
-          {/* Search Card */}
           <Card style={styles.searchCard}>
             <Text style={styles.sectionTitle}>Where do you need parking?</Text>
 
-            <GooglePlacesAutocomplete
-              placeholder="Enter address or location"
-              onPress={(data, details = null) => {
-                setLocation(data.description);
-                if (details?.geometry?.location) {
-                  setLatitude(details.geometry.location.lat);
-                  setLongitude(details.geometry.location.lng);
-                }
-              }}
-              query={{
-                key: googleMapsApiKey,
-                language: 'en',
-                components: 'country:ph',
-              }}
-              fetchDetails={true}
-              enablePoweredByContainer={false}
-              styles={{
+            <View style={styles.searchInputContainer}>
+              <GooglePlacesAutocomplete
+                ref={autocompleteRef}
+                placeholder="Enter address or location"
+                onPress={(data, details = null) => {
+                  setLocation(data.description);
+                  setSearchText(data.description);
+                  if (details?.geometry?.location) {
+                    setLatitude(details.geometry.location.lat);
+                    setLongitude(details.geometry.location.lng);
+                  }
+                  setListViewDisplayed(false);
+                }}
+                query={{
+                  key: googleMapsApiKey,
+                  language: 'en',
+                  components: 'country:ph',
+                }}
+                fetchDetails={true}
+                enablePoweredByContainer={false}
+                keyboardShouldPersistTaps="handled"
+                listViewDisplayed={listViewDisplayed}
+                onFocus={() => setListViewDisplayed(true)}
+                onBlur={() => setListViewDisplayed(false)}
+                textInputProps={{
+                  onChangeText: (text) => {
+                    setSearchText(text);
+                    if (text.length > 0) {
+                      setListViewDisplayed(true);
+                    } else {
+                      setListViewDisplayed(false);
+                    }
+                  },
+                }}
+                styles={{
                 container: {
                   flex: 0,
                   marginBottom: spacing.lg,
+                  zIndex: 1,
                 },
                 textInputContainer: {
                   backgroundColor: colors.surface,
@@ -138,6 +181,11 @@ export const SearchScreen: React.FC = () => {
                   borderColor: colors.border,
                   borderRadius: borderRadius.md,
                   marginTop: spacing.xs,
+                  position: 'absolute',
+                  top: 60,
+                  left: 0,
+                  right: 0,
+                  maxHeight: 200,
                 },
                 row: {
                   padding: spacing.md,
@@ -148,6 +196,15 @@ export const SearchScreen: React.FC = () => {
                 },
               }}
             />
+              {searchText.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={handleClearSearch}
+                >
+                  <Text style={styles.clearButtonText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {location && latitude && (
               <Text style={styles.selectedLocation}>
@@ -172,37 +229,41 @@ export const SearchScreen: React.FC = () => {
               </Text>
             )}
           </Card>
-
-          {/* How It Works */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>How It Works</Text>
-
-            <Card style={styles.stepCard}>
-              <Text style={styles.stepIcon}>🔍</Text>
-              <Text style={styles.stepTitle}>1. Search</Text>
-              <Text style={styles.stepDescription}>
-                Enter your location and desired parking time
-              </Text>
-            </Card>
-
-            <Card style={styles.stepCard}>
-              <Text style={styles.stepIcon}>📍</Text>
-              <Text style={styles.stepTitle}>2. Choose</Text>
-              <Text style={styles.stepDescription}>
-                Browse available parking spots on the map
-              </Text>
-            </Card>
-
-            <Card style={styles.stepCard}>
-              <Text style={styles.stepIcon}>📅</Text>
-              <Text style={styles.stepTitle}>3. Book</Text>
-              <Text style={styles.stepDescription}>
-                Reserve your spot and park with confidence
-              </Text>
-            </Card>
-          </View>
         </View>
-      </ScrollView>
+      );
+    }
+
+    if (item.type === 'step') {
+      return (
+        <View style={styles.content}>
+          <Card style={styles.stepCard}>
+            <Text style={styles.stepIcon}>{item.icon}</Text>
+            <Text style={styles.stepTitle}>{item.title}</Text>
+            <Text style={styles.stepDescription}>{item.description}</Text>
+          </Card>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={sections}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => `${item.type}-${index}`}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          sections[0].type === 'step' ? (
+            <Text style={[styles.sectionTitle, { paddingHorizontal: spacing.xl, marginTop: spacing.lg }]}>
+              How It Works
+            </Text>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 };
@@ -246,6 +307,26 @@ const styles = StyleSheet.create({
   },
   searchCard: {
     marginBottom: spacing.xl,
+  },
+  searchInputContainer: {
+    position: 'relative',
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   sectionTitle: {
     ...typography.h5,
