@@ -1,0 +1,276 @@
+name: Test Coverage Enforcement
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  backend-tests:
+    name: Backend Tests & Coverage
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parkpal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Setup database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+        run: npx prisma migrate deploy
+
+      - name: Run tests with coverage
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key
+          NODE_ENV: test
+        run: npm test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=text
+
+      - name: Check coverage thresholds
+        working-directory: ./backend
+        run: |
+          node ../test-automator/scripts/test-coverage-enforcer.js
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: true
+
+      - name: Generate coverage badge
+        uses: cicirello/jacoco-badge-generator@v2
+        with:
+          generate-branches-badge: true
+          jacoco-csv-file: backend/coverage/lcov.info
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/coverage/
+          retention-days: 30
+
+  mobile-tests:
+    name: Mobile Tests & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend/mobile
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: ./frontend/mobile
+        run: npm test -- --coverage --coverageReporters=json --coverageReporters=lcov --watchAll=false
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./frontend/mobile/coverage/lcov.info
+          flags: mobile
+          name: mobile-coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-coverage-report
+          path: frontend/mobile/coverage/
+          retention-days: 30
+
+  web-tests:
+    name: Web Tests & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend/web
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: ./frontend/web
+        run: npm test -- --coverage --run
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./frontend/web/coverage/lcov.info
+          flags: web
+          name: web-coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage-report
+          path: frontend/web/coverage/
+          retention-days: 30
+
+  api-contract-validation:
+    name: API Contract Validation
+    runs-on: ubuntu-latest
+    needs: [backend-tests]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Generate and validate API contract
+        run: npm run contract:test
+
+      - name: Upload contract report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-contract-report
+          path: backend/api-contract.json
+          retention-days: 30
+
+  generate-consolidated-report:
+    name: Generate Consolidated Test Report
+    runs-on: ubuntu-latest
+    needs: [backend-tests, mobile-tests, web-tests, api-contract-validation]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Download all coverage reports
+        uses: actions/download-artifact@v4
+        with:
+          path: ./coverage-reports
+
+      - name: Generate HTML report
+        run: |
+          node test-automator/scripts/generate-test-report.js
+
+      - name: Upload consolidated report
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-test-report
+          path: test-automator/reports/test-report.html
+          retention-days: 30
+
+      - name: Comment PR with coverage summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let backendCoverage = { statements: { pct: 0 } };
+            let mobileCoverage = { statements: { pct: 0 } };
+            let webCoverage = { statements: { pct: 0 } };
+
+            try {
+              backendCoverage = JSON.parse(fs.readFileSync('coverage-reports/backend-coverage-report/coverage-summary.json')).total;
+            } catch (e) {}
+
+            try {
+              mobileCoverage = JSON.parse(fs.readFileSync('coverage-reports/mobile-coverage-report/coverage-summary.json')).total;
+            } catch (e) {}
+
+            try {
+              webCoverage = JSON.parse(fs.readFileSync('coverage-reports/web-coverage-report/coverage-summary.json')).total;
+            } catch (e) {}
+
+            const comment = `## Test Coverage Report 📊
+
+            | Component | Statements | Branches | Functions | Lines |
+            |-----------|------------|----------|-----------|-------|
+            | **Backend** | ${backendCoverage.statements.pct.toFixed(1)}% | ${backendCoverage.branches.pct.toFixed(1)}% | ${backendCoverage.functions.pct.toFixed(1)}% | ${backendCoverage.lines.pct.toFixed(1)}% |
+            | **Mobile** | ${mobileCoverage.statements.pct.toFixed(1)}% | ${mobileCoverage.branches.pct.toFixed(1)}% | ${mobileCoverage.functions.pct.toFixed(1)}% | ${mobileCoverage.lines.pct.toFixed(1)}% |
+            | **Web** | ${webCoverage.statements.pct.toFixed(1)}% | ${webCoverage.branches.pct.toFixed(1)}% | ${webCoverage.functions.pct.toFixed(1)}% | ${webCoverage.lines.pct.toFixed(1)}% |
+
+            **Threshold:** 80% minimum for statements, functions, and lines; 75% for branches
+
+            ${backendCoverage.statements.pct >= 80 ? '✅' : '❌'} Backend meets coverage requirements
+            ${mobileCoverage.statements.pct >= 80 ? '✅' : '❌'} Mobile meets coverage requirements
+            ${webCoverage.statements.pct >= 80 ? '✅' : '❌'} Web meets coverage requirements
+
+            [View Detailed Report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
