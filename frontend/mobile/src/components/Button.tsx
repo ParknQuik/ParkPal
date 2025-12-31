@@ -10,6 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { ButtonProps } from '../types';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import { haptics } from '../utils/haptics';
 
 export const Button: React.FC<ButtonProps> = ({
   title,
@@ -21,6 +22,12 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   style,
 }) => {
+  const handlePress = async () => {
+    if (!disabled && !loading) {
+      await haptics.medium();
+      onPress?.();
+    }
+  };
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
       borderRadius: borderRadius.md,
@@ -62,10 +69,14 @@ export const Button: React.FC<ButtonProps> = ({
   if (variant === 'gradient') {
     return (
       <TouchableOpacity
-        onPress={onPress}
+        onPress={handlePress}
         disabled={disabled || loading}
         style={[styles.container, style]}
         activeOpacity={0.8}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: disabled || loading }}
       >
         <LinearGradient
           colors={colors.gradientPrimary}
@@ -98,7 +109,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
       style={[
         buttonStyle,
@@ -106,6 +117,10 @@ export const Button: React.FC<ButtonProps> = ({
         style,
       ]}
       activeOpacity={0.8}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading }}
     >
       {loading ? (
         <ActivityIndicator
