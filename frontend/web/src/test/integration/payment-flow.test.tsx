@@ -243,8 +243,7 @@ describe('Payment Flow Integration Test', () => {
   });
 
   it('should allow user to cancel payment', () => {
-    // Note: mockNavigate would be used to verify navigation in a full integration test
-    // const mockNavigate = vi.fn();
+    const mockNavigate = vi.fn();
 
     render(
       <BrowserRouter>
