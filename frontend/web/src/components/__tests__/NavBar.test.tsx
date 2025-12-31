@@ -73,13 +73,13 @@ describe('NavBar', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
-  it('should navigate to map when logo clicked', async () => {
+  it('should navigate to search when logo clicked', async () => {
     const user = userEvent.setup();
     renderNavBar();
 
     await user.click(screen.getByText('ParknQuik'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/map');
+    expect(mockNavigate).toHaveBeenCalledWith('/search');
   });
 
   it('should open menu when avatar clicked', async () => {
