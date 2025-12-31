@@ -31,3 +31,5 @@ yarn-error.log*
 
 # OS
 .DS_Store
+*.d.ts
+!src/vite-env.d.ts
