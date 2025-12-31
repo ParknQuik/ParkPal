@@ -1,0 +1,99 @@
+config:
+  target: "http://localhost:3000"
+  # Stress test to find breaking points
+
+  phases:
+    # Progressive load increase to find the breaking point
+    - duration: 60
+      arrivalRate: 10
+      name: "Stage 1: Light load"
+
+    - duration: 60
+      arrivalRate: 50
+      name: "Stage 2: Moderate load"
+
+    - duration: 60
+      arrivalRate: 100
+      name: "Stage 3: Heavy load"
+
+    - duration: 60
+      arrivalRate: 200
+      name: "Stage 4: Very heavy load"
+
+    - duration: 60
+      arrivalRate: 300
+      name: "Stage 5: Extreme load"
+
+    - duration: 60
+      arrivalRate: 500
+      name: "Stage 6: Breaking point"
+
+  # No strict thresholds - we want to see where it breaks
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint:
+      # Track detailed metrics per endpoint
+      stripQueryString: true
+
+scenarios:
+  # Realistic user behavior under stress
+  - name: "Mixed User Operations"
+    flow:
+      # 50% searches
+      - get:
+          url: "/api/v1/marketplace/listings?latitude=14.5995&longitude=120.9842&radius=5"
+          expect:
+            - statusCode: [200, 429, 503]
+
+      # 30% authentication
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          expect:
+            - statusCode: [200, 429, 503]
+
+      # 20% booking operations
+      - post:
+          url: "/api/v1/marketplace/bookings"
+          headers:
+            Authorization: "Bearer test-token"
+          json:
+            listingId: "{{ $randomString() }}"
+            startTime: "2026-01-15T08:00:00Z"
+            endTime: "2026-01-15T10:00:00Z"
+          expect:
+            - statusCode: [201, 400, 401, 429, 503]
+
+  # Database-intensive operations
+  - name: "Database Stress"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/v1/marketplace/listings?page=1&limit=50"
+          expect:
+            - statusCode: [200, 429, 503]
+
+      - get:
+          url: "/api/v1/marketplace/listings?latitude=14.5995&longitude=120.9842&radius=10&page=1&limit=100"
+          expect:
+            - statusCode: [200, 429, 503]
+
+  # Redis cache stress
+  - name: "Cache Operations"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/v1/marketplace/listings/popular"
+          expect:
+            - statusCode: [200, 429, 503]
+
+      - get:
+          url: "/api/v1/marketplace/listings?featured=true"
+          expect:
+            - statusCode: [200, 429, 503]
