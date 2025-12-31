@@ -183,11 +183,8 @@ websocketService.init(server);
 // Only start server if not in test mode
 if (process.env.NODE_ENV !== 'test') {
   server.listen(port, '0.0.0.0', () => {
-    logger.info(`Backend listening at http://localhost:${port}`);
-    logger.info(`Network access: http://192.168.100.176:${port}`);
-    logger.info(`API Documentation: http://localhost:${port}/api-docs`);
-    logger.info(`Metrics: http://localhost:${port}/metrics`);
-    logger.info(`Health Check: http://localhost:${port}/health`);
+    console.log(`Backend listening at http://localhost:${port}`);
+    console.log(`Network access: http://192.168.100.176:${port}`);
   });
 }
 
