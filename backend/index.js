@@ -3,18 +3,33 @@ const cors = require('cors');
 const http = require('http');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 require('dotenv').config();
 
 const secretManager = require('./config/secretManager');
+const logger = require('./config/logger');
+const metrics = require('./config/metrics');
+const { validateEnvironment, printEnvironmentSummary } = require('./config/env-validation');
 
 const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 3001;
 
+// Validate environment variables
+const envValidation = validateEnvironment();
+if (!envValidation.valid && process.env.NODE_ENV === 'production') {
+  logger.error('Cannot start server: Environment validation failed');
+  process.exit(1);
+}
+
 // Initialize Secret Manager
 secretManager.initialize();
+
+// Log startup information
+logger.logStartup();
+printEnvironmentSummary();
 
 // Rate limiting configuration
 const globalLimiter = rateLimit({
@@ -80,6 +95,12 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// HTTP request logging with Morgan + Winston
+app.use(morgan('combined', { stream: logger.stream }));
+
+// Prometheus metrics middleware
+app.use(metrics.metricsMiddleware);
+
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
@@ -100,6 +121,9 @@ const healthRoutes = require('./routes/health');
 const v1Router = require('./routes/v1');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { deprecate } = require('./middleware/deprecation');
+
+// Metrics endpoint (before other routes)
+app.get('/metrics', metrics.getMetrics);
 
 // Health check routes (before other routes)
 healthRoutes(app);
@@ -159,8 +183,11 @@ websocketService.init(server);
 // Only start server if not in test mode
 if (process.env.NODE_ENV !== 'test') {
   server.listen(port, '0.0.0.0', () => {
-    console.log(`Backend listening at http://localhost:${port}`);
-    console.log(`Network access: http://192.168.100.176:${port}`);
+    logger.info(`Backend listening at http://localhost:${port}`);
+    logger.info(`Network access: http://192.168.100.176:${port}`);
+    logger.info(`API Documentation: http://localhost:${port}/api-docs`);
+    logger.info(`Metrics: http://localhost:${port}/metrics`);
+    logger.info(`Health Check: http://localhost:${port}/health`);
   });
 }
 
