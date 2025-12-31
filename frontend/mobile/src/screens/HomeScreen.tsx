@@ -3,8 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,15 +16,24 @@ import { SearchBar } from '../components/SearchBar';
 import { ParkingCard } from '../components/ParkingCard';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { EmptyState } from '../components/EmptyState';
+import { SkeletonParkingCard } from '../components/SkeletonLoader';
+import { RefreshableScrollView } from '../components/RefreshableScrollView';
+import { Toast } from '../components/Toast';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import { haptics } from '../utils/haptics';
+import { accessibility } from '../utils/accessibility';
+import { useDebouncedCallback } from '../utils/performance';
+import { getErrorMessage } from '../utils/errorMessages';
 
 export const HomeScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'info' as const });
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
 
   const { user } = useAppSelector((state) => state.auth);
-  const { listings, loading, filters } = useAppSelector((state) => state.marketplace);
+  const { listings, loading, filters, error } = useAppSelector((state) => state.marketplace);
   const { currentLocation, loading: locationLoading, error: locationError } = useAppSelector((state) => state.location);
 
   useEffect(() => {
@@ -62,8 +71,8 @@ export const HomeScreen: React.FC = () => {
     }
   }, [currentLocation, filters.sortBy, dispatch]);
 
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
+  // Debounced search to improve performance
+  const debouncedSearch = useDebouncedCallback((query: string) => {
     if (currentLocation) {
       dispatch(
         searchListings({
@@ -74,15 +83,71 @@ export const HomeScreen: React.FC = () => {
         })
       );
     }
-  }, [currentLocation, filters.sortBy, dispatch]);
+  }, 500);
 
-  const handleSpotPress = useCallback((listingId: number) => {
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    debouncedSearch(query);
+  }, [debouncedSearch]);
+
+  const handleSpotPress = useCallback(async (listingId: number) => {
+    await haptics.light();
     navigation.navigate('ParkingDetail' as never, { spotId: listingId.toString() } as never);
   }, [navigation]);
 
-  const handleLocationRefresh = useCallback(() => {
-    dispatch(getCurrentLocation());
+  const handleLocationRefresh = useCallback(async () => {
+    await haptics.medium();
+    const result = await dispatch(getCurrentLocation());
+
+    if (getCurrentLocation.fulfilled.match(result)) {
+      setToast({
+        visible: true,
+        message: 'Location updated successfully',
+        type: 'success',
+      });
+    } else {
+      setToast({
+        visible: true,
+        message: getErrorMessage(result.error),
+        type: 'error',
+      });
+    }
   }, [dispatch]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await haptics.light();
+
+    try {
+      await Promise.all([
+        dispatch(getCurrentLocation()),
+        currentLocation && dispatch(
+          searchListings({
+            lat: currentLocation.latitude,
+            lon: currentLocation.longitude,
+            radius: 5,
+            sortBy: filters.sortBy,
+          })
+        ),
+      ]);
+
+      await haptics.success();
+      setToast({
+        visible: true,
+        message: 'Refreshed successfully',
+        type: 'success',
+      });
+    } catch (error) {
+      await haptics.error();
+      setToast({
+        visible: true,
+        message: 'Failed to refresh',
+        type: 'error',
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [dispatch, currentLocation, filters.sortBy]);
 
   // Memoize transformed listings to prevent unnecessary recalculations
   const transformedListings = useMemo(() => {
@@ -118,6 +183,17 @@ export const HomeScreen: React.FC = () => {
     }));
   }, [listings]);
 
+  // Show error toast when error changes
+  useEffect(() => {
+    if (error) {
+      setToast({
+        visible: true,
+        message: getErrorMessage(error),
+        type: 'error',
+      });
+    }
+  }, [error]);
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -125,15 +201,30 @@ export const HomeScreen: React.FC = () => {
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        {...accessibility.group('Header section')}
       >
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.greeting}>Hello,</Text>
-            <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
+            <Text style={styles.greeting} {...accessibility.header(2)}>
+              Hello,
+            </Text>
+            <Text
+              style={styles.userName}
+              {...accessibility.header(1)}
+              accessibilityLabel={`Welcome ${user?.name || 'Guest'}`}
+            >
+              {user?.name || 'Guest'}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.locationButton}
             onPress={handleLocationRefresh}
+            {...accessibility.button(
+              locationLoading ? 'Getting location' :
+              locationError ? 'Enable location' :
+              currentLocation ? 'Refresh location' : 'Get location',
+              'Tap to update your current location'
+            )}
           >
             {locationLoading ? (
               <Text style={styles.locationText}>📍 Getting location...</Text>
@@ -187,22 +278,34 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Nearby Parking</Text>
-          <TouchableOpacity>
+          <Text style={styles.sectionTitle} {...accessibility.header(3)}>
+            Nearby Parking
+          </Text>
+          <TouchableOpacity
+            {...accessibility.button('See all parking spots', 'View all available parking spots')}
+          >
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView
+        <RefreshableScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          onRefresh={handleRefresh}
         >
           {loading ? (
-            <LoadingSpinner />
+            <>
+              <SkeletonParkingCard />
+              <SkeletonParkingCard />
+              <SkeletonParkingCard />
+            </>
           ) : listings.length === 0 ? (
             <EmptyState
               title="No parking spots found"
               message="Try adjusting your search or location"
+              icon="🅿️"
+              actionLabel="Refresh"
+              onAction={handleRefresh}
             />
           ) : (
             transformedListings.map((spot) => (
@@ -213,8 +316,15 @@ export const HomeScreen: React.FC = () => {
               />
             ))
           )}
-        </ScrollView>
+        </RefreshableScrollView>
       </View>
+
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
     </SafeAreaView>
   );
 };
