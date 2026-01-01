@@ -46,7 +46,7 @@ config:
     expect: {}
     metrics-by-endpoint: {}
 
-  processor: "./performance-testing/artillery/artillery-helpers.js"
+  processor: "./artillery-helpers.js"
 
 scenarios:
   # Scenario 1: User Authentication Flow

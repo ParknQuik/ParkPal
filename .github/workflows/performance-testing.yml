@@ -91,9 +91,10 @@ jobs:
         run: mkdir -p performance-testing/reports
 
       - name: Run Artillery Load Test
+        working-directory: ./performance-testing/artillery
         run: |
-          artillery run performance-testing/artillery/api-load-test.yml \
-            --output performance-testing/reports/artillery-load-test-report.json
+          artillery run api-load-test.yml \
+            --output ../../performance-testing/reports/artillery-load-test-report.json
 
       - name: Generate HTML Report
         if: always()
