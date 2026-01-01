@@ -85,10 +85,7 @@ jobs:
           sleep 10
 
       - name: Install Artillery
-        run: |
-          npm install -g artillery@latest
-          npm install -g artillery-plugin-expect
-          npm install -g artillery-plugin-metrics-by-endpoint
+        run: npm install -g artillery@latest
 
       - name: Create reports directory
         run: mkdir -p performance-testing/reports
