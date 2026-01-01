@@ -41,9 +41,8 @@ config:
     headers:
       Content-Type: "application/json"
 
-  # Plugins disabled - causing CI issues, not essential for basic load testing
-  # plugins:
-  # processor: "./performance-testing/artillery/artillery-helpers.js"  # Disabled: not currently used, causing CI issues
+  # Note: Plugins and processor disabled due to CI compatibility issues
+  # They are not essential for basic load testing
 
 scenarios:
   # Scenario 1: User Authentication Flow
