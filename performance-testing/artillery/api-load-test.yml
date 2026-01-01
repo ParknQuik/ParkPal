@@ -46,7 +46,7 @@ config:
     expect: {}
     metrics-by-endpoint: {}
 
-  processor: "./performance-testing/artillery/artillery-helpers.js"
+  # processor: "./performance-testing/artillery/artillery-helpers.js"  # Disabled: not currently used, causing CI issues
 
 scenarios:
   # Scenario 1: User Authentication Flow
