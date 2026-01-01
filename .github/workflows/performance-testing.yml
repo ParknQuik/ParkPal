@@ -94,13 +94,14 @@ jobs:
         working-directory: ./performance-testing/artillery
         run: |
           artillery run api-load-test.yml \
-            --output ../../performance-testing/reports/artillery-load-test-report.json
+            --output ../reports/artillery-load-test-report.json
 
       - name: Generate HTML Report
         if: always()
+        working-directory: ./performance-testing
         run: |
-          artillery report performance-testing/reports/artillery-load-test-report.json \
-            --output performance-testing/reports/artillery-load-test-report.html
+          artillery report reports/artillery-load-test-report.json \
+            --output reports/artillery-load-test-report.html
 
       - name: Upload Artillery Report
         if: always()
