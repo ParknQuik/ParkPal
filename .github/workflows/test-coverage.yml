@@ -51,27 +51,6 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
-      - name: Create .env.test file
-        working-directory: ./backend
-        run: |
-          cat > .env.test << 'EOF'
-          PORT=3002
-          NODE_ENV=test
-          FRONTEND_URL=http://localhost:19006
-          USE_SECRET_MANAGER=false
-          DATABASE_URL=postgresql://parkpal:testpassword@localhost:5432/parkpal_test
-          REDIS_URL=redis://localhost:6379
-          JWT_SECRET=test-jwt-secret-for-ci-only-minimum-32-characters
-          QR_SECRET=test-qr-secret-for-ci
-          PAYMONGO_SECRET_KEY=sk_test_fake_key
-          PAYMONGO_PUBLIC_KEY=pk_test_fake_key
-          PAYMONGO_WEBHOOK_SECRET=whsec_fake_key
-          GOOGLE_MAPS_API_KEY=test_maps_key
-          WEATHER_API_KEY=test_weather_key
-          ENABLE_ANALYTICS=false
-          APP_VERSION=1.0.0-test
-          EOF
-
       - name: Setup database
         working-directory: ./backend
         env:
