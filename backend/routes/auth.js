@@ -1,7 +1,7 @@
 const authController = require('../controllers/authController');
 const { authenticate } = require('../services/auth');
 const { validateBody } = require('../middleware/validation');
-const { registerSchema, loginSchema, changePasswordSchema } = require('../validators/auth');
+const { registerSchema, loginSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validators/auth');
 
 module.exports = (app, authLimiter) => {
   /**
@@ -170,4 +170,69 @@ module.exports = (app, authLimiter) => {
    *         description: Logged out successfully
    */
   app.post('/auth/logout', authenticate, authController.logout);
+
+  /**
+   * @swagger
+   * /api/auth/forgot-password:
+   *   post:
+   *     summary: Request password reset
+   *     tags: [Authentication]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - email
+   *             properties:
+   *               email:
+   *                 type: string
+   *                 format: email
+   *                 example: john@example.com
+   *     responses:
+   *       200:
+   *         description: Reset email sent (if account exists)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *       400:
+   *         description: Invalid email format
+   */
+  app.post('/auth/forgot-password', authLimiter, validateBody(forgotPasswordSchema), authController.forgotPassword);
+
+  /**
+   * @swagger
+   * /api/auth/reset-password:
+   *   post:
+   *     summary: Reset password with token
+   *     tags: [Authentication]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - token
+   *               - newPassword
+   *             properties:
+   *               token:
+   *                 type: string
+   *                 example: a1b2c3d4e5f6...
+   *               newPassword:
+   *                 type: string
+   *                 format: password
+   *                 example: NewSecurePass123!
+   *     responses:
+   *       200:
+   *         description: Password reset successfully
+   *       400:
+   *         description: Invalid or expired token
+   */
+  app.post('/auth/reset-password', authLimiter, validateBody(resetPasswordSchema), authController.resetPassword);
 };

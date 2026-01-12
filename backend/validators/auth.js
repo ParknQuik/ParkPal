@@ -103,3 +103,35 @@ exports.changePasswordSchema = Joi.object({
       'any.invalid': 'New password must be different from current password'
     })
 });
+
+exports.forgotPasswordSchema = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      'string.email': 'Invalid email address',
+      'any.required': 'Email is required'
+    })
+});
+
+exports.resetPasswordSchema = Joi.object({
+  token: Joi.string()
+    .length(64)
+    .required()
+    .messages({
+      'string.length': 'Invalid reset token',
+      'any.required': 'Reset token is required'
+    }),
+
+  newPassword: Joi.string()
+    .min(8)
+    .max(72)
+    .pattern(passwordRegex)
+    .required()
+    .messages({
+      'string.min': 'Password must be at least 8 characters',
+      'string.max': 'Password must be less than 72 characters',
+      'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+      'any.required': 'Password is required'
+    })
+});

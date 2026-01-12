@@ -20,6 +20,11 @@ model User {
   phone           String?
   profileImageUrl String?   @map("profile_image_url")
   isActive        Boolean   @default(true) @map("is_active")
+
+  // Password Reset
+  resetPasswordToken   String?   @map("reset_password_token")
+  resetPasswordExpires DateTime? @map("reset_password_expires")
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
