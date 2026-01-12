@@ -40,14 +40,17 @@ const globalLimiter = rateLimit({
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
 });
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per IP
-  message: { error: 'Too many authentication attempts, please try again later.' },
-  skipSuccessfulRequests: true, // Don't count successful logins
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Bypass rate limiter in test environment to allow comprehensive testing
+const authLimiter = process.env.NODE_ENV === 'test'
+  ? (req, res, next) => next() // Bypass in tests
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5, // 5 attempts per IP
+      message: { error: 'Too many authentication attempts, please try again later.' },
+      skipSuccessfulRequests: true, // Don't count successful logins
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
 
 // Middleware
 // Security headers with helmet.js
