@@ -29,6 +29,31 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parkpal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -55,10 +80,22 @@ jobs:
           cd backend
           npx prisma generate
 
+      - name: Setup database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+        run: npx prisma migrate deploy
+
       - name: Run tests
-        run: |
-          cd backend
-          npm test || echo "⚠️ No tests configured yet"
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-pr-checks
+          QR_SECRET: test-qr-secret-for-pr-checks-only-64-character-hex-string-value
+          NODE_ENV: test
+          USE_SECRET_MANAGER: false
+        run: npm test || echo "⚠️ No tests configured yet"
 
   frontend-web-tests:
     name: Frontend Web Tests
@@ -118,7 +155,7 @@ jobs:
       - name: Run tests
         run: |
           cd frontend/mobile
-          npm test || echo "⚠️ No tests configured yet"
+          npm test -- --watchAll=false || echo "⚠️ No tests configured yet"
 
   security-scan:
     name: Security Scan
