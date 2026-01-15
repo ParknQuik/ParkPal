@@ -154,7 +154,7 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: ./frontend/web
-        run: npm test -- --coverage --run
+        run: npm run test:coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
