@@ -247,10 +247,12 @@ jobs:
 
       - name: Download all coverage reports
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: ./coverage-reports
 
       - name: Generate HTML report
+        continue-on-error: true
         run: |
           node test-automator/scripts/generate-test-report.js
 
@@ -263,26 +265,36 @@ jobs:
 
       - name: Comment PR with coverage summary
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
 
-            let backendCoverage = { statements: { pct: 0 } };
-            let mobileCoverage = { statements: { pct: 0 } };
-            let webCoverage = { statements: { pct: 0 } };
+            let backendCoverage = { statements: { pct: 0 }, branches: { pct: 0 }, functions: { pct: 0 }, lines: { pct: 0 } };
+            let mobileCoverage = { statements: { pct: 0 }, branches: { pct: 0 }, functions: { pct: 0 }, lines: { pct: 0 } };
+            let webCoverage = { statements: { pct: 0 }, branches: { pct: 0 }, functions: { pct: 0 }, lines: { pct: 0 } };
 
             try {
-              backendCoverage = JSON.parse(fs.readFileSync('coverage-reports/backend-coverage-report/coverage-summary.json')).total;
-            } catch (e) {}
+              const data = JSON.parse(fs.readFileSync('coverage-reports/backend-coverage-report/coverage-summary.json'));
+              if (data && data.total) backendCoverage = data.total;
+            } catch (e) {
+              console.log('Backend coverage not available:', e.message);
+            }
 
             try {
-              mobileCoverage = JSON.parse(fs.readFileSync('coverage-reports/mobile-coverage-report/coverage-summary.json')).total;
-            } catch (e) {}
+              const data = JSON.parse(fs.readFileSync('coverage-reports/mobile-coverage-report/coverage-summary.json'));
+              if (data && data.total) mobileCoverage = data.total;
+            } catch (e) {
+              console.log('Mobile coverage not available:', e.message);
+            }
 
             try {
-              webCoverage = JSON.parse(fs.readFileSync('coverage-reports/web-coverage-report/coverage-summary.json')).total;
-            } catch (e) {}
+              const data = JSON.parse(fs.readFileSync('coverage-reports/web-coverage-report/coverage-summary.json'));
+              if (data && data.total) webCoverage = data.total;
+            } catch (e) {
+              console.log('Web coverage not available:', e.message);
+            }
 
             const comment = `## Test Coverage Report 📊
 
