@@ -23,7 +23,11 @@ jobs:
   artillery-load-test:
     name: Artillery Load Test
     runs-on: ubuntu-latest
-    if: github.event.inputs.test_type == 'load' || github.event.inputs.test_type == ''
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'schedule' ||
+      github.event.inputs.test_type == 'load' ||
+      github.event.inputs.test_type == ''
 
     services:
       postgres:

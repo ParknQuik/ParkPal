@@ -63,7 +63,9 @@ jobs:
           DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key
+          QR_SECRET: test-qr-secret-for-coverage-tests-only-64-character-hex-string
           NODE_ENV: test
+          USE_SECRET_MANAGER: false
         run: npm test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=text
 
       - name: Check coverage thresholds
@@ -114,7 +116,7 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: ./frontend/mobile
-        run: npm test -- --coverage --coverageReporters=json --coverageReporters=lcov --watchAll=false
+        run: npm test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=text --watchAll=false
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -174,6 +176,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-tests]
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parkpal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -184,9 +201,25 @@ jobs:
           node-version: '18'
 
       - name: Install root dependencies
+        run: npm ci || echo "⚠️ No root dependencies"
+
+      - name: Install backend dependencies
+        working-directory: ./backend
         run: npm ci
 
+      - name: Setup database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+        run: npx prisma migrate deploy
+
       - name: Generate and validate API contract
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          JWT_SECRET: test-secret-key
+          QR_SECRET: test-qr-secret-for-contract-tests-only-64-character-hex-string
+          NODE_ENV: test
+          USE_SECRET_MANAGER: false
         run: npm run contract:test
 
       - name: Upload contract report
