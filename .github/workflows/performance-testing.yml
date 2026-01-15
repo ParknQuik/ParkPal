@@ -86,17 +86,22 @@ jobs:
           QR_SECRET: test-qr-secret-for-performance-testing-only-64-character-hex-string
           NODE_ENV: test
           USE_SECRET_MANAGER: false
+          NODE_OPTIONS: --no-experimental-fetch
         run: |
           npm start &
           sleep 10
 
       - name: Install Artillery
         run: npm install -g artillery@latest
+        env:
+          NODE_OPTIONS: --no-experimental-fetch
 
       - name: Create reports directory
         run: mkdir -p performance-testing/reports
 
       - name: Run Artillery Load Test
+        env:
+          NODE_OPTIONS: --no-experimental-fetch
         run: |
           artillery run performance-testing/artillery/api-load-test.yml \
             --output performance-testing/reports/artillery-load-test-report.json
@@ -203,6 +208,7 @@ jobs:
           QR_SECRET: test-qr-secret-for-performance-testing-only-64-character-hex-string
           NODE_ENV: test
           USE_SECRET_MANAGER: false
+          NODE_OPTIONS: --no-experimental-fetch
         run: |
           npm start &
           sleep 10
@@ -253,9 +259,9 @@ jobs:
         run: npm run build
 
       - name: Run Lighthouse CI
-        working-directory: ./performance-testing/lighthouse
         run: |
           npm install -g @lhci/cli@latest
+          cd performance-testing/lighthouse
           lhci autorun
 
       - name: Upload Lighthouse Report
