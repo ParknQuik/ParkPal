@@ -17,7 +17,7 @@
     ],
     "testTimeout": 10000,
     "setupFiles": ["<rootDir>/test/setup.js"],
-    "coverageThresholds": {
+    "coverageThreshold": {
       "global": {
         "branches": 75,
         "functions": 80,
