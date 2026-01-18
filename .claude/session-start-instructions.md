@@ -1,5 +1,13 @@
 # Session Start Instructions
 
+**DEPRECATED:** This file is outdated. Please use `.claude/session-start-instructions-NEW.md` instead.
+
+**Redirect:** [session-start-instructions-NEW.md](.claude/session-start-instructions-NEW.md)
+
+---
+
+## Old Instructions (for reference only)
+
 When the user says "start", follow these steps:
 
 ## 1. Review All Markdown Files
