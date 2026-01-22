@@ -1,145 +1,320 @@
 # Session Start Instructions
 
-**DEPRECATED:** This file is outdated. Please use `.claude/session-start-instructions-NEW.md` instead.
-
-**Redirect:** [session-start-instructions-NEW.md](.claude/session-start-instructions-NEW.md)
-
----
-
-## Old Instructions (for reference only)
-
-When the user says "start", follow these steps:
-
-## 1. Review All Markdown Files
-- Find all `.md` files in the project using Glob
-- Read each markdown file to understand:
-  - Project progress
-  - Architecture decisions
-  - Security audits
-  - Feature implementations
-  - Action items or TODOs
-
-## 2. Key Files to Check
-- `frontend/mobile/PROJECT_SUMMARY.md` - Mobile app status
-- `BACKEND_SECURITY_PERFORMANCE_AUDIT.md` - Security audit (note: some issues already fixed)
-- `backend/PASSWORD_POLICY.md` - Password requirements
-- `backend/POSTGRESQL_MIGRATION.md` - Database migration status
-- `CONTRACT_TESTING_SUMMARY.md` - API contract testing
-- `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` - System architecture
-- Any other `.md` files in the project root or subdirectories
-
-## 3. Provide Summary
-After reviewing, provide a concise summary of:
-- Current project state
-- Recent work completed
-- Outstanding tasks or issues
-- Any security/performance concerns noted
-
-## 4. Ask What to Work On
-Conclude by asking the user what they'd like to focus on in this session.
+**Last Updated:** January 22, 2026
+**Structure:** everything-claude-code format
 
 ---
 
-## Project Status Quick Reference (Updated: 2025-12-31)
+## When the user says "start"
 
-### ✅ Completed Major Items
-- **Mobile App**: 20 screens complete with PayMongo payment integration
-- **Phase 2 Complete**: EarningsScreen, PaymentMethodsScreen, MyListingsScreen ✅
-- **Phase 3 Complete**: UX polish, accessibility (WCAG AA), haptics, testing (41 tests) ✅
-- **Phase 4 Complete**: Production ready - backend security 100/100, Redis caching, monitoring ✅
-- **Web PayMongo UI**: Complete redesign with 4 payment methods (Dec 11, 2025)
-- **Booking → Payment Flow**: Mobile and web fully connected
-- **PostgreSQL Migration**: Migrated from SQLite to PostgreSQL with 24 indexes
-- **Security Hardening**: Rate limiting, CORS, helmet.js, JWT rotated (100/100 score) ✅
-- **Input Validation**: Joi - 100% coverage (23 routes, 21 schemas) ✅
-- **Password Policy**: OWASP-compliant with breach checking
-- **Contract Testing**: Automated frontend-backend API validation system
-- **API Versioning**: /api/v1 with legacy /api support + deprecation middleware
-- **GCP Integration**: Secret Manager for credentials
-- **Backend Tests**: 150 tests passing (99.3% pass rate)
-- **Performance**: Redis caching, N+1 queries eliminated, 10x speed improvement ✅
-- **Monitoring**: Winston logging, Prometheus metrics, health checks ✅
-- **Web Production**: Docker, CI/CD, service worker, SEO, accessibility ✅
+Follow this **streamlined context gathering** workflow:
 
-### 🎉 Latest Achievement (Dec 31, 2025)
-**Phases 3 & 4 Complete (100%)** - Production Ready
-- ✅ Mobile: 19 new files (UX components, haptics, accessibility, 41 tests)
-- ✅ Backend: 6 new files (Redis cache, Winston logs, Prometheus metrics, env validation)
-- ✅ Web: 22 new files (Docker, CI/CD, PWA, tests, deployment infrastructure)
-- ✅ Security score: 58/100 → 100/100 (+72%)
-- ✅ Performance: 200-500ms → 10-50ms (10x improvement)
-- ✅ API contract gaps: 31 → 0 (100% resolved)
+### Step 1: Read Essential Documentation (5 minutes)
 
-### 🎉 Previous Achievements
-**Phase 2 (Dec 16, 2025)** - Mobile Core Features
-- ✅ EarningsScreen, PaymentMethodsScreen, MyListingsScreen
-- ✅ Total: 20 mobile screens complete
+Read these 3 files in order:
 
-**Phase 1 (Dec 11, 2025)** - PayMongo Integration
-- ✅ Mobile & Web: 4 payment methods integrated
+1. **`JANUARY_2026_STATUS_REPORT.md`**
+   - Current status: 87% production ready
+   - Phase 5 progress: 40% complete
+   - P1 blockers and timeline
 
-### 🔴 Critical Issues (Production Blockers)
-**ALL RESOLVED** ✅
-1. ✅ **JWT Secret**: Rotated to 128-char cryptographic secret
-2. ✅ **WebSocket Authentication**: Verified and working
-3. 🟡 **Photo Upload**: GCP Cloud Storage integration pending (non-blocking)
+2. **`docs/MVP_ROADMAP_Q1_2026.md`**
+   - Complete roadmap
+   - Phases 1-4: Complete
+   - Phase 5: In progress
+   - Timeline to launch
 
-### 🟢 Performance Optimizations (ALL COMPLETE)
-1. ✅ **Database indexes**: 24 indexes added
-2. ✅ **Redis caching**: Implemented (50% DB load reduction)
-3. ✅ **N+1 queries**: Eliminated
-4. ✅ **Pagination**: Middleware implemented
-5. ✅ **Connection pooling**: PostgreSQL configured
+3. **`TECH_STACK_SUMMARY.md`**
+   - Authoritative tech stack
+   - Architecture decisions
+   - Technology choices
 
-### 🟢 Security (ALL COMPLETE)
-- ✅ **Input Validation**: 100% complete (Dec 6, 2025)
-- ✅ **JWT Secret**: Rotated (Dec 31, 2025)
-- ✅ **Rate Limiting**: Active
-- ✅ **CORS**: Configured
-- ✅ **Helmet.js**: Active
-- ✅ **WebSocket Auth**: Verified
+### Step 2: Provide Concise Summary (1 minute)
 
-### 📋 API Contract Status
-- ✅ **All mismatches resolved**: 31 → 0
-- ✅ **Mobile aliases**: `/parking/spots` routes added
-- ✅ **All endpoints exist**: Verified
+Format (3-4 sentences):
+```
+ParkPal is [X]% production ready with Phase 5 ([Y]% complete) in progress.
+[Brief summary of recent work]. [X] P1 blockers remain: [list blockers].
+Service 2 (Marketplace) launching [date], Service 1 (Analytics) [date].
+```
 
-### 🎯 Current Branch
-- Branch: `feat/mobile-core-features-phase2`
-- Status: Phases 3 & 4 complete, ready for staging deployment
-- Last commit: "feat(backend): Complete Secret Manager migration + API timeout fix" (93bfee2)
+### Step 3: Ask What to Work On
 
-### 📅 Roadmap Progress
-- **Phase 1 (Week 1)**: ✅ 100% Complete (Dec 11, 2025)
-- **Phase 2 (Weeks 2-4)**: ✅ 100% Complete (Dec 16, 2025)
-- **Phase 3 (Weeks 5-7)**: ✅ 100% Complete (Dec 31, 2025) - UX polish & testing
-- **Phase 4 (Weeks 8-10)**: ✅ 100% Complete (Dec 31, 2025) - Beta launch prep
-- **Phase 5 (Weeks 11-12)**: 0% - Public launch (NEXT)
-
-### 📱 Missing Screens (Optional/Future)
-- SettingsScreen (account settings) - Low priority
-- ForgotPasswordScreen + backend endpoints - Medium priority
-- MyVehiclesScreen, SavedAddressesScreen, NotificationsSettingsScreen - Low priority
+```
+What would you like to work on?
+```
 
 ---
 
-## Git Commit Policy
+## 📂 everything-claude-code Structure
+
+The project now follows the comprehensive everything-claude-code structure:
+
+```
+.claude/
+├── agents/              # 12 specialized subagents
+│   ├── planner.md                    # Feature planning
+│   ├── architect.md                  # System design
+│   ├── tdd-guide.md                  # Test-driven development
+│   ├── code-reviewer.md              # Code quality review
+│   ├── security-reviewer.md          # Security analysis
+│   ├── refactor-cleaner.md           # Code cleanup
+│   ├── frontend-developer.md         # Frontend specialist
+│   ├── mobile-developer.md           # Mobile specialist
+│   ├── data-engineer.md              # Data pipeline
+│   ├── test-automator.md             # Test automation
+│   ├── ui-ux-designer.md             # UI/UX design
+│   └── documentation-expert.md       # Documentation
+│
+├── skills/              # Workflow definitions
+│   ├── coding-standards.md           # Best practices
+│   └── backend-patterns.md           # API patterns
+│
+├── commands/            # Slash commands
+│   ├── plan.md                       # /plan
+│   └── tdd.md                        # /tdd
+│
+└── rules/               # Mandatory guidelines
+    ├── security.md                   # Security rules
+    ├── testing.md                    # Testing rules
+    └── git-workflow.md               # Git rules
+```
+
+**See `CLAUDE.md` for complete documentation.**
+
+---
+
+## 🤖 Using Specialized Agents
+
+### Common Scenarios
+
+**Planning a feature:**
+```
+"Delegate to planner: Plan the photo upload feature"
+```
+
+**System design:**
+```
+"Use architect agent to design the analytics pipeline"
+```
+
+**Writing tests:**
+```
+"/tdd user-registration --type=unit"
+```
+
+**Code review:**
+```
+"Delegate to code-reviewer: Review the booking service"
+```
+
+**Security audit:**
+```
+"Delegate to security-reviewer: Audit auth endpoints"
+```
+
+### Agent Selection Guide
+
+| Task | Agent | Example |
+|------|-------|---------|
+| Plan feature | planner | "Plan forgot password flow" |
+| Design system | architect | "Design caching strategy" |
+| Write tests | tdd-guide | "Generate tests for API endpoint" |
+| Review code | code-reviewer | "Review payment service" |
+| Security check | security-reviewer | "Audit for vulnerabilities" |
+| Refactor | refactor-cleaner | "Clean up booking service" |
+| Frontend work | frontend-developer | "Build responsive UI component" |
+| Mobile work | mobile-developer | "Implement QR scanner" |
+| Data pipeline | data-engineer | "Build ETL pipeline" |
+| Test automation | test-automator | "Create E2E test suite" |
+
+---
+
+## 📋 Mandatory Rules (Always Follow)
+
+### 1. Security Rules
+
+**ENFORCED by GitHub Actions**
+
+- ❌ No hardcoded secrets
+- ✅ Input validation on all endpoints
+- ✅ SQL injection prevention (Prisma)
+- ✅ Rate limiting on sensitive endpoints
+- ✅ HTTPS enforced in production
+
+See `.claude/rules/security.md` for complete checklist.
+
+### 2. Testing Rules
+
+**ENFORCED - 80% Coverage Required**
+
+- ✅ TDD: Write tests before implementation
+- ✅ Coverage: 80% statements, 75% branches, 80% functions, 80% lines
+- ✅ Test naming: `should [behavior] when [condition]`
+- ✅ Test isolation (no shared state)
+
+See `.claude/rules/testing.md` for complete guide.
+
+### 3. Git Workflow Rules
+
+**ENFORCED by GitHub Actions**
+
+**Commit Format (Conventional Commits):**
+```
+<type>(<scope>): <description>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Branch Naming:**
+```
+<type>/<description-in-kebab-case>
+```
+
+**Branch Flow:**
+```
+feature/* → dev → qa → main
+hotfix/*  → qa → main (bypass dev)
+```
+
+See `.claude/rules/git-workflow.md` for complete workflow.
+
+---
+
+## 🎯 Current Project Status (January 22, 2026)
+
+### Production Readiness: 87%
+
+**Phase 5: Public Launch (40% Complete)**
+
+### ✅ Recent Completions
+- Forgot password flow (backend + 17 tests)
+- CI/CD fixes (mobile tests 100% passing)
+- Web test coverage dependency fixes
+- Performance testing health checks
+- everything-claude-code structure implementation
+
+### 🔴 P1 Blockers (Must Fix Before Beta)
+1. **Photo Upload** - GCP Cloud Storage integration (2-3 days) ⏳ IN PROGRESS
+2. **Mobile Forgot Password UI** - Frontend screens (0.5 days)
+3. **Backend Test Database Setup** - 30 min one-time setup
+
+### 📅 Timeline to Launch
+- **Week 3 (Jan 20-24)**: Staging deployment
+- **Week 4 (Jan 27-31)**: Beta testing (50 users)
+- **Week 5-6 (Feb 3-14)**: Production launch 🚀
+- **Week 7-8 (Feb 17-28)**: Post-launch optimization
+
+### Tech Stack
+- **Backend:** Node.js + Express + PostgreSQL + Prisma + Redis
+- **Mobile:** React Native + Expo + Redux Toolkit
+- **Web:** React + Next.js + Material-UI
+- **Analytics:** Databricks on GCP + Cloud Storage
+- **Payments:** PayMongo (GCash, Cards, GrabPay, Maya)
+
+---
+
+## 📚 Key Documentation
+
+### Essential Files (Read Every Session)
+1. `JANUARY_2026_STATUS_REPORT.md` - Current state
+2. `docs/MVP_ROADMAP_Q1_2026.md` - Complete roadmap
+3. `TECH_STACK_SUMMARY.md` - Tech stack reference
+
+### Reference Files (Read On-Demand)
+4. `CLAUDE.md` - everything-claude-code structure guide
+5. `CODE_GUIDELINES.md` - Complete code standards
+6. `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` - System architecture
+7. `docs/API.md` - API documentation
+
+### Agent Files (Use When Delegating)
+8. `.claude/agents/planner.md` - Feature planning
+9. `.claude/agents/architect.md` - System design
+10. `.claude/agents/tdd-guide.md` - Test-driven development
+11. `.claude/agents/code-reviewer.md` - Code review
+12. `.claude/agents/security-reviewer.md` - Security audit
+
+### Rules Files (Always Follow)
+13. `.claude/rules/security.md` - Security checklist
+14. `.claude/rules/testing.md` - Testing requirements
+15. `.claude/rules/git-workflow.md` - Git workflow
+
+---
+
+## ⚠️ What NOT to Do
+
+❌ **Don't** read all 100+ markdown files
+❌ **Don't** read archived files in `docs/archive/`
+❌ **Don't** read outdated roadmaps
+❌ **Don't** spend 30+ minutes on documentation
+
+✅ **Do** read the 3 essential files (15-20 min)
+✅ **Do** use specialized agents for specific tasks
+✅ **Do** follow mandatory rules
+✅ **Do** provide concise summaries
+
+---
+
+## 🔄 Git Commit Policy
 
 **IMPORTANT:** Always inform the user before committing or pushing changes.
 
 ### Before `git commit`:
-1. Show a summary of what will be committed
-2. Ask for explicit confirmation: "Ready to commit these changes?"
-3. Wait for user approval before running `git commit`
+1. Show summary of changes
+2. Verify commit message follows Conventional Commits format
+3. Ask: "Ready to commit these changes?"
+4. Wait for user approval
 
 ### Before `git push`:
-1. Inform the user about the commits to be pushed
-2. Ask for explicit confirmation: "Ready to push to remote?"
-3. Wait for user approval before running `git push`
+1. Inform user about commits to be pushed
+2. Ask: "Ready to push to remote?"
+3. Wait for user approval
 
 ### Exception:
-Only commit/push automatically if the user explicitly says:
+Only commit/push automatically if user explicitly says:
 - "commit and push this"
 - "go ahead and commit"
 - "auto-commit"
-- Or similar clear permission
+
+---
+
+## 📖 Quick Reference Commands
+
+```bash
+# Start session
+"start"
+
+# Plan feature
+"/plan photo-upload"
+
+# Write tests
+"/tdd user-registration --type=unit"
+
+# Delegate to agent
+"Delegate to planner: Plan the analytics dashboard"
+"Use architect agent to design the data pipeline"
+"Ask security-reviewer to audit the API endpoints"
+
+# Review code
+"Delegate to code-reviewer: Review auth service"
+
+# Check project structure
+"Show me the everything-claude-code structure"
+```
+
+---
+
+## 🔗 Related Files
+
+- **Main Config**: `CLAUDE.md`
+- **Code Guidelines**: `CODE_GUIDELINES.md`
+- **Status Report**: `JANUARY_2026_STATUS_REPORT.md`
+- **Roadmap**: `docs/MVP_ROADMAP_Q1_2026.md`
+- **Tech Stack**: `TECH_STACK_SUMMARY.md`
+
+---
+
+**Status:** ✅ everything-claude-code structure fully implemented
+**Last Review:** January 22, 2026
+**Next Review:** After Phase 5 launch (Feb 2026)
