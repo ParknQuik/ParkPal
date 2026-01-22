@@ -1,5 +1,7 @@
 const prisma = require('../config/prisma');
+const crypto = require('crypto');
 const { generateToken, hashPassword, comparePassword, validatePassword } = require('../services/auth');
+const { sendPasswordResetEmail } = require('../services/email');
 
 exports.register = async (req, res) => {
   try {
@@ -177,5 +179,112 @@ exports.logout = async (req, res) => {
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Forgot password - Send reset token via email
+ */
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.validatedData;
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    // Always return success message (security: don't reveal if email exists)
+    // This prevents email enumeration attacks
+    const successMessage = 'If an account exists with that email, a password reset link has been sent.';
+
+    if (!user) {
+      return res.json({ message: successMessage });
+    }
+
+    // Generate reset token (32 bytes = 64 hex characters)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Set expiry to 1 hour from now
+    const resetExpires = new Date(Date.now() + 3600000); // 1 hour
+
+    // Save token to database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetExpires
+      }
+    });
+
+    // Send email
+    try {
+      await sendPasswordResetEmail(user.email, user.name, resetToken);
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError);
+      // Don't expose email sending failures to client
+    }
+
+    res.json({ message: successMessage });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+};
+
+/**
+ * Reset password - Validate token and update password
+ */
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.validatedData;
+
+    // Find user with valid token
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: {
+          gt: new Date() // Token not expired
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        error: 'Invalid or expired reset token. Please request a new password reset.'
+      });
+    }
+
+    // Validate new password (HIBP breach check)
+    const passwordValidation = await validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        updatedAt: new Date()
+      }
+    });
+
+    const response = { message: 'Password reset successfully. You can now log in with your new password.' };
+
+    // Include warnings if any
+    if (passwordValidation.warnings) {
+      response.warnings = passwordValidation.warnings;
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 };
