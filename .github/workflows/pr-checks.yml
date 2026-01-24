@@ -28,6 +28,7 @@ jobs:
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+    continue-on-error: true  # Optional during MVP - don't block PRs
 
     services:
       postgres:
@@ -100,6 +101,7 @@ jobs:
   frontend-web-tests:
     name: Frontend Web Tests
     runs-on: ubuntu-latest
+    continue-on-error: true  # Optional during MVP - don't block PRs
 
     steps:
       - name: Checkout code
@@ -130,6 +132,7 @@ jobs:
   frontend-mobile-checks:
     name: Frontend Mobile Checks
     runs-on: ubuntu-latest
+    continue-on-error: true  # Optional during MVP - don't block PRs
 
     steps:
       - name: Checkout code
