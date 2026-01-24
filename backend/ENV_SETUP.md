@@ -107,6 +107,34 @@ GCP_PROJECT_ID=parkpal-production
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 ```
 
+### GCP Cloud Storage (Photo Upload)
+**Purpose:** Store and serve parking spot photos
+
+**Setup:**
+1. Create GCS bucket in GCP Console
+   ```bash
+   gsutil mb -p parkpal-production gs://parkpal-photos
+   gsutil uniformbucketlevelaccess set on gs://parkpal-photos
+   ```
+
+2. Set up CORS for web uploads:
+   ```bash
+   echo '[{"origin": ["*"], "method": ["GET", "PUT"], "responseHeader": ["Content-Type"], "maxAgeSeconds": 3600}]' > cors.json
+   gsutil cors set cors.json gs://parkpal-photos
+   ```
+
+3. Grant service account permissions:
+   - Storage Object Creator (for uploads)
+   - Storage Object Viewer (for public access)
+
+**Example:**
+```
+GCS_BUCKET_NAME=parkpal-photos
+GCP_KEYFILE_PATH=/path/to/service-account-key.json
+```
+
+**Note:** Uses same GCP_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS as Secret Manager
+
 ## Verification
 
 Test your configuration:
