@@ -21,3 +21,16 @@ node_modules
 
 # macOS system files
 .DS_Store
+
+# Test coverage reports (all layers)
+coverage/
+**/coverage/
+*.lcov
+clover.xml
+coverage-final.json
+
+# TypeScript build artifacts
+*.d.ts
+!src/**/*.d.ts
+dist/
+build/

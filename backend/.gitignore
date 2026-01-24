@@ -13,3 +13,8 @@
 # PostgreSQL data (Docker volumes managed externally)
 # Migrations are committed, but SQLite backup is ignored
 prisma/migrations_sqlite_backup/
+
+# Test coverage reports
+coverage/
+*.lcov
+clover.xml
