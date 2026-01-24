@@ -1,8 +1,9 @@
 name: Performance Testing
 
 on:
-  pull_request:
-    branches: [main, dev]
+  # Disabled on PRs during MVP development - run manually only
+  # pull_request:
+  #   branches: [main, dev]
   schedule:
     # Run nightly at 2 AM UTC
     - cron: '0 2 * * *'
