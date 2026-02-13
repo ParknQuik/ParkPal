@@ -22,6 +22,7 @@ module.exports = (authLimiter) => {
   const userRoutes = require('../users');
   const healthRoutes = require('../health');
   const mediaRoutes = require('../media');
+  const analyticsRoutes = require('../analytics');
 
   // Health routes (no auth required)
   healthRoutes(router);
@@ -37,6 +38,7 @@ module.exports = (authLimiter) => {
   configRoutes(router);
   userRoutes(router);
   mediaRoutes(router);
+  analyticsRoutes(router);
 
   return router;
 };
