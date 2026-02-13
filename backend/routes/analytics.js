@@ -10,6 +10,16 @@ const prisma = new PrismaClient();
 
 const GeofencingService = require('../services/geofencing');
 const ParkingSessionTracking = require('../services/parkingSessionTracking');
+const { validateBody, validateParams, validateQuery } = require('../middleware/validation');
+const {
+  zoneEnterSchema,
+  activityLogSchema,
+  zoneExitSchema,
+  zoneIdParamSchema,
+  sessionIdParamSchema,
+  zoneMetricsQuerySchema,
+  zonesListQuerySchema
+} = require('../validators/analytics');
 
 module.exports = (router) => {
 
@@ -17,7 +27,7 @@ module.exports = (router) => {
  * POST /api/v1/analytics/zone/enter
  * User enters a parking zone (geofence detected)
  */
-router.post('/analytics/zone/enter', async (req, res) => {
+router.post('/analytics/zone/enter', validateBody(zoneEnterSchema), async (req, res) => {
   try {
     const { userId, zoneId, latitude, longitude } = req.body;
 
@@ -79,7 +89,7 @@ router.post('/analytics/zone/enter', async (req, res) => {
  * POST /api/v1/analytics/activity
  * Log user activity update (from Activity Recognition API)
  */
-router.post('/analytics/activity', async (req, res) => {
+router.post('/analytics/activity', validateBody(activityLogSchema), async (req, res) => {
   try {
     const { userId, sessionId, activityType, confidence, latitude, longitude } = req.body;
 
@@ -130,7 +140,7 @@ router.post('/analytics/activity', async (req, res) => {
  * POST /api/v1/analytics/zone/exit
  * User exits parking zone
  */
-router.post('/analytics/zone/exit', async (req, res) => {
+router.post('/analytics/zone/exit', validateBody(zoneExitSchema), async (req, res) => {
   try {
     const { sessionId, exitTime, parked } = req.body;
 
@@ -160,7 +170,7 @@ router.post('/analytics/zone/exit', async (req, res) => {
  * GET /api/v1/analytics/zones/:zoneId/availability
  * Get real-time zone availability and circling time estimate
  */
-router.get('/analytics/zones/:zoneId/availability', async (req, res) => {
+router.get('/analytics/zones/:zoneId/availability', validateParams(zoneIdParamSchema), async (req, res) => {
   try {
     const { zoneId } = req.params;
 
@@ -231,7 +241,7 @@ router.get('/analytics/zones/:zoneId/availability', async (req, res) => {
  * GET /api/v1/analytics/zones/:zoneId/metrics
  * Get historical metrics for a zone
  */
-router.get('/analytics/zones/:zoneId/metrics', async (req, res) => {
+router.get('/analytics/zones/:zoneId/metrics', validateParams(zoneIdParamSchema), validateQuery(zoneMetricsQuerySchema), async (req, res) => {
   try {
     const { zoneId } = req.params;
     const { period = 'hourly', from, to, limit = 24 } = req.query;
@@ -288,7 +298,7 @@ router.get('/analytics/zones/:zoneId/metrics', async (req, res) => {
  * GET /api/v1/analytics/sessions/:sessionId
  * Get session details and activities
  */
-router.get('/analytics/sessions/:sessionId', async (req, res) => {
+router.get('/analytics/sessions/:sessionId', validateParams(sessionIdParamSchema), async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -341,7 +351,7 @@ router.get('/analytics/sessions/:sessionId', async (req, res) => {
  * GET /api/v1/analytics/zones
  * List all zones with basic stats
  */
-router.get('/analytics/zones', async (req, res) => {
+router.get('/analytics/zones', validateQuery(zonesListQuerySchema), async (req, res) => {
   try {
     const { city, type, isActive = true } = req.query;
 
