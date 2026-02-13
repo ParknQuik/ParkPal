@@ -198,13 +198,13 @@ describe('GeofencingService', () => {
         timestamp: new Date(now - 40000)
       },
       {
-        latitude: 14.5313, // Moved 1 meter
+        latitude: 14.53122, // Moved ~2 meters
         longitude: 120.9844,
         timestamp: new Date(now - 30000)
       },
       {
-        latitude: 14.5313,
-        longitude: 120.9845, // Moved another 1 meter
+        latitude: 14.53122,
+        longitude: 120.98443, // Moved another ~3 meters
         timestamp: new Date(now - 20000)
       }
     ];

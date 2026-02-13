@@ -5,9 +5,10 @@
  * Detects when users enter/exit parking zones for circling time tracking.
  */
 
-const turf = require('@turf/turf');
+const { point, polygon } = require('@turf/helpers');
 const booleanPointInPolygon = require('@turf/boolean-point-in-polygon').default;
 const distance = require('@turf/distance').default;
+const circle = require('@turf/circle').default;
 
 class GeofencingService {
   /**
@@ -19,15 +20,15 @@ class GeofencingService {
    */
   static isPointInZone(latitude, longitude, geofencePolygonJSON) {
     try {
-      const point = turf.point([longitude, latitude]);
-      const polygon = JSON.parse(geofencePolygonJSON);
+      const pt = point([longitude, latitude]);
+      const poly = JSON.parse(geofencePolygonJSON);
 
       // Convert to Turf polygon if needed
-      const turfPolygon = polygon.type === 'Polygon'
-        ? turf.polygon(polygon.coordinates)
-        : polygon;
+      const turfPolygon = poly.type === 'Polygon'
+        ? polygon(poly.coordinates)
+        : poly;
 
-      return booleanPointInPolygon(point, turfPolygon);
+      return booleanPointInPolygon(pt, turfPolygon);
     } catch (error) {
       console.error('Geofencing error:', error);
       return false;
@@ -60,8 +61,8 @@ class GeofencingService {
    */
   static calculateDistance(lat1, lon1, lat2, lon2) {
     try {
-      const from = turf.point([lon1, lat1]);
-      const to = turf.point([lon2, lat2]);
+      const from = point([lon1, lat1]);
+      const to = point([lon2, lat2]);
 
       // Returns distance in kilometers, convert to meters
       return distance(from, to, { units: 'meters' });
@@ -121,11 +122,11 @@ class GeofencingService {
    */
   static createCircularGeofence(centerLat, centerLon, radiusMeters, steps = 64) {
     try {
-      const center = turf.point([centerLon, centerLat]);
+      const center = point([centerLon, centerLat]);
       const radiusKm = radiusMeters / 1000;
-      const circle = turf.circle(center, radiusKm, { steps, units: 'kilometers' });
+      const circleGeom = circle(center, radiusKm, { steps, units: 'kilometers' });
 
-      return JSON.stringify(circle.geometry);
+      return JSON.stringify(circleGeom.geometry);
     } catch (error) {
       console.error('Circular geofence creation error:', error);
       return null;

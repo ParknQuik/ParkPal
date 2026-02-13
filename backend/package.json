@@ -19,7 +19,10 @@
     "setupFiles": [
       "<rootDir>/test/setup.js"
     ],
-    "coverageThresholds": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@turf|kdbush|supercluster|robust-predicates)/)"
+    ],
+    "coverageThreshold": {
       "global": {
         "branches": 75,
         "functions": 80,
@@ -33,7 +36,9 @@
     "@google-cloud/storage": "^7.18.0",
     "@prisma/client": "^5.9.0",
     "@turf/boolean-point-in-polygon": "^7.3.4",
+    "@turf/circle": "^7.3.4",
     "@turf/distance": "^7.3.4",
+    "@turf/helpers": "^7.3.4",
     "@turf/turf": "^7.3.4",
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
