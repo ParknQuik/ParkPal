@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Region } from 'react-native-maps';
-import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { mediaAPI } from '../services/mediaApi';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { createListing } from '../store/slices/marketplaceSlice';
@@ -114,57 +114,37 @@ export const ListSpotScreen: React.FC = () => {
     'restroom',
   ];
 
-  const handleImagePick = async () => {
+  const handleImagePick = () => {
     Alert.alert(
       'Add Photo',
       'Choose an option',
       [
-        {
-          text: 'Take Photo',
-          onPress: handleCamera,
-        },
-        {
-          text: 'Choose from Library',
-          onPress: handleGallery,
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Take Photo', onPress: handleCamera },
+        { text: 'Choose from Library', onPress: handleGallery },
+        { text: 'Cancel', style: 'cancel' },
       ]
     );
   };
 
   const handleCamera = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera permission is required to take photos');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.8,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
-
-    if (!result.canceled && result.assets) {
-      const newImages = result.assets.map((asset) => asset.uri);
-      setImages([...images, ...newImages].slice(0, 5));
+    try {
+      const uri = await mediaAPI.takePhoto({ allowsEditing: true, aspect: [4, 3], quality: 0.8 });
+      if (uri) {
+        setImages((prev) => [...prev, uri].slice(0, 5));
+      }
+    } catch (error: any) {
+      Alert.alert('Permission needed', error.message || 'Camera permission is required to take photos');
     }
   };
 
   const handleGallery = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      quality: 0.8,
-      allowsEditing: false,
-    });
-
-    if (!result.canceled && result.assets) {
-      const newImages = result.assets.map((asset) => asset.uri);
-      setImages([...images, ...newImages].slice(0, 5));
+    try {
+      const uri = await mediaAPI.pickImage({ allowsEditing: false, quality: 0.8 });
+      if (uri) {
+        setImages((prev) => [...prev, uri].slice(0, 5));
+      }
+    } catch (error: any) {
+      Alert.alert('Permission needed', error.message || 'Media library permission is required');
     }
   };
 
@@ -209,6 +189,7 @@ export const ListSpotScreen: React.FC = () => {
     try {
       const fullAddress = `${address}, ${city}, ${state} ${zipCode}`.trim();
 
+      // Step 1: Create the listing (gets us the slotId)
       const result = await dispatch(
         createListing({
           lat: latitude,
@@ -218,9 +199,21 @@ export const ListSpotScreen: React.FC = () => {
           slotType: 'roadside_qr',
           description: description || title,
           amenities: selectedAmenities,
-          photos: images,
+          photos: [], // photos uploaded separately via media API
         })
       ).unwrap();
+
+      // Step 2: Upload photos to GCS using the media API
+      const slotId = result.id;
+      if (slotId && images.length > 0) {
+        const uploadResults = await Promise.allSettled(
+          images.map((uri) => mediaAPI.uploadPhoto(slotId, uri))
+        );
+        const failedUploads = uploadResults.filter((r) => r.status === 'rejected').length;
+        if (failedUploads > 0) {
+          console.warn(`${failedUploads} photo(s) failed to upload`);
+        }
+      }
 
       // Show verification feedback
       const verification = result.verification;
