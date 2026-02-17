@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { login, signup } from '../store/slices/authSlice';
 import { Input } from '../components/Input';
@@ -26,6 +27,7 @@ export const AuthScreen: React.FC = () => {
     password?: string;
   }>({});
 
+  const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { loading, error: authError } = useAppSelector((state) => state.auth);
 
@@ -158,7 +160,10 @@ export const AuthScreen: React.FC = () => {
               />
 
               {activeTab === 'login' && (
-                <TouchableOpacity style={styles.forgotPassword}>
+                <TouchableOpacity
+                  style={styles.forgotPassword}
+                  onPress={() => navigation.navigate('ForgotPassword' as never)}
+                >
                   <Text style={styles.forgotPasswordText}>
                     Forgot Password?
                   </Text>
