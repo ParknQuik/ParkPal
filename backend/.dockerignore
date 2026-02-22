@@ -1,0 +1,42 @@
+# Node modules (will be installed fresh in container)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Development files
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+__tests__/
+__mocks__/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+.DS_Store
+
+# Logs
+logs/
+*.log

@@ -139,13 +139,17 @@ exports.confirmUpload = async (req, res) => {
       return res.status(403).json({ error: 'You do not have permission to upload photos for this slot' });
     }
 
-    // Process the uploaded image into multiple sizes
-    const urls = await mediaService.processUploadedImage(fileName, slotId);
-
-    // Get current photo count to set position
+    // Enforce 5-photo limit per slot
     const photoCount = await prisma.photo.count({
       where: { slotId: parseInt(slotId) }
     });
+
+    if (photoCount >= 5) {
+      return res.status(400).json({ error: 'Maximum 5 photos allowed per parking slot' });
+    }
+
+    // Process the uploaded image into multiple sizes
+    const urls = await mediaService.processUploadedImage(fileName, slotId);
 
     // Save photo record to database
     const photo = await prisma.photo.create({
