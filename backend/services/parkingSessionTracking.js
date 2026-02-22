@@ -232,19 +232,10 @@ class ParkingSessionTrackingService {
    * Looks back up to 3 minutes to find first transition from IN_VEHICLE to STILL
    */
   static async findEarliestParkingIndicator(sessionId) {
-    // Get session to use its circlingStartTime as reference
-    const session = await prisma.parkingSession.findUnique({
-      where: { id: sessionId }
-    });
-
-    if (!session) {
-      return new Date();
-    }
-
     const recentActivities = await prisma.activityEvent.findMany({
       where: {
         sessionId,
-        timestamp: { gte: new Date(session.circlingStartTime.getTime() - 60 * 1000) } // 1 min before session start for safety
+        timestamp: { gte: new Date(Date.now() - 3 * 60 * 1000) }
       },
       orderBy: { timestamp: 'asc' }
     });
@@ -280,17 +271,9 @@ class ParkingSessionTrackingService {
         return; // Already confirmed
       }
 
-      const parkingTimeMs = new Date(parkingTime).getTime();
-      const circlingStartMs = new Date(session.circlingStartTime).getTime();
-      const nowMs = Date.now();
-
-      // Reject future parking times
-      if (parkingTimeMs > nowMs) {
-        console.warn(`Invalid parking time for session ${sessionId}: parking time is in the future`);
-        return;
-      }
-
-      const circlingDurationSeconds = Math.floor((parkingTimeMs - circlingStartMs) / 1000);
+      const circlingDurationSeconds = Math.floor(
+        (new Date(parkingTime).getTime() - new Date(session.circlingStartTime).getTime()) / 1000
+      );
 
       // Only confirm if circling time is reasonable (0-60 minutes)
       if (circlingDurationSeconds < 0 || circlingDurationSeconds > 3600) {

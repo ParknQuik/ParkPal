@@ -19,7 +19,7 @@ module.exports = (app) => {
    *       - bearerAuth: []
    */
   app.post(
-    '/api/v1/media/upload-url',
+    '/media/upload-url',
     authenticate,
     validateBody(generateUploadUrlSchema),
     mediaController.generateUploadUrl
@@ -35,7 +35,7 @@ module.exports = (app) => {
    *       - bearerAuth: []
    */
   app.post(
-    '/api/v1/media/confirm-upload',
+    '/media/confirm-upload',
     authenticate,
     validateBody(confirmUploadSchema),
     mediaController.confirmUpload
@@ -51,7 +51,7 @@ module.exports = (app) => {
    *       - bearerAuth: []
    */
   app.delete(
-    '/api/v1/media/photos/:id',
+    '/media/photos/:id',
     authenticate,
     validateParams(photoIdParamSchema),
     mediaController.deletePhoto
@@ -65,7 +65,7 @@ module.exports = (app) => {
    *     tags: [Media]
    */
   app.get(
-    '/api/v1/media/photos/slot/:slotId',
+    '/media/photos/slot/:slotId',
     validateParams(slotIdParamSchema),
     mediaController.getSlotPhotos
   );
