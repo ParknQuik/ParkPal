@@ -1,0 +1,15 @@
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.production'
+      - '-t'
+      - 'gcr.io/parkpal-474417/parkpal-backend:latest'
+      - '.'
+
+images:
+  - 'gcr.io/parkpal-474417/parkpal-backend:latest'
+
+timeout: 600s
