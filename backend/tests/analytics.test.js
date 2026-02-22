@@ -30,7 +30,7 @@ describe('Analytics API Routes', () => {
       data: {
         name: 'Test User',
         email: `test-${Date.now()}@example.com`,
-        passwordHash: 'hash',
+        password: 'hashed_password_for_test',
         role: 'driver'
       }
     });
@@ -317,24 +317,33 @@ describe('Analytics API Routes', () => {
             slotNumber: '1',
             status: 'available',
             isActive: true,
-            latitude: 14.5312,
-            longitude: 120.9844
+            lat: 14.5312,
+            lon: 120.9844,
+            address: '123 Test St, Manila',
+            slotType: 'commercial_iot',
+            price: 50.00
           },
           {
             zoneId: testZone.id,
             slotNumber: '2',
             status: 'occupied',
             isActive: true,
-            latitude: 14.5313,
-            longitude: 120.9845
+            lat: 14.5313,
+            lon: 120.9845,
+            address: '123 Test St, Manila',
+            slotType: 'commercial_iot',
+            price: 50.00
           },
           {
             zoneId: testZone.id,
             slotNumber: '3',
             status: 'available',
             isActive: true,
-            latitude: 14.5314,
-            longitude: 120.9846
+            lat: 14.5314,
+            lon: 120.9846,
+            address: '123 Test St, Manila',
+            slotType: 'commercial_iot',
+            price: 50.00
           }
         ]
       });
@@ -377,6 +386,9 @@ describe('Analytics API Routes', () => {
             zoneId: testZone.id,
             periodType: 'hourly',
             timestamp: new Date(),
+            totalSlots: 100,
+            occupiedSlots: 75,
+            availableSlots: 25,
             avgCirclingTimeSeconds: 300,
             minCirclingTimeSeconds: 120,
             maxCirclingTimeSeconds: 600,
@@ -388,6 +400,9 @@ describe('Analytics API Routes', () => {
             zoneId: testZone.id,
             periodType: 'hourly',
             timestamp: new Date(Date.now() - 3600000),
+            totalSlots: 100,
+            occupiedSlots: 80,
+            availableSlots: 20,
             avgCirclingTimeSeconds: 350,
             minCirclingTimeSeconds: 150,
             maxCirclingTimeSeconds: 650,

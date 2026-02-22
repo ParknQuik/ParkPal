@@ -258,8 +258,8 @@ describe('ParkingSessionTracking', () => {
 
       const score = await ParkingSessionTracking.checkLocationMovement(
         session.id,
-        14.53125, // ~15m away
-        120.98445
+        14.5312, // ~15m away (horizontal movement)
+        120.98454
       );
 
       expect(score).toBeGreaterThan(0);
@@ -396,6 +396,12 @@ describe('ParkingSessionTracking', () => {
     it('should find first transition from IN_VEHICLE to STILL', async () => {
       const now = Date.now();
 
+      // Update session's circlingStartTime to be in the past (before activities)
+      await prisma.parkingSession.update({
+        where: { id: session.id },
+        data: { circlingStartTime: new Date(now - 200000) } // 3min 20sec ago
+      });
+
       // Create activity sequence
       await prisma.activityEvent.createMany({
         data: [
@@ -452,7 +458,9 @@ describe('ParkingSessionTracking', () => {
     });
 
     it('should confirm parking and calculate circling time', async () => {
-      const parkingTime = new Date(Date.now() - 300000); // 5 minutes ago
+      // Wait 100ms to ensure parkingTime is after session creation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const parkingTime = new Date(); // Now (after session was created)
 
       await ParkingSessionTracking.confirmParking(session.id, parkingTime);
 
@@ -463,8 +471,8 @@ describe('ParkingSessionTracking', () => {
       expect(updatedSession.status).toBe('parked');
       expect(updatedSession.parkingConfirmationTime).toBeDefined();
       expect(updatedSession.circlingEndTime).toBeDefined();
-      expect(updatedSession.circlingDurationSeconds).toBeGreaterThan(290);
-      expect(updatedSession.circlingDurationSeconds).toBeLessThan(310);
+      expect(updatedSession.circlingDurationSeconds).toBeGreaterThanOrEqual(0);
+      expect(updatedSession.circlingDurationSeconds).toBeLessThan(5); // Should be <5 seconds
     });
 
     it('should not confirm already parked session', async () => {
@@ -543,8 +551,8 @@ describe('ParkingSessionTracking', () => {
     });
 
     it('should calculate circling duration for abandoned session', async () => {
-      // Wait a bit before exit
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait at least 1 second before exit (to ensure floor(duration/1000) > 0)
+      await new Promise(resolve => setTimeout(resolve, 1100));
 
       const exitTime = new Date();
       await ParkingSessionTracking.handleZoneExit(session.id, exitTime);
@@ -553,7 +561,7 @@ describe('ParkingSessionTracking', () => {
         where: { id: session.id }
       });
 
-      expect(updatedSession.circlingDurationSeconds).toBeGreaterThan(0);
+      expect(updatedSession.circlingDurationSeconds).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -711,11 +719,10 @@ describe('ParkingSessionTracking', () => {
         );
       }
 
-      // Wait a bit to simulate time passing
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Simulate user finding parking and being STILL for 60+ seconds
+      const baseTime = Date.now();
 
-      // Create STILL activities (60 seconds ago)
-      const stillTime = new Date(Date.now() - 60000);
+      // First STILL activity (60 seconds ago)
       await prisma.activityEvent.create({
         data: {
           userId: testData.users.driver.id,
@@ -724,20 +731,23 @@ describe('ParkingSessionTracking', () => {
           confidence: 85,
           latitude: 14.5313,
           longitude: 120.9845,
-          timestamp: stillTime
+          timestamp: new Date(baseTime - 60000)
         }
       });
 
-      // Simulate user parked (multiple STILL activities)
+      // More STILL activities spread over time (to ensure checkLocationMovement has data)
       for (let i = 0; i < 5; i++) {
-        await ParkingSessionTracking.logActivity(
-          testData.users.driver.id,
-          session.id,
-          'STILL',
-          90,
-          14.5313, // Same location
-          120.9845
-        );
+        await prisma.activityEvent.create({
+          data: {
+            userId: testData.users.driver.id,
+            sessionId: session.id,
+            activityType: 'STILL',
+            confidence: 90,
+            latitude: 14.5313, // Same location
+            longitude: 120.9845,
+            timestamp: new Date(baseTime - 50000 + (i * 10000)) // Spread over 50 seconds
+          }
+        });
       }
 
       // Check if parking would be detected

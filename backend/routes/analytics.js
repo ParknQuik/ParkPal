@@ -353,12 +353,13 @@ router.get('/analytics/sessions/:sessionId', validateParams(sessionIdParamSchema
  */
 router.get('/analytics/zones', validateQuery(zonesListQuerySchema), async (req, res) => {
   try {
-    const { city, type, isActive = true } = req.query;
+    const { city, type, isActive } = req.query;
 
     const where = {};
     if (city) where.city = city;
     if (type) where.type = type;
-    if (isActive !== undefined) where.isActive = isActive === 'true';
+    // Joi validator already converts isActive to boolean and defaults to true
+    where.isActive = isActive;
 
     const zones = await prisma.zone.findMany({
       where,
