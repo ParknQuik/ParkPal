@@ -58,6 +58,10 @@ export const authAPI = {
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (data: { name: string; phone: string | null }) =>
     api.patch('/users/profile', data),
+  forgotPassword: (email: string) =>
+    api.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    api.post('/auth/reset-password', { token, newPassword }),
 };
 
 // Parking endpoints (using /slots to match backend)
