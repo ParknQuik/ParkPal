@@ -1,117 +1,191 @@
 # Session Start Instructions
 
-When the user says "start", follow these steps:
-
-## 1. Review All Markdown Files
-- Find all `.md` files in the project using Glob
-- Read each markdown file to understand:
-  - Project progress
-  - Architecture decisions
-  - Security audits
-  - Feature implementations
-  - Action items or TODOs
-
-## 2. Key Files to Check
-- `frontend/mobile/PROJECT_SUMMARY.md` - Mobile app status
-- `BACKEND_SECURITY_PERFORMANCE_AUDIT.md` - Security audit (note: some issues already fixed)
-- `backend/PASSWORD_POLICY.md` - Password requirements
-- `backend/POSTGRESQL_MIGRATION.md` - Database migration status
-- `CONTRACT_TESTING_SUMMARY.md` - API contract testing
-- `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` - System architecture
-- Any other `.md` files in the project root or subdirectories
-
-## 3. Provide Summary
-After reviewing, provide a concise summary of:
-- Current project state
-- Recent work completed
-- Outstanding tasks or issues
-- Any security/performance concerns noted
-
-## 4. Ask What to Work On
-Conclude by asking the user what they'd like to focus on in this session.
+**Last Updated:** January 4, 2026
+**Documentation Structure:** Streamlined (11 essential files)
 
 ---
 
-## Project Status Quick Reference (Updated: 2025-12-31)
+## When the user says "start"
 
-### ✅ Completed Major Items
-- **Mobile App**: 20 screens complete with PayMongo payment integration
-- **Phase 2 Complete**: EarningsScreen, PaymentMethodsScreen, MyListingsScreen ✅
-- **Phase 3 Complete**: UX polish, accessibility (WCAG AA), haptics, testing (41 tests) ✅
-- **Phase 4 Complete**: Production ready - backend security 100/100, Redis caching, monitoring ✅
-- **Web PayMongo UI**: Complete redesign with 4 payment methods (Dec 11, 2025)
-- **Booking → Payment Flow**: Mobile and web fully connected
-- **PostgreSQL Migration**: Migrated from SQLite to PostgreSQL with 24 indexes
-- **Security Hardening**: Rate limiting, CORS, helmet.js, JWT rotated (100/100 score) ✅
-- **Input Validation**: Joi - 100% coverage (23 routes, 21 schemas) ✅
-- **Password Policy**: OWASP-compliant with breach checking
-- **Contract Testing**: Automated frontend-backend API validation system
-- **API Versioning**: /api/v1 with legacy /api support + deprecation middleware
-- **GCP Integration**: Secret Manager for credentials
-- **Backend Tests**: 150 tests passing (99.3% pass rate)
-- **Performance**: Redis caching, N+1 queries eliminated, 10x speed improvement ✅
-- **Monitoring**: Winston logging, Prometheus metrics, health checks ✅
-- **Web Production**: Docker, CI/CD, service worker, SEO, accessibility ✅
+Follow this **3-step quick context gathering** (15-20 minutes total):
 
-### 🎉 Latest Achievement (Dec 31, 2025)
-**Phases 3 & 4 Complete (100%)** - Production Ready
-- ✅ Mobile: 19 new files (UX components, haptics, accessibility, 41 tests)
-- ✅ Backend: 6 new files (Redis cache, Winston logs, Prometheus metrics, env validation)
-- ✅ Web: 22 new files (Docker, CI/CD, PWA, tests, deployment infrastructure)
-- ✅ Security score: 58/100 → 100/100 (+72%)
-- ✅ Performance: 200-500ms → 10-50ms (10x improvement)
-- ✅ API contract gaps: 31 → 0 (100% resolved)
+### Step 1: Read Current State (5 minutes)
 
-### 🎉 Previous Achievements
-**Phase 2 (Dec 16, 2025)** - Mobile Core Features
-- ✅ EarningsScreen, PaymentMethodsScreen, MyListingsScreen
-- ✅ Total: 20 mobile screens complete
+**Read ONLY this file:**
+- **`JANUARY_2026_STATUS_REPORT.md`**
+  - Current status: 87% production ready
+  - P1 blockers: 3 items (4-5 days to fix)
+  - Phase 5 progress: 40% complete
+  - Production readiness scorecard
+  - Timeline to launch
 
-**Phase 1 (Dec 11, 2025)** - PayMongo Integration
-- ✅ Mobile & Web: 4 payment methods integrated
+**What you'll learn:**
+- What's complete, what's not
+- Immediate blockers
+- Timeline expectations
 
-### 🔴 Critical Issues (Production Blockers)
-**ALL RESOLVED** ✅
-1. ✅ **JWT Secret**: Rotated to 128-char cryptographic secret
-2. ✅ **WebSocket Authentication**: Verified and working
-3. 🟡 **Photo Upload**: GCP Cloud Storage integration pending (non-blocking)
+---
 
-### 🟢 Performance Optimizations (ALL COMPLETE)
-1. ✅ **Database indexes**: 24 indexes added
-2. ✅ **Redis caching**: Implemented (50% DB load reduction)
-3. ✅ **N+1 queries**: Eliminated
-4. ✅ **Pagination**: Middleware implemented
-5. ✅ **Connection pooling**: PostgreSQL configured
+### Step 2: Understand Roadmap (5-10 minutes)
 
-### 🟢 Security (ALL COMPLETE)
-- ✅ **Input Validation**: 100% complete (Dec 6, 2025)
-- ✅ **JWT Secret**: Rotated (Dec 31, 2025)
-- ✅ **Rate Limiting**: Active
-- ✅ **CORS**: Configured
-- ✅ **Helmet.js**: Active
-- ✅ **WebSocket Auth**: Verified
+**Read ONLY this file:**
+- **`MASTER_ROADMAP_2026.md`**
+  - Complete 12-month plan
+  - Phases 1-4: Complete
+  - Phase 5: In progress (Service 2 launch - Feb 2026)
+  - Phases 6-8: Planned (Service 1 analytics - Mar-Sep 2026)
+  - Phase 9: Future (Scale - Oct-Dec 2026)
 
-### 📋 API Contract Status
-- ✅ **All mismatches resolved**: 31 → 0
-- ✅ **Mobile aliases**: `/parking/spots` routes added
-- ✅ **All endpoints exist**: Verified
+**What you'll learn:**
+- Where we've been (Phases 1-4)
+- Where we are (Phase 5, 40% complete)
+- Where we're going (Phases 6-9)
+- Milestones and timelines
 
-### 🎯 Current Branch
-- Branch: `feat/mobile-core-features-phase2`
-- Status: Phases 3 & 4 complete, ready for staging deployment
-- Last commit: "feat(backend): Complete Secret Manager migration + API timeout fix" (93bfee2)
+---
 
-### 📅 Roadmap Progress
-- **Phase 1 (Week 1)**: ✅ 100% Complete (Dec 11, 2025)
-- **Phase 2 (Weeks 2-4)**: ✅ 100% Complete (Dec 16, 2025)
-- **Phase 3 (Weeks 5-7)**: ✅ 100% Complete (Dec 31, 2025) - UX polish & testing
-- **Phase 4 (Weeks 8-10)**: ✅ 100% Complete (Dec 31, 2025) - Beta launch prep
-- **Phase 5 (Weeks 11-12)**: 0% - Public launch (NEXT)
+### Step 3: Check Tech Stack (2-3 minutes)
 
-### 📱 Missing Screens (Optional/Future)
-- SettingsScreen (account settings) - Low priority
-- ForgotPasswordScreen + backend endpoints - Medium priority
-- MyVehiclesScreen, SavedAddressesScreen, NotificationsSettingsScreen - Low priority
+**Read ONLY this file:**
+- **`TECH_STACK_SUMMARY.md`**
+  - Authoritative tech stack reference
+  - Layer-by-layer breakdown
+  - Databricks on GCP (not AWS/Mage/Airflow)
+  - Complete technology decisions
+
+**What you'll learn:**
+- What technologies we're using
+- Architecture layers
+- Why specific choices were made
+
+---
+
+## After Reading (1-2 minutes)
+
+Provide a **concise summary** (3-4 sentences):
+
+```
+Example:
+"ParkPal is 87% production ready with Phase 5 (40% complete) in progress.
+Testing infrastructure (47 files) is ready to merge. 3 P1 blockers remain:
+forgot password, photo upload, and test DB setup (4-5 days total).
+Service 2 (Marketplace) launching Feb 2026, Service 1 (Analytics) Sep 2026."
+```
+
+Then ask: **"What would you like to work on?"**
+
+---
+
+## Reference Documentation (Read on-demand)
+
+**Only read these if the user asks about specific topics:**
+
+### Service 1 (Analytics) - In Detail
+- **`SERVICE_1_ANALYTICS_GUIDE.md`**
+  - How circling time works
+  - Edge cases (delayed confirmations, false positives)
+  - Databricks pipeline architecture
+  - Implementation roadmap (Phases 6-8)
+  - **Read when:** User asks about analytics, geofencing, or Service 1
+
+### System Architecture
+- **`docs/PARKPAL_SYSTEM_ARCHITECTURE.md`**
+  - Service 1 + Service 2 architecture
+  - Data models
+  - API design
+  - Monetization strategy
+  - **Read when:** User asks about overall architecture or data models
+
+### API Documentation
+- **`docs/API_DOCUMENTATION.md`**
+  - All API endpoints
+  - Request/response formats
+  - Contract testing
+  - **Read when:** User asks about API or endpoints
+
+### Deployment
+- **`docs/DEPLOYMENT.md`**
+  - GCP deployment steps
+  - Secret Manager setup
+  - PayMongo configuration
+  - Environment setup
+  - **Read when:** User asks about deployment or infrastructure
+
+### Testing
+- **`TESTING_GUIDE.md`**
+  - Performance testing (Artillery, k6, Lighthouse)
+  - Test automation scripts
+  - Coverage enforcement
+  - **Read when:** User asks about testing
+
+---
+
+## Quick Reference: Project Status
+
+**Current State (Jan 2026):**
+- **Branch:** `feat/comprehensive-testing-infrastructure`
+- **Phase:** 5 (40% complete)
+- **Production Readiness:** 87/100
+- **Next Milestone:** Service 2 Public Launch (Feb 10-14, 2026)
+
+**Completion Status:**
+- ✅ **Phase 1:** PayMongo integration (100%)
+- ✅ **Phase 2:** Mobile core features (100%)
+- ✅ **Phase 3:** UX polish & testing (100%)
+- ✅ **Phase 4:** Beta launch prep (100%)
+- 🚧 **Phase 5:** Public launch (40%)
+  - ✅ Testing infrastructure (47 files ready to merge)
+  - ⏳ P1 fixes (forgot password, photo upload, test DB)
+  - ⏳ Staging deployment
+  - ⏳ Beta testing (60 users)
+  - ⏳ Production launch 🚀
+
+**P1 Blockers (4-5 days):**
+1. Forgot password flow (1-2 days)
+2. Photo upload - GCP Cloud Storage (2-3 days)
+3. Backend test database setup (30 min)
+
+**Tech Stack:**
+- Backend: Node.js + Express + PostgreSQL + Redis
+- Mobile: React Native + Expo + Redux Toolkit
+- Web: React + Next.js + Material-UI
+- Analytics: Databricks on GCP + Cloud Storage
+- Payments: PayMongo (GCash, Cards, GrabPay, Maya)
+
+---
+
+## Documentation Structure (11 Files)
+
+### Essential (Read for every session)
+1. `JANUARY_2026_STATUS_REPORT.md` - Current state
+2. `MASTER_ROADMAP_2026.md` - Complete roadmap
+3. `TECH_STACK_SUMMARY.md` - Tech stack
+
+### Reference (Read on-demand)
+4. `SERVICE_1_ANALYTICS_GUIDE.md` - Service 1 complete guide
+5. `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` - System architecture
+6. `docs/API_DOCUMENTATION.md` - API reference
+7. `docs/DEPLOYMENT.md` - Deployment guide
+8. `TESTING_GUIDE.md` - Testing & automation
+
+### Setup (Read for local development)
+9. `README.md` - Project overview
+10. `SETUP.md` - Local dev setup
+11. `docs/ENVIRONMENTS.md` - Environment config
+
+---
+
+## What NOT to Do
+
+❌ **Don't** read all 47 old markdown files
+❌ **Don't** read archived files in `docs/archive/`
+❌ **Don't** read outdated roadmaps (they're consolidated into MASTER_ROADMAP)
+❌ **Don't** spend 30+ minutes reading documentation
+
+✅ **Do** read the 3 essential files (15-20 min)
+✅ **Do** provide a quick summary
+✅ **Do** ask what to work on
+✅ **Do** read reference docs only when needed
 
 ---
 
@@ -135,3 +209,50 @@ Only commit/push automatically if the user explicitly says:
 - "go ahead and commit"
 - "auto-commit"
 - Or similar clear permission
+
+---
+
+## Historical Context (If Needed)
+
+**Archived documentation** is in `docs/archive/` and includes:
+- Phase completion summaries (Phases 1-4)
+- PayMongo integration completion
+- Security audit updates
+- Testing infrastructure fixes
+- Branch summaries
+
+**Only read these if:**
+- User asks about historical work
+- Need to understand past decisions
+- Investigating why something was done a certain way
+
+**Otherwise:** Skip them. Current documentation is comprehensive.
+
+---
+
+## Example Session Start
+
+**User:** "start"
+
+**Assistant:**
+1. Reads `JANUARY_2026_STATUS_REPORT.md` (5 min)
+2. Reads `MASTER_ROADMAP_2026.md` (7 min)
+3. Reads `TECH_STACK_SUMMARY.md` (3 min)
+
+**Total: 15 minutes**
+
+**Assistant response:**
+```
+ParkPal is 87% production ready (Phase 5: 40% complete). Testing
+infrastructure (47 files) ready to merge will boost test pass rate to 91%.
+3 P1 blockers remain: forgot password (1-2 days), photo upload (2-3 days),
+and test DB setup (30 min). Service 2 (Marketplace) launches Feb 2026,
+Service 1 (Analytics) launches Sep 2026.
+
+What would you like to work on?
+```
+
+---
+
+**Status:** ✅ Updated for streamlined documentation structure
+**Next Review:** After Phase 5 launch (Feb 2026)
