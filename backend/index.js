@@ -28,7 +28,7 @@ if (!envValidation.valid && process.env.NODE_ENV === 'production') {
 secretManager.initialize();
 
 // Log startup information
-// CD Pipeline: Added Cloud SQL Client IAM role
+// CD Pipeline: Database URL v4 with TCP connection
 logger.logStartup();
 printEnvironmentSummary();
 
