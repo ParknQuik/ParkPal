@@ -44,7 +44,6 @@ COPY --from=builder /app/controllers ./controllers
 COPY --from=builder /app/validators ./validators
 COPY --from=builder /app/models ./models
 COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/backend ./backend
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
