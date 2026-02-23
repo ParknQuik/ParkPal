@@ -100,7 +100,7 @@ jobs:
             --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --set-secrets DATABASE_URL=DATABASE_URL:latest \
-            --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
+            --set-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
             --service-account parkpal-backend-service@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --execute-now \
             --wait \
