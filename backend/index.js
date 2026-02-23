@@ -28,7 +28,7 @@ if (!envValidation.valid && process.env.NODE_ENV === 'production') {
 secretManager.initialize();
 
 // Log startup information
-// CD Pipeline: Database URL secret updated
+// CD Pipeline: Database URL v3 with localhost host
 logger.logStartup();
 printEnvironmentSummary();
 
