@@ -118,7 +118,7 @@ jobs:
             --service-account parkpal-backend-service@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
             --set-env-vars NODE_ENV=${{ steps.env-vars.outputs.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCS_BUCKET_NAME=parkpal-prod-photos \
-            --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest \
+            --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,SMTP_HOST=SMTP_HOST:latest,SMTP_PORT=SMTP_PORT:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASS=SMTP_PASS:latest \
             --min-instances ${{ steps.env-vars.outputs.MIN_INSTANCES }} \
             --max-instances ${{ steps.env-vars.outputs.MAX_INSTANCES }} \
             --memory ${{ steps.env-vars.outputs.MEMORY }} \
