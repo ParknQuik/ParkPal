@@ -28,7 +28,7 @@ if (!envValidation.valid && process.env.NODE_ENV === 'production') {
 secretManager.initialize();
 
 // Log startup information
-// CD Pipeline Test: Automated deployment v1.0
+// CD Pipeline: Database URL secret updated
 logger.logStartup();
 printEnvironmentSummary();
 
