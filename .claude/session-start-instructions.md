@@ -1,51 +1,52 @@
 # Session Start Instructions
 
 **Last Updated:** February 24, 2026
-**Documentation Structure:** Streamlined (33 essential files, 43 redundant files removed)
+**Documentation Structure:** Streamlined (13 essential root files, 43 redundant files removed)
 
 ---
 
 ## When the user says "start"
 
-Follow this **3-step quick context gathering** (15-20 minutes total):
+Follow this **2-step quick context gathering** (10-15 minutes total):
 
 ### Step 1: Read Current State (5 minutes)
 
 **Read ONLY this file:**
-- **`JANUARY_2026_STATUS_REPORT.md`**
-  - Current status: 95% production ready (updated Feb 2026)
-  - P1 blockers: 0 (all resolved!)
-  - CD Pipeline: 100% operational
-  - Phase 5 progress: ~80% complete
-  - Production readiness scorecard
-  - Timeline: Beta launch Feb 28, 2026
+- **`STATUS_REPORT.md`** (renamed from JANUARY_2026_STATUS_REPORT.md)
+  - Current deployment status
+  - Production readiness assessment
+  - Recent completions and blockers
+  - Timeline to launch
 
 **What you'll learn:**
-- What's complete: CD/CI, Photo Upload, Forgot Password, Database connected
-- What's remaining: Production secrets, staging test, beta recruitment
-- Timeline: 4 days to beta launch
+- Backend: ✅ Deployed to Cloud Run (operational)
+- Frontend: ⏳ Not deployed yet (web + mobile pending)
+- Database: ✅ Connected via Cloud SQL
+- Secrets: ✅ Configured in Secret Manager
 
 ---
 
-### Step 2: Understand Roadmap (5-10 minutes)
+### Step 2: Understand Infrastructure (5-10 minutes)
 
 **Read ONLY these files:**
 - **`TECH_STACK_SUMMARY.md`** (authoritative tech stack)
-- **`CD_PIPELINE_STATUS.md`** (deployment status)
-- **`DOCUMENTATION_AUDIT_SUMMARY.md`** (recent doc cleanup)
+- **`docs/DEPLOYMENT.md`** (consolidated deployment guide)
+- **`docs/PARKPAL_SYSTEM_ARCHITECTURE.md`** (two-service architecture)
 
 **What you'll learn:**
-- Tech stack: GCP (not Azure!), PostgreSQL, Redis, React Native, Next.js
-- Deployment: CD/CI operational, auto-deploy on push to dev/qa/main
-- Documentation: 43 files removed, 33 essential files remain
-- Recent work: Feb 24 documentation cleanup, mobile tests fixed
+- Tech stack: GCP Cloud Run, PostgreSQL, Redis, React Native, Vite/React
+- Deployment: Backend automated via GitHub Actions, frontend pending setup
+- Architecture: Service 1 (Analytics - future), Service 2 (Marketplace - current)
+- Infrastructure: Cloud SQL, Secret Manager, Cloud Storage, Firebase Hosting
 
 ---
 
-### Step 3: Check Recent Progress (2-3 minutes)
+### Step 3: Check Specific Topics (As Needed)
 
-**Read ONLY this file:**
-- **`DOCUMENTATION_AUDIT_REPORT.md`** (if needed for detailed audit info)
+**Read on-demand:**
+- **`DOCUMENTATION_AUDIT_SUMMARY.md`** - Recent doc cleanup details
+- **`docs/ENVIRONMENTS.md`** - Environment variables and configuration
+- **`docs/GCP_SECRET_MANAGER_SETUP.md`** - Secret management
 
 **What you'll learn:**
 - February 2026 progress: CD pipeline operational, mobile tests passing
@@ -120,32 +121,35 @@ Then ask: **"What would you like to work on?"**
 
 **Current State (Feb 24, 2026):**
 - **Branch:** `dev`
-- **Phase:** 5 (~80% complete)
-- **Production Readiness:** 95/100 ✅
-- **Next Milestone:** Beta Launch (Feb 28, 2026 - 4 days away!)
+- **Environment:** Development (single environment, no staging/prod yet)
+- **Service:** Service 2 - P2P Parking Marketplace (Airbnb-style)
+- **Service 1:** Analytics (future phase - not started)
 
-**Completion Status:**
-- ✅ **Phase 1:** PayMongo integration (100%)
-- ✅ **Phase 2:** Mobile core features (100%)
-- ✅ **Phase 3:** UX polish & testing (100%)
-- ✅ **Phase 4:** Beta launch prep (100%)
-- 🚧 **Phase 5:** Public launch (~80%)
-  - ✅ CD/CI Pipeline operational
-  - ✅ Photo upload (backend + mobile)
-  - ✅ Forgot password (backend + mobile)
-  - ✅ Database connected (Cloud SQL)
-  - ✅ Mobile tests passing (45/45)
-  - ✅ Documentation cleanup (43 files removed)
-  - ⏳ Production secrets setup
-  - ⏳ Staging deployment test
-  - ⏳ Beta user recruitment (30 users)
-  - ⏳ Beta launch 🚀 (Feb 28)
+**Deployment Status:**
+- ✅ **Backend:** Deployed to Cloud Run (automated CI/CD)
+  - URL: https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app
+  - Database: ✅ Connected (Cloud SQL PostgreSQL)
+  - Redis: ⏳ Not configured
+  - Health: 🟡 Operational but degraded
+- ❌ **Web Frontend:** Not deployed
+  - Workflow exists but deployment step incomplete
+  - Options: Firebase Hosting, Vercel, or Cloud Run
+- ❌ **Mobile App:** Not deployed
+  - EAS workflow exists but not on main branch
+  - Not submitted to App Stores
 
-**Remaining Tasks (4 hours):**
-1. Setup production secrets (1 hour)
-2. Test staging deployment (30 min)
-3. Recruit beta users (2 hours)
-4. Update workflow file syntax (30 min)
+**Feature Completion:**
+- ✅ **Backend:** 167 tests, API v1, PayMongo, forgot password
+- ✅ **Mobile:** 20 screens, 45/45 tests passing, payment integration
+- 🟡 **Web:** 11 screens, 72% test pass rate
+- ⏳ **Photo Upload:** Backend ready, GCS integration pending
+- ⏳ **Email Templates:** SMTP configured, templates needed
+
+**Critical Gaps:**
+1. ❌ Web app not deployed → Users can't access web dashboard
+2. ❌ Mobile app not deployed → No apps to download
+3. ⏳ Redis not configured → Caching unavailable
+4. ⏳ Photo upload incomplete → Hosts can't add listing photos
 
 **Tech Stack:**
 - Backend: Node.js + Express + PostgreSQL + Redis

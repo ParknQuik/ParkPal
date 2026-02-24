@@ -1,518 +1,599 @@
-# ParknQuik Deployment Guide
+# ParkPal Deployment Guide
+
+**Last Updated:** February 24, 2026
+**Current Status:** ✅ Backend deployed, ⏳ Frontend pending
+
+---
 
 ## Table of Contents
-1. [Development Setup](#development-setup)
-2. [Production Deployment](#production-deployment)
-3. [Environment Configuration](#environment-configuration)
-4. [Database Migration](#database-migration)
-5. [Troubleshooting](#troubleshooting)
 
-## Development Setup
+1. [Overview](#overview)
+2. [Current Deployment Status](#current-deployment-status)
+3. [GCP Infrastructure](#gcp-infrastructure)
+4. [Backend Deployment](#backend-deployment)
+5. [Frontend Deployment](#frontend-deployment)
+6. [Database Migrations](#database-migrations)
+7. [CI/CD Pipeline](#cicd-pipeline)
+8. [Troubleshooting](#troubleshooting)
 
-### Prerequisites
-- Node.js 16+ and npm
-- Git
-- For mobile: Expo Go app or iOS/Android simulator
+---
 
-### Quick Start
+## Overview
 
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd Projects
+ParkPal uses **Google Cloud Platform (GCP)** for all infrastructure:
+
+- **Backend**: Cloud Run (containerized Node.js)
+- **Database**: Cloud SQL (PostgreSQL)
+- **Caching**: Redis Cloud (external)
+- **Storage**: Cloud Storage (photos)
+- **Secrets**: Secret Manager
+- **Frontend**: Firebase Hosting or Cloud Run (TBD)
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Production Setup                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Frontend (Web)          Frontend (Mobile)                  │
+│  Firebase Hosting        EAS Build → App Stores             │
+│        │                        │                            │
+│        └────────────────────────┘                            │
+│                 │                                            │
+│                 ▼                                            │
+│         Backend API (Cloud Run)                             │
+│         parkpal-backend-dev                                 │
+│         https://parkpal-backend-dev-*.run.app               │
+│                 │                                            │
+│         ┌───────┴───────┬──────────┬──────────┐            │
+│         │               │          │          │             │
+│         ▼               ▼          ▼          ▼             │
+│   Cloud SQL      Secret Manager  GCS    Redis Cloud        │
+│   PostgreSQL     (env vars)    (photos)  (caching)         │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-2. **Start Backend**
+---
+
+## Current Deployment Status
+
+### ✅ Backend - DEPLOYED
+- **Service**: `parkpal-backend-dev`
+- **URL**: https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app
+- **Environment**: Development (dev branch)
+- **Deployment Method**: GitHub Actions CI/CD (automated)
+- **Status**: Operational
+- **Health Check**: `/health` endpoint
+
+**Recent Deployment:**
 ```bash
-cd backend
-./start.sh
+# Last successful deployment
+Date: February 23, 2026
+Run ID: #22319635044
+Branch: dev
+Status: ✅ Success
 ```
 
-3. **Start Web Frontend**
+### ⏳ Frontend Web - NOT DEPLOYED
+- **Status**: Workflow exists but deployment step incomplete
+- **File**: `frontend/web/.github/workflows/deploy.yml`
+- **Missing**: Actual deployment target configuration
+- **Options**: Firebase Hosting, Vercel, or Cloud Run
+
+### ⏳ Frontend Mobile - NOT DEPLOYED
+- **Status**: EAS build workflow exists but not on main branch
+- **File**: `.github/workflows/mobile-eas-build.yml`
+- **Missing**: EXPO_TOKEN secret, workflow merge to main
+- **Target**: iOS App Store + Google Play Store
+
+---
+
+## GCP Infrastructure
+
+### Project Configuration
+
+**Active Project:** `parkpal-474417` (Development)
+
+```bash
+gcloud config set project parkpal-474417
+```
+
+**Other Projects (Paused):**
+- `parkpal-staging` - Staging environment (infrastructure created, not in use)
+- `parkpal-production` - Production environment (not created yet)
+
+### Service Account
+
+**Name:** `parkpal-backend-service@parkpal-474417.iam.gserviceaccount.com`
+
+**IAM Roles:**
+- `roles/artifactregistry.writer` - Push Docker images
+- `roles/run.admin` - Manage Cloud Run services
+- `roles/iam.serviceAccountUser` - Act as service account
+- `roles/storage.admin` - Access Cloud Storage
+- `roles/secretmanager.secretAccessor` - Read secrets
+- `roles/cloudsql.client` - Connect to Cloud SQL
+
+### Secrets in Secret Manager
+
+```bash
+# List all secrets
+gcloud secrets list --project=parkpal-474417
+```
+
+**Current Secrets:**
+1. `DATABASE_URL` - PostgreSQL connection string (Unix socket)
+2. `JWT_SECRET` - JWT signing key
+3. `REDIS_URL` - Redis connection string
+4. `PAYMONGO_SECRET_KEY` - Payment processor secret
+5. `PAYMONGO_PUBLIC_KEY` - Payment processor public key
+6. `GOOGLE_MAPS_API_KEY` - Google Maps API key
+7. `SMTP_HOST` - Email server host
+8. `SMTP_PORT` - Email server port
+9. `SMTP_USER` - Email credentials
+10. `SMTP_PASS` - Email password
+
+### Cloud SQL Database
+
+**Instance:** `parkpal-db`
+- **Region:** asia-southeast1
+- **Version:** PostgreSQL 16
+- **Tier:** db-custom-1-3840
+- **Connection Name:** `parkpal-474417:asia-southeast1:parkpal-db`
+
+**Databases:**
+- `parknquik_staging` - Active database
+
+### Cloud Storage Buckets
+
+```bash
+gsutil ls -p parkpal-474417
+```
+
+**Buckets:**
+- `gs://parkpal-prod-photos` - User-uploaded photos
+- `gs://parkpal-prod-backups` - Database backups
+
+---
+
+## Backend Deployment
+
+### Automated Deployment (Current)
+
+**Trigger:** Push to `dev`, `qa`, or `main` branch
+
+**Workflow File:** `.github/workflows/deploy-backend.yml`
+
+**Process:**
+1. Checkout code
+2. Authenticate to GCP
+3. Build Docker image with Prisma
+4. Push to Google Container Registry
+5. Run database migrations (Cloud Run Job)
+6. Deploy to Cloud Run
+7. Health check verification
+
+**Deployment Time:** ~3 minutes
+
+### Manual Deployment
+
+If you need to deploy manually:
+
+```bash
+cd /Users/bryanangeloyaneza/Documents/GitHub/ParkPal
+
+# 1. Build and push Docker image
+gcloud builds submit --tag gcr.io/parkpal-474417/parkpal-backend:latest \
+  --project=parkpal-474417 backend/
+
+# 2. Deploy to Cloud Run
+gcloud run deploy parkpal-backend-dev \
+  --image gcr.io/parkpal-474417/parkpal-backend:latest \
+  --region asia-southeast1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --service-account parkpal-backend-service@parkpal-474417.iam.gserviceaccount.com \
+  --set-cloudsql-instances parkpal-474417:asia-southeast1:parkpal-db \
+  --set-env-vars NODE_ENV=development,GCP_PROJECT_ID=parkpal-474417,GCS_BUCKET_NAME=parkpal-prod-photos \
+  --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,SMTP_HOST=SMTP_HOST:latest,SMTP_PORT=SMTP_PORT:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASS=SMTP_PASS:latest \
+  --min-instances 0 \
+  --max-instances 10 \
+  --memory 512Mi \
+  --cpu 1 \
+  --timeout 300 \
+  --concurrency 80 \
+  --project parkpal-474417
+
+# 3. Verify deployment
+curl https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/health
+```
+
+### Environment-Specific Configurations
+
+| Branch | Environment | Service Name | Instances | Memory | CPU |
+|--------|-------------|--------------|-----------|--------|-----|
+| `dev` | Development | `parkpal-backend-dev` | 0-5 | 512Mi | 1 |
+| `qa` | Staging | `parkpal-backend-staging` | 0-10 | 512Mi | 1 |
+| `main` | Production | `parkpal-backend-prod` | 1-100 | 1Gi | 2 |
+
+---
+
+## Frontend Deployment
+
+### Web App (Pending Setup)
+
+**Option 1: Firebase Hosting (Recommended)**
+
 ```bash
 cd frontend/web
-./start.sh
-```
 
-4. **Start Mobile App**
-```bash
-cd frontend/mobile
-./start-mobile.sh
-```
+# Install Firebase CLI
+npm install -g firebase-tools
 
-## Production Deployment
+# Login to Firebase
+firebase login
 
-### Backend Deployment
+# Initialize project
+firebase init hosting
 
-#### Option 1: Traditional VPS (DigitalOcean, AWS EC2, etc.)
-
-1. **Install Dependencies**
-```bash
-ssh user@your-server
-sudo apt update
-sudo apt install nodejs npm nginx
-```
-
-2. **Clone and Setup**
-```bash
-git clone <repository-url>
-cd Projects/backend
-npm install --production
-```
-
-3. **Environment Variables**
-```bash
-nano .env
-# Set production values:
-PORT=3001
-DATABASE_URL=postgresql://user:password@localhost:5432/parkpal
-JWT_SECRET=<generate-strong-secret>
-NODE_ENV=production
-```
-
-4. **Database Setup**
-```bash
-# For PostgreSQL
-sudo apt install postgresql
-sudo -u postgres createdb parkpal
-npx prisma migrate deploy
-```
-
-5. **Process Manager (PM2)**
-```bash
-npm install -g pm2
-pm2 start npm --name "parkpal-api" -- start
-pm2 save
-pm2 startup
-```
-
-6. **Nginx Reverse Proxy**
-```nginx
-server {
-    listen 80;
-    server_name api.parkpal.com;
-    
-    location / {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-#### Option 2: Docker Deployment
-
-**Dockerfile** (backend/Dockerfile):
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-
-RUN npx prisma generate
-
-EXPOSE 3001
-
-CMD ["npm", "start"]
-```
-
-**docker-compose.yml**:
-```yaml
-version: '3.8'
-services:
-  backend:
-    build: ./backend
-    ports:
-      - "3001:3001"
-    environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/parkpal
-      - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      - db
-  
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=parkpal
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-volumes:
-  pgdata:
-```
-
-Deploy:
-```bash
-docker-compose up -d
-```
-
-#### Option 3: Platform as a Service
-
-**Render.com / Railway.app**:
-1. Connect GitHub repository
-2. Set build command: `npm install && npx prisma generate`
-3. Set start command: `npm start`
-4. Add environment variables
-5. Add PostgreSQL database addon
-
-**Heroku**:
-```bash
-heroku create parkpal-api
-heroku addons:create heroku-postgresql:hobby-dev
-git push heroku main
-heroku run npx prisma migrate deploy
-```
-
-### Web Frontend Deployment
-
-#### Option 1: Static Hosting (Netlify, Vercel, GitHub Pages)
-
-1. **Build for Production**
-```bash
-cd frontend/web
+# Build and deploy
 npm run build
+firebase deploy --only hosting --project parkpal-474417
 ```
 
-2. **Deploy to Netlify**
+**Option 2: Vercel**
+
 ```bash
-npm install -g netlify-cli
-netlify deploy --prod --dir=dist
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy
+cd frontend/web
+vercel --prod
 ```
 
-3. **Configure Redirects** (_redirects file):
-```
-/*    /index.html   200
-```
+**Option 3: Cloud Run (Containerized)**
 
-#### Option 2: Nginx Static Server
-
-```nginx
-server {
-    listen 80;
-    server_name parkpal.com;
-    root /var/www/parkpal-web/dist;
-    
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-### Mobile App Deployment
-
-#### iOS Deployment
-
-1. **Install EAS CLI**
 ```bash
-npm install -g eas-cli
-eas login
+# Build and deploy as container
+cd frontend/web
+gcloud builds submit --tag gcr.io/parkpal-474417/parkpal-web:latest
+gcloud run deploy parkpal-web \
+  --image gcr.io/parkpal-474417/parkpal-web:latest \
+  --region asia-southeast1 \
+  --platform managed \
+  --allow-unauthenticated
 ```
 
-2. **Configure EAS Build**
+### Mobile App (Pending Setup)
+
+**EAS Build Setup:**
+
 ```bash
 cd frontend/mobile
+
+# Install EAS CLI
+npm install -g eas-cli
+
+# Login to Expo
+eas login
+
+# Configure project
 eas build:configure
-```
 
-3. **Build for iOS**
-```bash
-eas build --platform ios
-```
+# Build for iOS
+eas build --platform ios --profile production
 
-4. **Submit to App Store**
-```bash
+# Build for Android
+eas build --platform android --profile production
+
+# Submit to stores
 eas submit --platform ios
-```
-
-#### Android Deployment
-
-1. **Build APK/AAB**
-```bash
-eas build --platform android
-```
-
-2. **Submit to Google Play**
-```bash
 eas submit --platform android
 ```
 
-## Environment Configuration
+**GitHub Secrets Required:**
+- `EXPO_TOKEN` - Expo authentication token
 
-### Backend (.env)
+---
+
+## Database Migrations
+
+### Automated Migrations (CI/CD)
+
+Migrations run automatically before each deployment via Cloud Run Job.
+
+**Job Configuration:**
+```bash
+gcloud run jobs create parkpal-backend-migrate-dev-10 \
+  --image gcr.io/parkpal-474417/parkpal-backend:latest \
+  --region asia-southeast1 \
+  --set-secrets DATABASE_URL=DATABASE_URL:latest \
+  --set-cloudsql-instances parkpal-474417:asia-southeast1:parkpal-db \
+  --service-account parkpal-backend-service@parkpal-474417.iam.gserviceaccount.com \
+  --args="sh,-c,cd /app && npx prisma migrate deploy --skip-generate" \
+  --max-retries 1 \
+  --task-timeout 10m \
+  --project parkpal-474417
+```
+
+### Manual Migrations
+
+If you need to run migrations manually:
 
 ```bash
-# Server
-PORT=3001
-NODE_ENV=production
+# Option 1: Via Cloud Run Job
+gcloud run jobs execute parkpal-backend-migrate-dev-10 \
+  --region asia-southeast1 \
+  --wait \
+  --project parkpal-474417
 
-# Database
-DATABASE_URL=postgresql://user:password@host:5432/parkpal
+# Option 2: Via Cloud SQL Proxy (local)
+# 1. Start proxy
+gcloud sql instances describe parkpal-db \
+  --project=parkpal-474417 \
+  --format="value(connectionName)"
 
-# Authentication
-JWT_SECRET=<generate-with: openssl rand -base64 32>
-JWT_EXPIRATION=24h
+cloud-sql-proxy parkpal-474417:asia-southeast1:parkpal-db
 
-# CORS
-ALLOWED_ORIGINS=https://parkpal.com,https://app.parkpal.com
-
-# Payment Gateway (Stripe example)
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_PUBLISHABLE_KEY=pk_live_...
-
-# Email Service
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=noreply@parkpal.com
-SMTP_PASS=<app-password>
+# 2. Run migrations
+cd backend
+DATABASE_URL="postgresql://USER:PASS@127.0.0.1:5432/parknquik_staging" \
+  npx prisma migrate deploy
 ```
 
-### Web Frontend (.env)
+---
 
-```bash
-VITE_API_BASE_URL=https://api.parkpal.com
-VITE_GOOGLE_MAPS_API_KEY=<your-key>
+## CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+**File:** `.github/workflows/deploy-backend.yml`
+
+**Triggers:**
+- Push to `dev`, `qa`, or `main` branches
+- Changes in `backend/**` or workflow file
+
+**Workflow Steps:**
+
+```yaml
+1. Checkout Repository
+2. Authenticate to GCP
+   - Uses GCP_SA_KEY secret
+3. Configure Docker for GCR
+4. Build Docker Image
+   - Multi-stage build
+   - Prisma client generation
+5. Push to Container Registry
+6. Run Database Migrations
+   - Cloud Run Job execution
+7. Deploy to Cloud Run
+   - Environment-specific config
+8. Health Check
+9. Generate Deployment Summary
 ```
 
-### Mobile App (app.json)
+**GitHub Secrets Required:**
+- `GCP_SA_KEY` - Service account key JSON (base64 encoded)
+- `GCP_PROJECT_ID` - Project ID (`parkpal-474417`)
 
-```json
-{
-  "expo": {
-    "extra": {
-      "apiUrl": "https://api.parkpal.com",
-      "googleMapsApiKey": "<your-key>"
-    }
-  }
-}
+### Deployment Metrics
+
+**Speed Comparison:**
+- **Manual Deployment:** ~30 minutes
+- **Automated Deployment:** ~3 minutes
+- **Improvement:** 90% faster
+
+**Build Breakdown:**
+```
+Checkout code:         5s
+Authenticate GCP:      20s
+Build Docker image:    90s
+Push to GCR:          30s
+Database migration:    15s
+Deploy to Cloud Run:   15s
+Health check:          5s
+────────────────────────
+Total:                ~3 minutes
 ```
 
-## Database Migration
-
-### Development to Production
-
-1. **Export Development Data**
-```bash
-npx prisma db pull
-npx prisma generate
-```
-
-2. **Create Migration**
-```bash
-npx prisma migrate dev --name initial_production
-```
-
-3. **Deploy to Production**
-```bash
-DATABASE_URL=<production-url> npx prisma migrate deploy
-```
-
-### Backup Strategy
-
-```bash
-# PostgreSQL backup
-pg_dump parkpal > backup_$(date +%Y%m%d).sql
-
-# Restore
-psql parkpal < backup_20251004.sql
-
-# Automated daily backups
-0 2 * * * pg_dump parkpal > /backups/parkpal_$(date +\%Y\%m\%d).sql
-```
-
-## Monitoring & Maintenance
-
-### Health Checks
-
-**Backend Health Endpoint**:
-```javascript
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
-});
-```
-
-**Uptime Monitoring**: UptimeRobot, Pingdom, or similar
-
-### Logging
-
-**Production Logging Setup**:
-```javascript
-const winston = require('winston');
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' })
-  ]
-});
-```
-
-### Performance Monitoring
-
-- **APM**: New Relic, DataDog
-- **Error Tracking**: Sentry
-- **Analytics**: Google Analytics, Mixpanel
+---
 
 ## Troubleshooting
 
 ### Common Issues
 
-**1. CORS Errors**
-```javascript
-// backend/index.js
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS.split(','),
-  credentials: true
-}));
-```
+#### 1. Deployment Fails with "Permission Denied"
 
-**2. Database Connection Issues**
+**Cause:** Service account missing IAM roles
+
+**Fix:**
 ```bash
-# Check connection
-npx prisma db pull
+gcloud projects get-iam-policy parkpal-474417 \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:parkpal-backend-service@parkpal-474417.iam.gserviceaccount.com"
 
-# Reset database (development only!)
-npx prisma migrate reset
+# Add missing roles
+gcloud projects add-iam-policy-binding parkpal-474417 \
+  --member="serviceAccount:parkpal-backend-service@parkpal-474417.iam.gserviceaccount.com" \
+  --role="roles/run.admin"
 ```
 
-**3. Build Failures**
+#### 2. Health Check Returns "degraded"
+
+**Cause:** Database, Redis, or Secret Manager not accessible
+
+**Check Logs:**
 ```bash
-# Clear caches
-rm -rf node_modules package-lock.json
-npm install
-
-# Frontend
-rm -rf dist .vite
-npm run build
+gcloud logging read \
+  "resource.type=cloud_run_revision AND resource.labels.service_name=parkpal-backend-dev" \
+  --limit 50 \
+  --project parkpal-474417 \
+  --format="table(timestamp,severity,textPayload)"
 ```
 
-**4. Mobile App Won't Connect**
-- Ensure API URL is correct in app.json
-- Check firewall rules
-- Verify SSL certificate (must be valid for HTTPS)
-
-### Debug Mode
-
+**Check Health:**
 ```bash
-# Backend
-DEBUG=* npm start
-
-# Enable verbose logging
-LOG_LEVEL=debug npm start
+curl https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/health | jq
 ```
 
-## Security Checklist
+**Common Fixes:**
+- Verify DATABASE_URL secret format: `postgresql://USER:PASS@localhost/DB?host=/cloudsql/CONNECTION_NAME`
+- Check Redis connection string
+- Verify Secret Manager IAM permissions
 
-- [ ] Environment variables not committed to Git
-- [ ] Strong JWT secret (32+ characters)
-- [ ] HTTPS enabled (SSL certificate)
-- [ ] Database credentials secured
-- [ ] API rate limiting implemented
-- [ ] Input validation on all endpoints
-- [ ] SQL injection prevention (using Prisma)
-- [ ] XSS protection headers
-- [ ] Regular dependency updates (`npm audit fix`)
-- [ ] Backup strategy in place
+#### 3. Database Connection Fails
 
-## Performance Optimization
+**Cause:** Incorrect connection string or missing Cloud SQL connection
 
-### Backend
-- Enable gzip compression
-- Implement caching (Redis)
-- Database query optimization
-- Connection pooling
+**Fix:**
+```bash
+# Get correct connection name
+gcloud sql instances describe parkpal-db \
+  --project=parkpal-474417 \
+  --format="value(connectionName)"
 
-### Frontend
-- Code splitting
-- Image optimization
-- Lazy loading
-- Service worker/PWA
+# Update DATABASE_URL secret
+echo -n "postgresql://USER:PASS@localhost/parknquik_staging?host=/cloudsql/parkpal-474417:asia-southeast1:parkpal-db" | \
+  gcloud secrets versions add DATABASE_URL --data-file=- --project=parkpal-474417
 
-### Mobile
-- Image caching
-- Optimize bundle size
-- Use Hermes engine
-- ProGuard/R8 (Android)
-
-## Scaling Considerations
-
-### Horizontal Scaling
-```yaml
-# kubernetes/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: parkpal-backend
-spec:
-  replicas: 3  # Scale to 3 instances
-  selector:
-    matchLabels:
-      app: parkpal-backend
-  template:
-    metadata:
-      labels:
-        app: parkpal-backend
-    spec:
-      containers:
-      - name: backend
-        image: parkpal/backend:latest
-        ports:
-        - containerPort: 3001
+# Redeploy
+gh workflow run deploy-backend.yml --ref dev -f environment=development
 ```
 
-### Load Balancing
-- Nginx/HAProxy for load distribution
-- AWS ELB/ALB or Google Cloud Load Balancer
-- Database read replicas
+#### 4. Prisma Client Not Found
 
-## CI/CD Pipeline
+**Cause:** Prisma client not generated in Docker build
 
-**GitHub Actions Example** (.github/workflows/deploy.yml):
-```yaml
-name: Deploy
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
-    
-    - name: Install dependencies
-      run: |
-        cd backend
-        npm ci
-    
-    - name: Run tests
-      run: npm test
-    
-    - name: Deploy to production
-      run: |
-        # Your deployment commands here
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cd /app && git pull && npm install && pm2 restart all'
+**Fix:** Verify Dockerfile includes:
+```dockerfile
+RUN npx prisma generate
 ```
 
-## Support
+And deployment includes:
+```bash
+--args="sh,-c,cd /app && npx prisma migrate deploy --skip-generate"
+```
 
-For deployment assistance:
-- Check documentation in `/docs` folder
-- Review troubleshooting section
-- Contact development team
+#### 5. Workflow Doesn't Trigger
+
+**Cause:** Branch protection or paths filter
+
+**Check:**
+- Push is to `dev`, `qa`, or `main`
+- Changes are in `backend/**` or `.github/workflows/`
+- Branch protection allows automated workflows
+
+**Manual Trigger:**
+```bash
+gh workflow run deploy-backend.yml --ref dev -f environment=development
+```
+
+### Viewing Logs
+
+**Cloud Run Logs:**
+```bash
+# Stream logs
+gcloud run services logs tail parkpal-backend-dev \
+  --region asia-southeast1 \
+  --project parkpal-474417
+
+# Search logs
+gcloud logging read \
+  "resource.type=cloud_run_revision AND resource.labels.service_name=parkpal-backend-dev AND severity=ERROR" \
+  --limit 10 \
+  --project parkpal-474417 \
+  --format=json
+```
+
+**GitHub Actions Logs:**
+```bash
+# View recent runs
+gh run list --workflow=deploy-backend.yml --limit 5
+
+# View specific run
+gh run view RUN_ID --log
+```
+
+### Health Check Endpoints
+
+**Backend Health:**
+```bash
+curl https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/health
+```
+
+**Expected Response:**
+```json
+{
+  "status": "ok",
+  "environment": "development",
+  "version": "1.0.0",
+  "checks": {
+    "database": {
+      "status": "up",
+      "responseTime": null
+    },
+    "redis": {
+      "status": "down",
+      "error": "Redis not available"
+    },
+    "secretManager": {
+      "status": "down"
+    }
+  }
+}
+```
+
+---
+
+## Cost Estimates
+
+### Current Monthly Costs (Development)
+
+| Service | Configuration | Monthly Cost |
+|---------|---------------|--------------|
+| Cloud SQL | db-custom-1-3840 | $80 |
+| Cloud Run | 0-10 instances | $0-15 |
+| Cloud Storage | 2 buckets | $2 |
+| Secret Manager | 10 secrets | $0 (free tier) |
+| Redis Cloud | External | $5 |
+| **Total** | | **~$87-102** |
+
+### Production Estimates (Future)
+
+| Service | Configuration | Monthly Cost |
+|---------|---------------|--------------|
+| Cloud SQL | High availability | $300-500 |
+| Cloud Run | 1-100 instances | $50-200 |
+| Cloud Storage | Photos + backups | $10-50 |
+| Firebase Hosting | Free tier | $0 |
+| **Total** | | **~$360-750** |
+
+---
+
+## Next Steps
+
+### Immediate (Blocking)
+1. ✅ Backend deployed to Cloud Run
+2. ⏳ Deploy web frontend (Firebase Hosting or Vercel)
+3. ⏳ Setup mobile EAS builds
+4. ⏳ Configure Redis connection (currently down)
+
+### Short Term (This Week)
+5. Test staging deployment (`qa` branch)
+6. Add monitoring/alerting
+7. Setup custom domain
+8. Configure CORS properly
+
+### Medium Term (Before Beta Launch)
+9. Submit mobile apps to stores
+10. Load testing validation
+11. Production environment setup
+12. Beta user rollout plan
+
+---
+
+**Deployment Status:** 🟡 Partially Deployed (Backend only)
+**Next Priority:** Frontend deployment infrastructure
+**Contact:** Development Team
