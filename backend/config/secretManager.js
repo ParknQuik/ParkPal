@@ -5,6 +5,7 @@ class SecretManager {
     this.client = null;
     this.projectId = process.env.GCP_PROJECT_ID;
     this.isEnabled = process.env.USE_SECRET_MANAGER === 'true';
+    this.isInitialized = false;
   }
 
   /**
@@ -13,6 +14,7 @@ class SecretManager {
   initialize() {
     if (!this.isEnabled) {
       console.log('Secret Manager is disabled. Using local environment variables.');
+      this.isInitialized = true; // Mark as initialized even when disabled
       return;
     }
 
@@ -26,9 +28,11 @@ class SecretManager {
       // detected by the Google Cloud client libraries. No need to pass it explicitly.
       // Just ensure it's set in your .env file and the client will use it.
       this.client = new SecretManagerServiceClient();
+      this.isInitialized = true;
       console.log('Secret Manager client initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Secret Manager client:', error.message);
+      this.isInitialized = false;
       throw error;
     }
   }
