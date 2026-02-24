@@ -1,8 +1,26 @@
-# ParkPal Development Roadmap - February 24, 2026
+# ParkPal Development Roadmap
 
 **Last Updated:** February 24, 2026
-**Current Status:** Critical fixes phase
+**Current Week:** Week 1 of 9 (Critical Backend Fixes)
+**Current Phase:** Phase 1 - Critical Backend Fixes
 **Target Public Launch:** Late April 2026 (9 weeks)
+
+---
+
+## 📝 How This Roadmap Works
+
+**This is a LIVING ROADMAP - Update it as you make progress:**
+
+1. **Check off tasks** - Mark `- [x]` when completed
+2. **Update Current Week** - Change line 4 as weeks progress
+3. **Update Current Phase** - Change line 5 when moving to next phase
+4. **Add notes** - Add `✅ DONE [date]` or `⚠️ BLOCKED: [reason]` next to items
+5. **Track in STATUS_REPORT.md** - Major milestones should update both files
+
+**Sync with STATUS_REPORT.md:**
+- Completed tasks → Update STATUS_REPORT.md blockers section
+- Test improvements → Update STATUS_REPORT.md test pass rates
+- Deployments → Update STATUS_REPORT.md deployment status
 
 ---
 
@@ -696,10 +714,56 @@ This roadmap reflects the **actual state** of ParkPal as of February 24, 2026, b
 
 ---
 
-**Roadmap Status:** ACTIVE
-**Next Review:** March 3, 2026 (after Week 1)
+## 📋 Update Instructions
+
+**When completing tasks in this roadmap:**
+
+1. **Mark tasks complete:**
+   ```markdown
+   - [x] Task description ✅ DONE [Feb 28, 2026]
+   ```
+
+2. **Add blockers:**
+   ```markdown
+   - [ ] Task description ⚠️ BLOCKED: Waiting for Redis deployment
+   ```
+
+3. **Update header (lines 4-5):**
+   ```markdown
+   **Current Week:** Week 2 of 9 (Frontend Deployment)
+   **Current Phase:** Phase 2 - Frontend Deployments
+   ```
+
+4. **Update STATUS_REPORT.md when:**
+   - Major milestone completed (fix all Week 1 tests)
+   - Infrastructure service restored (Redis UP)
+   - Platform deployed (web/mobile)
+   - Phase transition (Phase 1 → Phase 2)
+
+5. **Weekly Review:**
+   - Every Monday: Review last week's progress
+   - Update Current Week (line 4)
+   - Update Current Phase if changed (line 5)
+   - Mark completed tasks with ✅
+   - Add any new blockers or issues
+
+**Example Update:**
+```markdown
+### Week 1 Progress (Feb 28, 2026)
+- [x] Fix database connection issues (30-40 tests) ✅ DONE [Feb 26]
+- [x] Fix authentication issues (40-50 tests) ✅ DONE [Feb 27]
+- [x] Deploy Redis on GCP ✅ DONE [Feb 25]
+- [ ] Fix booking logic tests ⚠️ BLOCKED: Need Redis running
+```
+
+---
+
+**Roadmap Status:** ACTIVE - Living Document
+**Next Review:** March 3, 2026 (Weekly Monday Review)
 **Owner:** Engineering Team
-**Approval:** Pending team review
+**Last Updated:** February 24, 2026
+
+**Sync Note:** This roadmap works together with STATUS_REPORT.md. Update both when making significant progress.
 
 ---
 
