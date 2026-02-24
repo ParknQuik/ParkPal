@@ -46,7 +46,7 @@ exports.sendPasswordResetEmail = async (email, name, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || '"ParkPal" <noreply@parkpal.com>',
+    from: process.env.SMTP_FROM || '"ParkPal" <noreply@parknquik.com>',
     to: email,
     subject: 'Reset Your ParkPal Password',
     text: `Hi ${name || 'there'},
@@ -130,7 +130,7 @@ exports.sendPasswordResetEmail = async (email, name, resetToken) => {
 
   const msg = {
     to: email,
-    from: 'noreply@parkpal.com', // Must be verified in SendGrid
+    from: 'noreply@parknquik.com', // Must be verified in SendGrid
     subject: 'Reset Your ParkPal Password',
     text: `Hi ${name || 'there'}, ...`,
     html: `...`
