@@ -39,6 +39,8 @@ describe('Password Reset Flow', () => {
 
   describe('POST /api/auth/forgot-password', () => {
     it('should accept valid email and return success message', async () => {
+      const consoleSpy = jest.spyOn(console, 'log');
+
       const res = await request(app)
         .post('/api/v1/auth/forgot-password')
         .send({ email: testUser.email });
@@ -55,6 +57,14 @@ describe('Password Reset Flow', () => {
       expect(updatedUser.resetPasswordToken).toHaveLength(64);
       expect(updatedUser.resetPasswordExpires).toBeTruthy();
       expect(new Date(updatedUser.resetPasswordExpires).getTime()).toBeGreaterThan(Date.now());
+
+      // Verify email service was called (in test mode, using fallback logger)
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('✅ Password reset email sent:'),
+        expect.any(String)
+      );
+
+      consoleSpy.mockRestore();
 
       // Save token for next test
       resetToken = updatedUser.resetPasswordToken;

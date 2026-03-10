@@ -14,12 +14,14 @@ const resend = process.env.RESEND_API_KEY
 
 // Fallback logger if no API key configured
 const fallbackLogger = {
-  send: async (mailOptions) => {
-    console.log('📧 Email would be sent (no RESEND_API_KEY):');
-    console.log('  To:', mailOptions.to);
-    console.log('  Subject:', mailOptions.subject);
-    console.log('  From:', mailOptions.from);
-    return { id: 'test-' + Date.now() };
+  emails: {
+    send: async (mailOptions) => {
+      console.log('📧 Email would be sent (no RESEND_API_KEY):');
+      console.log('  To:', mailOptions.to);
+      console.log('  Subject:', mailOptions.subject);
+      console.log('  From:', mailOptions.from);
+      return { data: { id: 'test-' + Date.now() } };
+    }
   }
 };
 
@@ -73,8 +75,9 @@ exports.sendPasswordResetEmail = async (email, name, resetToken) => {
   try {
     const client = resend || fallbackLogger;
     const response = await client.emails.send(emailData);
-    console.log('✅ Password reset email sent:', response.id);
-    return { success: true, messageId: response.id };
+    const messageId = response.data?.id || response.id;
+    console.log('✅ Password reset email sent:', messageId);
+    return { success: true, messageId };
   } catch (error) {
     console.error('❌ Failed to send password reset email:', error);
     throw new Error('Failed to send email');
