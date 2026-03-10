@@ -1,67 +1,38 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 /**
  * Email Service for ParkPal
  *
- * Uses Nodemailer with Gmail SMTP for development
- * Switch to SendGrid for production (see commented code below)
+ * Uses Resend API for transactional emails
+ * Production-ready, no SMTP/DNS issues on Cloud Run
  */
 
-// Gmail SMTP Configuration (Development)
-const createTransporter = () => {
-  // For development: Use Gmail SMTP
-  // You need to enable "Less secure app access" or use App Password
-  // https://support.google.com/accounts/answer/185833
+// Initialize Resend client
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
+// Fallback logger if no API key configured
+const fallbackLogger = {
+  send: async (mailOptions) => {
+    console.log('📧 Email would be sent (no RESEND_API_KEY):');
+    console.log('  To:', mailOptions.to);
+    console.log('  Subject:', mailOptions.subject);
+    console.log('  From:', mailOptions.from);
+    return { id: 'test-' + Date.now() };
   }
-
-  // Fallback: Log to console (for testing without SMTP)
-  return {
-    sendMail: async (mailOptions) => {
-      console.log('📧 Email would be sent:');
-      console.log('  To:', mailOptions.to);
-      console.log('  Subject:', mailOptions.subject);
-      console.log('  Body:', mailOptions.text);
-      return { messageId: 'test-' + Date.now() };
-    }
-  };
 };
 
 /**
  * Send password reset email
  */
 exports.sendPasswordResetEmail = async (email, name, resetToken) => {
-  const transporter = createTransporter();
-
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-  const mailOptions = {
-    from: process.env.SMTP_FROM || '"ParkPal" <noreply@parknquik.com>',
+  const emailData = {
+    from: 'ParkPal <noreply@parknquik.com>',
     to: email,
     subject: 'Reset Your ParkPal Password',
-    text: `Hi ${name || 'there'},
-
-You requested to reset your password for ParkPal.
-
-Click the link below to reset your password:
-${resetUrl}
-
-This link will expire in 1 hour.
-
-If you didn't request this password reset, please ignore this email.
-
-Best regards,
-ParkPal Team`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -100,9 +71,10 @@ ParkPal Team`,
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Password reset email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    const client = resend || fallbackLogger;
+    const response = await client.emails.send(emailData);
+    console.log('✅ Password reset email sent:', response.id);
+    return { success: true, messageId: response.id };
   } catch (error) {
     console.error('❌ Failed to send password reset email:', error);
     throw new Error('Failed to send email');
