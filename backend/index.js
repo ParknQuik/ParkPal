@@ -78,7 +78,10 @@ const corsOptions = {
     ? [
         'https://parkpal.com',
         'https://www.parkpal.com',
-        // Add production domains here
+        // Cloud Run web frontends
+        'https://parkpal-web-dev-cxntrkjjmq-as.a.run.app',
+        'https://parkpal-web-staging-cxntrkjjmq-as.a.run.app',
+        'https://parkpal-web-prod-cxntrkjjmq-as.a.run.app',
       ]
     : [
         'http://localhost:3000',
@@ -89,6 +92,8 @@ const corsOptions = {
         'http://192.168.100.233:19006',
         'http://192.168.100.241:5173', // Vite dev server on network
         /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d{4,5}$/, // Allow all local network IPs
+        // Cloud Run web frontends (for development)
+        'https://parkpal-web-dev-cxntrkjjmq-as.a.run.app',
       ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
