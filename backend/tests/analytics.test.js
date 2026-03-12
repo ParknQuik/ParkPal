@@ -30,7 +30,7 @@ describe('Analytics API Routes', () => {
       data: {
         name: 'Test User',
         email: `test-${Date.now()}@example.com`,
-        passwordHash: 'hash',
+        password: '$2b$10$abcdefghijklmnopqrstuvwxyz', // Hashed password
         role: 'driver'
       }
     });
@@ -317,24 +317,30 @@ describe('Analytics API Routes', () => {
             slotNumber: '1',
             status: 'available',
             isActive: true,
-            latitude: 14.5312,
-            longitude: 120.9844
+            lat: 14.5312,
+            lon: 120.9844,
+            address: '123 Test St, Manila',
+            slotType: 'commercial_iot'
           },
           {
             zoneId: testZone.id,
             slotNumber: '2',
             status: 'occupied',
             isActive: true,
-            latitude: 14.5313,
-            longitude: 120.9845
+            lat: 14.5313,
+            lon: 120.9845,
+            address: '123 Test St, Manila',
+            slotType: 'commercial_iot'
           },
           {
             zoneId: testZone.id,
             slotNumber: '3',
             status: 'available',
             isActive: true,
-            latitude: 14.5314,
-            longitude: 120.9846
+            lat: 14.5314,
+            lon: 120.9846,
+            address: '123 Test St, Manila',
+            slotType: 'commercial_iot'
           }
         ]
       });
