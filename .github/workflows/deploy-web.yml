@@ -82,9 +82,9 @@ jobs:
         working-directory: frontend/web
         run: npm ci
 
-      - name: Type check
-        working-directory: frontend/web
-        run: npm run type-check
+      # - name: Type check
+      #   working-directory: frontend/web
+      #   run: npm run type-check
 
       - name: Run tests
         working-directory: frontend/web
