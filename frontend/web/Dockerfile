@@ -26,6 +26,13 @@ ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 ENV VITE_PAYMONGO_PUBLIC_KEY=$VITE_PAYMONGO_PUBLIC_KEY
 ENV VITE_APP_ENV=$VITE_APP_ENV
 
+# Debug: Print environment variables (remove after debugging)
+RUN echo "=== Build Environment Variables ===" && \
+    echo "VITE_API_BASE_URL: $VITE_API_BASE_URL" && \
+    echo "VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:0:10}..." && \
+    echo "VITE_APP_ENV: $VITE_APP_ENV" && \
+    echo "===================================="
+
 # Build the application
 RUN npm run build
 
