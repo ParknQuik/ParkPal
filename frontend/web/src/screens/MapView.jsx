@@ -93,6 +93,14 @@ const MapView = () => {
 		// Check for API key in environment
 		const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+		// Debug: Log API key status (remove after debugging)
+		console.log('[MapView] API Key check:', {
+			exists: !!apiKey,
+			length: apiKey?.length,
+			firstChars: apiKey?.substring(0, 10),
+			isPlaceholder: apiKey === 'YOUR_GOOGLE_MAPS_API_KEY'
+		});
+
 		if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
 			console.warn('Google Maps API key not configured. Using list view only.');
 			setError('Map view unavailable. Configure VITE_GOOGLE_MAPS_API_KEY to enable maps.');
