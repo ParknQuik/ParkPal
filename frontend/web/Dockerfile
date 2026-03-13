@@ -20,18 +20,21 @@ ARG VITE_GOOGLE_MAPS_API_KEY
 ARG VITE_PAYMONGO_PUBLIC_KEY
 ARG VITE_APP_ENV=production
 
-# Create .env.production file with build args (Vite requires this)
-RUN echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" > .env.production && \
-    echo "VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY" >> .env.production && \
-    echo "VITE_PAYMONGO_PUBLIC_KEY=$VITE_PAYMONGO_PUBLIC_KEY" >> .env.production && \
-    echo "VITE_APP_ENV=$VITE_APP_ENV" >> .env.production
+# Set environment variables for Vite to pick up during build
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+ENV VITE_PAYMONGO_PUBLIC_KEY=$VITE_PAYMONGO_PUBLIC_KEY
+ENV VITE_APP_ENV=$VITE_APP_ENV
 
-# Debug: Print environment variables (remove after debugging)
+# Debug: Print environment variables
 RUN echo "=== Build Environment Variables ===" && \
-    cat .env.production && \
+    echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" && \
+    echo "VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY:0:20}..." && \
+    echo "VITE_PAYMONGO_PUBLIC_KEY=${VITE_PAYMONGO_PUBLIC_KEY:0:20}..." && \
+    echo "VITE_APP_ENV=$VITE_APP_ENV" && \
     echo "===================================="
 
-# Build the application
+# Build the application with env vars
 RUN npm run build
 
 # Stage 2: Serve with nginx
