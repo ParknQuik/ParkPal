@@ -14,6 +14,9 @@ RUN npm ci --ignore-scripts
 # Copy source code
 COPY . .
 
+# Remove any cached Vite build artifacts
+RUN rm -rf node_modules/.vite dist
+
 # Build arguments for environment variables
 ARG VITE_API_BASE_URL
 ARG VITE_GOOGLE_MAPS_API_KEY
