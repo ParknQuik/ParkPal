@@ -1,3 +1,8 @@
+// ParknQuik Mobile App - Chip Component
+// Updated: March 14, 2026
+// Design: Google Stitch - Green theme rebrand
+// Changes: Green theme colors (primary color already updated via theme)
+
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { ChipProps } from '../types';
