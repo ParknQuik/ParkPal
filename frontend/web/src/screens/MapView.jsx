@@ -71,7 +71,7 @@ const MapView = () => {
 	}, [userLocation, searchCenter, radius]);
 
 	useEffect(() => {
-		if (mapLoaded && slots.length > 0) {
+		if (mapLoaded) {
 			// Debounce map initialization slightly for better performance
 			const timer = setTimeout(() => initializeMap(), 100);
 			return () => clearTimeout(timer);
