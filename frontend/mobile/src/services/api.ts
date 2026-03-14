@@ -1,12 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
-
-// Get API URL from app config, fallback to dev URL
-// Updated for API v1 versioning
-const API_BASE_URL =
-  Constants.expoConfig?.extra?.apiUrl ||
-  (__DEV__ ? 'http://192.168.100.176:3001/api/v1' : 'https://api.parkpal.com/api/v1');
+import { API_BASE_URL, isLocalBackend } from '../config/api.config';
 
 // Create axios instance
 const api = axios.create({
@@ -17,8 +11,10 @@ const api = axios.create({
   },
 });
 
-// Log API URL for debugging
-console.log('API Base URL:', API_BASE_URL);
+// Log API configuration for debugging
+console.log('📡 API Configuration:');
+console.log('  Base URL:', API_BASE_URL);
+console.log('  Backend:', isLocalBackend() ? '🏠 Local' : '☁️  Deployed');
 
 // Request interceptor to add auth token
 api.interceptors.request.use(

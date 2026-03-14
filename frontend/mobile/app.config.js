@@ -12,14 +12,15 @@
  * - EXPO_PUBLIC_ENV: Environment name (development, staging, production)
  */
 
-// Load environment variables from .env file
+// Load environment variables from .env.local (priority) then .env
+require('dotenv').config({ path: '.env.local' });
 require('dotenv').config();
 
 const ENV = process.env.EXPO_PUBLIC_ENV || 'development';
 
-// Validate required environment variables
+// Validate required environment variables (only Google Maps keys)
+// EXPO_PUBLIC_API_URL is optional - will use platform defaults if not set
 const requiredEnvVars = {
-  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
   GOOGLE_MAPS_API_KEY_IOS: process.env.GOOGLE_MAPS_API_KEY_IOS,
   GOOGLE_MAPS_API_KEY_ANDROID: process.env.GOOGLE_MAPS_API_KEY_ANDROID,
 };
@@ -34,7 +35,7 @@ if (missingVars.length > 0) {
   missingVars.forEach(varName => {
     console.error(`   - ${varName}`);
   });
-  console.error('\n📝 Please copy .env.example to .env and fill in your values.\n');
+  console.error('\n📝 Please add these to .env.local\n');
 
   // For development, we'll use placeholder values with a warning
   if (ENV === 'development') {
@@ -55,7 +56,8 @@ module.exports = {
 
     // Expose environment variables to the app via expo-constants
     extra: {
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.176:3001/api/v1',
+      // API URL is optional - src/config/api.config.ts will use platform defaults if not set
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || undefined,
       environment: ENV,
       // EAS Build will provide this automatically
       eas: {
