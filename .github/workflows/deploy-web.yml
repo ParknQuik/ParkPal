@@ -135,6 +135,7 @@ jobs:
             --build-arg VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }} \
             --build-arg VITE_PAYMONGO_PUBLIC_KEY=${{ secrets.VITE_PAYMONGO_PUBLIC_KEY }} \
             --build-arg VITE_APP_ENV=${{ needs.setup.outputs.environment }} \
+            --build-arg CACHE_BUST=${{ github.sha }} \
             -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ needs.setup.outputs.service-name }}:latest \
             -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ needs.setup.outputs.service-name }}:${{ github.sha }} \
             .
