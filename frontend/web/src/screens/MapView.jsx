@@ -52,6 +52,8 @@ const MapView = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [mapLoaded, setMapLoaded] = useState(false);
+	const [autoRefresh, setAutoRefresh] = useState(true); // Auto-refresh toggle
+	const [lastRefresh, setLastRefresh] = useState(Date.now());
 
 	// Default center (Manila)
 	const defaultCenter = { lat: 14.5995, lng: 120.9842 };
@@ -83,6 +85,19 @@ const MapView = () => {
 		const timer = setTimeout(() => filterSlots(), 300);
 		return () => clearTimeout(timer);
 	}, [searchQuery, slots]);
+
+	// Auto-refresh parking slots every 30 seconds
+	useEffect(() => {
+		if (!autoRefresh) return;
+
+		const interval = setInterval(() => {
+			console.log('[MapView] Auto-refreshing parking slots...');
+			fetchSlots();
+			setLastRefresh(Date.now());
+		}, 30000); // 30 seconds
+
+		return () => clearInterval(interval);
+	}, [autoRefresh, userLocation, searchCenter, radius]);
 
 	const loadGoogleMapsScript = () => {
 		// Check if Google Maps is already loaded
@@ -366,9 +381,22 @@ const MapView = () => {
 
 					{/* Radius Control */}
 					<Box sx={{ px: 2, pb: 2 }}>
-						<Typography variant="caption" color="text.secondary" gutterBottom>
-							Search Radius: {radius} km
-						</Typography>
+						<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+							<Typography variant="caption" color="text.secondary">
+								Search Radius: {radius} km
+							</Typography>
+							<Button
+								size="small"
+								startIcon={<Refresh />}
+								onClick={() => {
+									fetchSlots();
+									setLastRefresh(Date.now());
+								}}
+								disabled={loading}
+							>
+								Refresh
+							</Button>
+						</Box>
 						<Slider
 							value={radius}
 							onChange={(e, newValue) => setRadius(newValue)}
@@ -386,6 +414,7 @@ const MapView = () => {
 						/>
 						<Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
 							Showing {filteredSlots.length} parking spot{filteredSlots.length !== 1 ? 's' : ''}
+							{autoRefresh && ' • Auto-refresh: 30s'}
 						</Typography>
 					</Box>
 
