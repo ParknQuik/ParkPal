@@ -57,6 +57,7 @@ const Search: React.FC = () => {
 		checkOut: '',
 	});
 	const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+	// Cache bust: Force rebuild to include Browse Map button - 2026-03-14
 
 	const { isLoaded, loadError } = useJsApiLoader({
 		googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
