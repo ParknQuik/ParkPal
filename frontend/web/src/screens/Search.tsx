@@ -18,6 +18,7 @@ import {
 	Search as SearchIcon,
 	LocationOn as LocationIcon,
 	CalendarMonth as CalendarIcon,
+	Map as MapIcon,
 } from '@mui/icons-material';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 
@@ -200,17 +201,33 @@ const Search: React.FC = () => {
 
 						{/* Search Button */}
 						<Grid item xs={12}>
-							<Button
-								variant="contained"
-								size="large"
-								fullWidth
-								startIcon={<SearchIcon />}
-								onClick={handleSearch}
-								disabled={!searchParams.latitude || !searchParams.longitude}
-								sx={{ py: 1.5 }}
-							>
-								Search Parking
-							</Button>
+							<Grid container spacing={2}>
+								<Grid item xs={12} sm={6}>
+									<Button
+										variant="contained"
+										size="large"
+										fullWidth
+										startIcon={<SearchIcon />}
+										onClick={handleSearch}
+										disabled={!searchParams.latitude || !searchParams.longitude}
+										sx={{ py: 1.5 }}
+									>
+										Search Parking
+									</Button>
+								</Grid>
+								<Grid item xs={12} sm={6}>
+									<Button
+										variant="outlined"
+										size="large"
+										fullWidth
+										startIcon={<MapIcon />}
+										onClick={() => navigate('/map')}
+										sx={{ py: 1.5 }}
+									>
+										Browse Map
+									</Button>
+								</Grid>
+							</Grid>
 							{searchParams.location && !searchParams.latitude && (
 								<Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
 									Please select a location from the dropdown suggestions
