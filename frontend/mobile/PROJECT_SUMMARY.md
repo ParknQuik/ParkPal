@@ -1,6 +1,6 @@
 # ParknQuik Mobile App - Project Summary
 
-**Updated:** December 31, 2025 - Phase 3 Complete
+**Updated:** March 15, 2026 - Zero-Config Local Development Complete
 
 ## Project Overview
 
@@ -302,6 +302,51 @@ error: '#ef4444'
 
 - Email: Any valid email (e.g., test@example.com)
 - Password: Min 8 chars, 1 uppercase, 1 lowercase, 1 number
+
+## Recent Updates
+
+### March 15, 2026 - Zero-Config Backend Connection ✅
+
+**Feature:** Automatic backend IP detection for local development
+
+**Problem Solved:**
+- Previously: Developers had to manually configure IP addresses in `.env.local`
+- Issue: IP addresses change across networks (home, office, coffee shop)
+- Team friction: New developers couldn't test mobile app without network configuration
+
+**Solution Implemented:**
+- ✅ Automatic IP detection via Expo Metro bundler (`Constants.expoConfig.hostUri`)
+- ✅ Hybrid fallback system with 3 methods:
+  1. Manual override (`EXPO_PUBLIC_API_URL` in `.env.local`)
+  2. mDNS hostname (`EXPO_PUBLIC_BACKEND_HOSTNAME`)
+  3. Auto-detection from Metro bundler IP
+- ✅ Platform-specific smart defaults:
+  - iOS Simulator → `http://localhost:3001/api/v1`
+  - Android Emulator → `http://10.0.2.2:3001/api/v1`
+  - Physical Devices → Auto-extracted from Metro bundler
+
+**Files Created/Modified:**
+- `src/config/api.config.ts` - Complete rewrite with smart IP detection
+- `.env.local.example` - Template for new developers
+- `scripts/get-local-ip.js` - Helper utility for manual IP detection
+- `docs/BACKEND_SWITCHING.md` - Comprehensive setup documentation
+- `README.md` - Quick start guide updated
+
+**Impact:**
+- **Zero configuration** needed for local development
+- Works across all networks without manual changes
+- Team members can run `npm start` and immediately connect to local backend
+- Tested on multiple physical Android devices ✅
+
+**Developer Experience:**
+```bash
+# That's it! No configuration needed.
+cd frontend/mobile
+npm start
+# Scan QR code → automatically connects to local backend
+```
+
+---
 
 ## Phase 3 Enhancements (Dec 31, 2025) ✅
 
