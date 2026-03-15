@@ -634,4 +634,24 @@ describe('Marketplace API Tests', () => {
       expect(response.body.summary.totalEarnings).toBe(47.5);
     });
   });
+
+  describe('GET /api/v1/marketplace/listings/:id', () => {
+    it('should return listing with qrCodeData', async () => {
+      const response = await request(app)
+        .get(`/api/v1/marketplace/listings/${testData.slot.id}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('id', testData.slot.id);
+      expect(response.body).toHaveProperty('qrCodeData');
+      expect(response.body.qrCodeData).toMatch(/^PARKPAL:\d+:\d+:[a-f0-9]{8}$/);
+    });
+
+    it('should return 404 for non-existent listing', async () => {
+      const response = await request(app)
+        .get('/api/v1/marketplace/listings/99999');
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Listing not found');
+    });
+  });
 });
