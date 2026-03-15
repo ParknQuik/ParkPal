@@ -36,9 +36,8 @@ class MapsConfigService {
         }
       }
 
-      // Fetch from backend
-      const response = await configAPI.getGoogleMapsApiKey();
-      const newApiKey = response.data.apiKey;
+      // Fetch from backend with retry
+      const newApiKey = await this.fetchWithRetry();
 
       // Cache the key
       await this.cacheApiKey(newApiKey);
@@ -58,6 +57,27 @@ class MapsConfigService {
 
       throw new Error('Failed to get Google Maps API key');
     }
+  }
+
+  /**
+   * Fetch API key with retry logic
+   */
+  private async fetchWithRetry(retries = 3, delay = 2000): Promise<string> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await configAPI.getGoogleMapsApiKey();
+        return response.data.apiKey;
+      } catch (error) {
+        if (i === retries - 1) {
+          // Last retry failed, throw error
+          throw error;
+        }
+        // Wait before retrying
+        console.log(`Retrying Google Maps API key fetch (${i + 1}/${retries})...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error('Failed to fetch API key after retries');
   }
 
   /**

@@ -53,14 +53,22 @@ export const SearchScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchApiKey = async () => {
+    const fetchApiKey = async (retryCount = 0) => {
       try {
         const response = await api.get('/config/maps-api-key');
         setGoogleMapsApiKey(response.data.apiKey);
       } catch (error) {
-        console.error('Failed to fetch Google Maps API key:', error);
+        // Retry silently up to 2 times
+        if (retryCount < 2) {
+          console.log(`Retrying Google Maps API key fetch (${retryCount + 1}/2)...`);
+          setTimeout(() => fetchApiKey(retryCount + 1), 2000);
+          return;
+        }
+        console.error('Failed to fetch Google Maps API key after retries:', error);
       } finally {
-        setLoading(false);
+        if (retryCount === 0 || retryCount >= 2) {
+          setLoading(false);
+        }
       }
     };
     fetchApiKey();

@@ -65,7 +65,7 @@ export const ExploreScreen: React.FC = () => {
   }, [listings]);
 
   useEffect(() => {
-    const fetchApiKey = async () => {
+    const fetchApiKey = async (retryCount = 0) => {
       try {
         console.log('Fetching Google Maps API key...');
         const response = await api.get('/config/maps-api-key');
@@ -73,12 +73,13 @@ export const ExploreScreen: React.FC = () => {
         setGoogleMapsApiKey(response.data.apiKey);
         setApiKeyError(null);
       } catch (error: any) {
-        console.error('Failed to fetch Google Maps API key:', error);
-        console.error('Error details:', {
-          message: error.message,
-          code: error.code,
-          response: error.response?.data,
-        });
+        // Only log error, don't show to user - retry silently
+        if (retryCount < 2) {
+          console.log(`Retrying Google Maps API key fetch (${retryCount + 1}/2)...`);
+          setTimeout(() => fetchApiKey(retryCount + 1), 2000); // Retry after 2 seconds
+          return;
+        }
+        console.error('Failed to fetch Google Maps API key after retries:', error);
         setApiKeyError(`Unable to load map: ${error.message || 'Network Error'}`);
       }
     };
