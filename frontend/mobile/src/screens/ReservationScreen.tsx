@@ -19,7 +19,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Toast } from '../components/Toast';
 import { colors, typography, spacing, borderRadius } from '../theme';
 import { formatCurrency, formatDate, formatTime } from '../utils/helpers';
-import { mockPaymentMethods } from '../services/mockData';
+import { userAPI } from '../services/api';
 
 export const ReservationScreen: React.FC = () => {
   // Set default start time to 1 hour from now (rounded to next hour)
@@ -37,9 +37,9 @@ export const ReservationScreen: React.FC = () => {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
-  const [selectedPayment, setSelectedPayment] = useState(
-    mockPaymentMethods[0].id
-  );
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<string>('');
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -56,7 +56,25 @@ export const ReservationScreen: React.FC = () => {
 
   useEffect(() => {
     dispatch(getListingById(parseInt(spotId)));
+    loadPaymentMethods();
   }, [spotId]);
+
+  const loadPaymentMethods = async () => {
+    try {
+      setLoadingPaymentMethods(true);
+      const response = await userAPI.getPaymentMethods();
+      const methods = response.data || [];
+      setPaymentMethods(methods);
+      if (methods.length > 0) {
+        setSelectedPayment(methods[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
+      // Keep empty array, user will see "Add Payment Method" option
+    } finally {
+      setLoadingPaymentMethods(false);
+    }
+  };
 
   const calculateDuration = () => {
     const hours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
@@ -72,9 +90,15 @@ export const ReservationScreen: React.FC = () => {
   const handleReserve = async () => {
     if (!selectedListing || !user) return;
 
-    const paymentMethod = mockPaymentMethods.find(
+    const paymentMethod = paymentMethods.find(
       (p) => p.id === selectedPayment
     );
+
+    if (!paymentMethod) {
+      setToastMessage('Please select a payment method');
+      setShowToast(true);
+      return;
+    }
 
     try {
       console.log('Creating booking with:', {
@@ -250,34 +274,59 @@ export const ReservationScreen: React.FC = () => {
           {/* Payment Method */}
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Method</Text>
-            {mockPaymentMethods.map((method) => (
-              <TouchableOpacity
-                key={method.id}
-                style={[
-                  styles.paymentOption,
-                  selectedPayment === method.id && styles.paymentOptionSelected,
-                ]}
-                onPress={() => setSelectedPayment(method.id)}
-              >
-                <View style={styles.paymentInfo}>
-                  <Text style={styles.paymentLabel}>{method.label}</Text>
-                  <Text style={styles.paymentDetails}>{method.details}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.radio,
-                    selectedPayment === method.id && styles.radioSelected,
-                  ]}
+            {loadingPaymentMethods ? (
+              <LoadingSpinner />
+            ) : paymentMethods.length > 0 ? (
+              <>
+                {paymentMethods.map((method) => (
+                  <TouchableOpacity
+                    key={method.id}
+                    style={[
+                      styles.paymentOption,
+                      selectedPayment === method.id && styles.paymentOptionSelected,
+                    ]}
+                    onPress={() => setSelectedPayment(method.id)}
+                  >
+                    <View style={styles.paymentInfo}>
+                      <Text style={styles.paymentLabel}>
+                        {method.provider || method.type}
+                      </Text>
+                      <Text style={styles.paymentDetails}>
+                        {method.accountNumber || method.details || '••••'}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.radio,
+                        selectedPayment === method.id && styles.radioSelected,
+                      ]}
+                    >
+                      {selectedPayment === method.id && (
+                        <View style={styles.radioDot} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  style={styles.addPaymentButton}
+                  onPress={() => navigation.navigate('PaymentMethods' as never)}
                 >
-                  {selectedPayment === method.id && (
-                    <View style={styles.radioDot} />
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.addPaymentButton}>
-              <Text style={styles.addPaymentText}>+ Add Payment Method</Text>
-            </TouchableOpacity>
+                  <Text style={styles.addPaymentText}>+ Add Payment Method</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.emptyPaymentMethods}>
+                <Text style={styles.emptyPaymentText}>
+                  No payment methods yet
+                </Text>
+                <TouchableOpacity
+                  style={styles.addFirstPaymentButton}
+                  onPress={() => navigation.navigate('PaymentMethods' as never)}
+                >
+                  <Text style={styles.addFirstPaymentText}>+ Add Payment Method</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </Card>
 
           {/* Price Summary */}
@@ -463,6 +512,27 @@ const styles = StyleSheet.create({
   addPaymentText: {
     ...typography.body,
     color: colors.primary,
+    fontWeight: '600',
+  },
+  emptyPaymentMethods: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyPaymentText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  addFirstPaymentButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+  },
+  addFirstPaymentText: {
+    ...typography.body,
+    color: colors.white,
     fontWeight: '600',
   },
   summaryRow: {

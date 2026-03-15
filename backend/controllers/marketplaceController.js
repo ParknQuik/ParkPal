@@ -1,6 +1,6 @@
 const prisma = require('../config/prisma');
 const { broadcast } = require('../services/websocket');
-const { generateQRCodeImage, validateQRCode } = require('../services/qrcode');
+const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../services/qrcode');
 const cache = require('../services/cache');
 
 /**
@@ -852,10 +852,14 @@ exports.getListingById = async (req, res) => {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
+    // Generate QR code data for mobile app
+    const qrCodeData = await generateQRCodeData(listing.id.toString());
+
     res.json({
       ...listing,
       amenities: listing.amenities || [],
       photos: listing.photos || [],
+      qrCodeData, // Add QR code data string for mobile app
     });
   } catch (error) {
     console.error('Get listing by ID error:', error);
