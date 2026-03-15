@@ -55,17 +55,12 @@ export const ProfileScreen: React.FC = () => {
         {
           icon: '📋',
           label: 'My Listings',
-          action: () => navigation.navigate('ListSpot' as never),
+          action: () => navigation.navigate('MyListings' as never),
         },
         {
           icon: '💰',
           label: 'My Earnings',
           action: () => navigation.navigate('Earnings' as never),
-        },
-        {
-          icon: '📱',
-          label: 'Generate QR Code',
-          action: () => navigation.navigate('QRGenerator' as never),
         },
         { icon: '⭐', label: 'Reviews', action: () => {} },
       ],

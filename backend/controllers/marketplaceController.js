@@ -890,6 +890,10 @@ exports.getHostListings = async (req, res) => {
         ...l,
         amenities: l.amenities || [],
         photos: l.photos || [],
+        availability: l.isActive, // Map isActive to availability for frontend
+        pricePerHour: l.price, // Map price to pricePerHour for frontend
+        rating: l.averageRating || 0, // Map averageRating to rating for frontend
+        reviewCount: l.reviews.length, // Add review count
       }))
     );
   } catch (error) {
@@ -1061,6 +1065,48 @@ exports.cancelBooking = async (req, res) => {
     });
   } catch (error) {
     console.error('Cancel booking error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Toggle listing availability (activate/pause)
+ */
+exports.toggleListingAvailability = async (req, res) => {
+  try {
+    const listingId = parseInt(req.params.id);
+    const userId = req.user.id;
+
+    // Check if listing exists and belongs to user
+    const listing = await prisma.parkingSlot.findUnique({
+      where: { id: listingId },
+    });
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (listing.ownerId !== userId) {
+      return res.status(403).json({ error: 'You do not own this listing' });
+    }
+
+    // Toggle isActive
+    const updatedListing = await prisma.parkingSlot.update({
+      where: { id: listingId },
+      data: {
+        isActive: !listing.isActive,
+      },
+    });
+
+    // Invalidate listings cache
+    await cache.invalidateListingsCache();
+
+    res.json({
+      message: `Listing ${updatedListing.isActive ? 'activated' : 'paused'} successfully`,
+      listing: updatedListing,
+    });
+  } catch (error) {
+    console.error('Toggle listing availability error:', error);
     res.status(500).json({ error: error.message });
   }
 };

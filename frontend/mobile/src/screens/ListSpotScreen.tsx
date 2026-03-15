@@ -14,9 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { mediaAPI } from '../services/mediaApi';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { createListing } from '../store/slices/marketplaceSlice';
+import { marketplaceAPI } from '../services/api';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -27,6 +28,11 @@ import { colors, typography, spacing, borderRadius } from '../theme';
 const { width } = Dimensions.get('window');
 
 export const ListSpotScreen: React.FC = () => {
+  const route = useRoute();
+  const params = route.params as { listingId?: number; mode?: 'edit' | 'create' } | undefined;
+  const isEditMode = params?.mode === 'edit';
+  const listingId = params?.listingId;
+
   const [currentStep, setCurrentStep] = useState(1);
   const [showToast, setShowToast] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,8 +62,48 @@ export const ListSpotScreen: React.FC = () => {
   const [gettingAddress, setGettingAddress] = useState(false);
 
   useEffect(() => {
-    requestLocationPermission();
-  }, []);
+    if (isEditMode && listingId) {
+      loadListingData();
+    } else {
+      requestLocationPermission();
+    }
+  }, [isEditMode, listingId]);
+
+  const loadListingData = async () => {
+    try {
+      setLoading(true);
+      const response = await marketplaceAPI.getListingById(listingId!);
+      const listing = response.data;
+
+      // Pre-fill form with listing data
+      setTitle(listing.description || '');
+      setAddress(listing.address || '');
+      setCity(listing.city || '');
+      setState(listing.state || '');
+      setZipCode(listing.zipCode || '');
+      setPrice(listing.price?.toString() || listing.pricePerHour?.toString() || '');
+      setDescription(listing.description || '');
+      setSelectedAmenities(listing.amenities || []);
+      setImages(listing.photos || []);
+
+      // Set map location to listing location
+      const lat = listing.lat || listing.latitude || 14.5995;
+      const lon = listing.lon || listing.longitude || 120.9842;
+      setLatitude(lat);
+      setLongitude(lon);
+      setMapRegion({
+        latitude: lat,
+        longitude: lon,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    } catch (error) {
+      console.error('Error loading listing:', error);
+      Alert.alert('Error', 'Failed to load listing data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const requestLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -176,11 +222,21 @@ export const ListSpotScreen: React.FC = () => {
       return;
     }
 
-    // Check minimum photo requirement
-    if (images.length < 2) {
+    // Check minimum photo requirement (only for new listings)
+    if (!isEditMode && images.length < 2) {
       Alert.alert(
         'More Photos Needed',
         'Please add at least 2 photos of your parking spot for verification.'
+      );
+      return;
+    }
+
+    // Show message that edit is not yet implemented
+    if (isEditMode) {
+      Alert.alert(
+        'Edit Feature Coming Soon',
+        'The ability to edit listings is coming in the next update. For now, you can view your listing details here.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
       return;
     }
@@ -499,7 +555,7 @@ export const ListSpotScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>List Your Spot</Text>
+        <Text style={styles.title}>{isEditMode ? 'Edit Your Spot' : 'List Your Spot'}</Text>
         <View style={styles.progressContainer}>
           {[1, 2, 3].map((step) => (
             <View
@@ -531,7 +587,17 @@ export const ListSpotScreen: React.FC = () => {
           style={styles.button}
         />
         <Button
-          title={currentStep === 3 ? (loading ? 'Creating...' : 'Submit') : 'Next'}
+          title={
+            currentStep === 3
+              ? loading
+                ? isEditMode
+                  ? 'Updating...'
+                  : 'Creating...'
+                : isEditMode
+                ? 'Update Listing'
+                : 'Submit'
+              : 'Next'
+          }
           variant="gradient"
           onPress={currentStep === 3 ? handleSubmit : handleNext}
           style={styles.button}

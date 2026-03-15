@@ -494,4 +494,34 @@ module.exports = (app) => {
     validateParams(idParamSchema),
     marketplaceController.getListingReviews
   );
+
+  /**
+   * @swagger
+   * /api/marketplace/listings/:id/toggle:
+   *   patch:
+   *     summary: Toggle listing availability (activate/pause)
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Listing ID
+   *     responses:
+   *       200:
+   *         description: Listing availability toggled successfully
+   *       403:
+   *         description: Unauthorized (not the owner)
+   *       404:
+   *         description: Listing not found
+   */
+  app.patch(
+    '/marketplace/listings/:id/toggle',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.toggleListingAvailability
+  );
 };

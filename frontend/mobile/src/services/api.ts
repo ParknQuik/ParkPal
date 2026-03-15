@@ -155,6 +155,10 @@ export const marketplaceAPI = {
   // Host earnings
   getHostEarnings: (params?: { startDate?: string; endDate?: string }) =>
     api.get('/marketplace/host/earnings', { params }),
+
+  // Toggle listing availability
+  toggleListingAvailability: (listingId: number) =>
+    api.patch(`/marketplace/listings/${listingId}/toggle`),
 };
 
 // User endpoints
