@@ -219,7 +219,7 @@ Then ask: **"What would you like to work on?"**
 
 ---
 
-## Git Commit Policy
+## Git Workflow Policy
 
 **IMPORTANT:** Always inform the user before committing or pushing changes.
 
@@ -239,6 +239,49 @@ Only commit/push automatically if the user explicitly says:
 - "go ahead and commit"
 - "auto-commit"
 - Or similar clear permission
+
+---
+
+## Git Branch Protection
+
+**Repository Configuration:**
+- **`dev` branch is PROTECTED** - requires pull requests
+- **`main` branch is PROTECTED** - requires pull requests
+- Direct pushes to `dev` or `main` will be rejected
+
+### When User Says "Push to Dev" or "Merge to Dev":
+
+**Always follow this workflow:**
+
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b feat/descriptive-name
+   ```
+
+2. **Commit changes to feature branch:**
+   ```bash
+   git add [files]
+   git commit -m "descriptive message"
+   git push -u origin feat/descriptive-name
+   ```
+
+3. **Create Pull Request:**
+   ```bash
+   gh pr create --base dev --head feat/descriptive-name --title "Title" --body "Description"
+   ```
+
+4. **Do NOT attempt:**
+   - ❌ `git push origin dev` (will fail - protected branch)
+   - ❌ `git checkout dev && git merge` then push (will fail - protected branch)
+
+**Protected Branches Require:**
+- Pull request workflow
+- Status checks to pass (3 required checks)
+- Code review (configuration dependent)
+
+**Exception for Unprotected Branches:**
+- Feature branches can be pushed directly
+- Temporary/experimental branches can be pushed directly
 
 ---
 
