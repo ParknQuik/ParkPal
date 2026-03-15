@@ -1,52 +1,110 @@
-# Backend Configuration
+# Backend Configuration - Hybrid Approach
 
-**Last Updated:** March 14, 2026
+**Last Updated:** March 15, 2026
 
-Simple environment-based backend configuration for the mobile app.
+**🎯 Zero-configuration backend connection** using smart platform detection + mDNS for physical devices.
 
 ---
 
-## Quick Start
+## 🚀 Quick Start (New Developers)
 
-### For Local Development (Default)
+### Step 1: Setup Environment File
 
 ```bash
-# 1. Start backend
+cd frontend/mobile
+cp .env.local.example .env.local
+```
+
+### Step 2: Configure for Physical Device (Optional)
+
+**Only needed if testing on physical Android/iOS device:**
+
+```bash
+# Get your Mac's hostname
+hostname
+# Example output: Bryans-MacBook-Air.local
+
+# Edit .env.local and set (without .local suffix):
+EXPO_PUBLIC_BACKEND_HOSTNAME=Bryans-MacBook-Air
+```
+
+### Step 3: Start Development
+
+```bash
+# Terminal 1: Start backend
 cd backend && npm run dev
 
-# 2. Start mobile app
+# Terminal 2: Start mobile app
 cd frontend/mobile && npm start
 ```
 
-**That's it!** The app automatically uses:
-- iOS Simulator: `http://localhost:3001/api/v1`
-- Android Emulator: `http://10.0.2.2:3001/api/v1`
-
-### For Deployed Backend
-
-Uncomment in `.env.local`:
-```bash
-EXPO_PUBLIC_API_URL=https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/api/v1
-```
+**That's it!** The app automatically connects to the right backend:
+- ✅ **iOS Simulator**: `localhost:3001` (automatic)
+- ✅ **Android Emulator**: `10.0.2.2:3001` (automatic)
+- ✅ **Physical Device**: `[YOUR-HOSTNAME].local:3001` (via mDNS)
 
 ---
 
-## How It Works
+## 🎯 How It Works - Hybrid Approach
+
+The app **automatically detects** which backend to use:
 
 ### Configuration Priority
 
-1. **Environment variable** (`.env.local`) - Highest priority
-2. **App config** (`app.config.js`)
-3. **Platform defaults** - Development only
-4. **Deployed backend** - Production only
+1. **EXPO_PUBLIC_API_URL** (manual override) - Highest priority
+2. **EXPO_PUBLIC_BACKEND_HOSTNAME** (mDNS for physical devices)
+3. **Smart platform detection** (automatic for simulators/emulators)
+4. **Deployed backend** (production builds only)
 
-### Platform-Specific URLs
+### Platform Detection Logic
 
-| Platform | Default Local URL | Why? |
-|----------|-------------------|------|
-| iOS Simulator | `http://localhost:3001/api/v1` | Runs on same network as Mac |
-| Android Emulator | `http://10.0.2.2:3001/api/v1` | Virtual network, 10.0.2.2 = host machine |
-| Physical Device | Manual IP required | Must be on same Wi-Fi network |
+```
+Are you using EXPO_PUBLIC_API_URL override?
+├─ YES → Use that URL (manual override)
+└─ NO → Detect platform:
+    ├─ iOS Simulator → http://localhost:3001/api/v1
+    ├─ Android Emulator → http://10.0.2.2:3001/api/v1
+    └─ Physical Device → http://[HOSTNAME].local:3001/api/v1
+```
+
+### Why mDNS (.local) for Physical Devices?
+
+| Approach | IP Address | mDNS (.local) |
+|----------|-----------|---------------|
+| **Works when IP changes** | ❌ Breaks | ✅ Always works |
+| **Configuration** | Manual IP update | Set hostname once |
+| **Team friendly** | Each dev different IP | Each dev their hostname |
+| **Example** | `192.168.1.100` | `Bryans-MacBook-Air.local` |
+
+---
+
+## 👥 Team Setup (Multiple Developers)
+
+Each developer needs to:
+
+1. **Copy environment file**:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+2. **Find their Mac's hostname**:
+   ```bash
+   hostname
+   # Output: Johns-MacBook-Pro.local
+   ```
+
+3. **Set in `.env.local`** (without `.local` suffix):
+   ```bash
+   EXPO_PUBLIC_BACKEND_HOSTNAME=Johns-MacBook-Pro
+   ```
+
+4. **Add API keys**:
+   ```bash
+   GOOGLE_MAPS_API_KEY_IOS=your_ios_key
+   GOOGLE_MAPS_API_KEY_ANDROID=your_android_key
+   ```
+
+**No IP addresses to manage!** Each developer's setup works independently.
 
 ---
 

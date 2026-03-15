@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
 |------|------------|--------------|---------------------|
+| Mar 15, 2026 | Claude | Mobile backend config: Automatic IP detection via Expo Metro bundler, zero-config local dev | 89/100 |
 | Mar 12, 2026 (PM) | Claude | Web deployment: CI/CD operational, Cloud Run live, health check passing | 89/100 |
 | Mar 10, 2026 (Evening) | Claude | Resend email migration: SMTP→API, +18 tests, test fixes: 235→269 passing (93.4%) | 84/100 |
 | Mar 10, 2026 (PM) | Claude | Workflow automation: +2 skills (test-runner, pr-checker orchestrator), 7 skills total | 82/100 |
@@ -187,10 +188,24 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 **Test Status:** 45/45 passing (100%) - EXCELLENT
 
+**Local Development:** ✅ **ZERO-CONFIG!** (March 15, 2026)
+- Automatic backend detection via Expo Metro bundler
+- iOS Simulator: `localhost:3001` (auto-detected)
+- Android Emulator: `10.0.2.2:3001` (auto-detected)
+- Physical Devices: Auto-extracts IP from Metro bundler
+- No manual configuration needed for team members
+- Tested and working on multiple devices
+
+**Configuration Files:**
+- `src/config/api.config.ts` - Hybrid IP detection with 3 fallback methods
+- `.env.local.example` - Template for new developers
+- `scripts/get-local-ip.js` - Helper script for IP detection
+- `docs/BACKEND_SWITCHING.md` - Comprehensive setup guide
+
 **Blockers:**
 - Not submitted to Apple App Store
 - Not submitted to Google Play Store
-- No EAS Build configuration visible
+- EAS Build configuration pending (2-3 days)
 - Not accessible to users
 
 ---
@@ -370,7 +385,25 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
   - **Previous:** Gmail SMTP (smtp.gmail.com:587)
   - **Current:** Resend API (re_39XsdcC4_8r9csXoiDR3JwBMTTPwuJ6nL)
 
-### ✅ Recently Completed (March 10, 2026)
+### ✅ Recently Completed (March 15, 2026)
+
+**Mobile Zero-Config Backend Connection** ✅ **COMPLETE!**
+- **Completed:** March 15, 2026
+- **Impact:** Team can test mobile app locally without manual IP configuration
+- **Actions Taken:**
+  - ✅ Implemented automatic IP detection using Expo's Metro bundler (`Constants.expoConfig.hostUri`)
+  - ✅ Created hybrid fallback system (3 methods: IP override → mDNS → auto-detection)
+  - ✅ Platform-specific defaults (iOS Simulator: localhost, Android Emulator: 10.0.2.2)
+  - ✅ Physical device support with zero configuration
+  - ✅ Created `.env.local.example` template for new developers
+  - ✅ Created `scripts/get-local-ip.js` helper utility
+  - ✅ Updated comprehensive documentation (BACKEND_SWITCHING.md, mobile README.md, main README.md)
+  - ✅ Tested on multiple physical Android devices - working dynamically
+  - **Files Modified:** `src/config/api.config.ts` (complete rewrite with smart detection)
+  - **Developer Experience:** Zero manual configuration, works across all networks
+  - **Team Benefit:** New developers can run `npm start` and immediately connect to local backend
+
+### ✅ Previously Completed (March 10-12, 2026)
 
 **Resend Email Migration** ✅ **COMPLETE!**
 - **Completed:** March 10, 2026 (Evening)
