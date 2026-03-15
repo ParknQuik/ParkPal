@@ -1,3 +1,8 @@
+// ParknQuik Mobile App - LoadingSpinner Component
+// Updated: March 14, 2026
+// Design: Google Stitch - Green theme rebrand
+// Changes: Green primary color (already uses colors.primary from theme)
+
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { colors } from '../theme';

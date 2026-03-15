@@ -2,6 +2,52 @@
 
 A complete React Native (Expo) mobile application for parking management system built with TypeScript, Redux Toolkit, and React Navigation.
 
+## 🚀 Quick Start (New Developers)
+
+### 1. Install Dependencies
+
+```bash
+cd frontend/mobile
+npm install
+```
+
+### 2. Setup Environment
+
+```bash
+# Copy example environment file
+cp .env.local.example .env.local
+
+# Find your Mac's hostname
+hostname
+# Example: Johns-MacBook-Pro.local
+
+# Edit .env.local and set (without .local suffix):
+# EXPO_PUBLIC_BACKEND_HOSTNAME=Johns-MacBook-Pro
+
+# Add your Google Maps API keys
+# GOOGLE_MAPS_API_KEY_IOS=your_key_here
+# GOOGLE_MAPS_API_KEY_ANDROID=your_key_here
+```
+
+### 3. Start Development
+
+```bash
+# Terminal 1: Start backend
+cd ../../backend && npm run dev
+
+# Terminal 2: Start mobile app
+cd ../frontend/mobile && npm start
+```
+
+**That's it!** The app automatically connects to your local backend:
+- iOS Simulator → `localhost:3001` ✅
+- Android Emulator → `10.0.2.2:3001` ✅
+- Physical Device → `[YOUR-HOSTNAME].local:3001` ✅
+
+See [docs/BACKEND_SWITCHING.md](docs/BACKEND_SWITCHING.md) for detailed configuration.
+
+---
+
 ## Features
 
 - **Authentication**: Login/Signup with email and password

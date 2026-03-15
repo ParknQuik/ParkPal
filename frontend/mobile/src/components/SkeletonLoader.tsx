@@ -1,3 +1,8 @@
+// ParknQuik Mobile App - SkeletonLoader Component
+// Updated: March 14, 2026
+// Design: Google Stitch - Green theme rebrand
+// Changes: Uses theme colors (border color already from theme)
+
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { colors, spacing, borderRadius } from '../theme';

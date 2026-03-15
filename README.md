@@ -110,13 +110,33 @@ Runs on http://localhost:5174
 ### Mobile App Setup
 
 ```bash
+# 1. Copy environment file
 cd frontend/mobile
-./start-mobile.sh
+cp .env.local.example .env.local
+
+# 2. Set your Mac's hostname (for physical devices)
+hostname
+# Example output: Bryans-MacBook-Air.local
+# Edit .env.local and set: EXPO_PUBLIC_BACKEND_HOSTNAME=Bryans-MacBook-Air
+
+# 3. Add Google Maps API keys to .env.local
+# Get keys from: https://console.cloud.google.com/
+
+# 4. Install and start
+npm install
+npm start
 ```
 
-Connect via Expo Go app:
+The app **automatically connects** to your local backend:
+- ✅ iOS Simulator → `localhost:3001` (zero config)
+- ✅ Android Emulator → `10.0.2.2:3001` (zero config)
+- ✅ Physical Device → `[YOUR-HOSTNAME].local:3001` (via mDNS)
+
+**Connect via Expo Go app:**
 - Scan QR code from terminal
-- Or enter URL: `exp://192.168.100.222:8081`
+- Or press `i` for iOS Simulator / `a` for Android Emulator
+
+📖 **Detailed setup**: See [frontend/mobile/docs/BACKEND_SWITCHING.md](frontend/mobile/docs/BACKEND_SWITCHING.md)
 
 ## 🔧 Environment Variables
 

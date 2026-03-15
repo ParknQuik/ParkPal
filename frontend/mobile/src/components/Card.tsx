@@ -1,7 +1,12 @@
+// ParknQuik Mobile App - Card Component
+// Updated: March 13, 2026
+// Design: Google Stitch - Green theme rebrand
+// Changes: Updated border radius (xxl), new shadow system, added border
+
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { CardProps } from '../types';
-import { colors, spacing, borderRadius } from '../theme';
+import { colors, spacing, borderRadius, shadows } from '../theme';
 
 export const Card: React.FC<CardProps> = ({ children, style, onPress }) => {
   if (onPress) {
@@ -22,15 +27,10 @@ export const Card: React.FC<CardProps> = ({ children, style, onPress }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xxl, // Updated from lg to xxl (more rounded)
     padding: spacing.lg,
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1, // Added border
+    borderColor: colors.border, // Subtle border
+    ...shadows.sm, // Using new shadow system
   },
 });

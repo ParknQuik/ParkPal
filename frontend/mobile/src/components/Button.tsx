@@ -1,3 +1,8 @@
+// ParknQuik Mobile App - Button Component
+// Updated: March 13, 2026
+// Design: Google Stitch - Green theme rebrand
+// Changes: Updated border radius (xl), added shadows, new secondary/text variants
+
 import React from 'react';
 import {
   TouchableOpacity,
@@ -9,7 +14,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ButtonProps } from '../types';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { haptics } from '../utils/haptics';
 
 export const Button: React.FC<ButtonProps> = ({
@@ -30,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
   };
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: borderRadius.md,
+      borderRadius: borderRadius.xl, // Updated from md to xl (more rounded)
       justifyContent: 'center',
       alignItems: 'center',
       flexDirection: 'row',
@@ -42,7 +47,10 @@ export const Button: React.FC<ButtonProps> = ({
       large: { paddingVertical: spacing.lg, paddingHorizontal: spacing.xxl },
     };
 
-    return { ...baseStyle, ...sizeStyles[size] };
+    // Add shadow based on variant
+    const shadowStyle = variant === 'outline' ? {} : shadows.default;
+
+    return { ...baseStyle, ...sizeStyles[size], ...shadowStyle };
   };
 
   const getTextStyle = (): TextStyle => {
@@ -59,7 +67,9 @@ export const Button: React.FC<ButtonProps> = ({
 
     const variantStyles: Record<string, TextStyle> = {
       primary: { color: colors.white },
+      secondary: { color: colors.white },
       outline: { color: colors.primary },
+      text: { color: colors.primary },
       gradient: { color: colors.white },
     };
 
@@ -94,18 +104,44 @@ export const Button: React.FC<ButtonProps> = ({
     );
   }
 
-  const buttonStyle: ViewStyle =
-    variant === 'outline'
-      ? {
-          ...getButtonStyle(),
+  // Variant-specific styles with new green theme
+  const getVariantStyle = (): ViewStyle => {
+    const baseStyle = getButtonStyle();
+
+    switch (variant) {
+      case 'primary':
+        return {
+          ...baseStyle,
+          backgroundColor: colors.primary, // Green
+        };
+      case 'secondary':
+        return {
+          ...baseStyle,
+          backgroundColor: colors.secondary, // Orange
+        };
+      case 'outline':
+        return {
+          ...baseStyle,
           backgroundColor: 'transparent',
           borderWidth: 2,
           borderColor: colors.primary,
-        }
-      : {
-          ...getButtonStyle(),
+          ...shadows.none, // No shadow for outline
+        };
+      case 'text':
+        return {
+          ...baseStyle,
+          backgroundColor: 'transparent',
+          ...shadows.none, // No shadow for text
+        };
+      default:
+        return {
+          ...baseStyle,
           backgroundColor: colors.primary,
         };
+    }
+  };
+
+  const buttonStyle = getVariantStyle();
 
   return (
     <TouchableOpacity
