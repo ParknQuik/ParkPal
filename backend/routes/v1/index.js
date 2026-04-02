@@ -35,7 +35,7 @@ module.exports = (authLimiter) => {
   authRoutes(router, authLimiter);
 
   // Google Auth routes
-  googleAuthRoutes(router);
+  googleAuthRoutes(router, authLimiter);
 
   // Other routes
   parkingRoutes(router);

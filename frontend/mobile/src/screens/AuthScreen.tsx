@@ -24,7 +24,7 @@ import { Button } from '../components/Button';
 import { colors, typography, spacing, borderRadius } from '../theme';
 import { validateEmail, validatePassword } from '../utils/helpers';
 
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -81,23 +81,8 @@ export const AuthScreen: React.FC = () => {
   const handleGoogleSignIn = async (code: string) => {
     try {
       setGoogleLoading(true);
-      const tokenResponse = await fetch(discovery.tokenEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          code,
-          client_id: GOOGLE_CLIENT_ID,
-          redirect_uri: redirectUri,
-          grant_type: 'authorization_code',
-        }),
-      });
-
-      const tokenData = await tokenResponse.json();
-      const accessToken = tokenData.access_token;
-
-      const userResponse = await authAPI.googleSignIn(accessToken);
+      // Send code to backend - backend exchanges it for tokens securely
+      const userResponse = await authAPI.googleSignIn(code);
       const { token, user } = userResponse.data;
 
       await AsyncStorage.setItem('token', token);
@@ -107,7 +92,7 @@ export const AuthScreen: React.FC = () => {
     } catch (error: any) {
       Alert.alert(
         'Google Sign In Failed',
-        error.response?.data?.message || 'Please try again.'
+        error.response?.data?.error || 'Please try again.'
       );
     } finally {
       setGoogleLoading(false);

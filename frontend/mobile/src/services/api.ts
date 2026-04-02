@@ -58,8 +58,8 @@ export const authAPI = {
     api.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, newPassword: string) =>
     api.post('/auth/reset-password', { token, newPassword }),
-  googleSignIn: (googleToken: string) =>
-    api.post('/auth/google', { googleToken }),
+  googleSignIn: (code: string) =>
+    api.post('/auth/google', { code }),
 };
 
 // Parking endpoints (using /slots to match backend)

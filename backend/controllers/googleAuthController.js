@@ -7,35 +7,41 @@ const GOOGLE_TOKEN_INFO_URL = 'https://www.googleapis.com/oauth2/v3/tokeninfo';
 
 exports.googleAuth = async (req, res) => {
   try {
-    const { googleToken } = req.body;
-
-    if (!googleToken) {
-      return res.status(400).json({ error: 'Google token is required' });
-    }
+    const { code, googleToken } = req.body;
 
     let googleUser;
-    try {
-      // Try as id_token first (standard approach)
-      let response;
+
+    if (code) {
+      // Exchange authorization code for tokens server-side
+      const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI || 'parkpal://',
+        grant_type: 'authorization_code',
+      }).toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+
+      const { id_token, access_token } = tokenResponse.data;
+      const tokenToVerify = id_token || access_token;
+
+      // Verify the token
+      const verifyResponse = await axios.get(`${GOOGLE_TOKEN_INFO_URL}?id_token=${tokenToVerify}`);
+      googleUser = verifyResponse.data;
+    } else if (googleToken) {
+      // Legacy: accept pre-exchanged token
       try {
-        response = await axios.get(`${GOOGLE_TOKEN_INFO_URL}?id_token=${googleToken}`);
-        googleUser = response.data;
-      } catch (idTokenError) {
-        // If id_token validation fails, try as access_token
-        // This handles cases where the client sends an OAuth access_token instead
-        const accessTokenUrl = 'https://www.googleapis.com/oauth2/v3/userinfo';
-        response = await axios.get(accessTokenUrl, {
+        const verifyResponse = await axios.get(`${GOOGLE_TOKEN_INFO_URL}?id_token=${googleToken}`);
+        googleUser = verifyResponse.data;
+      } catch {
+        const userinfoResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${googleToken}` }
         });
-        googleUser = response.data;
-        // Normalize sub field for access_token response
-        if (googleUser && googleUser.sub) {
-          // userinfo endpoint returns the same structure
-        }
+        googleUser = userinfoResponse.data;
       }
-    } catch (error) {
-      console.error('Google token verification failed:', error.message);
-      return res.status(401).json({ error: 'Invalid Google token' });
+    } else {
+      return res.status(400).json({ error: 'Authorization code or Google token is required' });
     }
 
     if (!googleUser || !googleUser.sub) {

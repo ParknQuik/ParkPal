@@ -106,6 +106,8 @@ module.exports = {
       favicon: './assets/favicon.png',
     },
 
+    scheme: 'parkpal',
+
     plugins: [
       'expo-location',
       [

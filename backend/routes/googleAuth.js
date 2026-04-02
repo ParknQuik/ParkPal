@@ -1,6 +1,6 @@
 const googleAuthController = require('../controllers/googleAuthController');
 
-module.exports = (app) => {
+module.exports = (app, authLimiter) => {
   /**
    * @swagger
    * /api/v1/auth/google:
@@ -46,5 +46,5 @@ module.exports = (app) => {
    *       401:
    *         description: Invalid Google token
    */
-  app.post('/auth/google', googleAuthController.googleAuth);
+  app.post('/auth/google', authLimiter, googleAuthController.googleAuth);
 };
