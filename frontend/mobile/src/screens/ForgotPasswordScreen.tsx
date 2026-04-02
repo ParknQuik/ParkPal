@@ -10,12 +10,19 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { authAPI } from '../services/api';
 import { colors, typography, spacing, borderRadius } from '../theme';
+
+const CUSTOM_COLORS = {
+  primary: '#10b77f',
+  accentOrange: '#f97316',
+  background: '#f6f8f7',
+};
 
 export const ForgotPasswordScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -43,51 +50,87 @@ export const ForgotPasswordScreen: React.FC = () => {
       await authAPI.forgotPassword(email.trim().toLowerCase());
       setSubmitted(true);
     } catch (err: any) {
-      // Always show success to prevent email enumeration
       setSubmitted(true);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
   if (submitted) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.successContainer}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="mail-outline" size={48} color={colors.primary} />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LinearGradient
+          colors={[CUSTOM_COLORS.primary, colors.backgroundDarkStitch]}
+          style={styles.header}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Forgot Password</Text>
+            <View style={styles.iconButton} />
           </View>
-          <Text style={styles.successTitle}>Check Your Email</Text>
-          <Text style={styles.successBody}>
-            If an account exists for{' '}
-            <Text style={styles.emailHighlight}>{email}</Text>, you will receive
-            a password reset link shortly.
-          </Text>
-          <Text style={styles.successHint}>
-            Didn't receive an email? Check your spam folder or try again.
-          </Text>
-          <Button
-            title="Back to Login"
-            variant="gradient"
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          />
-          <TouchableOpacity
-            style={styles.tryAgainLink}
-            onPress={() => {
-              setSubmitted(false);
-              setEmail('');
-            }}
-          >
-            <Text style={styles.tryAgainText}>Try a different email</Text>
-          </TouchableOpacity>
+        </LinearGradient>
+
+        <View style={styles.content}>
+          <View style={styles.successContainer}>
+            <View style={styles.iconCircle}>
+              <MaterialCommunityIcons name="email-check-outline" size={48} color={CUSTOM_COLORS.primary} />
+            </View>
+            <Text style={styles.successTitle}>Check Your Email</Text>
+            <Text style={styles.successBody}>
+              If an account exists for{' '}
+              <Text style={styles.emailHighlight}>{email}</Text>, you will receive
+              a password reset link shortly.
+            </Text>
+            <Button
+              title="Back to Login"
+              variant="gradient"
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            />
+            <TouchableOpacity
+              style={styles.tryAgainLink}
+              onPress={() => {
+                setSubmitted(false);
+                setEmail('');
+              }}
+            >
+              <Text style={styles.tryAgainText}>Try a different email</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <LinearGradient
+        colors={[CUSTOM_COLORS.primary, colors.backgroundDarkStitch]}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Forgot Password</Text>
+          <View style={styles.iconButton} />
+        </View>
+
+        <View style={styles.headerIconContainer}>
+          <MaterialCommunityIcons name="lock-reset" size={48} color={colors.white} />
+        </View>
+      </LinearGradient>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -97,22 +140,11 @@ export const ForgotPasswordScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <TouchableOpacity style={styles.backArrow} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          <View style={styles.iconCircle}>
-            <Ionicons name="lock-open-outline" size={48} color={colors.primary} />
-          </View>
-
-          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.title}>Reset Password</Text>
           <Text style={styles.subtitle}>
-            Enter the email address associated with your account and we'll send you a link to reset
-            your password.
+            Enter your email and we'll send you a link to reset your password
           </Text>
 
-          {/* Form */}
           <View style={styles.form}>
             <Input
               label="Email Address"
@@ -128,20 +160,28 @@ export const ForgotPasswordScreen: React.FC = () => {
               error={error}
             />
 
-            <Button
-              title={loading ? 'Sending...' : 'Send Reset Link'}
-              variant="gradient"
+            <TouchableOpacity
               onPress={handleSubmit}
-              loading={loading}
               disabled={loading}
-              style={styles.submitButton}
-            />
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[CUSTOM_COLORS.primary, CUSTOM_COLORS.accentOrange]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submitButton}
+              >
+                <Text style={styles.submitButtonText}>
+                  {loading ? 'Sending...' : 'Send Reset Link'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.loginLink} onPress={() => navigation.goBack()}>
             <Text style={styles.loginLinkText}>
-              Remember your password?{' '}
-              <Text style={styles.loginLinkHighlight}>Log In</Text>
+              Remember password?{' '}
+              <Text style={styles.loginLinkHighlight}>Login</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -153,38 +193,56 @@ export const ForgotPasswordScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: CUSTOM_COLORS.background,
+  },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...typography.h5,
+    color: colors.white,
+    fontWeight: '700',
+  },
+  headerIconContainer: {
+    alignSelf: 'center',
+    marginTop: spacing.lg,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xxl,
-  },
-  backArrow: {
-    marginBottom: spacing.xl,
-    alignSelf: 'flex-start',
-    padding: spacing.xs,
-  },
-  iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.primaryLight || `${colors.primary}15`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: spacing.xl,
   },
   title: {
     ...typography.h3,
-    color: colors.text,
+    color: colors.textPrimary,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   subtitle: {
     ...typography.body,
@@ -192,12 +250,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: spacing.xxl,
+    paddingHorizontal: spacing.md,
   },
   form: {
     marginBottom: spacing.xl,
   },
   submitButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.md,
+  },
+  submitButtonText: {
+    ...typography.button,
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: 16,
   },
   loginLink: {
     alignItems: 'center',
@@ -208,19 +278,30 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   loginLinkHighlight: {
-    color: colors.primary,
+    color: CUSTOM_COLORS.primary,
     fontWeight: '600',
   },
-  // Success state
-  successContainer: {
+  content: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  successContainer: {
     alignItems: 'center',
+  },
+  iconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: `${CUSTOM_COLORS.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: spacing.xl,
   },
   successTitle: {
     ...typography.h3,
-    color: colors.text,
+    color: colors.textPrimary,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: spacing.lg,
@@ -233,14 +314,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   emailHighlight: {
-    color: colors.text,
+    color: colors.textPrimary,
     fontWeight: '600',
-  },
-  successHint: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xxl,
   },
   backButton: {
     width: '100%',
@@ -251,7 +326,9 @@ const styles = StyleSheet.create({
   },
   tryAgainText: {
     ...typography.body,
-    color: colors.primary,
+    color: CUSTOM_COLORS.primary,
     fontWeight: '600',
   },
 });
+
+export default ForgotPasswordScreen;

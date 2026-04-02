@@ -58,6 +58,8 @@ export const authAPI = {
     api.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, newPassword: string) =>
     api.post('/auth/reset-password', { token, newPassword }),
+  googleSignIn: (googleToken: string) =>
+    api.post('/auth/google', { googleToken }),
 };
 
 // Parking endpoints (using /slots to match backend)
@@ -110,6 +112,8 @@ export const marketplaceAPI = {
 
   getMyListings: () => api.get('/marketplace/host/listings'),
 
+  deleteListing: (listingId: number) => api.delete(`/marketplace/listings/${listingId}`),
+
   // Search with filters
   searchListings: (params?: {
     lat?: number;
@@ -157,8 +161,34 @@ export const marketplaceAPI = {
     api.get('/marketplace/host/earnings', { params }),
 
   // Toggle listing availability
-  toggleListingAvailability: (listingId: number) =>
-    api.patch(`/marketplace/listings/${listingId}/toggle`),
+  toggleListingAvailability: (listingId: number, isActive: boolean) =>
+    api.patch(`/marketplace/listings/${listingId}/toggle`, { isActive }),
+};
+
+// Vehicle endpoints
+export const vehiclesAPI = {
+  getVehicles: () => api.get('/vehicles'),
+  getVehicle: (id: number) => api.get(`/vehicles/${id}`),
+  createVehicle: (data: {
+    make: string;
+    model: string;
+    year: number;
+    color: string;
+    licensePlate: string;
+    imageUrl?: string;
+    isDefault?: boolean;
+  }) => api.post('/vehicles', data),
+  updateVehicle: (id: number, data: {
+    make?: string;
+    model?: string;
+    year?: number;
+    color?: string;
+    licensePlate?: string;
+    imageUrl?: string;
+    isDefault?: boolean;
+  }) => api.put(`/vehicles/${id}`, data),
+  deleteVehicle: (id: number) => api.delete(`/vehicles/${id}`),
+  setDefaultVehicle: (id: number) => api.post(`/vehicles/${id}/default`),
 };
 
 // User endpoints
@@ -195,10 +225,55 @@ export const paymentAPI = {
   getPaymentById: (id: number) => api.get(`/payments/${id}`),
 };
 
+// Earnings endpoints
+export const earningsAPI = {
+  getSummary: () => api.get('/earnings/summary'),
+  getTransactions: (params?: { status?: string; limit?: number; offset?: number }) =>
+    api.get('/earnings/transactions', { params }),
+  getAnalytics: (period?: 'weekly' | 'monthly') =>
+    api.get('/earnings/analytics', { params: { period } }),
+  requestPayout: (amount: number) =>
+    api.post('/earnings/payout', { amount }),
+};
+
 // Config endpoints
 export const configAPI = {
   getGoogleMapsApiKey: () => api.get('/config/maps-api-key'),
   getAppConfig: () => api.get('/config/app'),
+};
+
+// Notifications endpoints
+export interface Notification {
+  id: number;
+  userId: number;
+  title: string;
+  body: string;
+  type: string;
+  data: Record<string, any>;
+  read: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  unreadCount: number;
+}
+
+export const notificationsAPI = {
+  getNotifications: (params?: { read?: boolean; limit?: number; offset?: number }) =>
+    api.get<NotificationsResponse>('/notifications', { params }),
+  
+  getUnreadCount: () => api.get<{ unreadCount: number }>('/notifications/unread-count'),
+  
+  getNotification: (id: number) => api.get<Notification>(`/notifications/${id}`),
+  
+  markAsRead: (id: number) => api.patch<Notification>(`/notifications/${id}/read`),
+  
+  markAllAsRead: () => api.patch('/notifications/read-all'),
+  
+  deleteNotification: (id: number) => api.delete(`/notifications/${id}`),
 };
 
 export default api;

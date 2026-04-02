@@ -1,158 +1,208 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { useAppDispatch, useAppSelector } from '../store';
-import { logout } from '../store/slices/authSlice';
-import { Avatar } from '../components/Avatar';
-import { Card } from '../components/Card';
-import { AuthScreen } from './AuthScreen';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAppSelector, useAppDispatch } from '../store';
+import { logout, checkAuth } from '../store/slices/authSlice';
 import { colors, typography, spacing, borderRadius } from '../theme';
-import { formatCurrency, formatDate } from '../utils/helpers';
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  // Show login/signup screen if not authenticated
-  if (!user) {
-    return <AuthScreen />;
-  }
+  const handleLogout = useCallback(() => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await dispatch(logout()).unwrap();
+            } catch (err) {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }, [dispatch]);
 
-  const handleLogout = () => {
-    dispatch(logout());
-  };
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await dispatch(checkAuth()).unwrap();
+    } catch (err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [dispatch]);
+
+  const userName = user?.name || 'Guest';
+  const userEmail = user?.email || 'No email';
+  const userInitial = userName.charAt(0).toUpperCase();
 
   const menuSections = [
     {
-      title: 'Account',
+      title: 'My Account',
       items: [
         {
-          icon: '👤',
-          label: 'Edit Profile',
-          action: () => navigation.navigate('EditProfile' as never),
+          icon: 'car-outline' as const,
+          iconColor: colors.primary,
+          label: 'My Vehicles',
+          onPress: () => navigation.navigate('MyVehicles' as never),
         },
         {
-          icon: '💳',
+          icon: 'credit-card-outline' as const,
+          iconColor: colors.accentOrange,
           label: 'Payment Methods',
-          action: () => navigation.navigate('PaymentMethods' as never),
+          onPress: () => navigation.navigate('PaymentMethods' as never),
         },
-        { icon: '📍', label: 'Saved Addresses', action: () => {} },
-      ],
-    },
-    {
-      title: 'Parking',
-      items: [
-        { icon: '🚗', label: 'My Vehicles', action: () => {} },
         {
-          icon: '📋',
+          icon: 'format-list-bulleted' as const,
+          iconColor: colors.accentYellow,
           label: 'My Listings',
-          action: () => navigation.navigate('MyListings' as never),
+          onPress: () => navigation.navigate('MyListings' as never),
         },
-        {
-          icon: '💰',
-          label: 'My Earnings',
-          action: () => navigation.navigate('Earnings' as never),
-        },
-        { icon: '⭐', label: 'Reviews', action: () => {} },
       ],
     },
     {
-      title: 'Settings',
+      title: 'Account Settings',
       items: [
-        { icon: '🔔', label: 'Notifications', action: () => {} },
-        { icon: '🔒', label: 'Privacy & Security', action: () => {} },
-        { icon: '❓', label: 'Help & Support', action: () => {} },
-        { icon: '📄', label: 'Terms & Conditions', action: () => {} },
+        {
+          icon: 'account-circle' as const,
+          iconColor: colors.accentOrange,
+          label: 'Personal Information',
+          onPress: () => navigation.navigate('EditProfile' as never),
+        },
+        {
+          icon: 'bell-outline' as const,
+          iconColor: colors.accentYellow,
+          label: 'Notifications',
+          onPress: () => navigation.navigate('Notifications' as never),
+        },
+        {
+          icon: 'shield-lock-outline' as const,
+          iconColor: colors.primary,
+          label: 'Security & Privacy',
+          onPress: () => {},
+        },
+      ],
+    },
+    {
+      title: 'Support',
+      items: [
+        {
+          icon: 'help-circle-outline' as const,
+          iconColor: colors.textTertiary,
+          label: 'Help Center',
+          onPress: () => {},
+        },
+      ],
+    },
+    {
+      title: '',
+      items: [
+        {
+          icon: 'logout' as const,
+          iconColor: '#ef4444',
+          label: 'Sign Out',
+          onPress: handleLogout,
+        },
       ],
     },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <LinearGradient
-          colors={colors.gradientPrimary}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.profileSection}>
-            <Avatar uri={user.avatar} name={user.name} size={80} />
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-            {user.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+        }
+      >
+        <View style={styles.profileInfo}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{userInitial}</Text>
           </View>
+          <Text style={styles.userName}>{userName}</Text>
+          <Text style={styles.userEmail}>{userEmail}</Text>
 
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.totalBookings || 0}</Text>
-              <Text style={styles.statLabel}>Bookings</Text>
+          <View style={styles.membershipCard}>
+            <View style={styles.membershipLeft}>
+              <View style={styles.membershipIconContainer}>
+                <MaterialCommunityIcons
+                  name="star-circle"
+                  size={28}
+                  color={colors.white}
+                />
+              </View>
+              <View>
+                <Text style={styles.membershipLabel}>Bookings</Text>
+                <Text style={styles.membershipValue}>{user?.totalBookings || 0} total</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {formatCurrency(user.totalSpent || 0)}
-              </Text>
-              <Text style={styles.statLabel}>Spent</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>4.8</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.perksButton}
+              onPress={() => navigation.navigate('Earnings' as never)}
+            >
+              <Text style={styles.perksButtonText}>Perks</Text>
+            </TouchableOpacity>
           </View>
-        </LinearGradient>
+        </View>
 
         <View style={styles.content}>
-          <Card style={styles.memberCard}>
-            <View style={styles.memberCardHeader}>
-              <Text style={styles.memberCardTitle}>Member Since</Text>
-              <Text style={styles.memberCardBadge}>Premium</Text>
-            </View>
-            <Text style={styles.memberCardDate}>
-              {formatDate(user.activeSince)}
-            </Text>
-          </Card>
-
           {menuSections.map((section, sectionIndex) => (
-            <View key={sectionIndex} style={styles.menuSection}>
+            <View key={sectionIndex} style={styles.section}>
               <Text style={styles.sectionTitle}>{section.title}</Text>
-              <Card style={styles.menuCard}>
+              <View style={styles.menuContainer}>
                 {section.items.map((item, itemIndex) => (
-                  <React.Fragment key={itemIndex}>
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      onPress={item.action}
-                    >
-                      <View style={styles.menuItemLeft}>
-                        <Text style={styles.menuIcon}>{item.icon}</Text>
-                        <Text style={styles.menuLabel}>{item.label}</Text>
+                  <TouchableOpacity
+                    key={itemIndex}
+                    style={styles.menuItem}
+                    onPress={item.onPress}
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <View
+                        style={[
+                          styles.menuIconContainer,
+                          { backgroundColor: `${item.iconColor}15` },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={item.icon}
+                          size={22}
+                          color={item.iconColor}
+                        />
                       </View>
-                      <Text style={styles.menuArrow}>›</Text>
-                    </TouchableOpacity>
-                    {itemIndex < section.items.length - 1 && (
-                      <View style={styles.menuDivider} />
-                    )}
-                  </React.Fragment>
+                      <Text style={styles.menuLabel}>{item.label}</Text>
+                    </View>
+                    <MaterialCommunityIcons
+                      name="chevron-right"
+                      size={24}
+                      color={colors.textTertiary}
+                    />
+                  </TouchableOpacity>
                 ))}
-              </Card>
+              </View>
             </View>
           ))}
-
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.version}>Version 1.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -164,146 +214,141 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xxxl,
+  scrollView: {
+    flex: 1,
   },
-  profileSection: {
+  profileInfo: {
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    paddingTop: spacing.xl,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  avatarText: {
+    ...typography.h2,
+    color: colors.white,
+    fontWeight: '700',
   },
   userName: {
     ...typography.h3,
-    color: colors.white,
+    color: colors.textPrimary,
     fontWeight: '700',
-    marginTop: spacing.lg,
   },
   userEmail: {
-    ...typography.body,
-    color: colors.white,
-    opacity: 0.9,
-    marginTop: spacing.xs,
-  },
-  userPhone: {
     ...typography.bodySmall,
-    color: colors.white,
-    opacity: 0.8,
+    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginHorizontal: spacing.xl,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  statValue: {
-    ...typography.h4,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  statLabel: {
-    ...typography.small,
-    color: colors.white,
-    opacity: 0.9,
-    marginTop: spacing.xs,
-  },
-  content: {
-    padding: spacing.xl,
-    marginTop: -spacing.xl,
-  },
-  memberCard: {
-    marginBottom: spacing.xl,
-  },
-  memberCardHeader: {
+  membershipCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
+    width: '100%',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  memberCardTitle: {
-    ...typography.body,
-    color: colors.textSecondary,
+  membershipLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  memberCardBadge: {
+  membershipIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.accentOrange,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  membershipLabel: {
     ...typography.small,
-    color: colors.primary,
-    fontWeight: '700',
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '500',
   },
-  memberCardDate: {
+  membershipValue: {
     ...typography.h5,
-    color: colors.textPrimary,
+    color: colors.accentOrange,
     fontWeight: '700',
   },
-  menuSection: {
-    marginBottom: spacing.xl,
+  perksButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+  },
+  perksButtonText: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  content: {
+    padding: spacing.lg,
+    paddingBottom: 100,
+  },
+  section: {
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    ...typography.h6,
-    color: colors.textPrimary,
+    ...typography.small,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
     fontWeight: '700',
     marginBottom: spacing.md,
   },
-  menuCard: {
-    padding: 0,
+  menuContainer: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: spacing.lg,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  menuIcon: {
-    fontSize: 24,
-    marginRight: spacing.lg,
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
   menuLabel: {
     ...typography.body,
     color: colors.textPrimary,
-  },
-  menuArrow: {
-    fontSize: 24,
-    color: colors.textTertiary,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginLeft: spacing.lg + 24 + spacing.lg,
-  },
-  logoutButton: {
-    backgroundColor: colors.error,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  logoutText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  version: {
-    ...typography.small,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
+    fontWeight: '600',
   },
 });
+
+export default ProfileScreen;

@@ -1,355 +1,325 @@
-import React, { useEffect, useState } from 'react';
-import {
+import React, { useCallback, useState } from 'react';
+import { Modal,
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
+  ScrollView,
+  StatusBar,
+  FlatList,
   RefreshControl,
-  Image,
+  ActivityIndicator,
   Alert,
-  Dimensions,
-  Modal,
 } from 'react-native';
+import { Image } from 'expo-image';
+import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import QRCode from 'react-native-qrcode-svg';
 import { useAppDispatch, useAppSelector } from '../store';
 import { getMyListings } from '../store/slices/marketplaceSlice';
-import { Card } from '../components/Card';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { EmptyState } from '../components/EmptyState';
-import { Button } from '../components/Button';
-import { Badge } from '../components/Badge';
-import { colors, typography, spacing, borderRadius } from '../theme';
-import { formatCurrency } from '../utils/helpers';
-import { MarketplaceListing } from '../types';
 import { marketplaceAPI } from '../services/api';
-
-const { width } = Dimensions.get('window');
+import { colors, typography, spacing, borderRadius } from '../theme';
+import { haptics } from '../utils/haptics';
+import { accessibility } from '../utils/accessibility';
 
 export const MyListingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
-  const { myListings, loading } = useAppSelector((state) => state.marketplace);
-
-  const [activeTab, setActiveTab] = useState<'active' | 'paused'>('active');
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
-  const [qrCodeData, setQrCodeData] = useState<string>('');
-  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [qrData, setQrData] = useState<string>('');
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrListingName, setQrListingName] = useState<string>('');
 
-  // Refetch listings when screen comes into focus
+  const { myListings, loading, error } = useAppSelector((state) => state.marketplace);
+
+  const activeCount = myListings.filter((l: any) => l.availability).length;
+
+  const fetchData = useCallback(async () => {
+    try {
+      await dispatch(getMyListings()).unwrap();
+    } catch (err) {
+      console.error('Failed to fetch listings:', err);
+    }
+  }, [dispatch]);
+
   useFocusEffect(
-    React.useCallback(() => {
-      console.log('MyListingsScreen focused - fetching listings');
-      loadListings();
-    }, [dispatch])
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
   );
 
-  const loadListings = async () => {
-    console.log('loadListings called');
-    const result = await dispatch(getMyListings());
-    console.log('getMyListings result:', result);
-  };
-
-  const onRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadListings();
-    setRefreshing(false);
-  };
+    try {
+      await fetchData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchData]);
 
-  const handleCreateListing = () => {
-    navigation.navigate('ListSpot' as never);
-  };
+  const handleEditPress = useCallback(async (listingId: number) => {
+    await haptics.light();
+    navigation.navigate('ListSpot' as never, { listingId, mode: 'edit' } as never);
+  }, [navigation]);
 
-  const handleEditListing = (listing: MarketplaceListing) => {
-    // Navigate to edit listing screen (ListSpotScreen with edit mode)
-    navigation.navigate('ListSpot' as never, { listingId: listing.id, mode: 'edit' } as never);
-  };
+  const handleToggleAvailability = useCallback(async (listingId: number) => {
+    try {
+      await marketplaceAPI.toggleListingAvailability(listingId, true);
+      fetchData();
+    } catch (err) {
+      console.error('Toggle failed:', err);
+    }
+  }, [fetchData]);
 
-  const handleDeleteListing = (listing: MarketplaceListing) => {
+  const handleDeleteListing = useCallback(async (listingId: number) => {
+    await haptics.light();
     Alert.alert(
       'Delete Listing',
-      `Are you sure you want to delete "${listing.title || listing.address}"?`,
+      'Are you sure you want to delete this listing?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement delete listing API call
-            Alert.alert('Success', 'Listing deleted successfully');
-            loadListings();
-          },
-        },
-      ]
-    );
-  };
-
-  const handleToggleAvailability = async (listing: MarketplaceListing) => {
-    Alert.alert(
-      listing.availability ? 'Pause Listing' : 'Activate Listing',
-      `Do you want to ${listing.availability ? 'pause' : 'activate'} this listing?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
           onPress: async () => {
             try {
-              console.log('Toggling listing:', listing.id, 'Current availability:', listing.availability);
-              const response = await marketplaceAPI.toggleListingAvailability(listing.id);
-              console.log('Toggle response:', response.data);
-
-              Alert.alert(
-                'Success',
-                `Listing ${listing.availability ? 'paused' : 'activated'} successfully`
-              );
-
-              console.log('Reloading listings...');
-              await loadListings();
-              console.log('Listings reloaded');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to toggle listing availability');
-              console.error('Toggle availability error:', error);
+              await marketplaceAPI.deleteListing(listingId);
+              fetchData();
+            } catch (err) {
+              console.error('Delete failed:', err);
             }
           },
         },
       ]
     );
-  };
+  }, [fetchData]);
 
-  const handleGenerateQR = async (listing: MarketplaceListing) => {
+  const handleShowQR = useCallback(async (listing: any) => {
+    await haptics.light();
+    setQrListingName(listing.title || listing.address);
+    setQrLoading(true);
+    setQrModalVisible(true);
     try {
-      // Fetch listing details to get qrCodeData
       const response = await marketplaceAPI.getListingById(listing.id);
-      const qrData = response.data.qrCodeData;
-
-      if (qrData) {
-        setSelectedListing(listing);
-        setQrCodeData(qrData);
-        setShowQRModal(true);
-      } else {
-        Alert.alert('Error', 'QR code not available for this listing');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate QR code');
-      console.error('QR generation error:', error);
+      const data = response.data?.qrCodeData || response.data?.data?.qrCodeData;
+      setQrData(data || \`PARKPAL:\${listing.id}:\${Date.now()}\`);
+    } catch (err) {
+      console.error('Failed to fetch QR data:', err);
+      setQrData(\`PARKPAL:\${listing.id}:\${Date.now()}\`);
+    } finally {
+      setQrLoading(false);
     }
-  };
+  }, []);
 
-  const activeListings = myListings.filter((l) => l.availability);
-  const pausedListings = myListings.filter((l) => !l.availability);
-
-  const currentListings = activeTab === 'active' ? activeListings : pausedListings;
-
-  const renderListingCard = (listing: MarketplaceListing) => {
-    return (
-      <Card key={listing.id} style={styles.listingCard}>
-        <View style={styles.cardHeader}>
-          {listing.photos && listing.photos.length > 0 ? (
-            <Image
-              source={{ uri: listing.photos[0] }}
-              style={styles.spotImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.spotImage, styles.placeholderImage]}>
-              <Text style={styles.placeholderText}>P</Text>
-            </View>
-          )}
-          <View style={styles.cardHeaderInfo}>
-            <Text style={styles.spotTitle} numberOfLines={2}>
-              {listing.address}
-            </Text>
-            <Text style={styles.spotPrice}>
-              {formatCurrency(listing.pricePerHour)}/hr
-            </Text>
-            <Badge
-              text={listing.availability ? 'Active' : 'Paused'}
-              variant={listing.availability ? 'success' : 'default'}
-            />
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.detailsGrid}>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Rating</Text>
-            <Text style={styles.detailValue}>⭐ {listing.rating.toFixed(1)}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Bookings</Text>
-            <Text style={styles.detailValue}>{listing.reviewCount || 0}</Text>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleGenerateQR(listing)}
-          >
-            <Text style={styles.actionIcon}>📱</Text>
-            <Text style={styles.actionLabel}>QR Code</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleEditListing(listing)}
-          >
-            <Text style={styles.actionIcon}>✏️</Text>
-            <Text style={styles.actionLabel}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleToggleAvailability(listing)}
-          >
-            <Text style={styles.actionIcon}>
-              {listing.availability ? '⏸️' : '▶️'}
-            </Text>
-            <Text style={styles.actionLabel}>
-              {listing.availability ? 'Pause' : 'Activate'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleDeleteListing(listing)}
-          >
-            <Text style={styles.actionIcon}>🗑️</Text>
-            <Text style={styles.actionLabel}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </Card>
-    );
-  };
+const handleFilterPress = useCallback(async () => {
+    await haptics.light();
+  }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Listings</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleCreateListing}
-        >
-          <Text style={styles.addButtonText}>+ Add Listing</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'active' && styles.activeTab]}
-          onPress={() => setActiveTab('active')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'active' && styles.activeTabText,
-            ]}
-          >
-            Active ({activeListings.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'paused' && styles.activeTab]}
-          onPress={() => setActiveTab('paused')}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'paused' && styles.activeTabText,
-            ]}
-          >
-            Paused ({pausedListings.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+      <ScrollView 
+        style={styles.content}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contentContainer}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       >
-        {loading ? (
-          <LoadingSpinner />
-        ) : currentListings.length === 0 ? (
-          myListings.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <EmptyState
-                title="No Listings Yet"
-                message="Start hosting by creating your first parking spot listing"
-              />
-              <Button
-                title="Create Your First Listing"
-                variant="gradient"
-                onPress={handleCreateListing}
-                style={styles.createButton}
-              />
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Total Listings</Text>
+            <Text style={styles.statValue}>{myListings.length}</Text>
+            <View style={styles.statFooter}>
+              <Text style={styles.trendIcon}>trending_up</Text>
+              <Text style={styles.trendText}>{activeCount} active</Text>
             </View>
-          ) : (
-            <EmptyState
-              title={`No ${activeTab} listings`}
-              message={
-                activeTab === 'active'
-                  ? 'Your active listings will appear here'
-                  : 'Your paused listings will appear here'
-              }
-            />
-          )
-        ) : (
-          currentListings.map(renderListingCard)
-        )}
-      </ScrollView>
-
-      {/* QR Code Modal */}
-      <Modal
-        visible={showQRModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowQRModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.qrModalContainer}>
-            <View style={styles.qrModalHeader}>
-              <Text style={styles.qrModalTitle}>QR Code</Text>
-              <TouchableOpacity onPress={() => setShowQRModal(false)}>
-                <Text style={styles.qrModalClose}>✕</Text>
-              </TouchableOpacity>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Active Listings</Text>
+            <Text style={styles.statValue}>{activeCount}</Text>
+            <View style={styles.statFooter}>
+              <Text style={styles.viewsIcon}>visibility</Text>
+              <Text style={styles.viewsText}>{myListings.length} total</Text>
             </View>
-
-            {selectedListing && (
-              <View style={styles.qrModalContent}>
-                <Text style={styles.qrModalSubtitle}>
-                  {selectedListing.address}
-                </Text>
-
-                <View style={styles.qrCodeContainer}>
-                  <QRCode value={qrCodeData} size={250} />
-                </View>
-
-                <View style={styles.qrInfo}>
-                  <Text style={styles.qrInfoTitle}>How to use:</Text>
-                  <Text style={styles.qrInfoText}>
-                    1. Display this QR code at your parking spot{'\n'}
-                    2. Drivers scan to check in when they arrive{'\n'}
-                    3. System automatically manages their parking session
-                  </Text>
-                </View>
-
-                <Button
-                  title="Close"
-                  variant="outline"
-                  onPress={() => setShowQRModal(false)}
-                  style={styles.qrModalButton}
-                />
-              </View>
-            )}
           </View>
         </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Parking Spots</Text>
+            <TouchableOpacity 
+              style={styles.filterButton}
+              onPress={handleFilterPress}
+              {...accessibility.button('Filter', 'Filter listings')}
+            >
+              <Text style={styles.filterText}>Filter</Text>
+              <Text style={styles.filterIcon}>filter_list</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loading && !refreshing ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading listings...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>Failed to load listings</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
+                <Text style={styles.retryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+          <FlatList
+            data={myListings}
+            keyExtractor={(item) => String(item.id)}
+            scrollEnabled={false}
+            nestedScrollEnabled={true}
+            renderItem={({ item: listing }) => {
+              const isActive = listing.availability;
+              return (
+                <View style={styles.listingCard}>
+                  <Image source={{ uri: listing.photos?.[0] || 'https://via.placeholder.com/180' }} style={styles.listingImage} contentFit="cover" transition={200} />
+                  <View style={styles.listingContent}>
+                    <View style={styles.listingHeader}>
+                      <View style={{ flex: 1 }}>
+                        <View style={[
+                          styles.statusBadge,
+                          isActive ? styles.activeBadge : styles.inactiveBadge
+                        ]}>
+                          <Text style={[
+                            styles.statusText,
+                            isActive ? styles.activeStatusText : styles.inactiveStatusText
+                          ]}>
+                            {isActive ? 'Active' : 'Inactive'}
+                          </Text>
+                        </View>
+                        <Text style={styles.listingName} numberOfLines={1}>{listing.title || listing.address}</Text>
+                      </View>
+                      <View>
+                        <Text style={[
+                          styles.listingPrice,
+                          !isActive && styles.inactivePrice
+                        ]}>
+                          ₱{listing.pricePerHour}
+                          <Text style={styles.priceUnit}>/hr</Text>
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.listingLocation}>
+                      <Text style={styles.locationIcon}>location_on</Text>
+                      <Text style={styles.locationText} numberOfLines={1}>{listing.address}</Text>
+                    </View>
+                    <View style={styles.listingActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButton,
+                          isActive ? styles.editButton : styles.activateButton
+                        ]}
+                        onPress={() => isActive ? handleEditPress(listing.id) : handleToggleAvailability(listing.id)}
+                        {...accessibility.button(
+                          isActive ? 'Edit Listing' : 'Activate Listing',
+                          `${isActive ? 'Edit' : 'Activate'} ${listing.title || listing.address}`
+                        )}
+                      >
+                        <Text style={[
+                          styles.actionButtonText,
+                          isActive ? styles.editButtonText : styles.activateButtonText
+                        ]}>
+                          {isActive ? 'Edit Listing' : 'Activate'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.qrButton}
+                        onPress={() => handleShowQR(listing)}
+                        {...accessibility.button('QR Code', 'Show QR code for ' + (listing.title || listing.address))}
+                      >
+                        <Text style={styles.qrButtonText}>QR</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.moreButton}
+                        onPress={() => {
+                          if (isActive) {
+                            Alert.alert('Listing Options', listing.title || listing.address, [
+                              { text: 'Toggle Availability', onPress: () => handleToggleAvailability(listing.id) },
+                              { text: 'Delete', style: 'destructive', onPress: () => handleDeleteListing(listing.id) },
+                              { text: 'Cancel', style: 'cancel' },
+                            ]);
+                          } else {
+                            handleDeleteListing(listing.id);
+                          }
+                        }}
+                      >
+                        <Text style={styles.moreIcon}>more_horiz</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              );
+            }}
+            contentContainerStyle={styles.listingsList}
+            ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>add_location</Text>
+                <Text style={styles.emptyText}>No listings yet</Text>
+                <TouchableOpacity
+                  style={styles.addListingButton}
+                  onPress={() => navigation.navigate('ListSpot' as never)}
+                >
+                  <Text style={styles.addListingText}>Create Your First Listing</Text>
+                </TouchableOpacity>
+              </View>
+            }
+          />
+          )}
+        </View>
+      </ScrollView>
+      {/* QR Code Modal */}
+      <Modal
+        visible={qrModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQrModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setQrModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>QR Code</Text>
+            <Text style={styles.modalSubtitle}>{qrListingName}</Text>
+            <Text style={styles.modalInstructions}>
+              Show this QR code to the renter so they can check in when they arrive at the spot.
+            </Text>
+            {qrLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 40 }} />
+            ) : qrData ? (
+              <View style={styles.qrContainer}>
+                <QRCode
+                  value={qrData}
+                  size={220}
+                  backgroundColor="white"
+                />
+              </View>
+            ) : (
+              <Text style={styles.modalErrorText}>Failed to generate QR code</Text>
+            )}
+            <TouchableOpacity
+              style={styles.closeModalButton}
+              onPress={() => setQrModalVisible(false)}
+            >
+              <Text style={styles.closeModalText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -362,206 +332,370 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.background,
   },
-  title: {
-    ...typography.h3,
+  headerTitle: {
+    ...typography.h2,
     color: colors.textPrimary,
     fontWeight: '700',
   },
-  addButton: {
+  newListingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.xl,
   },
-  addButtonText: {
+  addIcon: {
+    fontFamily: 'MaterialSymbolsOutlined',
+    fontSize: 20,
+    color: colors.white,
+  },
+  newListingText: {
     ...typography.bodySmall,
     color: colors.white,
     fontWeight: '600',
   },
-  tabContainer: {
-    flexDirection: 'row',
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
     paddingHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
+    paddingBottom: 100,
+  },
+  statsGrid: {
+    flexDirection: 'row',
     gap: spacing.md,
+    marginBottom: spacing.xl,
   },
-  tab: {
+  statCard: {
     flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    backgroundColor: 'rgba(16, 183, 127, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 183, 127, 0.2)',
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
   },
-  activeTab: {
-    borderBottomColor: colors.primary,
-  },
-  tabText: {
-    ...typography.body,
+  statLabel: {
+    ...typography.tiny,
     color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: colors.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.xl,
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    paddingVertical: spacing.xxxl,
-  },
-  createButton: {
-    marginTop: spacing.xxl,
-  },
-  listingCard: {
-    marginBottom: spacing.lg,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    marginBottom: spacing.lg,
-  },
-  spotImage: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.border,
-  },
-  placeholderImage: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-  },
-  placeholderText: {
-    ...typography.h4,
-    color: colors.primary,
     fontWeight: '700',
-  },
-  cardHeaderInfo: {
-    flex: 1,
-    marginLeft: spacing.lg,
-    justifyContent: 'space-between',
-  },
-  spotTitle: {
-    ...typography.h6,
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  spotPrice: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.lg,
-  },
-  detailsGrid: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
-  detailItem: {
-    flex: 1,
-  },
-  detailLabel: {
-    ...typography.small,
-    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: spacing.xs,
   },
-  detailValue: {
-    ...typography.body,
+  statValue: {
+    ...typography.h3,
     color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  statFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  trendIcon: {
+    fontFamily: 'MaterialSymbolsOutlined',
+    fontSize: 16,
+    color: colors.primary,
+    marginRight: spacing.xs,
+  },
+  trendText: {
+    ...typography.tiny,
+    color: colors.primary,
     fontWeight: '600',
   },
-  actionsRow: {
+  viewsIcon: {
+    fontFamily: 'MaterialSymbolsOutlined',
+    fontSize: 16,
+    color: colors.secondary,
+    marginRight: spacing.xs,
+  },
+  viewsText: {
+    ...typography.tiny,
+    color: colors.secondary,
+    fontWeight: '600',
+  },
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.h5,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  filterText: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  filterIcon: {
+    fontFamily: 'MaterialSymbolsOutlined',
+    fontSize: 18,
+    color: colors.primary,
+  },
+  listingsList: {
+    gap: spacing.md,
+  },
+  listingCard: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  listingImage: {
+    width: '100%',
+    height: 180,
+  },
+  listingContent: {
+    padding: spacing.md,
+  },
+  listingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs - 2,
+    borderRadius: borderRadius.full,
+  },
+  activeBadge: {
+    backgroundColor: 'rgba(16, 183, 127, 0.1)',
+  },
+  inactiveBadge: {
+    backgroundColor: '#f1f5f9',
+  },
+  statusText: {
+    ...typography.tiny,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  activeStatusText: {
+    color: colors.primary,
+  },
+  inactiveStatusText: {
+    color: colors.textSecondary,
+  },
+  listingName: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+  },
+  listingPrice: {
+    ...typography.h5,
+    color: colors.primary,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  inactivePrice: {
+    color: colors.textSecondary,
+    textDecorationLine: 'line-through',
+  },
+  priceUnit: {
+    ...typography.small,
+    color: colors.textSecondary,
+    fontWeight: '400',
+  },
+  listingLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  locationIcon: {
+    fontFamily: 'MaterialSymbolsOutlined',
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginRight: spacing.xs,
+  },
+  locationText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  listingActions: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
   actionButton: {
     flex: 1,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
   },
-  actionIcon: {
+  editButton: {
+    backgroundColor: colors.primary,
+  },
+  activateButton: {
+    backgroundColor: '#e2e8f0',
+  },
+  actionButtonText: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+  },
+  editButtonText: {
+    color: colors.white,
+  },
+  activateButtonText: {
+    color: colors.textPrimary,
+  },
+  moreButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreIcon: {
+    fontFamily: 'MaterialSymbolsOutlined',
     fontSize: 20,
-    marginBottom: spacing.xs,
-  },
-  actionLabel: {
-    ...typography.tiny,
     color: colors.textSecondary,
+  },
+  qrButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrButtonText: {
+    color: 'white',
+    fontSize: 13,
     fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  qrModalContainer: {
-    width: width * 0.9,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
-  },
-  qrModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
     alignItems: 'center',
-    marginBottom: spacing.lg,
   },
-  qrModalTitle: {
-    ...typography.h4,
-    color: colors.textPrimary,
+  modalTitle: {
+    fontSize: 20,
     fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 4,
   },
-  qrModalClose: {
-    fontSize: 28,
+  modalSubtitle: {
+    fontSize: 14,
     color: colors.textSecondary,
+    marginBottom: 8,
   },
-  qrModalContent: {
-    alignItems: 'center',
-  },
-  qrModalSubtitle: {
-    ...typography.body,
+  modalInstructions: {
+    fontSize: 13,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: 16,
+    lineHeight: 18,
   },
-  qrCodeContainer: {
-    padding: spacing.xl,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.xl,
+  qrContainer: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginVertical: 8,
   },
-  qrInfo: {
-    width: '100%',
-    backgroundColor: colors.info + '10',
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.info,
-    marginBottom: spacing.xl,
+  modalErrorText: {
+    color: '#ef4444',
+    marginVertical: 40,
+    fontSize: 14,
   },
-  qrInfoTitle: {
-    ...typography.bodySmall,
-    color: colors.textPrimary,
+  closeModalButton: {
+    marginTop: 16,
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  closeModalText: {
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: spacing.sm,
+    color: colors.textPrimary,
   },
-  qrInfoText: {
-    ...typography.small,
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl * 2,
+  },
+  loadingText: {
+    ...typography.bodySmall,
     color: colors.textSecondary,
-    lineHeight: 20,
+    marginTop: spacing.md,
   },
-  qrModalButton: {
-    width: '100%',
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl * 2,
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  retryButton: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+  },
+  retryText: {
+    ...typography.bodySmall,
+    color: colors.white,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl * 2,
+  },
+  emptyIcon: {
+    fontFamily: 'MaterialSymbolsOutlined',
+    fontSize: 48,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  addListingButton: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm + 2,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+  },
+  addListingText: {
+    ...typography.bodySmall,
+    color: colors.white,
+    fontWeight: '600',
   },
 });

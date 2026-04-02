@@ -1,371 +1,347 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Animated,
   ScrollView,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
-type PaymentFailedScreenRouteProp = RouteProp<RootStackParamList, 'PaymentFailed'>;
-type PaymentFailedScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'PaymentFailed'
->;
+const PRIMARY = '#10b77f';
+const ERROR = '#ef4444';
+const BACKGROUND = '#f6f6f8';
+
+const orderData = {
+  image: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
+  name: 'Downtown Secure Parking',
+  address: '123 Main Street, Downtown, CA 90210',
+  checkIn: 'Mar 20, 2026',
+  checkInTime: '10:00 AM',
+  checkOut: 'Mar 22, 2026',
+  checkOutTime: '10:00 AM',
+  subtotal: 75.00,
+  serviceFee: 10.00,
+  total: 85.00,
+};
 
 export const PaymentFailedScreen: React.FC = () => {
-  const navigation = useNavigation<PaymentFailedScreenNavigationProp>();
-  const route = useRoute<PaymentFailedScreenRouteProp>();
-  const { error, bookingId } = route.params;
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { error, bookingId } = route.params as { error: string; bookingId: number };
 
-  const shakeAnim = new Animated.Value(0);
-  const fadeAnim = new Animated.Value(0);
-
-  useEffect(() => {
-    // Shake animation for error icon
-    Animated.sequence([
-      Animated.timing(shakeAnim, {
-        toValue: 10,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: -10,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 10,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 0,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Fade in content
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      delay: 400,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const handleTryAgain = () => {
-    // Navigate back to payment screen with the same booking
+  const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleContactSupport = () => {
-    // In production, this would open email client or support chat
-    console.log('Contact support for booking:', bookingId);
+  const handleTryAgain = () => {
+    navigation.goBack();
   };
 
-  const handleBackToHome = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Main' }],
-    });
+  const handleUseDifferentPayment = () => {
+    navigation.goBack();
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+            <Text style={styles.headerButtonText}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payment Failed</Text>
+          <View style={styles.headerButton} />
+        </View>
+
         {/* Error Icon */}
-        <Animated.View
-          style={[
-            styles.iconContainer,
-            {
-              transform: [{ translateX: shakeAnim }],
-            },
-          ]}
-        >
-          <View style={styles.errorCircle}>
-            <Text style={styles.errorIcon}>✗</Text>
+        <View style={styles.errorIconContainer}>
+          <View style={styles.errorIconCircle}>
+            <Text style={styles.errorIconText}>✕</Text>
           </View>
-        </Animated.View>
+        </View>
+
+        {/* Error Heading */}
+        <Text style={styles.errorHeading}>Payment Failed</Text>
 
         {/* Error Message */}
-        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-          <Text style={styles.title}>Payment Failed</Text>
-          <Text style={styles.subtitle}>
-            Unfortunately, we couldn't process your payment
-          </Text>
+        <Text style={styles.errorMessage}>
+          {error || 'There was an issue processing your payment'}
+        </Text>
 
-          {/* Error Details */}
-          <View style={styles.errorCard}>
-            <Text style={styles.errorLabel}>Error Details:</Text>
-            <Text style={styles.errorText}>{error || 'Unknown error occurred'}</Text>
-            {bookingId && (
-              <>
-                <View style={styles.errorSeparator} />
-                <View style={styles.errorRow}>
-                  <Text style={styles.errorLabel}>Booking ID:</Text>
-                  <Text style={styles.errorValue}>#{bookingId}</Text>
-                </View>
-              </>
-            )}
-          </View>
-
-          {/* Common Reasons */}
-          <View style={styles.reasonsContainer}>
-            <Text style={styles.reasonsTitle}>Common Reasons:</Text>
-            <View style={styles.reasonItem}>
-              <Text style={styles.reasonIcon}>💳</Text>
-              <Text style={styles.reasonText}>Insufficient funds in your account</Text>
-            </View>
-            <View style={styles.reasonItem}>
-              <Text style={styles.reasonIcon}>🔒</Text>
-              <Text style={styles.reasonText}>Card or payment method declined</Text>
-            </View>
-            <View style={styles.reasonItem}>
-              <Text style={styles.reasonIcon}>📶</Text>
-              <Text style={styles.reasonText}>Network connection issues</Text>
-            </View>
-            <View style={styles.reasonItem}>
-              <Text style={styles.reasonIcon}>⏱️</Text>
-              <Text style={styles.reasonText}>Payment session timed out</Text>
+        {/* Order Details Card */}
+        <View style={styles.orderCard}>
+          <Image
+            source={{ uri: orderData.image }}
+            style={styles.orderImage}
+            resizeMode="cover"
+          />
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderName}>{orderData.name}</Text>
+            <View style={styles.locationRow}>
+              <Text style={styles.locationIcon}>📍</Text>
+              <Text style={styles.locationText}>{orderData.address}</Text>
             </View>
           </View>
 
-          {/* What to Do */}
-          <View style={styles.infoBox}>
-            <Text style={styles.infoIcon}>💡</Text>
-            <Text style={styles.infoText}>
-              Try again with a different payment method or check your account balance. If the
-              problem persists, please contact support.
-            </Text>
+          <View style={styles.datesContainer}>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>From</Text>
+              <Text style={styles.dateValue}>{orderData.checkIn}</Text>
+              <Text style={styles.timeValue}>{orderData.checkInTime}</Text>
+            </View>
+            <View style={styles.dateArrow}>
+              <Text style={styles.dateArrowText}>→</Text>
+            </View>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>To</Text>
+              <Text style={styles.dateValue}>{orderData.checkOut}</Text>
+              <Text style={styles.timeValue}>{orderData.checkOutTime}</Text>
+            </View>
           </View>
 
-          {/* Support Info */}
-          <View style={styles.supportBox}>
-            <Text style={styles.supportTitle}>Need Help?</Text>
-            <Text style={styles.supportText}>
-              Our support team is here to help you Monday - Friday, 9 AM - 6 PM PHT
-            </Text>
+          <View style={styles.divider} />
+
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Subtotal</Text>
+            <Text style={styles.priceValue}>₱{orderData.subtotal.toFixed(2)}</Text>
           </View>
-        </Animated.View>
+
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Service Fee</Text>
+            <Text style={styles.priceValue}>₱{orderData.serviceFee.toFixed(2)}</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.priceRow}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalValue}>₱{orderData.total.toFixed(2)}</Text>
+          </View>
+        </View>
       </ScrollView>
 
-      {/* Action Buttons */}
+      {/* Buttons */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.primaryButton} onPress={handleTryAgain}>
-          <Text style={styles.primaryButtonText}>Try Again</Text>
+        <TouchableOpacity
+          style={styles.tryAgainButton}
+          onPress={handleTryAgain}
+        >
+          <Text style={styles.tryAgainButtonText}>Try Again</Text>
         </TouchableOpacity>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.secondaryButton, styles.flexButton]}
-            onPress={handleContactSupport}
-          >
-            <Text style={styles.secondaryButtonText}>Contact Support</Text>
-          </TouchableOpacity>
-
-          <View style={styles.buttonSpacer} />
-
-          <TouchableOpacity
-            style={[styles.secondaryButton, styles.flexButton]}
-            onPress={handleBackToHome}
-          >
-            <Text style={styles.secondaryButtonText}>Home</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.differentPaymentButton}
+          onPress={handleUseDifferentPayment}
+        >
+          <Text style={styles.differentPaymentButtonText}>
+            Use Different Payment
+          </Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: BACKGROUND,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  iconContainer: {
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
   },
-  errorCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#F44336',
+  headerButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#F44336',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
   },
-  errorIcon: {
-    fontSize: 60,
-    color: '#fff',
+  headerButtonText: {
+    fontSize: 24,
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  headerTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    color: '#1e293b',
   },
-  content: {
-    paddingBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  errorCard: {
-    backgroundColor: '#FFEBEE',
-    borderRadius: 16,
-    padding: 20,
+  errorIconContainer: {
+    alignItems: 'center',
+    marginTop: 32,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FFCDD2',
   },
-  errorLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#C62828',
+  errorIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: ERROR,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorIconText: {
+    fontSize: 40,
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  errorHeading: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  errorText: {
-    fontSize: 15,
-    color: '#D32F2F',
-    lineHeight: 22,
+  errorMessage: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 32,
   },
-  errorSeparator: {
+  orderCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  orderImage: {
+    width: '100%',
+    height: 140,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  orderInfo: {
+    marginBottom: 16,
+  },
+  orderName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  locationIcon: {
+    fontSize: 14,
+    marginRight: 6,
+    marginTop: 2,
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#64748b',
+    lineHeight: 20,
+  },
+  datesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: BACKGROUND,
+    borderRadius: 12,
+    padding: 12,
+  },
+  dateBlock: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dateLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  dateValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  timeValue: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  dateArrow: {
+    paddingHorizontal: 8,
+  },
+  dateArrowText: {
+    fontSize: 18,
+    color: '#cbd5e1',
+  },
+  divider: {
     height: 1,
-    backgroundColor: '#FFCDD2',
+    backgroundColor: '#e2e8f0',
     marginVertical: 12,
   },
-  errorRow: {
+  priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  errorValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#D32F2F',
-  },
-  reasonsContainer: {
-    marginBottom: 24,
-  },
-  reasonsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  reasonItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     marginBottom: 12,
-    paddingLeft: 8,
   },
-  reasonIcon: {
-    fontSize: 18,
-    marginRight: 12,
-    width: 24,
-  },
-  reasonText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 22,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF3E0',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  infoText: {
-    flex: 1,
+  priceLabel: {
     fontSize: 14,
-    color: '#E65100',
-    lineHeight: 20,
+    color: '#64748b',
   },
-  supportBox: {
-    backgroundColor: '#f8f8f8',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+  priceValue: {
+    fontSize: 14,
+    color: '#1e293b',
+    fontWeight: '500',
   },
-  supportTitle: {
+  totalLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: '#1e293b',
   },
-  supportText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+  totalValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: PRIMARY,
   },
   footer: {
-    padding: 20,
-    paddingBottom: 30,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#e2e8f0',
   },
-  primaryButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 18,
+  tryAgainButton: {
+    backgroundColor: PRIMARY,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
   },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+  tryAgainButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#ffffff',
   },
-  buttonRow: {
-    flexDirection: 'row',
-  },
-  secondaryButton: {
+  differentPaymentButton: {
     backgroundColor: 'transparent',
-    paddingVertical: 18,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 2,
+    borderColor: PRIMARY,
   },
-  flexButton: {
-    flex: 1,
-  },
-  buttonSpacer: {
-    width: 12,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+  differentPaymentButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: PRIMARY,
   },
 });

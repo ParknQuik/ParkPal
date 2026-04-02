@@ -1,18 +1,21 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { BottomTabNavigator } from './BottomTabNavigator';
-import { ParkingDetailScreen } from '../screens/ParkingDetailScreen';
-import { ReservationScreen } from '../screens/ReservationScreen';
-import { ListSpotScreen } from '../screens/ListSpotScreen';
+import { TabSwitcher } from './TabSwitcher';
+import { ParkingDetails } from '../screens/ParkingDetails';
+import { ReserveSpot } from '../screens/ReserveSpot';
+import { ListYourSpot } from '../screens/ListYourSpot';
 import { QRScannerScreen } from '../screens/QRScannerScreen';
 import { QRGeneratorScreen } from '../screens/QRGeneratorScreen';
-import { ReviewScreen } from '../screens/ReviewScreen';
+import { WriteReview } from '../screens/WriteReview';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { PaymentScreen } from '../screens/PaymentScreen';
-import { PaymentSuccessScreen } from '../screens/PaymentSuccessScreen';
+import { BookingConfirmed } from '../screens/BookingConfirmed';
 import { PaymentFailedScreen } from '../screens/PaymentFailedScreen';
 import { PaymentMethodsScreen } from '../screens/PaymentMethodsScreen';
 import { EarningsScreen } from '../screens/EarningsScreen';
+import { MyListingsScreen } from '../screens/MyListingsScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { MyVehiclesScreen } from '../screens/MyVehiclesScreen';
 
 const Stack = createStackNavigator();
 
@@ -23,10 +26,10 @@ export const MainStack: React.FC = () => {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
+      <Stack.Screen name="MainTabs" component={TabSwitcher} />
       <Stack.Screen
         name="ParkingDetail"
-        component={ParkingDetailScreen}
+        component={ParkingDetails}
         options={{
           headerShown: false,
           presentation: 'card',
@@ -34,7 +37,7 @@ export const MainStack: React.FC = () => {
       />
       <Stack.Screen
         name="Reservation"
-        component={ReservationScreen}
+        component={ReserveSpot}
         options={{
           headerShown: false,
           presentation: 'modal',
@@ -58,15 +61,15 @@ export const MainStack: React.FC = () => {
       />
       <Stack.Screen
         name="ListSpot"
-        component={ListSpotScreen}
+        component={ListYourSpot}
         options={{
           headerShown: false,
           presentation: 'modal',
         }}
       />
       <Stack.Screen
-        name="Review"
-        component={ReviewScreen}
+        name="WriteReview"
+        component={WriteReview}
         options={{
           headerShown: false,
           presentation: 'modal',
@@ -90,7 +93,7 @@ export const MainStack: React.FC = () => {
       />
       <Stack.Screen
         name="PaymentSuccess"
-        component={PaymentSuccessScreen}
+        component={BookingConfirmed}
         options={{
           headerShown: false,
           presentation: 'modal',
@@ -117,6 +120,30 @@ export const MainStack: React.FC = () => {
       <Stack.Screen
         name="Earnings"
         component={EarningsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="MyListings"
+        component={MyListingsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="MyVehicles"
+        component={MyVehiclesScreen}
         options={{
           headerShown: false,
           presentation: 'card',

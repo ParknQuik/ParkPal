@@ -1,0 +1,447 @@
+import React, { useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Animated,
+  Image,
+  Alert,
+  Linking,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
+
+const PRIMARY = '#10b77f';
+const SECONDARY = '#f59e0b';
+const ACCENT = '#ffeb3b';
+const BACKGROUND = '#f6f6f8';
+
+const bookingData = {
+  bookingId: 'PP-2026-ABC123',
+  locationName: 'Downtown Secure Parking',
+  locationAddress: '123 Main Street, Downtown, CA 90210',
+  checkIn: 'Mar 20, 2026',
+  checkInTime: '10:00 AM',
+  checkOut: 'Mar 22, 2026',
+  checkOutTime: '10:00 AM',
+  totalPaid: '₱85.00',
+};
+
+export const BookingConfirmed: React.FC = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { paymentId, bookingId } = route.params as { paymentId: number; bookingId: number };
+  const scaleAnim = new Animated.Value(0);
+  const fadeAnim = new Animated.Value(0);
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleClose = () => {
+    navigation.goBack();
+  };
+
+  const handleViewBooking = () => {
+    navigation.navigate('MainTabs' as never);
+  };
+
+  const handleDownloadReceipt = () => {
+    Alert.alert('Receipt', 'Receipt downloading...');
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerButton} onPress={handleClose}>
+            <Text style={styles.headerButtonText}>✕</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payment Success</Text>
+          <View style={styles.headerButton} />
+        </View>
+
+        {/* Success Animation */}
+        <Animated.View
+          style={[
+            styles.successContainer,
+            {
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          <View style={styles.successCircle}>
+            <Text style={styles.successCheck}>✓</Text>
+          </View>
+        </Animated.View>
+
+        {/* Content */}
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          {/* Title Section */}
+          <View style={styles.titleSection}>
+            <Text style={styles.mainTitle}>Booking Confirmed!</Text>
+            <Text style={styles.subtitle}>
+              Your parking spot has been reserved successfully
+            </Text>
+            <View style={styles.bookingIdBadge}>
+              <Text style={styles.bookingIdLabel}>Booking ID</Text>
+              <Text style={styles.bookingIdValue}>{bookingId}</Text>
+            </View>
+          </View>
+
+          {/* Details Card */}
+          <View style={styles.detailsCard}>
+            {/* Location */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={styles.locationName}>{bookingData.locationName}</Text>
+              <View style={styles.addressRow}>
+                <Text style={styles.addressIcon}>📍</Text>
+                <Text style={styles.addressText}>{bookingData.locationAddress}</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Dates */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Dates</Text>
+              <View style={styles.datesContainer}>
+                <View style={styles.dateBlock}>
+                  <Text style={styles.dateLabel}>From</Text>
+                  <Text style={styles.dateValue}>{bookingData.checkIn}</Text>
+                  <Text style={styles.timeValue}>{bookingData.checkInTime}</Text>
+                </View>
+                <View style={styles.dateArrow}>
+                  <Text style={styles.dateArrowText}>→</Text>
+                </View>
+                <View style={styles.dateBlock}>
+                  <Text style={styles.dateLabel}>To</Text>
+                  <Text style={styles.dateValue}>{bookingData.checkOut}</Text>
+                  <Text style={styles.timeValue}>{bookingData.checkOutTime}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Total Paid */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailLabel}>Total Paid</Text>
+              <Text style={styles.totalPaid}>{bookingData.totalPaid}</Text>
+            </View>
+          </View>
+
+          {/* QR Code Section */}
+          <View style={styles.qrSection}>
+            <Text style={styles.qrSectionTitle}>Check-in QR Code</Text>
+            <View style={styles.qrContainer}>
+              <Image
+                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${bookingId}` }}
+                style={styles.qrImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.qrInstruction}>
+              Show this QR code at check-in
+            </Text>
+          </View>
+        </Animated.View>
+      </ScrollView>
+
+      {/* Footer Buttons */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleViewBooking}
+        >
+          <Text style={styles.primaryButtonText}>View Booking</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.outlineButton}
+          onPress={handleDownloadReceipt}
+        >
+          <Text style={styles.outlineButtonText}>Download Receipt</Text>
+        </TouchableOpacity>
+
+        <View style={styles.supportRow}>
+          <Text style={styles.supportText}>Questions? </Text>
+          <TouchableOpacity onPress={() => Linking.openURL('mailto:support@parkpal.com')}>
+            <Text style={styles.supportLink}>Contact support</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: BACKGROUND,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerButtonText: {
+    fontSize: 20,
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  successContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  successCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: PRIMARY,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  successCheck: {
+    fontSize: 50,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  titleSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  mainTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  bookingIdBadge: {
+    backgroundColor: PRIMARY + '15',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  bookingIdLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  bookingIdValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: PRIMARY,
+  },
+  detailsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  detailSection: {
+    paddingVertical: 8,
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: '#64748b',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  locationName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  addressIcon: {
+    fontSize: 14,
+    marginRight: 6,
+    marginTop: 2,
+  },
+  addressText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#64748b',
+    lineHeight: 20,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
+  },
+  datesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateBlock: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  dateValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  timeValue: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  dateArrow: {
+    paddingHorizontal: 16,
+  },
+  dateArrowText: {
+    fontSize: 20,
+    color: '#cbd5e1',
+  },
+  totalPaid: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: PRIMARY,
+  },
+  qrSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  qrSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 16,
+  },
+  qrContainer: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 12,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
+  },
+  qrInstruction: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  footer: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  primaryButton: {
+    backgroundColor: PRIMARY,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  outlineButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: PRIMARY,
+    marginBottom: 16,
+  },
+  outlineButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: PRIMARY,
+  },
+  supportRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  supportText: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  supportLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: PRIMARY,
+  },
+});
