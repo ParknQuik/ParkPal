@@ -19,6 +19,7 @@ model User {
   password        String
   role            String    // driver, host, admin, operator
   phone           String?
+  googleId        String?   @unique @map("google_id")
   profileImageUrl String?   @map("profile_image_url")
   isActive        Boolean   @default(true) @map("is_active")
 
@@ -38,6 +39,8 @@ model User {
   payouts         Payout[]        @relation("HostPayouts")
   reviews         Review[]        @relation("ReviewAuthor")
   receivedReviews Review[]        @relation("ReviewTarget")
+  vehicles        Vehicle[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -420,4 +423,52 @@ model Review {
   @@index([authorId])
   @@index([createdAt])
   @@map("reviews")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Vehicle {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+
+  make        String
+  model       String
+  year        Int?
+  color       String?
+  licensePlate String   @unique @map("license_plate")
+
+  isDefault   Boolean   @default(false) @map("is_default")
+  isActive    Boolean   @default(true) @map("is_active")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@map("vehicles")
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+
+  title     String
+  body      String
+  type      String    @default("general") // booking, payment, review, message, system
+  data      Json?     // Additional data (e.g., { bookingId: 123 })
+  read      Boolean   @default(false)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
 }

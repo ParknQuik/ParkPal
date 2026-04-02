@@ -3,6 +3,21 @@ const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../services/qrcode');
 const cache = require('../services/cache');
 
+// Safe JSON parse that returns a fallback on invalid JSON
+function safeJsonParse(str, fallback = []) {
+  if (!str) return fallback;
+  try {
+    const parsed = JSON.parse(str);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    // Handle comma-separated strings like "covered, security, cctv"
+    if (typeof str === 'string' && str.includes(' ')) {
+      return str.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return fallback;
+  }
+}
+
 /**
  * @swagger
  * /api/marketplace/listings:
@@ -299,7 +314,7 @@ exports.searchListings = async (req, res) => {
       const requiredAmenities = amenities.split(',').map((a) => a.trim());
       processedSlots = processedSlots.filter((slot) => {
         if (!slot.amenities) return false;
-        const slotAmenities = JSON.parse(slot.amenities);
+        const slotAmenities = safeJsonParse(slot.amenities);
         return requiredAmenities.every((amenity) =>
           slotAmenities.includes(amenity)
         );
@@ -309,8 +324,8 @@ exports.searchListings = async (req, res) => {
     // Parse JSON fields for response
     processedSlots = processedSlots.map((slot) => ({
       ...slot,
-      amenities: slot.amenities ? JSON.parse(slot.amenities) : [],
-      photos: slot.photos ? JSON.parse(slot.photos) : [],
+      amenities: safeJsonParse(slot.amenities),
+      photos: safeJsonParse(slot.photos),
     }));
 
     // Use helper from pagination middleware if available
@@ -857,8 +872,8 @@ exports.getListingById = async (req, res) => {
 
     res.json({
       ...listing,
-      amenities: listing.amenities || [],
-      photos: listing.photos || [],
+      amenities: safeJsonParse(listing.amenities),
+      photos: safeJsonParse(listing.photos),
       qrCodeData, // Add QR code data string for mobile app
     });
   } catch (error) {
@@ -1129,3 +1144,37 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
+
+exports.deleteListing = async (req, res) => {
+  try {
+    const listingId = parseInt(req.params.id);
+    const userId = req.user.id;
+
+    // Check if listing exists and belongs to user
+    const listing = await prisma.parkingSlot.findUnique({
+      where: { id: listingId },
+    });
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (listing.ownerId !== userId) {
+      return res.status(403).json({ error: 'You do not own this listing' });
+    }
+
+    // Soft-delete by setting isActive to false, or hard delete
+    // Hard delete: remove the listing
+    await prisma.parkingSlot.delete({
+      where: { id: listingId },
+    });
+
+    // Invalidate listings cache
+    await cache.invalidateListingsCache();
+
+    res.json({ message: 'Listing deleted successfully' });
+  } catch (error) {
+    console.error('Delete listing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};

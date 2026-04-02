@@ -1,0 +1,50 @@
+const googleAuthController = require('../controllers/googleAuthController');
+
+module.exports = (app) => {
+  /**
+   * @swagger
+   * /api/v1/auth/google:
+   *   post:
+   *     summary: Sign in with Google
+   *     tags: [Authentication]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - googleToken
+   *             properties:
+   *               googleToken:
+   *                 type: string
+   *                 description: The Google OAuth id_token
+   *                 example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+   *     responses:
+   *       200:
+   *         description: Login successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 token:
+   *                   type: string
+   *                 user:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: integer
+   *                     name:
+   *                       type: string
+   *                     email:
+   *                       type: string
+   *                     role:
+   *                       type: string
+   *       400:
+   *         description: Missing Google token
+   *       401:
+   *         description: Invalid Google token
+   */
+  app.post('/auth/google', googleAuthController.googleAuth);
+};

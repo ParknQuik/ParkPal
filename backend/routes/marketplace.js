@@ -524,4 +524,11 @@ module.exports = (app) => {
     validateParams(idParamSchema),
     marketplaceController.toggleListingAvailability
   );
+  // Delete a listing
+  app.delete(
+    '/marketplace/listings/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.deleteListing
+  );
 };
