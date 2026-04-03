@@ -32,7 +32,7 @@ const discovery = {
 };
 
 // useProxy: true routes through Expo's auth proxy (auth.expo.io) - required for Google OAuth
-const redirectUri = makeRedirectUri({ useProxy: true, scheme: 'parknquik' });
+const redirectUri = makeRedirectUri({ scheme: 'parknquik' });
 
 const STITCH_COLORS = {
   primary: '#10b77f',

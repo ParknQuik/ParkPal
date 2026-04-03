@@ -1,26 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar, View, Text, ActivityIndicator } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { MaterialSymbolsOutlined } from '@expo-google-fonts/material-symbols';
 import * as Font from 'expo-font';
 import { store } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
 
-function App() {
+function AppContent() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
-    async function loadFonts() {
-      await Font.loadAsync(MaterialSymbolsOutlined);
-      setFontsLoaded(true);
+    async function load() {
+      try {
+        await Font.loadAsync({
+          'MaterialSymbolsOutlined': require('./assets/fonts/MaterialSymbols.ttf'),
+        });
+      } catch (e) {
+        console.warn('Font loading error:', e);
+      } finally {
+        setFontsLoaded(true);
+      }
     }
-    loadFonts();
+    load();
   }, []);
 
   if (!fontsLoaded) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#10b77f" />
+      </View>
+    );
   }
 
   return (
@@ -35,4 +45,6 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return <AppContent />;
+}
