@@ -31,7 +31,7 @@ const discovery = {
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
 };
 
-const redirectUri = makeRedirectUri({ scheme: 'parkpal' });
+const redirectUri = makeRedirectUri({ scheme: 'parknquik' });
 
 const STITCH_COLORS = {
   primary: '#10b77f',
