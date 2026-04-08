@@ -76,9 +76,10 @@ class PayMongoService {
    * @param {string} params.currency - Currency code (default: PHP)
    * @param {string} params.description - Payment description
    * @param {Object} params.metadata - Additional data (bookingId, userId, etc.)
+   * @param {string} params.captureType - 'automatic' or 'manual' (default: automatic)
    * @returns {Promise<Object>} PaymentIntent object
    */
-  async createPaymentIntent({ amount, currency = 'PHP', description, metadata = {} }) {
+  async createPaymentIntent({ amount, currency = 'PHP', description, metadata = {}, captureType = 'automatic' }) {
     await this.ensureInitialized();
 
     try {
@@ -103,8 +104,8 @@ class PayMongoService {
               'grab_pay',
               'paymaya'
             ],
-            // Capture automatically after authorization
-            capture_type: 'automatic'
+            // Capture type: automatic (charge immediately) or manual (authorization hold)
+            capture_type: captureType
           }
         }
       });
@@ -217,6 +218,44 @@ class PayMongoService {
       };
     } catch (error) {
       console.error('PayMongo getPaymentIntent error:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: this._formatError(error)
+      };
+    }
+  }
+
+  /**
+   * Capture a PaymentIntent (for manual capture_type)
+   * Finalizes an authorized payment and charges the customer
+   * @param {string} paymentIntentId - PaymentIntent ID
+   * @param {number} amountToCapture - Amount to capture in pesos (optional, defaults to full authorized amount)
+   * @returns {Promise<Object>} Captured PaymentIntent object
+   */
+  async capturePaymentIntent(paymentIntentId, amountToCapture = null) {
+    await this.ensureInitialized();
+
+    try {
+      const payload = {
+        data: {
+          attributes: {}
+        }
+      };
+
+      // If specific amount provided, capture only that amount
+      if (amountToCapture !== null) {
+        const amountInCents = Math.round(amountToCapture * 100);
+        payload.data.attributes.amount = amountInCents;
+      }
+
+      const response = await this.client.post(`/payment_intents/${paymentIntentId}/capture`, payload);
+
+      return {
+        success: true,
+        paymentIntent: response.data.data
+      };
+    } catch (error) {
+      console.error('PayMongo capturePaymentIntent error:', error.response?.data || error.message);
       return {
         success: false,
         error: this._formatError(error)

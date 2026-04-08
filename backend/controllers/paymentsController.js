@@ -27,15 +27,25 @@ exports.createPaymentIntent = async (req, res) => {
       return res.status(400).json({ error: 'Booking already paid' });
     }
 
+    // Determine capture type based on rental mode
+    const isOpenMode = booking.rentalMode === 'open';
+    const captureType = isOpenMode ? 'manual' : 'automatic';
+
     // Create PaymentIntent with PayMongo
     const result = await paymongoService.createPaymentIntent({
       amount: parseFloat(amount),
       description: `Parking at ${booking.slot.address} - Booking #${bookingId}`,
+      captureType: captureType,
       metadata: {
         bookingId: bookingId.toString(),
         userId: userId.toString(),
         slotId: booking.slotId.toString(),
-        paymentMethod: paymentMethod || 'unknown'
+        paymentMethod: paymentMethod || 'unknown',
+        rentalMode: booking.rentalMode,
+        ...(isOpenMode && { 
+          authorizationOnly: true,
+          maxAmount: booking.authAmount 
+        })
       }
     });
 
@@ -57,10 +67,19 @@ exports.createPaymentIntent = async (req, res) => {
         status: 'pending',
         metadata: {
           paymentIntentId: result.paymentIntent.id,
-          clientKey: result.paymentIntent.attributes.client_key
+          clientKey: result.paymentIntent.attributes.client_key,
+          captureType: captureType
         }
       }
     });
+
+    // For open mode, store authId in booking for later capture
+    if (isOpenMode) {
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { authId: result.paymentIntent.id }
+      });
+    }
 
     // Return client secret for frontend
     res.status(201).json({
@@ -69,7 +88,10 @@ exports.createPaymentIntent = async (req, res) => {
       clientKey: result.paymentIntent.attributes.client_key,
       amount: parseFloat(amount),
       status: result.paymentIntent.attributes.status,
-      message: 'Payment intent created - proceed with payment'
+      captureType: captureType,
+      message: isOpenMode 
+        ? 'Authorization hold created - amount will be captured on checkout'
+        : 'Payment intent created - proceed with payment'
     });
   } catch (error) {
     console.error('Create payment intent error:', error);
@@ -118,8 +140,15 @@ exports.confirmPayment = async (req, res) => {
     let paymentStatus = 'pending';
     let bookingStatus = payment.booking.status;
 
+    // Check if this is a manual capture (authorization hold)
+    const isManualCapture = payment.metadata?.captureType === 'manual';
+
     if (status === 'succeeded') {
       paymentStatus = 'completed';
+      bookingStatus = 'confirmed';
+    } else if (status === 'awaiting_capture') {
+      // For manual capture, payment is authorized but not yet captured
+      paymentStatus = 'authorized';
       bookingStatus = 'confirmed';
     } else if (status === 'processing') {
       paymentStatus = 'processing';
@@ -140,15 +169,15 @@ exports.confirmPayment = async (req, res) => {
       }
     });
 
-    // Update booking status if payment succeeded
-    if (paymentStatus === 'completed') {
+    // Update booking status if payment succeeded or authorized
+    if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
       await prisma.booking.update({
         where: { id: payment.bookingId },
         data: { status: bookingStatus }
       });
 
       broadcast({
-        type: 'payment_completed',
+        type: paymentStatus === 'authorized' ? 'payment_authorized' : 'payment_completed',
         payment: updatedPayment,
         bookingId: payment.bookingId
       });
@@ -160,6 +189,8 @@ exports.confirmPayment = async (req, res) => {
       bookingStatus: bookingStatus,
       message: paymentStatus === 'completed'
         ? 'Payment successful! Booking confirmed.'
+        : paymentStatus === 'authorized'
+        ? 'Payment authorized! Amount will be captured on checkout.'
         : `Payment ${paymentStatus}`
     });
   } catch (error) {

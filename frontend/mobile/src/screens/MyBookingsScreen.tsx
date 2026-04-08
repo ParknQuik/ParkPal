@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { getMyBookings } from '../store/slices/marketplaceSlice';
-import { marketplaceAPI } from '../services/api';
+import { marketplaceAPI, paymentAPI } from '../services/api';
 import { colors, typography, spacing, borderRadius } from '../theme';
 
 const PRIMARY = '#10b77f';
@@ -98,6 +98,12 @@ export const MyBookingsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+  const [extendModalVisible, setExtendModalVisible] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [selectedHours, setSelectedHours] = useState(1);
+  const [extensionAvailability, setExtensionAvailability] = useState<any>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [extending, setExtending] = useState(false);
 
   const { bookings, loading, error } = useAppSelector((state) => state.marketplace);
 
@@ -156,8 +162,10 @@ export const MyBookingsScreen: React.FC = () => {
               try {
                 await marketplaceAPI.cancelBooking(parseInt(bookingId, 10));
                 await fetchBookings();
-              } catch (err) {
-                Alert.alert('Error', 'Failed to cancel booking. Please try again.');
+              } catch (err: any) {
+                const errorMessage = err.response?.data?.error || 'Failed to cancel booking. Please try again.';
+                console.error('Failed to cancel booking:', errorMessage);
+                Alert.alert('Cannot Cancel Booking', errorMessage);
               }
             },
           },
@@ -166,6 +174,74 @@ export const MyBookingsScreen: React.FC = () => {
     },
     [fetchBookings],
   );
+
+  const handleOpenExtendModal = useCallback(async (booking: any) => {
+    setSelectedBooking(booking);
+    setSelectedHours(1);
+    setExtendModalVisible(true);
+    
+    // Check initial availability for 1 hour
+    await checkExtensionAvailability(booking.id, 1);
+  }, []);
+
+  const checkExtensionAvailability = async (bookingId: number, hours: number) => {
+    try {
+      setCheckingAvailability(true);
+      const response = await marketplaceAPI.checkExtensionAvailability(bookingId, hours);
+      setExtensionAvailability(response.data);
+    } catch (err: any) {
+      console.error('Failed to check availability:', err);
+      Alert.alert('Error', 'Failed to check extension availability');
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const handleExtendBooking = async () => {
+    if (!selectedBooking || !extensionAvailability?.available) return;
+    
+    try {
+      setExtending(true);
+      
+      // Create payment intent for extension
+      const paymentResponse = await paymentAPI.createPaymentIntent({
+        amount: extensionAvailability.pricing.total,
+        paymentMethod: 'card', // Use user's saved payment method
+        bookingId: selectedBooking.id,
+      });
+      
+      // Confirm payment
+      await paymentAPI.confirmPayment({
+        paymentIntentId: paymentResponse.data.paymentIntentId,
+      });
+      
+      // Extend booking
+      await marketplaceAPI.extendBooking(selectedBooking.id, {
+        hours: selectedHours,
+        paymentIntentId: paymentResponse.data.paymentIntentId,
+      });
+      
+      Alert.alert(
+        'Booking Extended!',
+        `Your booking has been extended by ${selectedHours} hour(s). New end time: ${new Date(extensionAvailability.requestedEndTime).toLocaleString()}`
+      );
+      
+      setExtendModalVisible(false);
+      await fetchBookings(); // Refresh bookings list
+    } catch (err: any) {
+      console.error('Failed to extend booking:', err.response?.data?.error || err.message);
+      Alert.alert('Extension Failed', err.response?.data?.error || 'Failed to extend booking. Please try again.');
+    } finally {
+      setExtending(false);
+    }
+  };
+
+  const handleHoursChange = async (hours: number) => {
+    setSelectedHours(hours);
+    if (selectedBooking) {
+      await checkExtensionAvailability(selectedBooking.id, hours);
+    }
+  };
 
   const handleShowQR = useCallback((booking: any) => {
     const qrData = booking.qrCode || String(booking.id);
@@ -298,6 +374,17 @@ export const MyBookingsScreen: React.FC = () => {
                     </Text>
                   </TouchableOpacity>
                 )}
+                {booking.rentalMode === 'fixed' && 
+                 (booking.status === 'confirmed' || booking.status === 'active') && 
+                 new Date(booking.endTime) > new Date() && (
+                  <TouchableOpacity
+                    style={styles.extendButton}
+                    onPress={() => handleOpenExtendModal(booking)}
+                  >
+                    <Text style={styles.extendButtonIcon}>⏰</Text>
+                    <Text style={styles.extendButtonText}>Extend Time</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={[
                     styles.actionButton,
@@ -322,11 +409,34 @@ export const MyBookingsScreen: React.FC = () => {
                   <Text style={styles.qrButtonText}>Show QR Code</Text>
                 </TouchableOpacity>
               )}
-              {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancelBooking(String(booking.id))}>
-                  <Text style={styles.cancelButtonText}>Cancel Booking</Text>
-                </TouchableOpacity>
-              )}
+              {(() => {
+                if (booking.status === 'active') return null;
+                if (booking.status === 'completed' || booking.status === 'cancelled') return null;
+                
+                const now = new Date();
+                const startTime = new Date(booking.startTime);
+                const cancellationDeadline = new Date(startTime.getTime() - 30 * 60 * 1000); // 30 min before
+                const canCancel = now < cancellationDeadline;
+                
+                if (!canCancel) {
+                  return (
+                    <View style={styles.cancelButtonDisabled}>
+                      <Text style={styles.cancelButtonDisabledText}>
+                        Cancellation unavailable (within 30 min of start)
+                      </Text>
+                    </View>
+                  );
+                }
+                
+                return (
+                  <TouchableOpacity 
+                    style={styles.cancelButton} 
+                    onPress={() => handleCancelBooking(String(booking.id))}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
           );
         }}
@@ -358,6 +468,119 @@ export const MyBookingsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Extension Modal */}
+      <Modal
+        visible={extendModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setExtendModalVisible(false)}
+      >
+        <View style={styles.extensionModalOverlay}>
+          <View style={styles.extensionModalContent}>
+            <Text style={styles.extensionModalTitle}>Extend Booking Time</Text>
+            
+            {selectedBooking && (
+              <>
+                <Text style={styles.extensionModalSubtitle}>
+                  Current end: {new Date(selectedBooking.endTime).toLocaleString()}
+                </Text>
+                
+                <Text style={styles.extensionModalLabel}>Select extension duration:</Text>
+                
+                <View style={styles.hoursContainer}>
+                  {[1, 2, 3, 4].map((hours) => (
+                    <TouchableOpacity
+                      key={hours}
+                      style={[
+                        styles.hourButton,
+                        selectedHours === hours && styles.hourButtonActive,
+                      ]}
+                      onPress={() => handleHoursChange(hours)}
+                    >
+                      <Text style={[
+                        styles.hourButtonText,
+                        selectedHours === hours && styles.hourButtonTextActive,
+                      ]}>
+                        +{hours}hr{hours > 1 ? 's' : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                
+                {checkingAvailability ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+                ) : extensionAvailability ? (
+                  extensionAvailability.available ? (
+                    <View style={styles.availabilityBox}>
+                      <Text style={styles.availabilityTitle}>Available</Text>
+                      <Text style={styles.availabilityText}>
+                        New end: {new Date(extensionAvailability.requestedEndTime).toLocaleString()}
+                      </Text>
+                      <View style={styles.pricingBox}>
+                        <View style={styles.pricingRow}>
+                          <Text style={styles.pricingLabel}>Extension ({selectedHours}hr{selectedHours > 1 ? 's' : ''})</Text>
+                          <Text style={styles.pricingValue}>₱{extensionAvailability.pricing.extensionCost.toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.pricingRow}>
+                          <Text style={styles.pricingLabel}>Service Fee</Text>
+                          <Text style={styles.pricingValue}>₱{extensionAvailability.pricing.serviceFee.toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.pricingRow}>
+                          <Text style={styles.pricingLabel}>Tax</Text>
+                          <Text style={styles.pricingValue}>₱{extensionAvailability.pricing.tax.toFixed(2)}</Text>
+                        </View>
+                        <View style={[styles.pricingRow, styles.pricingTotal]}>
+                          <Text style={styles.pricingTotalLabel}>Total</Text>
+                          <Text style={styles.pricingTotalValue}>₱{extensionAvailability.pricing.total.toFixed(2)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.unavailableBox}>
+                      <Text style={styles.unavailableTitle}>Unavailable</Text>
+                      <Text style={styles.unavailableText}>
+                        This slot is booked by another user during the requested extension time.
+                      </Text>
+                      {extensionAvailability.conflictingBooking && (
+                        <Text style={styles.unavailableText}>
+                          Next booking starts: {new Date(extensionAvailability.conflictingBooking.startTime).toLocaleString()}
+                        </Text>
+                      )}
+                    </View>
+                  )
+                ) : null}
+                
+                <View style={styles.extensionModalActions}>
+                  <TouchableOpacity
+                    style={styles.extensionModalCancelButton}
+                    onPress={() => setExtendModalVisible(false)}
+                  >
+                    <Text style={styles.extensionModalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.extensionModalConfirmButton,
+                      (!extensionAvailability?.available || extending) && styles.extensionModalConfirmButtonDisabled,
+                    ]}
+                    onPress={handleExtendBooking}
+                    disabled={!extensionAvailability?.available || extending}
+                  >
+                    {extending ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.extensionModalConfirmText}>
+                        Extend & Pay ₱{extensionAvailability?.pricing.total.toFixed(2) || '0.00'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -676,6 +899,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.error,
   },
+  cancelButtonDisabled: {
+    backgroundColor: colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    opacity: 0.6,
+    marginTop: spacing.sm,
+  },
+  cancelButtonDisabledText: {
+    color: colors.text,
+    fontSize: 12,
+    textAlign: 'center',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -705,5 +941,176 @@ const styles = StyleSheet.create({
     fontSize: typography.sm.fontSize,
     color: colors.white,
     fontWeight: '600',
+  },
+  extendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+  },
+  extendButtonIcon: {
+    fontSize: 16,
+  },
+  extendButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  extensionModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  extensionModalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  extensionModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  extensionModalSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 20,
+  },
+  extensionModalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  hoursContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  hourButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  hourButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}10`,
+  },
+  hourButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  hourButtonTextActive: {
+    color: colors.primary,
+  },
+  availabilityBox: {
+    backgroundColor: `${colors.success}10`,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+  },
+  availabilityTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.success,
+    marginBottom: 4,
+  },
+  availabilityText: {
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 12,
+  },
+  unavailableBox: {
+    backgroundColor: `${colors.error}10`,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+  },
+  unavailableTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.error,
+    marginBottom: 4,
+  },
+  unavailableText: {
+    fontSize: 14,
+    color: colors.text,
+    marginTop: 4,
+  },
+  pricingBox: {
+    gap: 8,
+  },
+  pricingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  pricingLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  pricingValue: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  pricingTotal: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  pricingTotalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  pricingTotalValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  extensionModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  extensionModalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  extensionModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  extensionModalConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  extensionModalConfirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  extensionModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

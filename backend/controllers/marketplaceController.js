@@ -376,8 +376,34 @@ exports.searchListings = async (req, res) => {
  */
 exports.createBooking = async (req, res) => {
   try {
-    const { slotId, startTime, endTime } = req.body;
+    const { slotId, startTime, endTime, rentalMode = 'fixed', maxDuration } = req.body;
     const userId = req.user.id;
+
+    // Validate required fields based on rental mode
+    if (!slotId || !startTime) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: slotId, startTime' 
+      });
+    }
+
+    if (rentalMode === 'fixed' && !endTime) {
+      return res.status(400).json({ 
+        error: 'endTime is required for fixed rental mode' 
+      });
+    }
+
+    if (rentalMode === 'open' && !maxDuration) {
+      return res.status(400).json({ 
+        error: 'maxDuration is required for open rental mode' 
+      });
+    }
+
+    // Validate rental mode value
+    if (rentalMode !== 'fixed' && rentalMode !== 'open') {
+      return res.status(400).json({ 
+        error: 'rentalMode must be either "fixed" or "open"' 
+      });
+    }
 
     // Validate slot exists and is available
     const slot = await prisma.parkingSlot.findUnique({
@@ -392,11 +418,23 @@ exports.createBooking = async (req, res) => {
       return res.status(400).json({ error: 'Slot is not available' });
     }
 
-    // Calculate price (basic: hourly rate * hours)
+    // Calculate price based on rental mode
     const start = new Date(startTime);
-    const end = new Date(endTime);
-    const hours = Math.ceil((end - start) / (1000 * 60 * 60));
-    const totalPrice = slot.price * hours;
+    let end, hours, totalPrice, authAmount;
+
+    if (rentalMode === 'fixed') {
+      // Fixed mode: calculate exact price
+      end = new Date(endTime);
+      hours = Math.ceil((end - start) / (1000 * 60 * 60));
+      totalPrice = slot.price * hours;
+      authAmount = null;
+    } else {
+      // Open mode: calculate authorization amount for max duration
+      end = null;
+      hours = maxDuration;
+      authAmount = slot.price * hours; // Pre-auth amount
+      totalPrice = authAmount; // Initial estimate
+    }
 
     // Calculate platform fee (5% commission)
     const platformFeeRate = 0.05;
@@ -409,11 +447,14 @@ exports.createBooking = async (req, res) => {
         slotId: parseInt(slotId),
         userId,
         startTime: start,
-        endTime: end,
+        endTime: end, // null for open mode
+        rentalMode,
+        maxDuration: rentalMode === 'open' ? maxDuration : null,
+        authAmount: authAmount,
         price: totalPrice,
         platformFee,
         hostEarnings,
-        status: 'confirmed',
+        status: 'pending',
       },
       include: {
         slot: {
@@ -458,7 +499,14 @@ exports.createBooking = async (req, res) => {
     });
 
     broadcast({ type: 'booking_created', booking });
-    res.status(201).json(booking);
+    res.status(201).json({
+      message: rentalMode === 'open' 
+        ? 'Booking created. Payment will be authorized for maximum duration.' 
+        : 'Booking created successfully',
+      booking,
+      rentalMode,
+      estimatedAmount: rentalMode === 'open' ? authAmount : totalPrice,
+    });
   } catch (error) {
     console.error('Create booking error:', error);
     res.status(500).json({ error: error.message });
@@ -601,7 +649,10 @@ exports.qrCheckOut = async (req, res) => {
     // Get session
     const session = await prisma.parkingSession.findUnique({
       where: { id: parseInt(sessionId) },
-      include: { slot: true },
+      include: { 
+        slot: true,
+        booking: true
+      },
     });
 
     if (!session) {
@@ -624,6 +675,86 @@ exports.qrCheckOut = async (req, res) => {
     const hours = Math.ceil(durationMinutes / 60);
     const totalAmount = session.slot.price * hours;
 
+    // Handle payment capture for open rental mode bookings
+    let captureResult = null;
+    if (session.booking && session.booking.rentalMode === 'open' && session.booking.authId) {
+      try {
+        const paymongoService = require('../services/paymongo');
+        const actualAmount = totalAmount;
+        const maxAmount = session.booking.authAmount || 0;
+        
+        // Capture only the actual amount (up to authorized max)
+        const captureAmount = Math.min(actualAmount, maxAmount);
+        
+        console.log(`💳 Capturing payment for Booking #${session.bookingId}: ₱${captureAmount.toFixed(2)} (actual: ₱${actualAmount.toFixed(2)}, max: ₱${maxAmount.toFixed(2)})`);
+        
+        captureResult = await paymongoService.capturePaymentIntent(
+          session.booking.authId,
+          captureAmount
+        );
+        
+        if (!captureResult.success) {
+          console.error('Payment capture error:', captureResult.error);
+          return res.status(500).json({ 
+            error: 'Failed to process payment',
+            details: captureResult.error.message 
+          });
+        }
+
+        // Update payment record to completed
+        // First, get the existing payment to preserve metadata
+        const existingPayment = await prisma.payment.findFirst({
+          where: {
+            bookingId: session.bookingId,
+            metadata: {
+              path: ['paymentIntentId'],
+              equals: session.booking.authId
+            }
+          }
+        });
+
+        if (existingPayment) {
+          await prisma.payment.update({
+            where: { id: existingPayment.id },
+            data: {
+              status: 'completed',
+              amount: captureAmount,
+              metadata: {
+                ...existingPayment.metadata,
+                capturedAt: new Date().toISOString(),
+                capturedAmount: captureAmount
+              }
+            }
+          });
+        }
+        
+        // If actual amount exceeds authorized max, log overstay charge needed
+        if (actualAmount > maxAmount) {
+          const overstayAmount = actualAmount - maxAmount;
+          console.log(`⚠️  Overstay detected: Booking ${session.bookingId}, Extra charge needed: ₱${overstayAmount.toFixed(2)}`);
+          
+          // TODO: Create additional charge or add to user balance
+          // For now, we'll create a notification for the user
+          await prisma.notification.create({
+            data: {
+              userId: session.userId,
+              title: 'Additional Payment Required ⚠️',
+              body: `Your parking exceeded the prepaid duration. Additional charge: ₱${overstayAmount.toFixed(2)}. Please settle this amount.`,
+              type: 'payment_required',
+              data: JSON.stringify({ 
+                sessionId: session.id, 
+                bookingId: session.bookingId,
+                overstayAmount: overstayAmount 
+              }),
+            },
+          });
+        }
+      } catch (paymentError) {
+        console.error('Payment capture error:', paymentError);
+        return res.status(500).json({ error: 'Failed to process payment' });
+      }
+    }
+
     // Update session
     const updatedSession = await prisma.parkingSession.update({
       where: { id: parseInt(sessionId) },
@@ -633,7 +764,7 @@ exports.qrCheckOut = async (req, res) => {
         totalAmount,
         status: 'completed',
       },
-      include: { slot: true },
+      include: { slot: true, booking: true },
     });
 
     // Update slot status
@@ -642,17 +773,42 @@ exports.qrCheckOut = async (req, res) => {
       data: { status: 'available' },
     });
 
-    // Create payment record (link to booking if session has one)
-    const payment = await prisma.payment.create({
-      data: {
-        userId,
-        sessionId: session.id,
-        bookingId: session.bookingId,
-        amount: totalAmount,
-        paymentMethod: 'pending',
-        status: 'pending',
-      },
-    });
+    // Update booking to completed if it exists
+    if (session.bookingId) {
+      await prisma.booking.update({
+        where: { id: session.bookingId },
+        data: { 
+          status: 'completed',
+          endTime: checkOutTime
+        },
+      });
+    }
+
+    // Create payment record only if not already handled by authorization capture
+    let payment = null;
+    if (!captureResult) {
+      payment = await prisma.payment.create({
+        data: {
+          userId,
+          sessionId: session.id,
+          bookingId: session.bookingId,
+          amount: totalAmount,
+          paymentMethod: 'pending',
+          status: 'pending',
+        },
+      });
+    } else {
+      // Find the existing payment that was captured
+      payment = await prisma.payment.findFirst({
+        where: {
+          bookingId: session.bookingId,
+          metadata: {
+            path: ['paymentIntentId'],
+            equals: session.booking.authId
+          }
+        }
+      });
+    }
 
     // Notify user of check-out completion and payment
     if (session.booking?.userId) {
@@ -1100,13 +1256,39 @@ exports.cancelBooking = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to cancel this booking' });
     }
 
+    // Check if booking has already started or is within cancellation deadline
+    const now = new Date();
+    const bookingStartTime = new Date(booking.startTime);
+    const cancellationDeadline = new Date(bookingStartTime.getTime() - 30 * 60 * 1000); // 30 minutes before
+
+    if (now >= cancellationDeadline) {
+      return res.status(400).json({ 
+        error: 'Cannot cancel booking within 30 minutes of start time or after it has started',
+        code: 'CANCELLATION_DEADLINE_PASSED'
+      });
+    }
+
+    // Cannot cancel if already checked in
+    if (booking.status === 'active') {
+      return res.status(400).json({ 
+        error: 'Cannot cancel an active booking. Please check out first.',
+        code: 'BOOKING_ALREADY_ACTIVE'
+      });
+    }
+
     // Check if booking is already cancelled or completed
     if (booking.status === 'cancelled') {
-      return res.status(400).json({ error: 'Booking is already cancelled' });
+      return res.status(400).json({ 
+        error: 'Booking is already cancelled',
+        code: 'ALREADY_CANCELLED'
+      });
     }
 
     if (booking.status === 'completed') {
-      return res.status(400).json({ error: 'Cannot cancel a completed booking' });
+      return res.status(400).json({ 
+        error: 'Cannot cancel a completed booking',
+        code: 'BOOKING_COMPLETED'
+      });
     }
 
     // Update booking status to cancelled
@@ -1138,9 +1320,9 @@ exports.cancelBooking = async (req, res) => {
     // Notify host of cancellation
     await prisma.notification.create({
       data: {
-        userId: slot.ownerId,
+        userId: booking.slot.ownerId,
         title: 'Booking Cancelled ❌',
-        body: `A booking for ${slot.address} has been cancelled.`,
+        body: `A booking for ${booking.slot.address} has been cancelled.`,
         type: 'booking_cancelled',
         data: JSON.stringify({ bookingId: booking.id }),
       },
@@ -1308,6 +1490,260 @@ exports.getUpcomingBookings = async (req, res) => {
     res.json({ bookings });
   } catch (error) {
     console.error('Get upcoming bookings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Check if booking can be extended
+ * GET /marketplace/bookings/:id/extension-availability
+ */
+exports.checkExtensionAvailability = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { hours } = req.query; // Requested extension hours
+    const userId = req.user.id;
+
+    // Get booking details
+    const booking = await prisma.booking.findUnique({
+      where: { id: parseInt(id) },
+      include: { slot: true },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Verify ownership
+    if (booking.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Only fixed mode bookings can be extended
+    if (booking.rentalMode !== 'fixed') {
+      return res.status(400).json({ 
+        error: 'Only fixed duration bookings can be extended',
+        code: 'INVALID_RENTAL_MODE'
+      });
+    }
+
+    // Check booking status
+    if (booking.status === 'completed') {
+      return res.status(400).json({ 
+        error: 'Cannot extend completed booking',
+        code: 'BOOKING_COMPLETED'
+      });
+    }
+
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ 
+        error: 'Cannot extend cancelled booking',
+        code: 'BOOKING_CANCELLED'
+      });
+    }
+
+    // Check if booking has already ended
+    const now = new Date();
+    const currentEndTime = new Date(booking.endTime);
+    
+    if (now > currentEndTime) {
+      return res.status(400).json({ 
+        error: 'Booking has already ended',
+        code: 'BOOKING_ENDED'
+      });
+    }
+
+    // Calculate new end time
+    const requestedHours = parseInt(hours) || 1;
+    const newEndTime = new Date(currentEndTime.getTime() + (requestedHours * 60 * 60 * 1000));
+
+    // Check for conflicting bookings
+    const conflictingBookings = await prisma.booking.findMany({
+      where: {
+        slotId: booking.slotId,
+        id: { not: parseInt(id) },
+        status: { in: ['confirmed', 'active', 'pending'] },
+        OR: [
+          {
+            startTime: { lte: newEndTime },
+            endTime: { gte: currentEndTime },
+          },
+        ],
+      },
+    });
+
+    const isAvailable = conflictingBookings.length === 0;
+
+    // Calculate extension cost
+    const extensionCost = booking.slot.price * requestedHours;
+    const serviceFee = 10; // Lower service fee for extensions
+    const tax = extensionCost * 0.05;
+    const totalCost = extensionCost + serviceFee + tax;
+
+    res.json({
+      available: isAvailable,
+      currentEndTime: currentEndTime.toISOString(),
+      requestedEndTime: newEndTime.toISOString(),
+      extensionHours: requestedHours,
+      pricing: {
+        extensionCost,
+        serviceFee,
+        tax,
+        total: totalCost,
+      },
+      conflictingBooking: conflictingBookings.length > 0 ? {
+        startTime: conflictingBookings[0].startTime,
+      } : null,
+    });
+  } catch (error) {
+    console.error('Check extension availability error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Extend booking
+ * POST /marketplace/bookings/:id/extend
+ */
+exports.extendBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { hours, paymentIntentId } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!hours || !paymentIntentId) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: hours, paymentIntentId' 
+      });
+    }
+
+    const extensionHours = parseInt(hours);
+    if (extensionHours < 1 || extensionHours > 4) {
+      return res.status(400).json({ 
+        error: 'Extension hours must be between 1 and 4' 
+      });
+    }
+
+    // Get booking with slot details
+    const booking = await prisma.booking.findUnique({
+      where: { id: parseInt(id) },
+      include: { slot: true },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Verify ownership
+    if (booking.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Validate booking state (same checks as availability)
+    if (booking.rentalMode !== 'fixed') {
+      return res.status(400).json({ error: 'Only fixed duration bookings can be extended' });
+    }
+
+    if (['completed', 'cancelled'].includes(booking.status)) {
+      return res.status(400).json({ error: `Cannot extend ${booking.status} booking` });
+    }
+
+    const now = new Date();
+    const currentEndTime = new Date(booking.endTime);
+    
+    if (now > currentEndTime) {
+      return res.status(400).json({ error: 'Booking has already ended' });
+    }
+
+    // Calculate new end time
+    const newEndTime = new Date(currentEndTime.getTime() + (extensionHours * 60 * 60 * 1000));
+
+    // Double-check availability (race condition protection)
+    const conflictingBookings = await prisma.booking.findMany({
+      where: {
+        slotId: booking.slotId,
+        id: { not: parseInt(id) },
+        status: { in: ['confirmed', 'active', 'pending'] },
+        OR: [
+          {
+            startTime: { lte: newEndTime },
+            endTime: { gte: currentEndTime },
+          },
+        ],
+      },
+    });
+
+    if (conflictingBookings.length > 0) {
+      return res.status(409).json({ 
+        error: 'Slot is no longer available for the requested extension time',
+        code: 'SLOT_CONFLICT'
+      });
+    }
+
+    // Calculate costs
+    const extensionCost = booking.slot.price * extensionHours;
+    const serviceFee = 10;
+    const tax = extensionCost * 0.05;
+    const totalCost = extensionCost + serviceFee + tax;
+
+    // Update booking with extension
+    const updatedBooking = await prisma.booking.update({
+      where: { id: parseInt(id) },
+      data: {
+        originalEndTime: booking.originalEndTime || booking.endTime, // Store original if first extension
+        endTime: newEndTime,
+        extensionCount: { increment: 1 },
+        totalExtensionHrs: { increment: extensionHours },
+        lastExtendedAt: now,
+        price: { increment: totalCost }, // Add extension cost to total price
+      },
+    });
+
+    // Create payment record for extension
+    await prisma.payment.create({
+      data: {
+        userId,
+        bookingId: parseInt(id),
+        amount: totalCost,
+        paymentMethod: 'extension',
+        status: 'completed',
+        paymentIntent: paymentIntentId,
+        paymentDetails: JSON.stringify({
+          type: 'extension',
+          hours: extensionHours,
+          originalEndTime: currentEndTime,
+          newEndTime,
+        }),
+      },
+    });
+
+    // Create notification
+    await prisma.notification.create({
+      data: {
+        userId: booking.slot.ownerId,
+        title: 'Booking Extended',
+        body: `A booking at ${booking.slot.address} has been extended by ${extensionHours} hour(s).`,
+        type: 'booking_extended',
+        data: JSON.stringify({ 
+          bookingId: booking.id,
+          extensionHours,
+          newEndTime,
+        }),
+      },
+    });
+
+    res.json({
+      message: 'Booking extended successfully',
+      booking: updatedBooking,
+      extension: {
+        hours: extensionHours,
+        cost: totalCost,
+        newEndTime: newEndTime.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Extend booking error:', error);
     res.status(500).json({ error: error.message });
   }
 };

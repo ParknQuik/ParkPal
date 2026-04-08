@@ -16,26 +16,13 @@ console.log('📡 API Configuration:');
 console.log('  Base URL:', API_BASE_URL);
 console.log('  Backend:', isLocalBackend() ? '🏠 Local' : '☁️  Deployed');
 
-// Request interceptor to add auth token and log requests
+// Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Log API requests for debugging
-    console.log('\n📤 API Request:');
-    console.log('  Method:', config.method?.toUpperCase());
-    console.log('  URL:', `${config.baseURL || ''}${config.url || ''}`);
-    console.log('  Headers:', JSON.stringify(config.headers, null, 2));
-    if (config.data) {
-      console.log('  Body:', typeof config.data === 'string' ? config.data : JSON.stringify(config.data, null, 2));
-    }
-    if (config.params) {
-      console.log('  Params:', JSON.stringify(config.params, null, 2));
-    }
-    
     return config;
   },
   (error) => {
@@ -44,38 +31,23 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors and log responses
+// Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => {
-    // Log successful responses
-    console.log('\n📥 API Response:');
-    console.log('  Status:', response.status, response.statusText);
-    console.log('  URL:', response.config.url);
-    console.log('  Data:', JSON.stringify(response.data, null, 2));
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    console.error('\n❌ API Error Response:');
-    console.error('  URL:', error.config?.url);
-    console.error('  Method:', error.config?.method?.toUpperCase());
-    
     if (error.response) {
-      console.error('  Status:', error.response.status, error.response.statusText);
-      console.error('  Headers:', JSON.stringify(error.response.headers, null, 2));
-      console.error('  Data:', JSON.stringify(error.response.data, null, 2));
+      console.error(
+        `❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} - Status: ${error.response.status}`
+      );
       
       if (error.response.status === 401) {
-        // Token expired or invalid, clear storage and redirect to login
-        console.log('  🔐 Clearing auth storage due to 401');
         await AsyncStorage.removeItem('token');
         await AsyncStorage.removeItem('user');
-        // TODO: Navigate to login screen
       }
     } else if (error.request) {
-      console.error('  No response received');
-      console.error('  Request:', error.request);
+      console.error('❌ API Error: No response received');
     } else {
-      console.error('  Error:', error.message);
+      console.error('❌ API Error:', error.message);
     }
     
     return Promise.reject(error);
@@ -175,6 +147,16 @@ export const marketplaceAPI = {
 
   cancelBooking: (bookingId: number) =>
     api.patch(`/marketplace/bookings/${bookingId}/cancel`),
+
+  // Check if booking can be extended
+  checkExtensionAvailability: (bookingId: number, hours: number) =>
+    api.get(`/marketplace/bookings/${bookingId}/extension-availability`, {
+      params: { hours },
+    }),
+
+  // Extend booking
+  extendBooking: (bookingId: number, data: { hours: number; paymentIntentId: string }) =>
+    api.post(`/marketplace/bookings/${bookingId}/extend`, data),
 
   // QR Code operations
   qrCheckIn: (data: { qrData: string; bookingId?: number }) =>

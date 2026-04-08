@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const secretManager = require('./config/secretManager');
@@ -188,6 +189,22 @@ app.use(errorHandler);
 // WebSocket setup
 const websocketService = require('./services/websocket');
 websocketService.init(server);
+
+// Auto-checkout cron job setup
+if (process.env.NODE_ENV !== 'test') {
+  const { autoCheckoutExpiredSessions } = require('./services/autoCheckout');
+  
+  // Schedule auto-checkout job - runs every 30 minutes
+  cron.schedule('*/30 * * * *', async () => {
+    try {
+      await autoCheckoutExpiredSessions();
+    } catch (error) {
+      logger.error('[Cron] Auto-checkout failed:', error);
+    }
+  });
+  
+  logger.info('Auto-checkout cron job scheduled (every 30 minutes)');
+}
 
 // Only start server if not in test mode
 if (process.env.NODE_ENV !== 'test') {

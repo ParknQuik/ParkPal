@@ -299,6 +299,9 @@ model ZoneMetrics {
 // MARKETPLACE BOOKINGS & PAYOUTS
 // ============================================
 
+// Rental modes:
+// - 'fixed': Traditional booking with preset start and end times
+// - 'open': Open-ended booking, end time determined by QR checkout
 model Booking {
   id              Int       @id @default(autoincrement())
   slotId          Int       @map("slot_id")
@@ -306,12 +309,28 @@ model Booking {
 
   // Booking time window
   startTime       DateTime  @map("start_time")
-  endTime         DateTime  @map("end_time")
+  endTime         DateTime? @map("end_time") // Nullable for open-ended bookings
+
+  // Rental mode
+  rentalMode      String    @default("fixed") @map("rental_mode") // 'fixed' or 'open'
+  
+  // For open mode: maximum allowed duration in hours
+  maxDuration     Int?      @map("max_duration") // e.g., 12 hours
+  
+  // For open mode: payment authorization
+  authAmount      Float?    @map("auth_amount") // Pre-authorized amount
+  authId          String?   @map("auth_id") // Payment authorization ID
 
   // Pricing
   price           Float     // Total price for the booking
   platformFee     Float     @default(0) @map("platform_fee") // 5-7% commission
   hostEarnings    Float     @map("host_earnings") // price - platformFee
+
+  // Extension tracking
+  originalEndTime   DateTime? @map("original_end_time") // Store original end time before extensions
+  extensionCount    Int       @default(0) @map("extension_count") // Number of times extended
+  totalExtensionHrs Int       @default(0) @map("total_extension_hrs") // Total hours added via extensions
+  lastExtendedAt    DateTime? @map("last_extended_at") // When last extension was made
 
   // Status
   status          String    @default("pending") // pending, confirmed, active, completed, cancelled

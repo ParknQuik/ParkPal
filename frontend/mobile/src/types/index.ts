@@ -223,6 +223,7 @@ export interface MarketplaceListing {
 export interface MarketplaceBooking {
   id: number;
   listingId: number;
+  slotId: number;
   listingTitle: string;
   listingAddress: string;
   listingPhoto?: string;
@@ -231,6 +232,7 @@ export interface MarketplaceBooking {
   totalAmount: number;
   platformFee: number;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+  rentalMode: 'fixed' | 'hourly';
   qrCode?: string;
   sessionId?: number;
   createdAt: string;

@@ -66,6 +66,8 @@ export const ReserveSpot: React.FC = () => {
   const [pickerMode, setPickerMode] = useState<PickerMode>('date');
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>('startDate');
   const [isBooking, setIsBooking] = useState(false);
+  const [rentalMode, setRentalMode] = useState<'fixed' | 'open'>('fixed');
+  const MAX_DURATION_HOURS = 12;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -142,22 +144,26 @@ export const ReserveSpot: React.FC = () => {
     }
   };
 
-  const hours = Math.max(
-    1,
-    Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)),
-  );
+  const hours = rentalMode === 'fixed' 
+    ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)))
+    : MAX_DURATION_HOURS; // Show max price estimate for open mode
+  
   const pricePerHour = spot?.price || spot?.pricePerHour || 0;
   const parkingFee = hours * pricePerHour;
   const serviceFee = 25;
   const tax = parkingFee * 0.05;
   const total = parkingFee + serviceFee + tax;
 
+  const priceLabel = rentalMode === 'open' 
+    ? `Estimated max (${MAX_DURATION_HOURS}hrs)` 
+    : 'Total';
+
   const handleProceedToPayment = async () => {
     if (startDate <= new Date()) {
       Alert.alert('Invalid Date', 'Start date/time must be in the future.');
       return;
     }
-    if (endDate <= startDate) {
+    if (rentalMode === 'fixed' && endDate <= startDate) {
       Alert.alert('Invalid Date', 'End date/time must be after start date/time.');
       return;
     }
@@ -178,6 +184,8 @@ export const ReserveSpot: React.FC = () => {
         bookingId,
         amount: total,
         spotId,
+        rentalMode,
+        maxDuration: rentalMode === 'open' ? MAX_DURATION_HOURS : undefined,
       });
     } catch (err) {
       console.error('Booking failed:', err);
@@ -255,6 +263,49 @@ export const ReserveSpot: React.FC = () => {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Rental Mode</Text>
+          <View style={styles.rentalModeContainer}>
+            <TouchableOpacity
+              style={[
+                styles.rentalModeOption,
+                rentalMode === 'fixed' && styles.rentalModeOptionActive
+              ]}
+              onPress={() => setRentalMode('fixed')}
+            >
+              <View style={styles.rentalModeIcon}>
+                <Text style={styles.rentalModeEmoji}>⏱️</Text>
+              </View>
+              <Text style={[
+                styles.rentalModeText,
+                rentalMode === 'fixed' && styles.rentalModeTextActive
+              ]}>Fixed Duration</Text>
+              <Text style={styles.rentalModeDescription}>
+                Set specific start and end times
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.rentalModeOption,
+                rentalMode === 'open' && styles.rentalModeOptionActive
+              ]}
+              onPress={() => setRentalMode('open')}
+            >
+              <View style={styles.rentalModeIcon}>
+                <Text style={styles.rentalModeEmoji}>🔓</Text>
+              </View>
+              <Text style={[
+                styles.rentalModeText,
+                rentalMode === 'open' && styles.rentalModeTextActive
+              ]}>Open Time</Text>
+              <Text style={styles.rentalModeDescription}>
+                Pay when you checkout (max {MAX_DURATION_HOURS}hrs)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Date & Time</Text>
           <View style={styles.dateTimeGrid}>
             <View style={styles.inputGroup}>
@@ -281,30 +332,34 @@ export const ReserveSpot: React.FC = () => {
                 <Text style={styles.inputIcon}>🕐</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Exit Date</Text>
-              <TouchableOpacity
-                style={styles.inputContainer}
-                onPress={() => openPicker('endDate')}
-              >
-                <Text style={styles.inputText}>{formatDate(endDate)}</Text>
-                <Text style={styles.inputIcon}>📅</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Exit Time</Text>
-              <TouchableOpacity
-                style={styles.inputContainer}
-                onPress={() => {
-                  setPickerTarget('endDate');
-                  setPickerMode('time');
-                  setShowPicker(true);
-                }}
-              >
-                <Text style={styles.inputText}>{formatTime(endDate)}</Text>
-                <Text style={styles.inputIcon}>🕐</Text>
-              </TouchableOpacity>
-            </View>
+            {rentalMode === 'fixed' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Exit Date</Text>
+                  <TouchableOpacity
+                    style={styles.inputContainer}
+                    onPress={() => openPicker('endDate')}
+                  >
+                    <Text style={styles.inputText}>{formatDate(endDate)}</Text>
+                    <Text style={styles.inputIcon}>📅</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Exit Time</Text>
+                  <TouchableOpacity
+                    style={styles.inputContainer}
+                    onPress={() => {
+                      setPickerTarget('endDate');
+                      setPickerMode('time');
+                      setShowPicker(true);
+                    }}
+                  >
+                    <Text style={styles.inputText}>{formatTime(endDate)}</Text>
+                    <Text style={styles.inputIcon}>🕐</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
           {showPicker && (
             <DateTimePicker
@@ -379,7 +434,7 @@ export const ReserveSpot: React.FC = () => {
             <Text style={styles.priceValue}>₱{tax.toFixed(2)}</Text>
           </View>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalLabel}>{priceLabel}</Text>
             <Text style={styles.totalValue}>₱{total.toFixed(2)}</Text>
           </View>
         </View>
@@ -538,6 +593,44 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textPrimary,
     marginBottom: 12,
+  },
+  rentalModeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  rentalModeOption: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  rentalModeOptionActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}10`,
+  },
+  rentalModeIcon: {
+    marginBottom: 8,
+  },
+  rentalModeEmoji: {
+    fontSize: 32,
+  },
+  rentalModeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  rentalModeTextActive: {
+    color: COLORS.primary,
+  },
+  rentalModeDescription: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   dateTimeGrid: {
     flexDirection: 'row',

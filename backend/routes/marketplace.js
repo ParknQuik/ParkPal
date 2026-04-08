@@ -254,6 +254,98 @@ module.exports = (app) => {
 
   /**
    * @swagger
+   * /api/marketplace/bookings/{id}/extension-availability:
+   *   get:
+   *     summary: Check if booking can be extended
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *       - in: query
+   *         name: hours
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 4
+   *         description: Number of hours to extend (1-4)
+   *         example: 1
+   *     responses:
+   *       200:
+   *         description: Extension availability check result
+   *       400:
+   *         description: Invalid booking state for extension
+   *       403:
+   *         description: Unauthorized
+   *       404:
+   *         description: Booking not found
+   */
+  app.get(
+    '/marketplace/bookings/:id/extension-availability',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.checkExtensionAvailability
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/bookings/{id}/extend:
+   *   post:
+   *     summary: Extend an active booking
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - hours
+   *               - paymentIntentId
+   *             properties:
+   *               hours:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 4
+   *                 example: 1
+   *               paymentIntentId:
+   *                 type: string
+   *                 example: "pi_3AbCdEfGhIjKlMnO"
+   *     responses:
+   *       200:
+   *         description: Booking extended successfully
+   *       400:
+   *         description: Invalid input or booking state
+   *       403:
+   *         description: Unauthorized
+   *       404:
+   *         description: Booking not found
+   *       409:
+   *         description: Slot conflict - no longer available for extension
+   */
+  app.post(
+    '/marketplace/bookings/:id/extend',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.extendBooking
+  );
+
+  /**
+   * @swagger
    * /api/marketplace/qr/checkin:
    *   post:
    *     summary: Check in to a parking slot using QR code
