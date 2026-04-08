@@ -194,16 +194,6 @@ export const ParkingDetails: React.FC = () => {
       {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.scanQRButton}
-          onPress={() => navigation.navigate('QRScanner' as never, {
-            mode: 'generic',
-            spotId,
-          } as never)}
-        >
-          <Text style={styles.scanQRIcon}>📱</Text>
-          <Text style={styles.scanQRText}>Scan QR</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           style={styles.reserveButton}
           onPress={() => navigation.navigate('Reservation', { spotId })}
         >
@@ -458,8 +448,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#ffffff',
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -470,29 +458,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 5,
-    gap: 12,
-  },
-  scanQRButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#10b77f',
-    gap: 6,
-  },
-  scanQRIcon: {
-    fontSize: 18,
-  },
-  scanQRText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#10b77f',
   },
   reserveButton: {
-    flex: 1,
     backgroundColor: colors.secondary,
     paddingVertical: 16,
     borderRadius: 12,

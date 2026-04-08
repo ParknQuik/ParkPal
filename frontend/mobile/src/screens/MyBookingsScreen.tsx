@@ -173,6 +173,17 @@ export const MyBookingsScreen: React.FC = () => {
     setQrModalVisible(true);
   }, []);
 
+  const handleScanQR = useCallback(
+    (booking: any) => {
+      const mode = booking.status === 'active' ? 'checkout' : 'checkin';
+      navigation.navigate('QRScanner' as never, {
+        mode,
+        bookingId: booking.id,
+      } as never);
+    },
+    [navigation],
+  );
+
   const filteredBookings = bookings.filter((booking) => {
     if (activeTab === 'upcoming') {
       return booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'active';
@@ -273,6 +284,20 @@ export const MyBookingsScreen: React.FC = () => {
                 )}
               </View>
               <View style={styles.cardActions}>
+                {(booking.status === 'confirmed' || booking.status === 'active') && (
+                  <TouchableOpacity
+                    style={[
+                      styles.scanQRButton,
+                      booking.status === 'active' && styles.scanQRButtonCheckout,
+                    ]}
+                    onPress={() => handleScanQR(booking)}
+                  >
+                    <Text style={styles.scanQRButtonIcon}>📷</Text>
+                    <Text style={styles.scanQRButtonText}>
+                      {booking.status === 'active' ? 'Scan QR to Check-Out' : 'Scan QR to Check-In'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={[
                     styles.actionButton,
@@ -613,6 +638,33 @@ const styles = StyleSheet.create({
     fontSize: typography.sm.fontSize,
     fontWeight: '600',
     color: PRIMARY,
+  },
+  scanQRButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: borderRadius.lg,
+    backgroundColor: PRIMARY,
+    gap: 6,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  scanQRButtonCheckout: {
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+  },
+  scanQRButtonIcon: {
+    fontSize: 16,
+  },
+  scanQRButtonText: {
+    fontSize: typography.sm.fontSize,
+    fontWeight: '700',
+    color: colors.white,
   },
   cancelButton: {
     marginTop: spacing.sm,
