@@ -6,10 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { paymentAPI } from '../services/api';
+import { paymentAPI, marketplaceAPI } from '../services/api';
 
 const PRIMARY = '#10b77f';
 const BACKGROUND = '#f6f6f8';
@@ -35,11 +36,31 @@ export const PaymentScreen: React.FC = () => {
   const handlePayNow = async () => {
     if (!selectedPayment) return;
 
+    if (selectedPayment === 'cash') {
+      try {
+        setLoading(true);
+        
+        const response = await marketplaceAPI.confirmBooking(bookingId);
+        
+        Alert.alert(
+          'Booking Confirmed!',
+          'Please pay in cash when you arrive at the parking location.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        return;
+      } catch (err: any) {
+        Alert.alert('Error', 'Failed to confirm booking. Please try again.');
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
     setLoading(true);
     try {
       const intentResponse = await paymentAPI.createPaymentIntent({
         amount: orderData.total,
-        paymentMethod: selectedPayment as 'gcash' | 'card' | 'grab_pay' | 'paymaya',
+        paymentMethod: selectedPayment as 'cash' | 'gcash' | 'card' | 'grab_pay' | 'paymaya',
         bookingId,
       });
 
@@ -64,6 +85,7 @@ export const PaymentScreen: React.FC = () => {
   };
 
   const paymentMethods = [
+    { id: 'cash', name: 'Cash', icon: '💵', description: 'Pay with cash at location' },
     { id: 'gcash', name: 'GCash', icon: '💚', description: 'Pay with GCash e-wallet' },
     { id: 'card', name: 'Credit/Debit Card', icon: '💳', description: 'Visa, Mastercard, Amex' },
     { id: 'grab_pay', name: 'GrabPay', icon: '🟢', description: 'Pay with GrabPay' },

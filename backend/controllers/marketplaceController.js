@@ -1339,7 +1339,78 @@ exports.cancelBooking = async (req, res) => {
 };
 
 /**
- * Toggle listing availability (activate/pause)
+ * Confirm booking without payment (for cash payments)
+ * POST /marketplace/bookings/:id/confirm
+ */
+exports.confirmBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Find the booking
+    const booking = await prisma.booking.findUnique({
+      where: { id: parseInt(id) },
+      include: { slot: true },
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Ensure user can only confirm their own bookings
+    if (booking.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to confirm this booking' });
+    }
+
+    // Check booking status
+    if (booking.status !== 'pending') {
+      return res.status(400).json({ 
+        error: `Cannot confirm booking with status '${booking.status}'. Only pending bookings can be confirmed.` 
+      });
+    }
+
+    // Update booking status to confirmed
+    const updatedBooking = await prisma.booking.update({
+      where: { id: parseInt(id) },
+      data: { status: 'confirmed' },
+      include: {
+        slot: {
+          select: { id: true, address: true, status: true }
+        }
+      }
+    });
+
+    // Update slot status to reserved
+    if (booking.slot.status === 'available') {
+      await prisma.parkingSlot.update({
+        where: { id: booking.slotId },
+        data: { status: 'reserved' },
+      });
+    }
+
+    // Notify host
+    await prisma.notification.create({
+      data: {
+        userId: booking.slot.ownerId,
+        title: 'Booking Confirmed - Cash Payment',
+        body: `A booking at ${booking.slot.address} has been confirmed. Guest will pay in cash.`,
+        type: 'booking_confirmed',
+        data: JSON.stringify({ bookingId: booking.id, paymentMethod: 'cash' }),
+      },
+    });
+
+    res.json({
+      message: 'Booking confirmed successfully with cash payment',
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    console.error('Confirm booking error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get reviews for a specific listing
  */
 exports.toggleListingAvailability = async (req, res) => {
   try {

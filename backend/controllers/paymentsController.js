@@ -27,6 +27,16 @@ exports.createPaymentIntent = async (req, res) => {
       return res.status(400).json({ error: 'Booking already paid' });
     }
 
+    if (paymentMethod === 'cash') {
+      return res.json({
+        paymentIntentId: `cash_${booking.id}_${Date.now()}`,
+        message: 'Cash payment selected. Pay at location.',
+        requiresPayment: false,
+        amount: amount,
+        bookingId: parseInt(bookingId)
+      });
+    }
+
     // Determine capture type based on rental mode
     const isOpenMode = booking.rentalMode === 'open';
     const captureType = isOpenMode ? 'manual' : 'automatic';
@@ -107,6 +117,54 @@ exports.confirmPayment = async (req, res) => {
   try {
     const { paymentIntentId } = req.body;
     const userId = req.user.id;
+
+    if (paymentIntentId.startsWith('cash_')) {
+      const bookingId = parseInt(paymentIntentId.split('_')[1]);
+      
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId }
+      });
+      
+      if (!booking) {
+        return res.status(404).json({ error: 'Booking not found' });
+      }
+      
+      if (booking.userId !== userId) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+      
+      const payment = await prisma.payment.create({
+        data: {
+          userId: req.user.id,
+          bookingId: bookingId,
+          amount: booking.price,
+          paymentMethod: 'cash',
+          status: 'pending',
+          paymentIntent: paymentIntentId,
+        }
+      });
+      
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'confirmed' }
+      });
+      
+      await prisma.notification.create({
+        data: {
+          userId: booking.hostId,
+          title: 'Booking Confirmed - Cash Payment',
+          body: `Booking #${bookingId} confirmed. Guest will pay in cash.`,
+          type: 'booking_confirmed',
+          data: JSON.stringify({ bookingId, paymentMethod: 'cash' })
+        }
+      });
+      
+      return res.json({
+        message: 'Booking confirmed. Please collect cash payment from customer.',
+        payment: payment,
+        booking: { ...booking, status: 'confirmed' }
+      });
+    }
 
     // Retrieve PaymentIntent from PayMongo
     const result = await paymongoService.getPaymentIntent(paymentIntentId);

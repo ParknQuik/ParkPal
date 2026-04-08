@@ -148,6 +148,10 @@ export const marketplaceAPI = {
   cancelBooking: (bookingId: number) =>
     api.patch(`/marketplace/bookings/${bookingId}/cancel`),
 
+  // Confirm booking without payment (for cash payments)
+  confirmBooking: (bookingId: number) =>
+    api.post(`/marketplace/bookings/${bookingId}/confirm`),
+
   // Check if booking can be extended
   checkExtensionAvailability: (bookingId: number, hours: number) =>
     api.get(`/marketplace/bookings/${bookingId}/extension-availability`, {
@@ -227,7 +231,7 @@ export const paymentAPI = {
   createPaymentIntent: (data: {
     bookingId: number;
     amount: number;
-    paymentMethod: 'gcash' | 'card' | 'grab_pay' | 'paymaya';
+    paymentMethod: 'cash' | 'gcash' | 'card' | 'grab_pay' | 'paymaya';
   }) => api.post('/payments/intent', data),
 
   // Confirm payment after completion

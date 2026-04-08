@@ -252,6 +252,14 @@ module.exports = (app) => {
     marketplaceController.cancelBooking
   );
 
+  // Confirm booking without payment (cash payments)
+  app.post(
+    '/marketplace/bookings/:id/confirm',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.confirmBooking
+  );
+
   /**
    * @swagger
    * /api/marketplace/bookings/{id}/extension-availability:
