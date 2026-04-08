@@ -20,7 +20,7 @@ import { colors, typography, spacing, borderRadius } from '../theme';
 
 const CUSTOM_COLORS = {
   primary: '#10b77f',
-  accentOrange: '#f97316',
+  accentOrange: colors.secondary,
   background: '#f6f8f7',
 };
 

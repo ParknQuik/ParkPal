@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "FORCE_COLOR=0 node index.js",
+    "dev": "FORCE_COLOR=0 nodemon index.js",
     "seed": "node prisma/seed.js",
     "test": "NODE_ENV=test jest --detectOpenHandles --forceExit",
     "test:watch": "NODE_ENV=test jest --watch",

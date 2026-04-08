@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -6,11 +7,11 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -19,6 +20,61 @@ import { searchListings } from '../store/slices/marketplaceSlice';
 import { colors } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
+
+// ---------------------------------------------------------------------------
+// SVG-based price marker — Android-safe, no View/Text clipping issues.
+//
+// Strategy (Option C): Build the entire marker as an inline SVG string with
+// explicit width/height. react-native-svg renders it at exact pixel dimensions,
+// so Android knows the canvas size before the first paint and never clips.
+// tracksViewChanges is locked to false immediately after mount so the JS bridge
+// is only crossed once per marker.
+// ---------------------------------------------------------------------------
+
+const PriceMarker = React.memo(({ listing, selected, onPress }: {
+  listing: any;
+  selected: boolean;
+  onPress: (id: any) => void;
+}) => {
+  const [tracksChanges, setTracksChanges] = React.useState(true);
+  const price = listing.pricePerHour != null ? `P${listing.pricePerHour}` : 'P—';
+  const bg = selected ? '#10b77f' : '#ffffff';
+  const textColor = selected ? '#ffffff' : '#10b77f';
+
+  return (
+    <Marker
+      coordinate={{ latitude: listing.latitude, longitude: listing.longitude }}
+      onPress={() => onPress(listing.id)}
+      tracksViewChanges={tracksChanges}
+      anchor={{ x: 0.5, y: 0.5 }}
+    >
+      <View
+        collapsable={false}
+        style={{ width: 80, height: 36 }}
+        onLayout={() => setTracksChanges(false)}
+      >
+        <Svg width={80} height={36}>
+          <Rect
+            x={2} y={2} width={76} height={32}
+            rx={8} ry={8}
+            fill={bg}
+            stroke="#10b77f"
+            strokeWidth={2}
+          />
+          <SvgText
+            x={40} y={22}
+            textAnchor="middle"
+            fontSize={13}
+            fontWeight="bold"
+            fill={textColor}
+          >
+            {price}
+          </SvgText>
+        </Svg>
+      </View>
+    </Marker>
+  );
+});
 
 export const ExploreMap: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -33,9 +89,11 @@ export const ExploreMap: React.FC = () => {
   const [region, setRegion] = useState({
     latitude: 14.5995,
     longitude: 120.9842,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
   });
+  const [locationReady, setLocationReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   const { listings, loading } = useAppSelector((state) => state.marketplace);
 
@@ -57,10 +115,38 @@ export const ExploreMap: React.FC = () => {
     }
   }, [dispatch, searchQuery]);
 
-  // Fetch on mount only
-  useEffect(() => {
-    fetchListings(region.latitude, region.longitude);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const centerOnUser = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        const newRegion = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 500);
+        fetchListings(location.coords.latitude, location.coords.longitude);
+      } else {
+        fetchListings(region.latitude, region.longitude);
+      }
+    } catch {
+      fetchListings(region.latitude, region.longitude);
+    } finally {
+      setLocationReady(true);
+    }
+  }, [fetchListings]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Center on user every time this tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      centerOnUser();
+    }, [centerOnUser])
+  );
 
   // Debounced search when searchQuery changes
   useEffect(() => {
@@ -83,32 +169,9 @@ export const ExploreMap: React.FC = () => {
     setRefreshing(false);
   }, [fetchListings]);
 
-  const handleRecenter = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Location permission is required to show your location');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const newRegion = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      };
-
-      mapRef.current?.animateToRegion(newRegion, 1000);
-      setRegion(newRegion);
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert('Error', 'Could not get your current location');
-    }
-  };
+  const handleRecenter = useCallback(() => {
+    centerOnUser();
+  }, [centerOnUser]);
 
   const handleZoomIn = () => {
     const newRegion = {
@@ -188,32 +251,18 @@ export const ExploreMap: React.FC = () => {
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           region={region}
+          onMapReady={() => { setMapReady(true); centerOnUser(); }}
           onRegionChangeComplete={(r) => { setRegion(r); setHasMovedMap(true); }}
           showsUserLocation
           showsMyLocationButton={false}
-          mapPadding={{
-            top: 180,
-            right: 16,
-            bottom: height * 0.28,
-            left: 16,
-          }}
         >
           {listings.map((listing: any) => (
-            <Marker
+            <PriceMarker
               key={listing.id}
-              coordinate={{
-                latitude: listing.latitude,
-                longitude: listing.longitude,
-              }}
-              onPress={() => handleMarkerPress(listing.id)}
-            >
-              <View style={[
-                styles.markerContainer,
-                selectedMarker === listing.id && styles.markerSelected
-              ]}>
-                <Text style={styles.markerPrice}>₱{listing.pricePerHour}</Text>
-              </View>
-            </Marker>
+              listing={listing}
+              selected={selectedMarker === listing.id}
+              onPress={handleMarkerPress}
+            />
           ))}
         </MapView>
 
@@ -425,49 +474,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-  },
-  markerContainer: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  markerSelected: {
-    backgroundColor: colors.primary,
-    transform: [{ scale: 1.1 }],
-  },
-  markerPrice: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  markerIcon: {
-    fontSize: 20,
-  },
-  markerLabel: {
-    position: 'absolute',
-    top: 52,
-    backgroundColor: colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  markerLabelText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   mapControls: {
     position: 'absolute',

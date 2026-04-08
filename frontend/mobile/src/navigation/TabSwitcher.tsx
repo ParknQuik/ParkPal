@@ -1,16 +1,12 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { HomeDashboard } from '../screens/HomeDashboard';
 import { ExploreMap } from '../screens/ExploreMap';
 import { MyBookingsScreen } from '../screens/MyBookingsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
-
-const TabIcon: React.FC<{ icon: string }> = ({ icon }) => (
-  <Text>{icon}</Text>
-);
 
 export const TabSwitcher: React.FC = () => {
   return (
@@ -21,28 +17,57 @@ export const TabSwitcher: React.FC = () => {
         tabBarInactiveTintColor: '#64748b',
         tabBarStyle: {
           backgroundColor: 'white',
+          borderTopWidth: 1,
+          borderTopColor: '#e5e7eb',
+          paddingBottom: 4,
+          paddingTop: 4,
+          height: 60,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
         },
       }}
     >
       <Tab.Screen
         name="Home"
         component={HomeDashboard}
-        options={{ tabBarIcon: () => <TabIcon icon="🏠" />, tabBarLabel: 'Home' }}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="home-outline" size={size} color={color} />
+          ),
+          tabBarLabel: 'Home',
+        }}
       />
       <Tab.Screen
         name="Explore"
         component={ExploreMap}
-        options={{ tabBarIcon: () => <TabIcon icon="🗺️" />, tabBarLabel: 'Explore' }}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="map-outline" size={size} color={color} />
+          ),
+          tabBarLabel: 'Explore',
+        }}
       />
       <Tab.Screen
         name="MyBookings"
         component={MyBookingsScreen}
-        options={{ tabBarIcon: () => <TabIcon icon="📋" />, tabBarLabel: 'Bookings' }}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="calendar-text" size={size} color={color} />
+          ),
+          tabBarLabel: 'Bookings',
+        }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarIcon: () => <TabIcon icon="👤" />, tabBarLabel: 'Profile' }}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account-outline" size={size} color={color} />
+          ),
+          tabBarLabel: 'Profile',
+        }}
       />
     </Tab.Navigator>
   );

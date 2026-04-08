@@ -152,7 +152,8 @@ export const MyVehiclesScreen: React.FC = () => {
       handleCloseModal();
       loadVehicles();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to save vehicle');
+      const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to save vehicle';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -172,7 +173,8 @@ export const MyVehiclesScreen: React.FC = () => {
               await dispatch(deleteVehicle(vehicle.id)).unwrap();
               Alert.alert('Success', 'Vehicle deleted successfully');
             } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to delete vehicle');
+              const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to delete vehicle';
+              Alert.alert('Error', errorMessage);
             }
           },
         },
@@ -185,7 +187,8 @@ export const MyVehiclesScreen: React.FC = () => {
       await dispatch(setDefaultVehicle(vehicle.id)).unwrap();
       Alert.alert('Success', 'Default vehicle updated');
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to set default vehicle');
+      const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to set default vehicle';
+      Alert.alert('Error', errorMessage);
     }
   };
 

@@ -20,8 +20,6 @@ import { marketplaceAPI } from '../services/api';
 import { colors, typography, spacing, borderRadius } from '../theme';
 
 const PRIMARY = '#10b77f';
-const SECONDARY_ORANGE = '#f97316';
-const ACCENT_YELLOW = '#fbbf24';
 const BACKGROUND = '#f6f8f7';
 
 type TabType = 'upcoming' | 'completed' | 'cancelled';
@@ -38,11 +36,11 @@ const getStatusColor = (status: string) => {
     case 'active':
       return PRIMARY;
     case 'pending':
-      return SECONDARY_ORANGE;
+      return colors.secondary;
     case 'completed':
       return PRIMARY;
     case 'cancelled':
-      return '#ef4444';
+      return colors.error;
     default:
       return PRIMARY;
   }
@@ -80,8 +78,8 @@ const getActionButtonText = (status: string) => {
 };
 
 const getActionButtonColor = (status: string) => {
-  if (status === 'pending') return SECONDARY_ORANGE;
-  if (status === 'completed') return ACCENT_YELLOW;
+  if (status === 'pending') return colors.secondary;
+  if (status === 'completed') return colors.accent;
   return PRIMARY;
 };
 
@@ -123,19 +121,21 @@ export const MyBookingsScreen: React.FC = () => {
 
   const handleAction = useCallback(
     (booking: any) => {
+      console.log('[MyBookings] booking:', JSON.stringify(booking));
+      console.log('[MyBookings] slotId:', booking.slotId);
       switch (booking.status) {
         case 'confirmed':
         case 'active':
-          navigation.navigate('ParkingDetail' as never, { spotId: booking.listingId } as never);
+          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId } as never);
           break;
         case 'pending':
           navigation.navigate('Payment' as never, { bookingId: booking.id, amount: booking.totalAmount } as never);
           break;
         case 'completed':
-          navigation.navigate('WriteReview' as never, { spotId: booking.listingId } as never);
+          navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never);
           break;
         default:
-          navigation.navigate('ParkingDetail' as never, { spotId: booking.listingId } as never);
+          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId } as never);
           break;
       }
     },
@@ -286,7 +286,7 @@ export const MyBookingsScreen: React.FC = () => {
                 {booking.status === 'completed' && (
                   <TouchableOpacity
                     style={styles.rateButton}
-                    onPress={() => navigation.navigate('WriteReview' as never, { spotId: booking.listingId } as never)}
+                    onPress={() => navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never)}
                   >
                     <Text style={styles.rateButtonIcon}>⭐</Text>
                   </TouchableOpacity>
@@ -543,9 +543,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.lg,
-    backgroundColor: `${ACCENT_YELLOW}10`,
+    backgroundColor: `${colors.accent}10`,
     borderWidth: 1,
-    borderColor: `${ACCENT_YELLOW}20`,
+    borderColor: `${colors.accent}20`,
   },
   rateButtonIcon: {
     fontSize: 18,
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: typography.sm.fontSize,
     fontWeight: '600',
-    color: '#ef4444',
+    color: colors.error,
   },
   modalOverlay: {
     flex: 1,

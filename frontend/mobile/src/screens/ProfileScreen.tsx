@@ -120,7 +120,7 @@ export const ProfileScreen: React.FC = () => {
       items: [
         {
           icon: 'logout' as const,
-          iconColor: '#ef4444',
+          iconColor: colors.error,
           label: 'Sign Out',
           onPress: handleLogout,
         },

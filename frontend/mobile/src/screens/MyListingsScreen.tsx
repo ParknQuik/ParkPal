@@ -15,6 +15,7 @@ import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { getMyListings } from '../store/slices/marketplaceSlice';
 import { marketplaceAPI } from '../services/api';
@@ -103,10 +104,10 @@ export const MyListingsScreen: React.FC = () => {
     try {
       const response = await marketplaceAPI.getListingById(listing.id);
       const data = response.data?.qrCodeData || response.data?.data?.qrCodeData;
-      setQrData(data || \`PARKPAL:\${listing.id}:\${Date.now()}\`);
+      setQrData(data || `PARKNQ:${listing.id}:${Date.now()}`);
     } catch (err) {
       console.error('Failed to fetch QR data:', err);
-      setQrData(\`PARKPAL:\${listing.id}:\${Date.now()}\`);
+      setQrData(`PARKNQ:${listing.id}:${Date.now()}`);
     } finally {
       setQrLoading(false);
     }
@@ -135,7 +136,7 @@ const handleFilterPress = useCallback(async () => {
             <Text style={styles.statLabel}>Total Listings</Text>
             <Text style={styles.statValue}>{myListings.length}</Text>
             <View style={styles.statFooter}>
-              <Text style={styles.trendIcon}>trending_up</Text>
+              <MaterialIcons name="trending-up" size={16} color={colors.primary} />
               <Text style={styles.trendText}>{activeCount} active</Text>
             </View>
           </View>
@@ -143,7 +144,7 @@ const handleFilterPress = useCallback(async () => {
             <Text style={styles.statLabel}>Active Listings</Text>
             <Text style={styles.statValue}>{activeCount}</Text>
             <View style={styles.statFooter}>
-              <Text style={styles.viewsIcon}>visibility</Text>
+              <MaterialIcons name="visibility" size={16} color={colors.secondary} />
               <Text style={styles.viewsText}>{myListings.length} total</Text>
             </View>
           </View>
@@ -152,13 +153,13 @@ const handleFilterPress = useCallback(async () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Your Parking Spots</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.filterButton}
               onPress={handleFilterPress}
               {...accessibility.button('Filter', 'Filter listings')}
             >
               <Text style={styles.filterText}>Filter</Text>
-              <Text style={styles.filterIcon}>filter_list</Text>
+              <MaterialIcons name="filter-list" size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -212,7 +213,7 @@ const handleFilterPress = useCallback(async () => {
                       </View>
                     </View>
                     <View style={styles.listingLocation}>
-                      <Text style={styles.locationIcon}>location_on</Text>
+                      <MaterialIcons name="location-on" size={16} color={colors.textSecondary} />
                       <Text style={styles.locationText} numberOfLines={1}>{listing.address}</Text>
                     </View>
                     <View style={styles.listingActions}>
@@ -255,7 +256,7 @@ const handleFilterPress = useCallback(async () => {
                           }
                         }}
                       >
-                        <Text style={styles.moreIcon}>more_horiz</Text>
+                        <MaterialIcons name="more-horiz" size={20} color={colors.textSecondary} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -267,7 +268,7 @@ const handleFilterPress = useCallback(async () => {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyIcon}>add_location</Text>
+                <MaterialIcons name="add-location" size={48} color={colors.textSecondary} />
                 <Text style={styles.emptyText}>No listings yet</Text>
                 <TouchableOpacity
                   style={styles.addListingButton}
@@ -399,23 +400,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.sm,
-  },
-  trendIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 16,
-    color: colors.primary,
-    marginRight: spacing.xs,
+    gap: spacing.xs,
   },
   trendText: {
     ...typography.tiny,
     color: colors.primary,
     fontWeight: '600',
-  },
-  viewsIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 16,
-    color: colors.secondary,
-    marginRight: spacing.xs,
   },
   viewsText: {
     ...typography.tiny,
@@ -445,11 +435,6 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.primary,
     fontWeight: '600',
-  },
-  filterIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 18,
-    color: colors.primary,
   },
   listingsList: {
     gap: spacing.md,
@@ -522,16 +507,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
-  },
-  locationIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginRight: spacing.xs,
+    gap: spacing.xs,
   },
   locationText: {
     ...typography.bodySmall,
     color: colors.textSecondary,
+    flex: 1,
   },
   listingActions: {
     flexDirection: 'row',
@@ -539,9 +520,11 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   editButton: {
     backgroundColor: colors.primary,
@@ -560,6 +543,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   moreButton: {
+    minWidth: 44,
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.lg,
@@ -568,12 +553,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  moreIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 20,
-    color: colors.textSecondary,
-  },
   qrButton: {
+    minWidth: 44,
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.lg,
@@ -624,7 +606,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   modalErrorText: {
-    color: '#ef4444',
+    color: colors.error,
     marginVertical: 40,
     fontSize: 14,
   },
@@ -676,15 +658,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacing.xxl * 2,
   },
-  emptyIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 48,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
   emptyText: {
     ...typography.body,
     color: colors.textSecondary,
+    marginTop: spacing.md,
     marginBottom: spacing.md,
   },
   addListingButton: {

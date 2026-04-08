@@ -438,6 +438,7 @@ model Vehicle {
   year        Int?
   color       String?
   licensePlate String   @unique @map("license_plate")
+  imageUrl    String?   @map("image_url")
 
   isDefault   Boolean   @default(false) @map("is_default")
   isActive    Boolean   @default(true) @map("is_active")

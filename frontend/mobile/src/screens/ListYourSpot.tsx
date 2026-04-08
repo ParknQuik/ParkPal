@@ -92,9 +92,9 @@ export const ListYourSpot: React.FC = () => {
           <Text style={styles.sectionTitle}>Photos</Text>
           <View style={styles.photoSection}>
             <View style={styles.photosGrid}>
-              {photos.map((photo, index) => (
+              {photos.map((photo) => (
                 <Image
-                  key={index}
+                  key={photo}
                   source={{ uri: photo }}
                   style={styles.photoThumbnail}
                   resizeMode="cover"

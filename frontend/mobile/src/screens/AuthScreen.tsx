@@ -31,12 +31,22 @@ const discovery = {
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
 };
 
-// useProxy: true routes through Expo's auth proxy (auth.expo.io) - required for Google OAuth
-const redirectUri = makeRedirectUri({ scheme: 'parknquik' });
+// Production: Use native URI scheme (works in standalone builds)
+// Development: Falls back to exp:// (won't work, use email/password for testing)
+const redirectUri = makeRedirectUri({
+  scheme: 'parknquik',
+  // No path needed for production
+});
+
+// Debug: Log the redirect URI being used
+console.log('🔍 OAuth Redirect URI (Production):', redirectUri);
+if (__DEV__) {
+  console.log('⚠️  Google OAuth requires standalone build. Use email/password for dev testing.');
+}
 
 const STITCH_COLORS = {
   primary: '#10b77f',
-  accentOrange: '#f59e0b',
+  accentOrange: colors.secondary,
   accentYellow: '#facc15',
   backgroundLight: '#f6f8f7',
   backgroundDark: '#10221c',
@@ -68,14 +78,25 @@ export const AuthScreen: React.FC = () => {
       clientId: GOOGLE_CLIENT_ID,
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
+      responseType: 'code',
+      usePKCE: false,
+      prompt: Google.Prompt.SelectAccount, // Force account selection
     },
     discovery
   );
 
   React.useEffect(() => {
+    console.log('🔍 OAuth Response:', response);
+
     if (response?.type === 'success') {
       const { code } = response.params;
+      console.log('✅ Got OAuth code, sending to backend...');
       handleGoogleSignIn(code);
+    } else if (response?.type === 'error') {
+      console.error('❌ OAuth error:', response.error);
+      Alert.alert('OAuth Error', response.error?.message || 'Authentication failed');
+    } else if (response?.type === 'cancel') {
+      console.log('⚠️ OAuth cancelled by user');
     }
   }, [response]);
 
@@ -100,7 +121,18 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
-  const handleGooglePress = () => {
+  const handleGooglePress = async () => {
+    // In development, warn user that Google OAuth requires production build
+    if (__DEV__) {
+      Alert.alert(
+        'Development Mode',
+        'Google Sign-In requires a production build (EAS Build).\n\nFor development testing, please use email/password login.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Production: Launch Google OAuth
     promptAsync({ showInRecents: true });
   };
 
@@ -150,7 +182,7 @@ export const AuthScreen: React.FC = () => {
     } catch (err: any) {
       Alert.alert(
         activeTab === 'login' ? 'Login Failed' : 'Signup Failed',
-        err || 'An error occurred. Please try again.'
+        err?.message || err?.error || (typeof err === 'string' ? err : 'An error occurred. Please try again.')
       );
     }
   };

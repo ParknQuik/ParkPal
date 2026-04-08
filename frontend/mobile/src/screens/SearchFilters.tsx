@@ -8,10 +8,11 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { colors } from '../theme';
 
 const COLORS = {
   primary: '#10b77f',
-  secondary: '#f97316',
+  secondary: colors.secondary,
   accent: '#facc15',
   background: '#f6f8f7',
   white: '#ffffff',

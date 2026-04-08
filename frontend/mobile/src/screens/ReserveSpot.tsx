@@ -16,10 +16,11 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { marketplaceAPI, vehiclesAPI } from '../services/api';
+import { colors } from '../theme';
 
 const COLORS = {
   primary: '#10b77f',
-  secondary: '#f59e0b',
+  secondary: colors.secondary,
   background: '#f6f8f7',
   white: '#ffffff',
   textPrimary: '#1e293b',

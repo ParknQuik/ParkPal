@@ -213,10 +213,10 @@ export const QRScannerScreen: React.FC = () => {
       return { valid: false, error: 'Empty or invalid QR data' };
     }
 
-    // Format: PARKPAL:slotId:timestamp:signature
+    // Format: PARKNQ:slotId:timestamp:signature
     const parts = data.split(':');
 
-    if (parts[0] === 'PARKPAL' && parts.length >= 2) {
+    if (parts[0] === 'PARKNQ' && parts.length >= 2) {
       return { valid: true, slotId: parts[1] };
     }
 
@@ -368,7 +368,7 @@ export const QRScannerScreen: React.FC = () => {
 
                 {loading && (
                   <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#f59e0b" />
+                    <ActivityIndicator size="large" color={colors.secondary} />
                   </View>
                 )}
               </Animated.View>
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 30,
     height: 30,
-    borderColor: '#f59e0b',
+    borderColor: colors.secondary,
   },
   cornerTL: {
     top: 0,
@@ -599,8 +599,8 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     height: 2,
-    backgroundColor: '#f59e0b',
-    shadowColor: '#f59e0b',
+    backgroundColor: colors.secondary,
+    shadowColor: colors.secondary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,

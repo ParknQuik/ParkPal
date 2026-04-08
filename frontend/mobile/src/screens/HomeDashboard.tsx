@@ -14,6 +14,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings, getMyBookings } from '../store/slices/marketplaceSlice';
 import { getCurrentLocation } from '../store/slices/locationSlice';
@@ -55,27 +56,37 @@ export const HomeDashboard: React.FC = () => {
   }, [dispatch, currentLocation, user?.id]);
 
   useEffect(() => {
-    dispatch(getCurrentLocation());
-  }, [dispatch]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const lat = currentLocation?.latitude || 14.5995;
-      const lon = currentLocation?.longitude || 120.9842;
-      await dispatch(searchListings({ latitude: lat, longitude: lon, radius: 10 }));
-      if (user?.id) {
-        await dispatch(getMyBookings());
+    const init = async () => {
+      let lat = 14.5995;
+      let lon = 120.9842;
+      try {
+        const result = await dispatch(getCurrentLocation()).unwrap();
+        lat = result.latitude;
+        lon = result.longitude;
+      } catch {
+        // permission denied or error — fall back to Manila
       }
-    } catch (err) {
-      console.error('Failed to fetch data:', err);
+      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 10 }));
+      if (user?.id) {
+        dispatch(getMyBookings());
+      }
+    };
+    init();
+  }, [dispatch, user?.id]);
+
+  const handleRefresh = useCallback(() => {
+    if (refreshing) return;
+    setRefreshing(true);
+    const lat = currentLocation?.latitude || 14.5995;
+    const lon = currentLocation?.longitude || 120.9842;
+    const fetches: Promise<any>[] = [
+      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 10 })),
+    ];
+    if (user?.id) {
+      fetches.push(dispatch(getMyBookings()));
     }
-    setRefreshing(false);
-  }, [dispatch, currentLocation, user?.id]);
+    Promise.allSettled(fetches).finally(() => setRefreshing(false));
+  }, [dispatch, currentLocation, user?.id, refreshing]);
 
   const debouncedSearch = useDebouncedCallback((query: string) => {
     if (currentLocation) {
@@ -162,7 +173,7 @@ export const HomeDashboard: React.FC = () => {
 
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
-            <Text style={styles.searchIcon}>search</Text>
+            <MaterialCommunityIcons name="magnify" size={20} color="#94a3b8" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for parking nearby..."
@@ -172,7 +183,7 @@ export const HomeDashboard: React.FC = () => {
               {...accessibility.textInput('Search parking')}
             />
             <TouchableOpacity style={styles.filterButton}>
-              <Text style={styles.filterIcon}>tune</Text>
+              <MaterialCommunityIcons name="tune" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -180,21 +191,21 @@ export const HomeDashboard: React.FC = () => {
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <View style={[styles.statIconContainer, { backgroundColor: 'rgba(16, 183, 127, 0.1)' }]}>
-              <Text style={[styles.statIcon, { color: colors.primary }]}>account_balance_wallet</Text>
+              <MaterialCommunityIcons name="wallet-outline" size={24} color={colors.primary} />
             </View>
             <Text style={styles.statLabel}>Balance</Text>
             <Text style={styles.statValue}>${user?.totalSpent?.toFixed(2) || '0.00'}</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIconContainer, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-              <Text style={[styles.statIcon, { color: colors.secondary }]}>bookmark</Text>
+              <MaterialCommunityIcons name="bookmark-outline" size={24} color={colors.secondary} />
             </View>
             <Text style={styles.statLabel}>Bookings</Text>
             <Text style={styles.statValue}>{bookings.length}</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIconContainer, { backgroundColor: 'rgba(250, 204, 21, 0.1)' }]}>
-              <Text style={[styles.statIcon, { color: colors.accent }]}>local_parking</Text>
+              <MaterialCommunityIcons name="map-marker-outline" size={24} color={colors.accent} />
             </View>
             <Text style={styles.statLabel}>Nearby</Text>
             <Text style={styles.statValue}>{listings.length}</Text>
@@ -208,14 +219,19 @@ export const HomeDashboard: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {loading && !refreshing ? (
+        {loading && !refreshing && listings.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading nearby parking...</Text>
           </View>
-        ) : error ? (
+        ) : error && listings.length === 0 ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorIcon}>error_outline</Text>
+            <MaterialCommunityIcons
+              name="alert-circle-outline"
+              size={48}
+              color={colors.error}
+              style={{ marginBottom: spacing.md }}
+            />
             <Text style={styles.errorText}>Failed to load parking spots</Text>
             <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
               <Text style={styles.retryText}>Retry</Text>
@@ -243,7 +259,7 @@ export const HomeDashboard: React.FC = () => {
                 <View style={styles.parkingTopRow}>
                   <Text style={styles.parkingName} numberOfLines={1}>{parking.title || parking.address}</Text>
                   <View style={styles.ratingContainer}>
-                    <Text style={styles.starIcon}>star</Text>
+                    <MaterialCommunityIcons name="star" size={14} color={colors.accent} />
                     <Text style={styles.ratingText}>{parking.rating?.toFixed(1) || 'N/A'}</Text>
                   </View>
                 </View>
@@ -280,7 +296,12 @@ export const HomeDashboard: React.FC = () => {
           ListEmptyComponent={
             !loading ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyIcon}>search_off</Text>
+                <MaterialCommunityIcons
+                  name="map-marker-off-outline"
+                  size={48}
+                  color={colors.textSecondary}
+                  style={{ marginBottom: spacing.md }}
+                />
                 <Text style={styles.emptyText}>No parking spots found nearby</Text>
               </View>
             ) : null

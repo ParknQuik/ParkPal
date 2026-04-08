@@ -14,11 +14,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { marketplaceAPI } from '../services/api';
+import { colors } from '../theme';
 
 const { width } = Dimensions.get('window');
 
 const PRIMARY = '#10b77f';
-const SECONDARY = '#f59e0b';
 const ACCENT = '#ffeb3b';
 const BACKGROUND = '#f6f6f8';
 
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pastBookingBadge: {
-    backgroundColor: SECONDARY + '20',
+    backgroundColor: colors.secondary + '20',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   pastBookingText: {
     fontSize: 12,
     fontWeight: '600',
-    color: SECONDARY,
+    color: colors.secondary,
   },
   spotName: {
     fontSize: 18,

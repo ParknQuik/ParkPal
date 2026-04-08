@@ -60,11 +60,11 @@ export const QRGeneratorScreen: React.FC = () => {
         return response.data.qrCodeData;
       }
       // Fallback: generate QR data (backend should always provide this)
-      return `PARKPAL:${listing.id}:${Date.now()}:fallback`;
+      return `PARKNQ:${listing.id}:${Date.now()}:fallback`;
     } catch (error) {
       console.error('Error fetching QR data:', error);
       // Fallback format
-      return `PARKPAL:${listing.id}:${Date.now()}:error`;
+      return `PARKNQ:${listing.id}:${Date.now()}:error`;
     }
   };
 

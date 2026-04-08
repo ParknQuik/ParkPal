@@ -435,6 +435,28 @@ exports.createBooking = async (req, res) => {
       data: { status: 'reserved' },
     });
 
+    // Create notification for user booking confirmation
+    const userNotification = await prisma.notification.create({
+      data: {
+        userId: booking.userId,
+        title: 'Booking Confirmed! 🎉',
+        body: `Your parking booking at ${booking.slot?.address || 'the parking spot'} is confirmed for ${new Date(booking.startTime).toLocaleDateString()}.`,
+        type: 'booking_confirmation',
+        data: JSON.stringify({ bookingId: booking.id }),
+      },
+    });
+
+    // Create notification for host new booking
+    await prisma.notification.create({
+      data: {
+        userId: booking.slot.ownerId,
+        title: 'New Booking! 💰',
+        body: `You have a new booking from ${booking.user?.name || 'a driver'} for ${booking.slot?.address || 'your parking spot'}.`,
+        type: 'new_booking',
+        data: JSON.stringify({ bookingId: booking.id }),
+      },
+    });
+
     broadcast({ type: 'booking_created', booking });
     res.status(201).json(booking);
   } catch (error) {
@@ -527,6 +549,19 @@ exports.qrCheckIn = async (req, res) => {
       data: { status: 'occupied' },
     });
 
+    // Notify host of check-in
+    if (slot.ownerId !== userId) {
+      await prisma.notification.create({
+        data: {
+          userId: slot.ownerId,
+          title: 'Driver Checked In 🚗',
+          body: `A driver has checked in to your parking spot at ${slot.address}.`,
+          type: 'check_in',
+          data: JSON.stringify({ sessionId: session.id }),
+        },
+      });
+    }
+
     broadcast({ type: 'qr_checkin', session });
     res.json({ message: 'Check-in successful', session });
   } catch (error) {
@@ -618,6 +653,32 @@ exports.qrCheckOut = async (req, res) => {
         status: 'pending',
       },
     });
+
+    // Notify user of check-out completion and payment
+    if (session.booking?.userId) {
+      await prisma.notification.create({
+        data: {
+          userId: session.booking.userId,
+          title: 'Check-out Complete ✅',
+          body: `Your parking session is complete. Total: ₱${totalAmount.toFixed(2)}`,
+          type: 'check_out',
+          data: JSON.stringify({ sessionId: session.id, amount: totalAmount }),
+        },
+      });
+    }
+
+    // Notify host of check-out
+    if (session.slot?.ownerId) {
+      await prisma.notification.create({
+        data: {
+          userId: session.slot.ownerId,
+          title: 'Driver Checked Out 💵',
+          body: `Parking session ended. Your earnings: ₱${(updatedSession.booking?.hostEarnings || 0).toFixed(2)}`,
+          type: 'check_out',
+          data: JSON.stringify({ sessionId: session.id }),
+        },
+      });
+    }
 
     broadcast({ type: 'qr_checkout', session: updatedSession });
     res.json({
@@ -1074,6 +1135,17 @@ exports.cancelBooking = async (req, res) => {
       });
     }
 
+    // Notify host of cancellation
+    await prisma.notification.create({
+      data: {
+        userId: slot.ownerId,
+        title: 'Booking Cancelled ❌',
+        body: `A booking for ${slot.address} has been cancelled.`,
+        type: 'booking_cancelled',
+        data: JSON.stringify({ bookingId: booking.id }),
+      },
+    });
+
     res.json({
       message: 'Booking cancelled successfully',
       booking: updatedBooking,
@@ -1175,6 +1247,67 @@ exports.deleteListing = async (req, res) => {
     res.json({ message: 'Listing deleted successfully' });
   } catch (error) {
     console.error('Delete listing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get upcoming bookings (for reservation reminders)
+ */
+exports.getUpcomingBookings = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        userId,
+        startTime: { gte: now },
+        status: { in: ['confirmed', 'pending'] },
+      },
+      include: {
+        slot: {
+          select: { id: true, address: true, lat: true, lon: true },
+        },
+      },
+      orderBy: { startTime: 'asc' },
+      take: 10,
+    });
+
+    // Trigger notifications for bookings starting in next 2 hours
+    const upcomingSoon = bookings.filter(b => {
+      const hoursUntil = (new Date(b.startTime) - now) / (1000 * 60 * 60);
+      return hoursUntil > 0 && hoursUntil <= 2;
+    });
+
+    // Create reminder notifications if needed
+    for (const booking of upcomingSoon) {
+      // Check if we already sent a reminder in last hour
+      const existingNotif = await prisma.notification.findFirst({
+        where: {
+          userId,
+          type: 'upcoming_reminder',
+          data: JSON.stringify({ bookingId: booking.id }),
+          createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
+        },
+      });
+
+      if (!existingNotif) {
+        await prisma.notification.create({
+          data: {
+            userId,
+            title: 'Upcoming Reservation ⏰',
+            body: `Your parking reservation starts in less than 2 hours at ${booking.slot.address}.`,
+            type: 'upcoming_reminder',
+            data: JSON.stringify({ bookingId: booking.id }),
+          },
+        });
+      }
+    }
+
+    res.json({ bookings });
+  } catch (error) {
+    console.error('Get upcoming bookings error:', error);
     res.status(500).json({ error: error.message });
   }
 };

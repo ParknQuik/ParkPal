@@ -12,18 +12,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { marketplaceAPI } from '../services/api';
+import { colors } from '../theme';
 import type { RootStackParamList } from '../types';
 
 const { width } = Dimensions.get('window');
-
-const ACCENT_ORANGE = '#f97316';
 
 type ParkingDetailsRouteProp = RouteProp<RootStackParamList, 'ParkingDetail'>;
 
 export const ParkingDetails: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<ParkingDetailsRouteProp>();
-  const { spotId } = (route.params || {}) as any;
+  const spotId = route.params?.spotId;
+  // Debug: log the params for debugging
+  console.log("[ParkingDetails] route.params:", route.params);
+  console.log("[ParkingDetails] spotId:", spotId);
 
   const [spot, setSpot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export const ParkingDetails: React.FC = () => {
         const response = await marketplaceAPI.getListingById(Number(spotId));
         setSpot(response.data?.data || response.data);
       } catch (err: any) {
-        setError(err.message || 'Failed to load parking spot');
+        setError(err?.response?.data?.error || err.message || 'Listing not found or removed');
       } finally {
         setLoading(false);
       }
@@ -45,7 +47,7 @@ export const ParkingDetails: React.FC = () => {
       fetchSpot();
     } else {
       setLoading(false);
-      setError('No parking spot specified');
+      setError('Booking does not have a valid listing');
     }
   }, [spotId]);
 
@@ -53,7 +55,7 @@ export const ParkingDetails: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={ACCENT_ORANGE} />
+          <ActivityIndicator size="large" color={colors.secondary} />
         </View>
       </SafeAreaView>
     );
@@ -225,12 +227,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#ef4444',
+    color: colors.error,
     textAlign: 'center',
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: ACCENT_ORANGE,
+    backgroundColor: colors.secondary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -328,7 +330,7 @@ const styles = StyleSheet.create({
   unavailableBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ef444420',
+    backgroundColor: colors.error + '20',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -337,13 +339,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.error,
     marginRight: 6,
   },
   unavailableText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#ef4444',
+    color: colors.error,
   },
   quickInfoSection: {
     flexDirection: 'row',
@@ -491,7 +493,7 @@ const styles = StyleSheet.create({
   },
   reserveButton: {
     flex: 1,
-    backgroundColor: ACCENT_ORANGE,
+    backgroundColor: colors.secondary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

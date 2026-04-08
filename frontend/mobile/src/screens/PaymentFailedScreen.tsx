@@ -10,9 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-const PRIMARY = '#10b77f';
-const ERROR = '#ef4444';
-const BACKGROUND = '#f6f6f8';
+import { colors } from '../theme';
 
 const orderData = {
   image: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
@@ -148,7 +146,7 @@ export const PaymentFailedScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -183,7 +181,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: ERROR,
+    backgroundColor: colors.error,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -252,7 +250,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: BACKGROUND,
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 12,
   },
@@ -310,7 +308,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: PRIMARY,
+    color: colors.primary,
   },
   footer: {
     backgroundColor: '#ffffff',
@@ -320,7 +318,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e8f0',
   },
   tryAgainButton: {
-    backgroundColor: PRIMARY,
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -337,11 +335,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: PRIMARY,
+    borderColor: colors.primary,
   },
   differentPaymentButtonText: {
     fontSize: 18,
     fontWeight: '700',
-    color: PRIMARY,
+    color: colors.primary,
   },
 });

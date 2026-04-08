@@ -213,8 +213,8 @@ export const EarningsScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
               <View style={styles.chartContainer}>
-                {analytics.map((item, index) => (
-                  <View key={index} style={styles.barWrapper}>
+                {analytics.map((item) => (
+                  <View key={item.label} style={styles.barWrapper}>
                     <View style={styles.barContainer}>
                       <View 
                         style={[
@@ -244,11 +244,11 @@ export const EarningsScreen: React.FC = () => {
                   <View style={styles.transactionInfo}>
                     <Text style={styles.transactionDate}>{formatDate(transaction.createdAt)}</Text>
                     <Text style={styles.transactionDesc}>{transaction.description}</Text>
-                    <Text style={[styles.txStatus, { color: transaction.status === 'completed' ? '#10b77f' : '#f59e0b' }]}>
+                    <Text style={[styles.txStatus, { color: transaction.status === 'completed' ? colors.primary : colors.secondary }]}>
                       {transaction.status || 'completed'}
                     </Text>
                   </View>
-                  <Text style={[styles.transactionAmount, { color: isPositive ? '#10b77f' : '#ef4444' }]}>
+                  <Text style={[styles.transactionAmount, { color: isPositive ? colors.primary : colors.error }]}>
                     {isPositive ? '+' : '-'}₱{Math.abs(transaction.amount).toLocaleString()}
                   </Text>
                 </View>
@@ -384,8 +384,10 @@ const styles = StyleSheet.create({
   },
   periodButton: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: borderRadius.sm,
   },
   periodButtonActive: {
@@ -479,7 +481,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: borderRadius.md,
     paddingVertical: spacing.md,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   withdrawButtonText: {
     ...typography.body,

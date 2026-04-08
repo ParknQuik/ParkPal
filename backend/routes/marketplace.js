@@ -474,6 +474,24 @@ module.exports = (app) => {
 
   /**
    * @swagger
+   * /api/marketplace/bookings/upcoming:
+   *   get:
+   *     summary: Get upcoming bookings (for notifications)
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List of upcoming bookings
+   */
+  app.get(
+    '/marketplace/bookings/upcoming',
+    authenticate,
+    marketplaceController.getUpcomingBookings
+  );
+
+  /**
+   * @swagger
    * /api/marketplace/listings/:id/reviews:
    *   get:
    *     summary: Get reviews for a specific listing
