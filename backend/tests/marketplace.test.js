@@ -277,6 +277,89 @@ describe('Marketplace API Tests', () => {
     });
   });
 
+  describe('POST /api/v1/marketplace/bookings - Rental Modes', () => {
+    it('should create fixed duration booking with endTime', async () => {
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          endTime: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          rentalMode: 'fixed'
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.booking.rentalMode).toBe('fixed');
+      expect(response.body.booking.endTime).toBeTruthy();
+      expect(response.body.booking.maxDuration).toBeNull();
+      expect(response.body.booking.authAmount).toBeNull();
+    });
+
+    it('should create open time booking without endTime', async () => {
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          rentalMode: 'open',
+          maxDuration: 12
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.booking.rentalMode).toBe('open');
+      expect(response.body.booking.endTime).toBeNull();
+      expect(response.body.booking.maxDuration).toBe(12);
+      expect(response.body.booking.authAmount).toBeTruthy();
+    });
+
+    it('should require endTime for fixed rental mode', async () => {
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          rentalMode: 'fixed'
+          // Missing endTime
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('endTime is required');
+    });
+
+    it('should require maxDuration for open rental mode', async () => {
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          rentalMode: 'open'
+          // Missing maxDuration
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('maxDuration is required');
+    });
+
+    it('should validate rental mode value', async () => {
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          endTime: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+          rentalMode: 'invalid'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('must be either "fixed" or "open"');
+    });
+  });
+
   describe('POST /api/v1/marketplace/qr/checkin', () => {
     let qrCode;
 
@@ -410,6 +493,403 @@ describe('Marketplace API Tests', () => {
       });
 
       expect(slot.status).toBe('available');
+    });
+  });
+
+  describe('PATCH /api/v1/marketplace/bookings/:id/cancel - Updated Cancellation', () => {
+    let bookingToCancel;
+
+    beforeEach(async () => {
+      // Create a booking that can be cancelled (starts in 2 hours)
+      bookingToCancel = await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.driver.id,
+          startTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+          endTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
+          rentalMode: 'fixed',
+          status: 'confirmed',
+          price: 100,
+          platformFee: 5,
+          hostEarnings: 95
+        }
+      });
+    });
+
+    it('should cancel booking before deadline', async () => {
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/bookings/${bookingToCancel.id}/cancel`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.booking.status).toBe('cancelled');
+      expect(response.body.booking.cancelledAt).toBeTruthy();
+    });
+
+    it('should not cancel booking within 30 minutes of start', async () => {
+      // Update booking to start in 20 minutes
+      await prisma.booking.update({
+        where: { id: bookingToCancel.id },
+        data: {
+          startTime: new Date(Date.now() + 20 * 60 * 1000),
+          endTime: new Date(Date.now() + 2 * 60 * 60 * 1000)
+        }
+      });
+
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/bookings/${bookingToCancel.id}/cancel`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('within 30 minutes');
+      expect(response.body.code).toBe('CANCELLATION_DEADLINE_PASSED');
+    });
+
+    it('should not cancel active booking', async () => {
+      await prisma.booking.update({
+        where: { id: bookingToCancel.id },
+        data: { status: 'active' }
+      });
+
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/bookings/${bookingToCancel.id}/cancel`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('active booking');
+      expect(response.body.code).toBe('BOOKING_ALREADY_ACTIVE');
+    });
+
+    it('should not cancel completed booking', async () => {
+      await prisma.booking.update({
+        where: { id: bookingToCancel.id },
+        data: { status: 'completed' }
+      });
+
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/bookings/${bookingToCancel.id}/cancel`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('BOOKING_COMPLETED');
+    });
+
+    it('should not cancel already cancelled booking', async () => {
+      await prisma.booking.update({
+        where: { id: bookingToCancel.id },
+        data: { status: 'cancelled', cancelledAt: new Date() }
+      });
+
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/bookings/${bookingToCancel.id}/cancel`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('ALREADY_CANCELLED');
+    });
+
+    it('should not cancel booking that has already started', async () => {
+      // Update booking to have started 10 minutes ago
+      await prisma.booking.update({
+        where: { id: bookingToCancel.id },
+        data: {
+          startTime: new Date(Date.now() - 10 * 60 * 1000),
+          endTime: new Date(Date.now() + 60 * 60 * 1000)
+        }
+      });
+
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/bookings/${bookingToCancel.id}/cancel`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('CANCELLATION_DEADLINE_PASSED');
+    });
+  });
+
+  describe('Booking Extension Tests', () => {
+    let extendableBooking;
+
+    beforeEach(async () => {
+      // Create a fixed duration booking that can be extended
+      extendableBooking = await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.driver.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
+          endTime: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours from now
+          originalEndTime: null,
+          rentalMode: 'fixed',
+          status: 'confirmed',
+          price: 150,
+          platformFee: 7.5,
+          hostEarnings: 142.5,
+          extensionCount: 0,
+          totalExtensionHrs: 0
+        }
+      });
+    });
+
+    describe('GET /api/v1/marketplace/bookings/:id/extension-availability', () => {
+      it('should check extension availability successfully', async () => {
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 })
+          .set('Authorization', `Bearer ${authTokens.driver}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('available');
+        expect(response.body).toHaveProperty('currentEndTime');
+        expect(response.body).toHaveProperty('requestedEndTime');
+        expect(response.body).toHaveProperty('extensionHours', 2);
+        expect(response.body).toHaveProperty('pricing');
+        expect(response.body.pricing).toHaveProperty('extensionCost');
+        expect(response.body.pricing).toHaveProperty('serviceFee', 10);
+        expect(response.body.pricing).toHaveProperty('tax');
+        expect(response.body.pricing).toHaveProperty('total');
+      });
+
+      it('should detect conflicting bookings', async () => {
+        // Create a conflicting booking
+        await prisma.booking.create({
+          data: {
+            slotId: testData.slot.id,
+            userId: testData.host.id, // Different user
+            startTime: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
+            endTime: new Date(Date.now() + 6 * 60 * 60 * 1000),
+            rentalMode: 'fixed',
+            status: 'confirmed',
+            price: 100,
+            platformFee: 5,
+            hostEarnings: 95
+          }
+        });
+
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 }) // Would extend past conflicting booking
+          .set('Authorization', `Bearer ${authTokens.driver}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.available).toBe(false);
+        expect(response.body.conflictingBooking).toBeTruthy();
+        expect(response.body.conflictingBooking.startTime).toBeTruthy();
+      });
+
+      it('should not allow extension for open rental mode', async () => {
+        // Update booking to open mode
+        await prisma.booking.update({
+          where: { id: extendableBooking.id },
+          data: { rentalMode: 'open', endTime: null, maxDuration: 12 }
+        });
+
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 })
+          .set('Authorization', `Bearer ${authTokens.driver}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('Only fixed duration bookings can be extended');
+        expect(response.body.code).toBe('INVALID_RENTAL_MODE');
+      });
+
+      it('should not allow extension for completed booking', async () => {
+        await prisma.booking.update({
+          where: { id: extendableBooking.id },
+          data: { status: 'completed' }
+        });
+
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 })
+          .set('Authorization', `Bearer ${authTokens.driver}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.code).toBe('BOOKING_COMPLETED');
+      });
+
+      it('should not allow extension for cancelled booking', async () => {
+        await prisma.booking.update({
+          where: { id: extendableBooking.id },
+          data: { status: 'cancelled', cancelledAt: new Date() }
+        });
+
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 })
+          .set('Authorization', `Bearer ${authTokens.driver}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.code).toBe('BOOKING_CANCELLED');
+      });
+
+      it('should not allow extension for booking that has ended', async () => {
+        // Update booking to have ended 1 hour ago
+        await prisma.booking.update({
+          where: { id: extendableBooking.id },
+          data: {
+            startTime: new Date(Date.now() - 3 * 60 * 60 * 1000),
+            endTime: new Date(Date.now() - 60 * 60 * 1000)
+          }
+        });
+
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 })
+          .set('Authorization', `Bearer ${authTokens.driver}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('already ended');
+        expect(response.body.code).toBe('BOOKING_ENDED');
+      });
+
+      it('should require authentication', async () => {
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 });
+
+        expect(response.status).toBe(401);
+      });
+
+      it('should verify booking ownership', async () => {
+        const response = await request(app)
+          .get(`/api/v1/marketplace/bookings/${extendableBooking.id}/extension-availability`)
+          .query({ hours: 2 })
+          .set('Authorization', `Bearer ${authTokens.host}`); // Different user
+
+        expect(response.status).toBe(403);
+        expect(response.body.error).toBe('Unauthorized');
+      });
+    });
+
+    describe('POST /api/v1/marketplace/bookings/:id/extend', () => {
+      it('should extend booking successfully', async () => {
+        const response = await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            hours: 2,
+            paymentIntentId: 'test_payment_intent_123'
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toContain('extended successfully');
+        expect(response.body.booking.extensionCount).toBe(1);
+        expect(response.body.booking.totalExtensionHrs).toBe(2);
+        expect(response.body.booking.lastExtendedAt).toBeTruthy();
+        expect(response.body.booking.originalEndTime).toBeTruthy();
+        expect(response.body.extension.hours).toBe(2);
+        expect(response.body.extension.newEndTime).toBeTruthy();
+
+        // Verify payment record created
+        const payment = await prisma.payment.findFirst({
+          where: {
+            bookingId: extendableBooking.id,
+            paymentMethod: 'extension'
+          }
+        });
+        expect(payment).toBeTruthy();
+        expect(payment.status).toBe('completed');
+        expect(payment.paymentIntent).toBe('test_payment_intent_123');
+      });
+
+      it('should track multiple extensions', async () => {
+        // First extension
+        await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            hours: 1,
+            paymentIntentId: 'test_payment_1'
+          });
+
+        // Second extension
+        const response = await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            hours: 2,
+            paymentIntentId: 'test_payment_2'
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body.booking.extensionCount).toBe(2);
+        expect(response.body.booking.totalExtensionHrs).toBe(3); // 1 + 2
+      });
+
+      it('should validate hours range (1-4)', async () => {
+        const response = await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            hours: 5, // Too many
+            paymentIntentId: 'test_payment_intent_123'
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('must be between 1 and 4');
+      });
+
+      it('should require hours and paymentIntentId', async () => {
+        const response = await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            // Missing fields
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('Missing required fields');
+      });
+
+      it('should detect race condition (slot becomes unavailable)', async () => {
+        // Create a conflicting booking between checking and extending
+        await prisma.booking.create({
+          data: {
+            slotId: testData.slot.id,
+            userId: testData.host.id,
+            startTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
+            endTime: new Date(Date.now() + 6 * 60 * 60 * 1000),
+            rentalMode: 'fixed',
+            status: 'confirmed',
+            price: 100,
+            platformFee: 5,
+            hostEarnings: 95
+          }
+        });
+
+        const response = await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            hours: 2,
+            paymentIntentId: 'test_payment_intent_123'
+          });
+
+        expect(response.status).toBe(409);
+        expect(response.body.error).toContain('no longer available');
+        expect(response.body.code).toBe('SLOT_CONFLICT');
+      });
+
+      it('should notify slot owner of extension', async () => {
+        await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            hours: 2,
+            paymentIntentId: 'test_payment_intent_123'
+          });
+
+        // Verify notification created
+        const notification = await prisma.notification.findFirst({
+          where: {
+            userId: testData.host.id,
+            type: 'booking_extended'
+          }
+        });
+        expect(notification).toBeTruthy();
+        expect(notification.title).toContain('Extended');
+      });
     });
   });
 
