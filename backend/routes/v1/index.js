@@ -14,6 +14,7 @@ const router = express.Router();
  */
 module.exports = (authLimiter) => {
   const authRoutes = require('../auth');
+  const googleAuthRoutes = require('../googleAuth');
   const parkingRoutes = require('../parking');
   const paymentRoutes = require('../payments');
   const alertRoutes = require('../alerts');
@@ -23,12 +24,18 @@ module.exports = (authLimiter) => {
   const healthRoutes = require('../health');
   const mediaRoutes = require('../media');
   const analyticsRoutes = require('../analytics');
+  const vehiclesRoutes = require('../vehicles');
+  const notificationsRoutes = require('../notifications');
+  const earningsRoutes = require('../earnings');
 
   // Health routes (no auth required)
   healthRoutes(router);
 
   // Auth routes get stricter rate limiting
   authRoutes(router, authLimiter);
+
+  // Google Auth routes
+  googleAuthRoutes(router, authLimiter);
 
   // Other routes
   parkingRoutes(router);
@@ -39,6 +46,9 @@ module.exports = (authLimiter) => {
   userRoutes(router);
   mediaRoutes(router);
   analyticsRoutes(router);
+  vehiclesRoutes(router);
+  notificationsRoutes(router);
+  earningsRoutes(router);
 
   return router;
 };

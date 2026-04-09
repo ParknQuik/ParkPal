@@ -3,412 +3,351 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList, PayMongoPaymentMethod } from '../types';
-import { paymentAPI } from '../services/api';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { paymentAPI, marketplaceAPI } from '../services/api';
 
-type PaymentScreenRouteProp = RouteProp<RootStackParamList, 'Payment'>;
-type PaymentScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Payment'>;
+const PRIMARY = '#10b77f';
+const BACKGROUND = '#f6f6f8';
 
 export const PaymentScreen: React.FC = () => {
-  const navigation = useNavigation<PaymentScreenNavigationProp>();
-  const route = useRoute<PaymentScreenRouteProp>();
-  const { bookingId, amount } = route.params;
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { bookingId, amount } = route.params as { bookingId: number; amount: number; spotId?: number };
 
-  const [selectedMethod, setSelectedMethod] = useState<PayMongoPaymentMethod>('gcash');
+  const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const paymentMethods: Array<{
-    id: PayMongoPaymentMethod;
-    name: string;
-    description: string;
-    icon: string;
-  }> = [
-    {
-      id: 'gcash',
-      name: 'GCash',
-      description: 'Most popular in Philippines',
-      icon: '💰',
-    },
-    {
-      id: 'card',
-      name: 'Credit/Debit Card',
-      description: 'Visa, Mastercard',
-      icon: '💳',
-    },
-    {
-      id: 'grab_pay',
-      name: 'GrabPay',
-      description: 'Pay with GrabPay wallet',
-      icon: '🚗',
-    },
-    {
-      id: 'paymaya',
-      name: 'PayMaya',
-      description: 'Digital wallet',
-      icon: '🏦',
-    },
+  const orderData = {
+    subtotal: amount || 0,
+    serviceFee: Math.round((amount || 0) * 0.05),
+    total: (amount || 0) + Math.round((amount || 0) * 0.05),
+  };
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  const handlePayNow = async () => {
+    if (!selectedPayment) return;
+
+    if (selectedPayment === 'cash') {
+      try {
+        setLoading(true);
+        
+        const response = await marketplaceAPI.confirmBooking(bookingId);
+        
+        Alert.alert(
+          'Booking Confirmed!',
+          'Please pay in cash when you arrive at the parking location.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        return;
+      } catch (err: any) {
+        Alert.alert('Error', 'Failed to confirm booking. Please try again.');
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    setLoading(true);
+    try {
+      const intentResponse = await paymentAPI.createPaymentIntent({
+        amount: orderData.total,
+        paymentMethod: selectedPayment as 'cash' | 'gcash' | 'card' | 'grab_pay' | 'paymaya',
+        bookingId,
+      });
+
+      const { paymentIntentId, clientSecret } = intentResponse.data;
+
+      const confirmResponse = await paymentAPI.confirmPayment({
+        paymentIntentId,
+      });
+
+      navigation.navigate('PaymentSuccess' as never, {
+        paymentId: confirmResponse.data.paymentId || paymentIntentId,
+        bookingId,
+      } as never);
+    } catch (err: any) {
+      navigation.navigate('PaymentFailed' as never, {
+        error: err.response?.data?.error || err.message || 'Payment failed',
+        bookingId,
+      } as never);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const paymentMethods = [
+    { id: 'cash', name: 'Cash', icon: '💵', description: 'Pay with cash at location' },
+    { id: 'gcash', name: 'GCash', icon: '💚', description: 'Pay with GCash e-wallet' },
+    { id: 'card', name: 'Credit/Debit Card', icon: '💳', description: 'Visa, Mastercard, Amex' },
+    { id: 'grab_pay', name: 'GrabPay', icon: '🟢', description: 'Pay with GrabPay' },
+    { id: 'paymaya', name: 'Maya', icon: '🔵', description: 'Pay with Maya e-wallet' },
   ];
 
-  const handlePayment = async () => {
-    try {
-      setLoading(true);
-
-      // Create payment intent
-      const response = await paymentAPI.createPaymentIntent({
-        bookingId,
-        amount,
-        paymentMethod: selectedMethod,
-      });
-
-      const { paymentIntentId, clientKey } = response.data;
-
-      // For GCash/GrabPay/PayMaya - redirect to payment page
-      if (selectedMethod === 'gcash' || selectedMethod === 'grab_pay' || selectedMethod === 'paymaya') {
-        // In production, you would use PayMongo SDK here
-        // For now, show alert with instructions
-        Alert.alert(
-          'Complete Payment',
-          `Payment Intent created!\n\nPayment ID: ${paymentIntentId}\n\nIn production, you would be redirected to ${selectedMethod.toUpperCase()} to complete payment.`,
-          [
-            {
-              text: 'Simulate Success',
-              onPress: () => simulatePaymentSuccess(paymentIntentId),
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel',
-              onPress: () => setLoading(false),
-            },
-          ]
-        );
-      } else if (selectedMethod === 'card') {
-        // For card payments - would show card input form
-        Alert.alert(
-          'Card Payment',
-          'Card payment UI would be shown here using PayMongo SDK.',
-          [
-            {
-              text: 'Simulate Success',
-              onPress: () => simulatePaymentSuccess(paymentIntentId),
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel',
-              onPress: () => setLoading(false),
-            },
-          ]
-        );
-      }
-    } catch (error: any) {
-      setLoading(false);
-      Alert.alert(
-        'Payment Failed',
-        error.response?.data?.error || error.message || 'Failed to create payment'
-      );
-    }
-  };
-
-  const simulatePaymentSuccess = async (paymentIntentId: string) => {
-    try {
-      // Confirm payment with backend
-      const confirmResponse = await paymentAPI.confirmPayment({ paymentIntentId });
-      const { paymentId, status } = confirmResponse.data;
-
-      setLoading(false);
-
-      if (status === 'completed') {
-        navigation.replace('PaymentSuccess', { paymentId, bookingId });
-      } else {
-        navigation.replace('PaymentFailed', {
-          error: `Payment ${status}`,
-          bookingId,
-        });
-      }
-    } catch (error: any) {
-      setLoading(false);
-      navigation.replace('PaymentFailed', {
-        error: error.response?.data?.error || error.message || 'Payment confirmation failed',
-        bookingId,
-      });
-    }
-  };
-
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            disabled={loading}
-          >
-            <Text style={styles.backButtonText}>←</Text>
+          <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+            <Text style={styles.headerButtonText}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Payment</Text>
-          <View style={styles.placeholder} />
+          <View style={styles.headerButton} />
         </View>
 
-        {/* Amount Summary */}
-        <View style={styles.amountContainer}>
-          <Text style={styles.amountLabel}>Total Amount</Text>
-          <Text style={styles.amount}>₱{amount.toFixed(2)}</Text>
-          <Text style={styles.amountSubtext}>Booking #{bookingId}</Text>
+        {/* Price Breakdown */}
+        <View style={styles.priceCard}>
+          <Text style={styles.sectionTitle}>Price Details</Text>
+          
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Subtotal</Text>
+            <Text style={styles.priceValue}>₱{orderData.subtotal.toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Service Fee</Text>
+            <Text style={styles.priceValue}>₱{orderData.serviceFee.toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.divider} />
+          
+          <View style={styles.priceRow}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalValue}>₱{orderData.total.toFixed(2)}</Text>
+          </View>
         </View>
 
         {/* Payment Methods */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Payment Method</Text>
-
+        <View style={styles.paymentSection}>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
+          
           {paymentMethods.map((method) => (
             <TouchableOpacity
               key={method.id}
               style={[
-                styles.methodCard,
-                selectedMethod === method.id && styles.methodCardSelected,
+                styles.paymentOption,
+                selectedPayment === method.id && styles.paymentOptionSelected,
               ]}
-              onPress={() => setSelectedMethod(method.id)}
-              disabled={loading}
+              onPress={() => setSelectedPayment(method.id)}
             >
-              <View style={styles.methodIcon}>
-                <Text style={styles.methodIconText}>{method.icon}</Text>
-              </View>
-              <View style={styles.methodInfo}>
-                <Text style={styles.methodName}>{method.name}</Text>
-                <Text style={styles.methodDescription}>{method.description}</Text>
-              </View>
-              {selectedMethod === method.id && (
-                <View style={styles.selectedIndicator}>
-                  <Text style={styles.selectedIndicatorText}>✓</Text>
+              <View style={styles.paymentOptionContent}>
+                <Text style={styles.paymentIcon}>{method.icon}</Text>
+                <View style={styles.paymentTextContainer}>
+                  <Text style={styles.paymentName}>{method.name}</Text>
+                  <Text style={styles.paymentDescription}>{method.description}</Text>
                 </View>
-              )}
+              </View>
+              <View
+                style={[
+                  styles.radioOuter,
+                  selectedPayment === method.id && styles.radioOuterSelected,
+                ]}
+              >
+                {selectedPayment === method.id && (
+                  <View style={styles.radioInner} />
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Payment Info */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoIcon}>ℹ️</Text>
-          <Text style={styles.infoText}>
-            You'll be redirected to complete your payment securely. Your booking will be confirmed
-            once payment is successful.
-          </Text>
-        </View>
-
-        {/* Security Notice */}
-        <View style={styles.securityNotice}>
-          <Text style={styles.securityIcon}>🔒</Text>
-          <Text style={styles.securityText}>
-            Payments powered by PayMongo - Secure & PCI-DSS compliant
-          </Text>
-        </View>
       </ScrollView>
 
-      {/* Pay Button */}
+      {/* Pay Now Button */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.payButton, loading && styles.payButtonDisabled]}
-          onPress={handlePayment}
-          disabled={loading}
+          style={[
+            styles.payButton,
+            (!selectedPayment || loading) && styles.payButtonDisabled,
+          ]}
+          onPress={handlePayNow}
+          disabled={!selectedPayment || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#ffffff" />
           ) : (
-            <>
-              <Text style={styles.payButtonText}>Pay ₱{amount.toFixed(2)}</Text>
-              <Text style={styles.payButtonSubtext}>with {paymentMethods.find(m => m.id === selectedMethod)?.name}</Text>
-            </>
+            <Text style={styles.payButtonText}>
+              Pay ₱{orderData.total.toFixed(2)}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: BACKGROUND,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 28,
-    color: '#333',
+  headerButtonText: {
+    fontSize: 24,
+    color: '#1e293b',
+    fontWeight: '500',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#1e293b',
   },
-  placeholder: {
-    width: 40,
-  },
-  amountContainer: {
-    backgroundColor: '#4CAF50',
-    padding: 30,
-    alignItems: 'center',
-  },
-  amountLabel: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
-    marginBottom: 8,
-  },
-  amount: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  amountSubtext: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.8,
-    marginTop: 8,
-  },
-  section: {
-    marginTop: 20,
-    paddingHorizontal: 20,
+  priceCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#1e293b',
     marginBottom: 16,
   },
-  methodCard: {
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  priceValue: {
+    fontSize: 14,
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 8,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: PRIMARY,
+  },
+  paymentSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  paymentOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
+    justifyContent: 'space-between',
+    backgroundColor: BACKGROUND,
     borderRadius: 12,
+    padding: 16,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: 'transparent',
   },
-  methodCardSelected: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#f1f8f4',
+  paymentOptionSelected: {
+    borderColor: PRIMARY,
+    backgroundColor: PRIMARY + '10',
   },
-  methodIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
+  paymentOptionContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
-  },
-  methodIconText: {
-    fontSize: 24,
-  },
-  methodInfo: {
     flex: 1,
   },
-  methodName: {
+  paymentIcon: {
+    fontSize: 28,
+    marginRight: 14,
+  },
+  paymentTextContainer: {
+    flex: 1,
+  },
+  paymentName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: '#1e293b',
+    marginBottom: 2,
   },
-  methodDescription: {
+  paymentDescription: {
     fontSize: 13,
-    color: '#666',
+    color: '#64748b',
   },
-  selectedIndicator: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedIndicatorText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: '#E3F2FD',
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 20,
+  radioOuter: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
-  },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1976D2',
-    lineHeight: 20,
-  },
-  securityNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
     justifyContent: 'center',
-    padding: 20,
-    marginTop: 10,
+    alignItems: 'center',
   },
-  securityIcon: {
-    fontSize: 16,
-    marginRight: 8,
+  radioOuterSelected: {
+    borderColor: PRIMARY,
   },
-  securityText: {
-    fontSize: 12,
-    color: '#666',
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: PRIMARY,
   },
   footer: {
-    padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#e2e8f0',
   },
   payButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 18,
+    backgroundColor: PRIMARY,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   payButtonDisabled: {
-    opacity: 0.6,
+    backgroundColor: '#cbd5e1',
   },
   payButtonText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  payButtonSubtext: {
-    fontSize: 13,
-    color: '#fff',
-    opacity: 0.9,
-    marginTop: 4,
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });

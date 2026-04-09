@@ -320,7 +320,8 @@ describe('Analytics API Routes', () => {
             lat: 14.5312,
             lon: 120.9844,
             address: '123 Test St, Manila',
-            slotType: 'commercial_iot'
+            slotType: 'commercial_iot',
+            price: 50.00
           },
           {
             zoneId: testZone.id,
@@ -330,7 +331,8 @@ describe('Analytics API Routes', () => {
             lat: 14.5313,
             lon: 120.9845,
             address: '123 Test St, Manila',
-            slotType: 'commercial_iot'
+            slotType: 'commercial_iot',
+            price: 50.00
           },
           {
             zoneId: testZone.id,
@@ -340,7 +342,8 @@ describe('Analytics API Routes', () => {
             lat: 14.5314,
             lon: 120.9846,
             address: '123 Test St, Manila',
-            slotType: 'commercial_iot'
+            slotType: 'commercial_iot',
+            price: 50.00
           }
         ]
       });
@@ -388,7 +391,10 @@ describe('Analytics API Routes', () => {
             maxCirclingTimeSeconds: 600,
             occupancyPercentage: 75.5,
             totalSessions: 10,
-            totalRevenue: 500.00
+            totalRevenue: 500.00,
+            totalSlots: 100,
+            occupiedSlots: 0,
+            availableSlots: 100
           },
           {
             zoneId: testZone.id,
@@ -399,7 +405,10 @@ describe('Analytics API Routes', () => {
             maxCirclingTimeSeconds: 650,
             occupancyPercentage: 80.0,
             totalSessions: 12,
-            totalRevenue: 600.00
+            totalRevenue: 600.00,
+            totalSlots: 100,
+            occupiedSlots: 0,
+            availableSlots: 100
           }
         ]
       });

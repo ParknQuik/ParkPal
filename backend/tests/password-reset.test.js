@@ -59,10 +59,12 @@ describe('Password Reset Flow', () => {
       expect(new Date(updatedUser.resetPasswordExpires).getTime()).toBeGreaterThan(Date.now());
 
       // Verify email service was called (in test mode, using fallback logger)
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('✅ Password reset email sent:'),
-        expect.any(String)
+      expect(consoleSpy).toHaveBeenCalled();
+      const calls = consoleSpy.mock.calls;
+      const hasMatchingCall = calls.some(call => 
+        call[0] && call[0].includes('✅ Password reset email sent:')
       );
+      expect(hasMatchingCall).toBe(true);
 
       consoleSpy.mockRestore();
 

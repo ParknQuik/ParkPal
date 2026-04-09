@@ -155,7 +155,7 @@ export interface LocationState {
 export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'outline' | 'gradient';
+  variant?: 'primary' | 'secondary' | 'outline' | 'text' | 'gradient';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
@@ -223,6 +223,7 @@ export interface MarketplaceListing {
 export interface MarketplaceBooking {
   id: number;
   listingId: number;
+  slotId: number;
   listingTitle: string;
   listingAddress: string;
   listingPhoto?: string;
@@ -231,6 +232,7 @@ export interface MarketplaceBooking {
   totalAmount: number;
   platformFee: number;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+  rentalMode: 'fixed' | 'hourly';
   qrCode?: string;
   sessionId?: number;
   createdAt: string;
@@ -261,6 +263,7 @@ export interface HostEarnings {
 }
 
 export interface SearchFilters {
+  q?: string;
   latitude?: number;
   longitude?: number;
   radius?: number;
@@ -283,10 +286,31 @@ export interface MarketplaceState {
   error: string | null;
 }
 
+export interface Vehicle {
+  id: number;
+  userId: number;
+  make: string;
+  model: string;
+  year: number;
+  color: string;
+  licensePlate: string;
+  imageUrl: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VehiclesState {
+  vehicles: Vehicle[];
+  loading: boolean;
+  error: string | null;
+}
+
 export interface RootState {
   auth: AuthState;
   parking: ParkingState;
   booking: BookingState;
   location: LocationState;
   marketplace: MarketplaceState;
+  vehicles: VehiclesState;
 }

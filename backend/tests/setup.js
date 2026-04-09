@@ -36,6 +36,7 @@ async function cleanDatabase() {
   await prisma.sensorEvent.deleteMany();
   await prisma.parkingSlot.deleteMany();
   await prisma.zone.deleteMany();
+  await prisma.notification.deleteMany();
   await prisma.user.deleteMany();
 }
 
