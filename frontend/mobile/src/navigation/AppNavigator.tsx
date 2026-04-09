@@ -6,6 +6,17 @@ import { AuthStack } from './AuthStack';
 import { MainStack } from './MainStack';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
+// Deep linking configuration for OAuth callbacks
+const linking = {
+  prefixes: ['parknquik://', 'https://auth.expo.io/@anonymous/parknquik-mobile'],
+  config: {
+    screens: {
+      Auth: 'auth',
+      Main: 'main',
+    },
+  },
+};
+
 export const AppNavigator: React.FC = () => {
   const dispatch = useAppDispatch();
   const { isAuthenticated, loading } = useAppSelector((state) => state.auth);
@@ -19,7 +30,7 @@ export const AppNavigator: React.FC = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {isAuthenticated ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
   );

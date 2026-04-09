@@ -252,6 +252,106 @@ module.exports = (app) => {
     marketplaceController.cancelBooking
   );
 
+  // Confirm booking without payment (cash payments)
+  app.post(
+    '/marketplace/bookings/:id/confirm',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.confirmBooking
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/bookings/{id}/extension-availability:
+   *   get:
+   *     summary: Check if booking can be extended
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *       - in: query
+   *         name: hours
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 4
+   *         description: Number of hours to extend (1-4)
+   *         example: 1
+   *     responses:
+   *       200:
+   *         description: Extension availability check result
+   *       400:
+   *         description: Invalid booking state for extension
+   *       403:
+   *         description: Unauthorized
+   *       404:
+   *         description: Booking not found
+   */
+  app.get(
+    '/marketplace/bookings/:id/extension-availability',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.checkExtensionAvailability
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/bookings/{id}/extend:
+   *   post:
+   *     summary: Extend an active booking
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Booking ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - hours
+   *               - paymentIntentId
+   *             properties:
+   *               hours:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 4
+   *                 example: 1
+   *               paymentIntentId:
+   *                 type: string
+   *                 example: "pi_3AbCdEfGhIjKlMnO"
+   *     responses:
+   *       200:
+   *         description: Booking extended successfully
+   *       400:
+   *         description: Invalid input or booking state
+   *       403:
+   *         description: Unauthorized
+   *       404:
+   *         description: Booking not found
+   *       409:
+   *         description: Slot conflict - no longer available for extension
+   */
+  app.post(
+    '/marketplace/bookings/:id/extend',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.extendBooking
+  );
+
   /**
    * @swagger
    * /api/marketplace/qr/checkin:
@@ -474,6 +574,24 @@ module.exports = (app) => {
 
   /**
    * @swagger
+   * /api/marketplace/bookings/upcoming:
+   *   get:
+   *     summary: Get upcoming bookings (for notifications)
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List of upcoming bookings
+   */
+  app.get(
+    '/marketplace/bookings/upcoming',
+    authenticate,
+    marketplaceController.getUpcomingBookings
+  );
+
+  /**
+   * @swagger
    * /api/marketplace/listings/:id/reviews:
    *   get:
    *     summary: Get reviews for a specific listing
@@ -493,5 +611,60 @@ module.exports = (app) => {
     '/marketplace/listings/:id/reviews',
     validateParams(idParamSchema),
     marketplaceController.getListingReviews
+  );
+
+  /**
+   * @swagger
+   * /api/marketplace/listings/:id/toggle:
+   *   patch:
+   *     summary: Toggle listing availability (activate/pause)
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Listing ID
+   *     responses:
+   *       200:
+   *         description: Listing availability toggled successfully
+   *       403:
+   *         description: Unauthorized (not the owner)
+   *       404:
+   *         description: Listing not found
+   */
+  app.patch(
+    '/marketplace/listings/:id/toggle',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.toggleListingAvailability
+  );
+  // Delete a listing
+  app.delete(
+    '/marketplace/listings/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    marketplaceController.deleteListing
+  );
+
+  // Manual trigger for booking expiry check (for testing/development)
+  app.post(
+    '/marketplace/bookings/check-expired',
+    async (req, res) => {
+      try {
+        const { checkExpiredBookings } = require('../services/bookingExpiry');
+        const result = await checkExpiredBookings();
+        res.json({
+          message: 'Booking expiry check completed',
+          processed: result.processed
+        });
+      } catch (error) {
+        console.error('Manual expiry check error:', error);
+        res.status(500).json({ error: error.message });
+      }
+    }
   );
 };

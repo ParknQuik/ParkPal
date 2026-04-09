@@ -37,12 +37,16 @@ const format = winston.format.combine(
   winston.format.json()
 );
 
+// Check if terminal supports colors
+const supportsColor = process.stdout.isTTY && process.env.TERM !== 'dumb';
+
 // Define which transports the logger must use
 const transports = [
   // Console transport
   new winston.transports.Console({
     format: winston.format.combine(
-      winston.format.colorize({ all: true }),
+      // Only colorize if terminal supports it
+      supportsColor ? winston.format.colorize({ all: true }) : winston.format.uncolorize(),
       winston.format.printf(
         (info) => {
           const { timestamp, level, message, ...meta } = info;

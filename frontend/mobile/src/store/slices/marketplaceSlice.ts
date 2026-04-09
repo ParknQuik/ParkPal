@@ -28,8 +28,13 @@ const initialState: MarketplaceState = {
 export const searchListings = createAsyncThunk(
   'marketplace/searchListings',
   async (params?: SearchFilters) => {
-    console.log('🔄 API Request params:', params);
-    const response = await marketplaceAPI.searchListings(params);
+    // Map frontend field names to backend API expected params
+    const { latitude, longitude, ...rest } = params || {};
+    const apiParams: Record<string, any> = { ...rest };
+    if (latitude !== undefined) apiParams.lat = latitude;
+    if (longitude !== undefined) apiParams.lon = longitude;
+    console.log('🔄 API Request params:', apiParams);
+    const response = await marketplaceAPI.searchListings(apiParams);
     console.log('✅ API Response:', {
       status: response.status,
       dataLength: response.data?.data?.length || response.data?.length || 0
@@ -125,7 +130,7 @@ export const getListingById = createAsyncThunk(
 
 export const createListing = createAsyncThunk(
   'marketplace/createListing',
-  async (data: {
+  async (params: {
     title: string;
     description: string;
     address: string;
@@ -134,8 +139,19 @@ export const createListing = createAsyncThunk(
     pricePerHour: number;
     photos?: string[];
     amenities?: string[];
+    slotType?: string;
   }) => {
-    const response = await marketplaceAPI.createListing(data);
+    const apiParams = {
+      lat: params.latitude,
+      lon: params.longitude,
+      price: params.pricePerHour,
+      address: params.address,
+      slotType: (params.slotType as 'roadside_qr' | 'commercial_manual' | 'commercial_iot') || 'commercial_manual',
+      description: params.description,
+      amenities: params.amenities,
+      photos: params.photos,
+    };
+    const response = await marketplaceAPI.createListing(apiParams);
     return response.data;
   }
 );
@@ -143,7 +159,7 @@ export const createListing = createAsyncThunk(
 export const createBooking = createAsyncThunk(
   'marketplace/createBooking',
   async (data: {
-    listingId: number;
+    slotId: number;
     startTime: string;
     endTime: string;
   }) => {
@@ -187,7 +203,7 @@ export const getListingReviews = createAsyncThunk(
 export const createReview = createAsyncThunk(
   'marketplace/createReview',
   async (data: {
-    listingId: number;
+    slotId: number;
     bookingId: number;
     rating: number;
     comment: string;
@@ -209,7 +225,41 @@ export const getMyListings = createAsyncThunk(
   'marketplace/getMyListings',
   async () => {
     const response = await marketplaceAPI.getMyListings();
-    return response.data;
+    const listings = response.data?.data || response.data || [];
+
+    return listings.map((listing: any) => ({
+      id: listing.id,
+      title: listing.address,
+      description: listing.description || '',
+      address: listing.address,
+      latitude: listing.lat,
+      longitude: listing.lon,
+      lat: listing.lat,
+      lon: listing.lon,
+      price: listing.price,
+      pricePerHour: listing.price,
+      photos: listing.photos || [],
+      amenities: listing.amenities || [],
+      slotType: listing.slotType,
+      hostId: listing.ownerId || listing.owner?.id,
+      hostName: listing.owner?.name || 'Unknown Host',
+      hostAvatar: listing.owner?.profileImageUrl,
+      owner: listing.owner,
+      rating: listing.rating || 0,
+      reviewCount: listing.reviews?.length || 0,
+      reviews: listing.reviews || [],
+      distance: listing.distance,
+      availability: listing.status === 'available',
+      status: listing.status,
+    }));
+  }
+);
+
+export const cancelBooking = createAsyncThunk(
+  'marketplace/cancelBooking',
+  async (bookingId: number) => {
+    await marketplaceAPI.cancelBooking(bookingId);
+    return bookingId;
   }
 );
 
@@ -395,6 +445,11 @@ const marketplaceSlice = createSlice({
     builder.addCase(getMyListings.rejected, (state, action) => {
       state.loading = false;
       state.error = action.error.message || 'Failed to fetch listings';
+    });
+
+    // Cancel booking
+    builder.addCase(cancelBooking.fulfilled, (state, action) => {
+      state.bookings = state.bookings.filter((b) => b.id !== action.payload);
     });
   },
 });

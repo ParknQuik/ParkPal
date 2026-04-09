@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "FORCE_COLOR=0 node index.js",
+    "dev": "FORCE_COLOR=0 nodemon index.js",
     "seed": "node prisma/seed.js",
     "test": "NODE_ENV=test jest --detectOpenHandles --forceExit",
     "test:watch": "NODE_ENV=test jest --watch",
@@ -52,6 +52,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^6.9.7",
     "pg": "^8.16.3",
     "prom-client": "^15.1.3",

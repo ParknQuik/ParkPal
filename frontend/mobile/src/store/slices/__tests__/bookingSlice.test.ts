@@ -279,4 +279,80 @@ describe('bookingSlice', () => {
       expect(state.activeBooking).toBe(null);
     });
   });
+
+  describe('bookingSlice - Extension Features', () => {
+    it('should handle booking with extension data', async () => {
+      const mockAPIBooking = {
+        id: 1,
+        slotId: 10,
+        userId: 5,
+        startTime: '2026-04-08T10:00:00Z',
+        endTime: '2026-04-08T15:00:00Z',
+        originalEndTime: '2026-04-08T13:00:00Z',
+        extensionCount: 2,
+        totalExtensionHrs: 2,
+        lastExtendedAt: '2026-04-08T11:30:00Z',
+        rentalMode: 'fixed',
+        status: 'active',
+        price: 180,
+        platformFee: 9,
+        hostEarnings: 171,
+        createdAt: '2026-04-08T09:00:00Z',
+        slot: {
+          description: 'Extended Parking',
+          address: '789 Extended St',
+          photos: JSON.stringify(['photo_ext.jpg']),
+          qrCode: 'QR789',
+        },
+      };
+
+      (marketplaceAPI.getMyBookings as jest.Mock).mockResolvedValue({
+        data: { bookings: [mockAPIBooking] },
+      });
+
+      await store.dispatch(fetchBookings('5'));
+
+      const state = store.getState().booking;
+      expect(state.bookings).toHaveLength(1);
+      expect(state.bookings[0].id).toBe('1');
+      expect(state.bookings[0].status).toBe('active');
+      expect(state.bookings[0].price).toBe(180);
+    });
+
+    it('should handle open rental mode bookings', async () => {
+      const mockOpenModeBooking = {
+        id: 2,
+        slotId: 11,
+        userId: 5,
+        startTime: '2026-04-08T10:00:00Z',
+        endTime: null,
+        rentalMode: 'open',
+        maxDuration: 12,
+        authAmount: 600,
+        status: 'confirmed',
+        price: 600,
+        platformFee: 30,
+        hostEarnings: 570,
+        createdAt: '2026-04-08T09:00:00Z',
+        slot: {
+          description: 'Open Mode Parking',
+          address: '456 Open St',
+          photos: JSON.stringify(['photo_open.jpg']),
+          qrCode: 'QR456',
+        },
+      };
+
+      (marketplaceAPI.getMyBookings as jest.Mock).mockResolvedValue({
+        data: { bookings: [mockOpenModeBooking] },
+      });
+
+      await store.dispatch(fetchBookings('5'));
+
+      const state = store.getState().booking;
+      expect(state.bookings).toHaveLength(1);
+      expect(state.bookings[0].id).toBe('2');
+      expect(state.bookings[0].endDate).toBeNull();
+      expect(state.bookings[0].price).toBe(600);
+    });
+  });
 });

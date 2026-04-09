@@ -136,7 +136,7 @@ function getListingsCacheKey(params) {
     'listings',
     status || 'available',
     slotType || 'all',
-    lat && lon && radius ? `loc:${lat},${lon},${radius}` : 'anywhere',
+    lat && lon && radius ? `loc:${parseFloat(lat).toFixed(3)},${parseFloat(lon).toFixed(3)},${radius}` : 'anywhere',
     minPrice ? `min:${minPrice}` : '',
     maxPrice ? `max:${maxPrice}` : '',
     amenities ? `am:${amenities}` : '',

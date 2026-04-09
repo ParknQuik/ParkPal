@@ -1,275 +1,270 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
+  ScrollView,
+  StatusBar,
+  ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import { useAppDispatch, useAppSelector } from '../store';
-import { getHostEarnings } from '../store/slices/marketplaceSlice';
-import { Card } from '../components/Card';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { EmptyState } from '../components/EmptyState';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius } from '../theme';
-import { formatCurrency, formatDate } from '../utils/helpers';
+import { haptics } from '../utils/haptics';
+import { earningsAPI } from '../services/api';
 
-type DateFilter = 'all' | 'week' | 'month' | 'year';
+interface EarningsSummary {
+  totalEarned: number;
+  monthlyChange: number;
+  availableBalance: number;
+}
+
+interface AnalyticsItem {
+  label: string;
+  amount: number;
+}
+
+interface Transaction {
+  id: number;
+  createdAt: string;
+  description: string;
+  amount: number;
+  status: string;
+  type?: string;
+}
 
 export const EarningsScreen: React.FC = () => {
   const navigation = useNavigation();
-  const dispatch = useAppDispatch();
-  const { hostEarnings, loading } = useAppSelector((state) => state.marketplace);
-
-  const [selectedFilter, setSelectedFilter] = useState<DateFilter>('all');
+  const [summary, setSummary] = useState<EarningsSummary | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsItem[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly');
+
+  const fetchData = async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setLoading(true);
+
+      const [summaryRes, analyticsRes, transactionsRes] = await Promise.all([
+        earningsAPI.getSummary(),
+        earningsAPI.getAnalytics(period),
+        earningsAPI.getTransactions({ limit: 10 }),
+      ]);
+
+      setSummary(summaryRes.data?.data || summaryRes.data || null);
+      setAnalytics(analyticsRes.data?.data || analyticsRes.data || []);
+      setTransactions(transactionsRes.data?.data || transactionsRes.data || []);
+    } catch (error) {
+      console.error('Failed to fetch earnings data:', error);
+      if (!isRefresh) {
+        Alert.alert('Error', 'Failed to load earnings data. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [period])
+  );
 
   useEffect(() => {
-    loadEarnings();
-  }, [selectedFilter]);
+    const fetchAnalytics = async () => {
+      try {
+        const analyticsResponse = await earningsAPI.getAnalytics(period);
+        setAnalytics(analyticsResponse.data?.data || analyticsResponse.data || []);
+      } catch (err) {
+        console.error('Failed to fetch analytics:', err);
+      }
+    };
+    fetchAnalytics();
+  }, [period]);
 
-  const loadEarnings = async () => {
-    const params = getDateFilterParams(selectedFilter);
-    await dispatch(getHostEarnings(params));
-  };
-
-  const onRefresh = async () => {
+  const handleRefresh = () => {
     setRefreshing(true);
-    await loadEarnings();
-    setRefreshing(false);
+    fetchData(true);
   };
 
-  const getDateFilterParams = (filter: DateFilter) => {
-    const now = new Date();
-    let startDate: Date | undefined;
-
-    switch (filter) {
-      case 'week':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'month':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case 'year':
-        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        return undefined;
-    }
-
-    return startDate
-      ? {
-          startDate: startDate.toISOString(),
-          endDate: now.toISOString(),
-        }
-      : undefined;
-  };
-
-  const handleBack = () => {
+  const handleBack = async () => {
+    await haptics.light();
     navigation.goBack();
   };
 
-  if (loading && !hostEarnings) {
-    return <LoadingSpinner />;
+  const handleWithdraw = async () => {
+    await haptics.medium();
+    if (!summary?.availableBalance || summary.availableBalance <= 0) {
+      Alert.alert('No Balance', 'You have no available balance to withdraw.');
+      return;
+    }
+    try {
+      await earningsAPI.requestPayout(summary.availableBalance);
+      Alert.alert('Success', 'Payout request submitted successfully.');
+      fetchData(true);
+    } catch (error) {
+      console.error('Payout failed:', error);
+      Alert.alert('Error', 'Payout request failed. Please try again.');
+    }
+  };
+
+  const maxAmount = analytics.length > 0 ? Math.max(...analytics.map(d => d.amount)) : 1;
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <SafeAreaView edges={['top']} style={styles.safeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Text style={styles.backIcon}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>Earnings</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
   }
 
-  const filters: { id: DateFilter; label: string }[] = [
-    { id: 'all', label: 'All Time' },
-    { id: 'week', label: 'Week' },
-    { id: 'month', label: 'Month' },
-    { id: 'year', label: 'Year' },
-  ];
-
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>‹</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Earnings</Text>
-        <View style={styles.headerRight} />
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Earnings</Text>
+          <View style={styles.placeholder} />
+        </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Earnings Summary Header */}
-        <LinearGradient
-          colors={colors.gradientPrimary}
-          style={styles.summaryHeader}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         >
-          <Text style={styles.summaryLabel}>Total Earnings</Text>
-          <Text style={styles.summaryAmount}>
-            {formatCurrency(hostEarnings?.totalEarnings || 0)}
-          </Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {formatCurrency(hostEarnings?.pendingPayouts || 0)}
-              </Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {formatCurrency(hostEarnings?.completedPayouts || 0)}
-              </Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {hostEarnings?.bookingsCount || 0}
-              </Text>
-              <Text style={styles.statLabel}>Bookings</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        <View style={styles.content}>
-          {/* Date Filters */}
-          <View style={styles.filtersContainer}>
-            {filters.map((filter) => (
-              <TouchableOpacity
-                key={filter.id}
-                style={[
-                  styles.filterChip,
-                  selectedFilter === filter.id && styles.filterChipActive,
-                ]}
-                onPress={() => setSelectedFilter(filter.id)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    selectedFilter === filter.id && styles.filterChipTextActive,
-                  ]}
-                >
-                  {filter.label}
+          <View style={styles.totalCardContainer}>
+            <LinearGradient
+              colors={['#10b77f', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.totalCard}
+            >
+              <Text style={styles.totalLabel}>Total Earned</Text>
+              <Text style={styles.totalAmount}>₱{(summary?.totalEarned ?? 0).toLocaleString()}</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeIcon}>{(summary?.monthlyChange ?? 0) >= 0 ? '↑' : '↓'}</Text>
+                <Text style={styles.badgeText}>
+                  {(summary?.monthlyChange ?? 0) >= 0 ? '+' : ''}{summary?.monthlyChange ?? 0}% from last month
                 </Text>
-              </TouchableOpacity>
-            ))}
+              </View>
+            </LinearGradient>
           </View>
 
-          {/* Earnings by Listing */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Earnings by Listing</Text>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.cardLabel}>Available Balance</Text>
+              <Text style={styles.cardValue}>₱{(summary?.availableBalance ?? 0).toLocaleString()}</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.cardLabel}>This Month</Text>
+              <Text style={styles.cardValue}>
+                {(summary as any)?.monthlyEarnings != null
+                  ? `₱${(summary as any).monthlyEarnings.toLocaleString()}`
+                  : `${(summary?.monthlyChange ?? 0) >= 0 ? '+' : ''}${summary?.monthlyChange ?? 0}%`}
+              </Text>
+            </View>
+          </View>
 
-            {!hostEarnings || hostEarnings.listings.length === 0 ? (
-              <EmptyState
-                title="No Earnings Yet"
-                message="Start hosting parking spots to see your earnings here"
-              />
+          {analytics.length > 0 && (
+            <View style={styles.chartSection}>
+              <Text style={styles.sectionTitle}>{period === 'weekly' ? 'Weekly' : 'Monthly'} Earnings</Text>
+              <View style={styles.periodToggle}>
+                <TouchableOpacity
+                  style={[styles.periodButton, period === 'weekly' && styles.periodButtonActive]}
+                  onPress={() => setPeriod('weekly')}
+                >
+                  <Text style={[styles.periodText, period === 'weekly' && styles.periodTextActive]}>Weekly</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.periodButton, period === 'monthly' && styles.periodButtonActive]}
+                  onPress={() => setPeriod('monthly')}
+                >
+                  <Text style={[styles.periodText, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.chartContainer}>
+                {analytics.map((item) => (
+                  <View key={item.label} style={styles.barWrapper}>
+                    <View style={styles.barContainer}>
+                      <View 
+                        style={[
+                          styles.bar, 
+                          { height: `${(item.amount / maxAmount) * 100}%` }
+                        ]} 
+                      />
+                    </View>
+                    <Text style={styles.barLabel}>{item.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <View style={styles.transactionsSection}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            {transactions.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No transactions yet.</Text>
+              </View>
             ) : (
-              hostEarnings.listings.map((listing, index) => (
-                <Card key={listing.id} style={styles.listingCard}>
-                  <View style={styles.listingHeader}>
-                    <View style={styles.listingRank}>
-                      <Text style={styles.listingRankText}>#{index + 1}</Text>
-                    </View>
-                    <View style={styles.listingInfo}>
-                      <Text style={styles.listingTitle} numberOfLines={1}>
-                        {listing.title}
-                      </Text>
-                      <Text style={styles.listingStats}>
-                        {listing.bookings} booking{listing.bookings !== 1 ? 's' : ''}
-                      </Text>
-                    </View>
-                    <View style={styles.listingEarnings}>
-                      <Text style={styles.listingEarningsAmount}>
-                        {formatCurrency(listing.earnings)}
-                      </Text>
-                    </View>
+              transactions.map((transaction) => {
+                const isPositive = transaction.type !== 'debit' && transaction.amount >= 0;
+                return (
+                <View key={transaction.id} style={styles.transactionItem}>
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionDate}>{formatDate(transaction.createdAt)}</Text>
+                    <Text style={styles.transactionDesc}>{transaction.description}</Text>
+                    <Text style={[styles.txStatus, { color: transaction.status === 'completed' ? colors.primary : colors.secondary }]}>
+                      {transaction.status || 'completed'}
+                    </Text>
                   </View>
-
-                  {/* Progress Bar */}
-                  <View style={styles.progressContainer}>
-                    <View
-                      style={[
-                        styles.progressBar,
-                        {
-                          width: `${
-                            hostEarnings.totalEarnings > 0
-                              ? (listing.earnings / hostEarnings.totalEarnings) * 100
-                              : 0
-                          }%`,
-                        },
-                      ]}
-                    />
-                  </View>
-
-                  <Text style={styles.progressPercentage}>
-                    {hostEarnings.totalEarnings > 0
-                      ? ((listing.earnings / hostEarnings.totalEarnings) * 100).toFixed(1)
-                      : 0}
-                    % of total
+                  <Text style={[styles.transactionAmount, { color: isPositive ? colors.primary : colors.error }]}>
+                    {isPositive ? '+' : '-'}₱{Math.abs(transaction.amount).toLocaleString()}
                   </Text>
-                </Card>
-              ))
+                </View>
+                );
+              })
             )}
           </View>
+        </ScrollView>
 
-          {/* Payment History Info */}
-          {hostEarnings && hostEarnings.listings.length > 0 && (
-            <Card style={styles.infoCard}>
-              <View style={styles.infoHeader}>
-                <Text style={styles.infoIcon}>💡</Text>
-                <Text style={styles.infoTitle}>Payment Information</Text>
-              </View>
-              <Text style={styles.infoText}>
-                Earnings are tracked manually. Hosts confirm payments received from drivers.
-                Automatic payouts will be available soon!
-              </Text>
-              <View style={styles.infoStats}>
-                <View style={styles.infoStatItem}>
-                  <Text style={styles.infoStatLabel}>Platform Fee</Text>
-                  <Text style={styles.infoStatValue}>5%</Text>
-                </View>
-                <View style={styles.infoStatItem}>
-                  <Text style={styles.infoStatLabel}>Your Share</Text>
-                  <Text style={styles.infoStatValue}>95%</Text>
-                </View>
-              </View>
-            </Card>
-          )}
-
-          {/* Action Buttons */}
-          {hostEarnings && hostEarnings.listings.length > 0 && (
-            <View style={styles.actionsContainer}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => {
-                  // Navigate to My Listings (will be implemented next)
-                  console.log('View all listings');
-                }}
-              >
-                <Text style={styles.actionButtonText}>View My Listings</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.actionButtonSecondary]}
-                onPress={() => {
-                  // Navigate to support/help
-                  console.log('Contact support');
-                }}
-              >
-                <Text style={styles.actionButtonTextSecondary}>Contact Support</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={handleWithdraw} style={styles.withdrawButton}>
+            <Text style={styles.withdrawButtonText}>Withdraw</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -278,246 +273,236 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  safeArea: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   backButton: {
     width: 40,
     height: 40,
-    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.white,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   backIcon: {
-    fontSize: 32,
+    fontSize: 24,
     color: colors.textPrimary,
-    fontWeight: '300',
   },
-  headerTitle: {
-    ...typography.h5,
+  title: {
+    ...typography.h2,
     color: colors.textPrimary,
-    fontWeight: '700',
   },
-  headerRight: {
+  placeholder: {
     width: 40,
   },
-  summaryHeader: {
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xxxl,
-    paddingHorizontal: spacing.xl,
-    alignItems: 'center',
+  scrollView: {
+    flex: 1,
   },
-  summaryLabel: {
-    ...typography.body,
-    color: colors.white,
-    opacity: 0.9,
-    marginBottom: spacing.sm,
+  scrollContent: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
   },
-  summaryAmount: {
-    ...typography.h1,
-    color: colors.white,
-    fontWeight: '700',
-    marginBottom: spacing.xl,
+  totalCardContainer: {
+    marginBottom: spacing.lg,
   },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  totalCard: {
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
-    width: '100%',
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  statValue: {
-    ...typography.h5,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  statLabel: {
-    ...typography.small,
+  totalLabel: {
+    ...typography.body,
     color: colors.white,
     opacity: 0.9,
-    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
   },
-  content: {
-    padding: spacing.lg,
-    marginTop: -spacing.xl,
-  },
-  filtersContainer: {
-    flexDirection: 'row',
-    marginBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  filterChip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterChipText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  filterChipTextActive: {
+  totalAmount: {
+    ...typography.h1,
     color: colors.white,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    ...typography.h6,
-    color: colors.textPrimary,
+    fontSize: 36,
     fontWeight: '700',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
-  listingCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  listingHeader: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+    alignSelf: 'flex-start',
+  },
+  badgeIcon: {
+    fontSize: 14,
+    color: colors.white,
+    marginRight: spacing.xs,
+  },
+  badgeText: {
+    ...typography.caption,
+    color: colors.white,
+    fontWeight: '600',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+  },
+  cardLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  cardValue: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  chartSection: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  periodToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.xs,
     marginBottom: spacing.md,
   },
-  listingRank: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+  periodButton: {
+    flex: 1,
+    minHeight: 44,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    borderRadius: borderRadius.sm,
   },
-  listingRankText: {
+  periodButtonActive: {
+    backgroundColor: colors.white,
+  },
+  periodText: {
     ...typography.body,
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  listingInfo: {
-    flex: 1,
-  },
-  listingTitle: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  listingStats: {
-    ...typography.small,
     color: colors.textSecondary,
+    fontWeight: '500',
   },
-  listingEarnings: {
-    alignItems: 'flex-end',
+  periodTextActive: {
+    color: colors.primary,
+    fontWeight: '600',
   },
-  listingEarningsAmount: {
-    ...typography.h5,
-    color: colors.success,
-    fontWeight: '700',
-  },
-  progressContainer: {
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: spacing.xs,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-  },
-  progressPercentage: {
-    ...typography.small,
-    color: colors.textTertiary,
-    textAlign: 'right',
-  },
-  infoCard: {
-    padding: spacing.lg,
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
-    marginBottom: spacing.lg,
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  sectionTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
-  infoIcon: {
-    fontSize: 24,
-    marginRight: spacing.sm,
+  chartContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: 150,
   },
-  infoTitle: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '700',
+  barWrapper: {
+    alignItems: 'center',
+    flex: 1,
   },
-  infoText: {
-    ...typography.body,
+  barContainer: {
+    width: 24,
+    height: 120,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+  },
+  bar: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.sm,
+    minHeight: 20,
+  },
+  barLabel: {
+    ...typography.caption,
     color: colors.textSecondary,
-    lineHeight: 22,
+    marginTop: spacing.xs,
+  },
+  transactionsSection: {
     marginBottom: spacing.lg,
   },
-  infoStats: {
+  transactionItem: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: spacing.md,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionDate: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  transactionDesc: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  txStatus: {
+    ...typography.caption,
+    fontWeight: '600',
+    marginTop: spacing.xs,
+    textTransform: 'capitalize',
+  },
+  transactionAmount: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  footer: {
+    padding: spacing.md,
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  infoStatItem: {
-    alignItems: 'center',
-  },
-  infoStatLabel: {
-    ...typography.small,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  infoStatValue: {
-    ...typography.h4,
-    color: colors.success,
-    fontWeight: '700',
-  },
-  actionsContainer: {
-    marginBottom: spacing.xl,
-  },
-  actionButton: {
+  withdrawButton: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
     borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    minHeight: 44,
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'center',
   },
-  actionButtonSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  actionButtonText: {
+  withdrawButtonText: {
     ...typography.body,
     color: colors.white,
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  actionButtonTextSecondary: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyText: {
     ...typography.body,
-    color: colors.primary,
-    fontWeight: '700',
+    color: colors.textSecondary,
   },
 });

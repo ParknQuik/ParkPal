@@ -1,16 +1,21 @@
 export const colors = {
-  primary: '#667eea',
-  primaryDark: '#5568d3',
-  primaryLight: '#818cf8',
-  secondary: '#10b981',
-  secondaryDark: '#059669',
-  secondaryLight: '#34d399',
-  accent: '#f59e0b',
-  accentDark: '#d97706',
-  accentLight: '#fbbf24',
+  // Primary - Green (from Stitch)
+  primary: '#10b77f',
+  primaryDark: '#0d9668',
+  primaryLight: '#14c99e',
+  
+  // Secondary/Accent - Orange (from Stitch)
+  secondary: '#f59e0b',
+  secondaryDark: '#d97706',
+  secondaryLight: '#fbbf24',
+  
+  // Accent Yellow
+  accent: '#facc15',
+  accentDark: '#eab308',
+  accentLight: '#fde047',
 
   // Status colors
-  success: '#10b981',
+  success: '#10b77f',
   warning: '#f59e0b',
   error: '#ef4444',
   info: '#3b82f6',
@@ -18,10 +23,10 @@ export const colors = {
   // Neutral colors
   white: '#ffffff',
   black: '#000000',
-  background: '#f8fafc',
-  backgroundDark: '#1e293b',
+  background: '#f6f8f7',  // Changed from #f8fafc
+  backgroundDark: '#10221c',
   surface: '#ffffff',
-  surfaceDark: '#334155',
+  surfaceDark: '#1e293b',
 
   // Text colors
   textPrimary: '#1e293b',
@@ -38,9 +43,18 @@ export const colors = {
   overlay: 'rgba(0, 0, 0, 0.5)',
   overlayLight: 'rgba(0, 0, 0, 0.3)',
 
-  // Gradients
-  gradientPrimary: ['#667eea', '#764ba2'],
-  gradientSecondary: ['#10b981', '#059669'],
-  gradientAccent: ['#f59e0b', '#d97706'],
-  gradientDark: ['#1e293b', '#334155'],
+  // Gradients - Updated for Stitch design
+  gradientPrimary: ['#10b77f', '#0d9668'] as const,
+  gradientSecondary: ['#10b77f', '#f59e0b'] as const,
+  gradientAccent: ['#f59e0b', '#facc15'] as const,
+  gradientDark: ['#1e293b', '#334155'] as const,
+  
+  // New Stitch-specific
+  accentOrange: '#f59e0b',
+  accentYellow: '#facc15',
+  backgroundLight: '#f6f8f7',
+  backgroundDarkStitch: '#10221c',
+
+  // Legacy aliases
+  text: '#1e293b',
 };

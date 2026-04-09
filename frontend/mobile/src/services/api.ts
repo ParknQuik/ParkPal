@@ -26,6 +26,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -34,12 +35,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid, clear storage and redirect to login
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      // TODO: Navigate to login screen
+    if (error.response) {
+      console.error(
+        `❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} - Status: ${error.response.status}`
+      );
+      
+      if (error.response.status === 401) {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('user');
+      }
+    } else if (error.request) {
+      console.error('❌ API Error: No response received');
+    } else {
+      console.error('❌ API Error:', error.message);
     }
+    
     return Promise.reject(error);
   }
 );
@@ -58,6 +68,8 @@ export const authAPI = {
     api.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, newPassword: string) =>
     api.post('/auth/reset-password', { token, newPassword }),
+  googleSignIn: (code: string) =>
+    api.post('/auth/google', { code }),
 };
 
 // Parking endpoints (using /slots to match backend)
@@ -110,6 +122,8 @@ export const marketplaceAPI = {
 
   getMyListings: () => api.get('/marketplace/host/listings'),
 
+  deleteListing: (listingId: number) => api.delete(`/marketplace/listings/${listingId}`),
+
   // Search with filters
   searchListings: (params?: {
     lat?: number;
@@ -134,6 +148,20 @@ export const marketplaceAPI = {
   cancelBooking: (bookingId: number) =>
     api.patch(`/marketplace/bookings/${bookingId}/cancel`),
 
+  // Confirm booking without payment (for cash payments)
+  confirmBooking: (bookingId: number) =>
+    api.post(`/marketplace/bookings/${bookingId}/confirm`),
+
+  // Check if booking can be extended
+  checkExtensionAvailability: (bookingId: number, hours: number) =>
+    api.get(`/marketplace/bookings/${bookingId}/extension-availability`, {
+      params: { hours },
+    }),
+
+  // Extend booking
+  extendBooking: (bookingId: number, data: { hours: number; paymentIntentId: string }) =>
+    api.post(`/marketplace/bookings/${bookingId}/extend`, data),
+
   // QR Code operations
   qrCheckIn: (data: { qrData: string; bookingId?: number }) =>
     api.post('/marketplace/qr/checkin', data),
@@ -155,6 +183,36 @@ export const marketplaceAPI = {
   // Host earnings
   getHostEarnings: (params?: { startDate?: string; endDate?: string }) =>
     api.get('/marketplace/host/earnings', { params }),
+
+  // Toggle listing availability
+  toggleListingAvailability: (listingId: number, isActive: boolean) =>
+    api.patch(`/marketplace/listings/${listingId}/toggle`, { isActive }),
+};
+
+// Vehicle endpoints
+export const vehiclesAPI = {
+  getVehicles: () => api.get('/vehicles'),
+  getVehicle: (id: number) => api.get(`/vehicles/${id}`),
+  createVehicle: (data: {
+    make: string;
+    model: string;
+    year: number;
+    color: string;
+    licensePlate: string;
+    imageUrl?: string;
+    isDefault?: boolean;
+  }) => api.post('/vehicles', data),
+  updateVehicle: (id: number, data: {
+    make?: string;
+    model?: string;
+    year?: number;
+    color?: string;
+    licensePlate?: string;
+    imageUrl?: string;
+    isDefault?: boolean;
+  }) => api.put(`/vehicles/${id}`, data),
+  deleteVehicle: (id: number) => api.delete(`/vehicles/${id}`),
+  setDefaultVehicle: (id: number) => api.post(`/vehicles/${id}/default`),
 };
 
 // User endpoints
@@ -173,7 +231,7 @@ export const paymentAPI = {
   createPaymentIntent: (data: {
     bookingId: number;
     amount: number;
-    paymentMethod: 'gcash' | 'card' | 'grab_pay' | 'paymaya';
+    paymentMethod: 'cash' | 'gcash' | 'card' | 'grab_pay' | 'paymaya';
   }) => api.post('/payments/intent', data),
 
   // Confirm payment after completion
@@ -191,10 +249,55 @@ export const paymentAPI = {
   getPaymentById: (id: number) => api.get(`/payments/${id}`),
 };
 
+// Earnings endpoints
+export const earningsAPI = {
+  getSummary: () => api.get('/earnings/summary'),
+  getTransactions: (params?: { status?: string; limit?: number; offset?: number }) =>
+    api.get('/earnings/transactions', { params }),
+  getAnalytics: (period?: 'weekly' | 'monthly') =>
+    api.get('/earnings/analytics', { params: { period } }),
+  requestPayout: (amount: number) =>
+    api.post('/earnings/payout', { amount }),
+};
+
 // Config endpoints
 export const configAPI = {
   getGoogleMapsApiKey: () => api.get('/config/maps-api-key'),
   getAppConfig: () => api.get('/config/app'),
+};
+
+// Notifications endpoints
+export interface Notification {
+  id: number;
+  userId: number;
+  title: string;
+  body: string;
+  type: string;
+  data: Record<string, any>;
+  read: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  unreadCount: number;
+}
+
+export const notificationsAPI = {
+  getNotifications: (params?: { read?: boolean; limit?: number; offset?: number }) =>
+    api.get<NotificationsResponse>('/notifications', { params }),
+  
+  getUnreadCount: () => api.get<{ unreadCount: number }>('/notifications/unread-count'),
+  
+  getNotification: (id: number) => api.get<Notification>(`/notifications/${id}`),
+  
+  markAsRead: (id: number) => api.patch<Notification>(`/notifications/${id}/read`),
+  
+  markAllAsRead: () => api.patch('/notifications/read-all'),
+  
+  deleteNotification: (id: number) => api.delete(`/notifications/${id}`),
 };
 
 export default api;

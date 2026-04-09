@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const secretManager = require('./config/secretManager');
@@ -188,6 +189,45 @@ app.use(errorHandler);
 // WebSocket setup
 const websocketService = require('./services/websocket');
 websocketService.init(server);
+
+// Auto-checkout cron job setup
+if (process.env.NODE_ENV !== 'test') {
+  const { autoCheckoutExpiredSessions } = require('./services/autoCheckout');
+  
+  // Schedule auto-checkout job - runs every 30 minutes
+  cron.schedule('*/30 * * * *', async () => {
+    try {
+      await autoCheckoutExpiredSessions();
+    } catch (error) {
+      logger.error('[Cron] Auto-checkout failed:', error);
+    }
+  });
+  
+  logger.info('Auto-checkout cron job scheduled (every 30 minutes)');
+
+  // Booking expiry cron jobs
+  const { checkExpiredBookings, sendExpiryReminders } = require('./services/bookingExpiry');
+  
+  // Check for expired bookings every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await checkExpiredBookings();
+    } catch (error) {
+      logger.error('[Cron] Booking expiry check failed:', error);
+    }
+  });
+  
+  // Send expiry reminders every 10 minutes
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      await sendExpiryReminders();
+    } catch (error) {
+      logger.error('[Cron] Expiry reminder check failed:', error);
+    }
+  });
+  
+  logger.info('Booking expiry cron jobs scheduled (expire: every 5min, reminders: every 10min)');
+}
 
 // Only start server if not in test mode
 if (process.env.NODE_ENV !== 'test') {

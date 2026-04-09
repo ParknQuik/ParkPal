@@ -15,7 +15,10 @@ async function initializeRedis() {
         connect: async () => {},
         get: async () => null,
         set: async () => {},
+        setEx: async () => {},
         del: async () => {},
+        keys: async () => [],
+        ping: async () => 'PONG',
         on: () => {}
       };
     }
@@ -40,7 +43,10 @@ async function initializeRedis() {
       connect: async () => {},
       get: async () => null,
       set: async () => {},
+      setEx: async () => {},
       del: async () => {},
+      keys: async () => [],
+      ping: async () => 'PONG',
       on: () => {}
     };
   }
@@ -57,13 +63,14 @@ const clientPromise = initializeRedis().then(client => {
 module.exports = new Proxy({}, {
   get: (target, prop) => {
     if (redisClient) {
-      return redisClient[prop];
+      const val = redisClient[prop];
+      return typeof val === 'function' ? val.bind(redisClient) : val;
     }
     // For operations, return async functions that wait for initialization
     return async (...args) => {
       const client = await clientPromise;
       if (typeof client[prop] === 'function') {
-        return client[prop](...args);
+        return client[prop].bind(client)(...args);
       }
       return client[prop];
     };

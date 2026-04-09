@@ -368,4 +368,425 @@ describe('Payment API Tests', () => {
       expect(response.status).toBe(403);
     });
   });
+
+  describe('Payment Authorization and Capture Tests', () => {
+    let openModeBooking;
+    let fixedModeBooking;
+
+    beforeEach(async () => {
+      // Create open mode booking for authorization tests
+      openModeBooking = await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.driver.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000),
+          endTime: null, // Open mode has no end time
+          rentalMode: 'open',
+          maxDuration: 12,
+          status: 'pending',
+          price: 600, // 12 hours * 50
+          authAmount: 600,
+          platformFee: 30,
+          hostEarnings: 570
+        }
+      });
+
+      // Create fixed mode booking for comparison
+      fixedModeBooking = await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.driver.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+          rentalMode: 'fixed',
+          status: 'pending',
+          price: 150,
+          platformFee: 7.5,
+          hostEarnings: 142.5
+        }
+      });
+    });
+
+    describe('POST /api/v1/payments/intent - Authorization for Open Mode', () => {
+      it('should create payment intent with manual capture for open mode', async () => {
+        const response = await request(app)
+          .post('/api/v1/payments/intent')
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            amount: openModeBooking.price,
+            paymentMethod: 'card',
+            bookingId: openModeBooking.id
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('paymentIntentId');
+        expect(response.body.message).toContain('authorized');
+
+        // Verify authId was stored in booking
+        const updatedBooking = await prisma.booking.findUnique({
+          where: { id: openModeBooking.id }
+        });
+        expect(updatedBooking.authId).toBeTruthy();
+      });
+
+      it('should create payment intent with automatic capture for fixed mode', async () => {
+        const response = await request(app)
+          .post('/api/v1/payments/intent')
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            amount: fixedModeBooking.price,
+            paymentMethod: 'card',
+            bookingId: fixedModeBooking.id
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('paymentIntentId');
+        expect(response.body.message).not.toContain('authorized');
+
+        // Fixed mode should not store authId
+        const updatedBooking = await prisma.booking.findUnique({
+          where: { id: fixedModeBooking.id }
+        });
+        expect(updatedBooking.authId).toBeNull();
+      });
+    });
+
+    describe('POST /api/v1/payments/confirm - Confirm Authorization', () => {
+      let paymentIntentId;
+
+      beforeEach(async () => {
+        // Create payment intent first
+        const intentResponse = await request(app)
+          .post('/api/v1/payments/intent')
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            amount: openModeBooking.price,
+            paymentMethod: 'card',
+            bookingId: openModeBooking.id
+          });
+
+        paymentIntentId = intentResponse.body.paymentIntentId;
+      });
+
+      it('should confirm authorization and update payment status to authorized', async () => {
+        const response = await request(app)
+          .post('/api/v1/payments/confirm')
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            paymentIntentId
+          });
+
+        expect(response.status).toBe(200);
+
+        // Verify payment status is 'authorized' not 'completed'
+        const payment = await prisma.payment.findFirst({
+          where: {
+            paymentIntent: paymentIntentId
+          }
+        });
+        expect(payment.status).toBe('authorized');
+      });
+    });
+
+    describe('QR Checkout with Payment Capture', () => {
+      let session;
+      let authPayment;
+
+      beforeEach(async () => {
+        // Set booking to confirmed with authId
+        await prisma.booking.update({
+          where: { id: openModeBooking.id },
+          data: {
+            status: 'confirmed',
+            authId: 'test_auth_payment_intent_123'
+          }
+        });
+
+        // Create payment with authorized status
+        authPayment = await prisma.payment.create({
+          data: {
+            userId: testData.driver.id,
+            bookingId: openModeBooking.id,
+            amount: openModeBooking.authAmount,
+            paymentMethod: 'card',
+            status: 'authorized',
+            paymentIntent: 'test_auth_payment_intent_123'
+          }
+        });
+
+        // Create parking session (check-in)
+        session = await prisma.parkingSession.create({
+          data: {
+            userId: testData.driver.id,
+            slotId: testData.slot.id,
+            bookingId: openModeBooking.id,
+            sessionType: 'roadside_qr',
+            checkInTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+            status: 'active'
+          }
+        });
+      });
+
+      it('should capture payment at checkout for open mode booking', async () => {
+        const response = await request(app)
+          .post('/api/v1/marketplace/qr/checkout')
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            sessionId: session.id
+          });
+
+        expect(response.status).toBe(200);
+
+        // Verify session completed
+        const completedSession = await prisma.parkingSession.findUnique({
+          where: { id: session.id }
+        });
+        expect(completedSession.status).toBe('completed');
+        expect(completedSession.totalAmount).toBeTruthy();
+        expect(completedSession.durationMinutes).toBeTruthy();
+
+        // Verify payment was updated to completed
+        const completedPayment = await prisma.payment.findUnique({
+          where: { id: authPayment.id }
+        });
+        expect(completedPayment.status).toBe('completed');
+        expect(completedPayment.amount).toBeLessThanOrEqual(openModeBooking.authAmount);
+
+        // Verify booking was completed
+        const completedBooking = await prisma.booking.findUnique({
+          where: { id: openModeBooking.id }
+        });
+        expect(completedBooking.status).toBe('completed');
+        expect(completedBooking.endTime).toBeTruthy(); // endTime should now be set
+      });
+
+      it('should handle overstay scenario (actual > authorized)', async () => {
+        // Update session to have been active for 15 hours (beyond 12 hour max)
+        await prisma.parkingSession.update({
+          where: { id: session.id },
+          data: {
+            checkInTime: new Date(Date.now() - 15 * 60 * 60 * 1000)
+          }
+        });
+
+        const response = await request(app)
+          .post('/api/v1/marketplace/qr/checkout')
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            sessionId: session.id
+          });
+
+        expect(response.status).toBe(200);
+
+        // Verify overstay notification created
+        const overstayNotification = await prisma.notification.findFirst({
+          where: {
+            userId: testData.driver.id,
+            body: {
+              contains: 'additional payment'
+            }
+          }
+        });
+        expect(overstayNotification).toBeTruthy();
+      });
+
+      it('should handle checkout when actual time < authorized amount', async () => {
+        // Update session to only 1 hour (less than 12 hour auth)
+        await prisma.parkingSession.update({
+          where: { id: session.id },
+          data: {
+            checkInTime: new Date(Date.now() - 60 * 60 * 1000) // 1 hour ago
+          }
+        });
+
+        const response = await request(app)
+          .post('/api/v1/marketplace/qr/checkout')
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({
+            sessionId: session.id
+          });
+
+        expect(response.status).toBe(200);
+
+        // Verify only actual amount was captured
+        const completedPayment = await prisma.payment.findUnique({
+          where: { id: authPayment.id }
+        });
+        
+        // 1 hour parking should be much less than 12 hour authorization
+        expect(completedPayment.amount).toBeLessThan(openModeBooking.authAmount);
+      });
+    });
+  });
+});
+
+describe('Cash Payment Tests', () => {
+  let cashBooking;
+
+  beforeEach(async () => {
+    // Create pending booking for cash payment
+    cashBooking = await prisma.booking.create({
+      data: {
+        slotId: testData.slot.id,
+        userId: testData.driver.id,
+        startTime: new Date(Date.now() + 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+        rentalMode: 'fixed',
+        status: 'pending',
+        price: 150,
+        platformFee: 7.5,
+        hostEarnings: 142.5
+      }
+    });
+  });
+
+  describe('POST /api/v1/payments/intent - Cash Payment', () => {
+    it('should return cash payment intent without creating Stripe payment', async () => {
+      const response = await request(app)
+        .post('/api/v1/payments/intent')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          amount: cashBooking.price,
+          paymentMethod: 'cash',
+          bookingId: cashBooking.id
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.paymentIntentId).toMatch(/^cash_/);
+      expect(response.body.message).toContain('Cash');
+      expect(response.body.requiresPayment).toBe(false);
+    });
+
+    it('should require booking for cash payment intent', async () => {
+      const response = await request(app)
+        .post('/api/v1/payments/intent')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          amount: 100,
+          paymentMethod: 'cash'
+          // Missing bookingId
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('bookingId');
+    });
+  });
+
+  describe('POST /api/v1/payments/confirm - Cash Payment', () => {
+    it('should confirm booking with cash payment', async () => {
+      const paymentIntentId = `cash_${cashBooking.id}_${Date.now()}`;
+
+      const response = await request(app)
+        .post('/api/v1/payments/confirm')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          paymentIntentId
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toContain('cash');
+
+      // Verify payment created with pending status
+      const payment = await prisma.payment.findFirst({
+        where: { bookingId: cashBooking.id }
+      });
+      expect(payment).toBeTruthy();
+      expect(payment.paymentMethod).toBe('cash');
+      expect(payment.status).toBe('pending');
+
+      // Verify booking confirmed
+      const updatedBooking = await prisma.booking.findUnique({
+        where: { id: cashBooking.id }
+      });
+      expect(updatedBooking.status).toBe('confirmed');
+
+      // Verify slot reserved
+      const slot = await prisma.parkingSlot.findUnique({
+        where: { id: testData.slot.id }
+      });
+      expect(slot.status).toBe('reserved');
+    });
+
+    it('should create notification for host', async () => {
+      const paymentIntentId = `cash_${cashBooking.id}_${Date.now()}`;
+
+      await request(app)
+        .post('/api/v1/payments/confirm')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          paymentIntentId
+        });
+
+      const notification = await prisma.notification.findFirst({
+        where: {
+          userId: testData.host.id,
+          type: 'booking_confirmed'
+        }
+      });
+      expect(notification).toBeTruthy();
+      expect(notification.title).toContain('Cash');
+    });
+  });
+
+  describe('POST /api/v1/marketplace/bookings/:id/confirm', () => {
+    it('should confirm booking directly without payment', async () => {
+      // Create another pending booking
+      const pendingBooking = await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.driver.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+          rentalMode: 'fixed',
+          status: 'pending',
+          price: 100,
+          platformFee: 5,
+          hostEarnings: 95
+        }
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/marketplace/bookings/${pendingBooking.id}/confirm`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toContain('confirmed');
+      expect(response.body.booking.status).toBe('confirmed');
+
+      // Verify slot status updated
+      const slot = await prisma.parkingSlot.findUnique({
+        where: { id: testData.slot.id }
+      });
+      expect(slot.status).toBe('reserved');
+    });
+
+    it('should not confirm already confirmed booking', async () => {
+      await prisma.booking.update({
+        where: { id: cashBooking.id },
+        data: { status: 'confirmed' }
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/marketplace/bookings/${cashBooking.id}/confirm`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('pending');
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .post(`/api/v1/marketplace/bookings/${cashBooking.id}/confirm`);
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should verify ownership', async () => {
+      const response = await request(app)
+        .post(`/api/v1/marketplace/bookings/${cashBooking.id}/confirm`)
+        .set('Authorization', `Bearer ${authTokens.host}`);
+
+      expect(response.status).toBe(403);
+    });
+  });
 });
