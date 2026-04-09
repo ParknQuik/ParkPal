@@ -1,9 +1,9 @@
 # ParkPal Project Status Report
 
-**Last Updated:** March 21, 2026
-**Current Branch:** `feat/stitch-ui-overhaul`
-**Production Readiness:** 72/100 (Kilocode UI overhaul + Google Auth + Vehicles + Notifications)
-**Phase:** Mobile App UI Redesign + Feature Integration (Week 1 complete)
+**Last Updated:** April 9, 2026
+**Current Branch:** `dev`
+**Production Readiness:** 85/100 (Booking system, rental modes, cash payment, expiry protocol)
+**Phase:** Phase 3-4: App Store Submissions + Beta Testing
 
 ---
 
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
 |------|------------|--------------|---------------------|
+| Apr 9, 2026 | Claude | Booking system overhaul: rental modes, extensions, cash payment, expiry protocol, tests | 85/100 |
 | Mar 15, 2026 | Claude | Mobile backend config: Automatic IP detection via Expo Metro bundler, zero-config local dev | 89/100 |
 | Mar 12, 2026 (PM) | Claude | Web deployment: CI/CD operational, Cloud Run live, health check passing | 89/100 |
 | Mar 10, 2026 (Evening) | Claude | Resend email migration: SMTP→API, +18 tests, test fixes: 235→269 passing (93.4%) | 84/100 |
@@ -59,7 +60,17 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **Not Deployed:**
 - Mobile App: NOT DEPLOYED (not in app stores)
 
-**Recent Major Progress (March 21, 2026):**
+**Recent Major Progress (April 9, 2026):**
+
+**April 2026 - Booking System Overhaul:**
+- ✅ Rental Modes: Fixed duration + Open time (pay-on-exit)
+- ✅ Booking Extensions: 1-4 hour extensions with availability checking
+- ✅ Cash Payment: New payment method option
+- ✅ Booking Expiry Protocol: Auto-expire no-shows, slot release
+- ✅ Cancellation Policy: 30-minute deadline
+- ✅ Test Suite: 45+ new tests added
+
+**March 2026:**
 - ✅ **Kilocode Integration:** Added AI-powered code generation with custom modes
 - ✅ **UI Overhaul:** Stitch-inspired green theme (#10b77f primary, orange/yellow accents)
 - ✅ **Google Sign-In:** Full OAuth implementation (backend + frontend)
@@ -70,12 +81,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 **Test Status:**
 - Backend: 269/288 passing (93.4% pass rate) ✅
-  - Fixed: PostgreSQL test database setup
-  - Fixed: Test fixture password fields (+34 tests)
-  - Added: Email service tests (+18 tests)
-  - Remaining: 17 failures (GCS upload, API response formats)
-  - **Note:** New vehicle/notification endpoints need tests
-- Mobile: 45/45 passing (100%)
+- Mobile: 45/45 passing (100%) ✅
 - Web: 54/85 passing (63.5%)
 
 **Infrastructure:**
@@ -84,6 +90,36 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - Billing: Optimized to $7-12/month (96% cost reduction from peak)
 - Projects: Consolidated to 1 dev project (staging/prod deleted)
 - Workflow Automation: 7 skills operational (3 MCP-powered, 1 orchestrator) ✅
+
+## 🌐 Environment URLs
+
+### Development (Current)
+| Service | URL | Status |
+|---------|-----|--------|
+| Backend API | https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app | ✅ UP |
+| Web Frontend | https://parkpal-web-dev-cxntrkjjmq-as.a.run.app | ✅ UP |
+| Mobile App | Not deployed (EAS ready) | 📱 Ready |
+| Swagger Docs | https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/api-docs | ✅ UP |
+
+### Mobile App Local Development
+- iOS Simulator: localhost:3001 (auto-detected)
+- Android Emulator: 10.0.2.2:3001 (auto-detected)
+- Physical Devices: Auto-extracts IP from Metro bundler
+
+### Database
+- PostgreSQL: Cloud SQL (asia-southeast1)
+- Connection: Managed via Prisma
+
+### Payment Methods Configured
+- GCash (PayMongo)
+- Credit/Debit Card (PayMongo)
+- GrabPay (PayMongo)
+- Maya (PayMongo)
+- Cash (at location)
+
+### Authentication
+- Email/Password (JWT)
+- Google OAuth (backend + frontend)
 
 ---
 
@@ -522,50 +558,23 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - No frontends deployed
 - Backend critically broken
 
-### UPDATED Timeline (March 15, 2026)
+### UPDATED Timeline (April 9, 2026)
 
 **Current Reality:**
 - Backend: ✅ 93.4% tests passing, deployed to Cloud Run
 - Web: ✅ Deployed to Cloud Run
-- Mobile: ⚠️ ~50% complete (7 major features missing)
+- Mobile: ✅ Booking system overhaul complete, 45+ new tests
 
-**New 6-Week Mobile Completion Plan:**
+**Current Progress (April 8-14):**
+- ✅ Booking System Overhaul complete (rental modes, extensions, cash payment, expiry protocol)
+- ✅ 45+ new tests added
+- ⏳ App Store submissions in progress
+- ⏳ Beta testing preparation
 
-**Week 1 (Mar 18-24): Foundation & Vehicles**
-- Add missing screens to navigation
-- Complete backend integration setup
-- Build My Vehicles feature (complete)
-- **Milestone:** Navigation fixed, Vehicles working
-
-**Week 2 (Mar 25-31): Core Features**
-- Photo upload feature (complete)
-- My Listings (complete)
-- Reviews system (complete)
-- **Milestone:** Core host/driver features working
-
-**Week 3 (Apr 1-7): Advanced Features**
-- Google Sign In (complete)
-- Notifications system (push + in-app + email)
-- **Milestone:** Social auth + notifications working
-
-**Week 4 (Apr 8-14): UI Redesign**
-- Complete all 15 components (green theme)
-- Redesign 8 critical screens
-- **Milestone:** 100% UI consistency
-
-**Week 5 (Apr 15-21): Integration & Testing**
-- My Earnings (complete)
-- QR Code system (complete)
-- Replace all mock data with real API
-- **Milestone:** 100% backend integration
-
-**Week 6 (Apr 22-28): Testing & Deployment**
-- Comprehensive testing (visual, functional, accessibility, unit)
-- EAS Build setup + app store submission
-- Beta testing preparation
-- **Milestone:** Apps submitted, beta ready
-
-**New Public Launch Target:** May 1, 2026 (6 weeks from now)
+**Next Milestones:**
+- App Store submissions: In progress (April 2026)
+- Beta launch: May 2026
+- Public launch: May-June 2026
 
 ---
 

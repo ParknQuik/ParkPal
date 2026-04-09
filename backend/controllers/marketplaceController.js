@@ -69,6 +69,7 @@ function safeJsonParse(str, fallback = []) {
 exports.createListing = async (req, res) => {
   try {
     const {
+      title,
       lat,
       lon,
       price,
@@ -82,15 +83,16 @@ exports.createListing = async (req, res) => {
     const ownerId = req.user.id;
 
     // Validate required fields
-    if (!lat || !lon || !price || !address || !slotType) {
+    if (!lat || !lon || !price || !address || !slotType || !title) {
       return res.status(400).json({
-        error: 'Missing required fields: lat, lon, price, address, slotType',
+        error: 'Missing required fields: lat, lon, price, address, slotType, title',
       });
     }
 
     // Create parking slot
     const slot = await prisma.parkingSlot.create({
       data: {
+        title,
         lat: parseFloat(lat),
         lon: parseFloat(lon),
         price: parseFloat(price),
@@ -416,6 +418,59 @@ exports.createBooking = async (req, res) => {
 
     if (slot.status !== 'available') {
       return res.status(400).json({ error: 'Slot is not available' });
+    }
+
+    // Check for conflicting bookings (overlapping time slots)
+    if (rentalMode === 'fixed' && endTime) {
+      const conflictingBookings = await prisma.booking.findMany({
+        where: {
+          slotId: parseInt(slotId),
+          status: { in: ['confirmed', 'pending', 'active'] },
+          OR: [
+            {
+              startTime: { lte: start },
+              endTime: { gt: start }
+            },
+            {
+              startTime: { lt: end },
+              endTime: { gte: end }
+            },
+            {
+              startTime: { gte: start },
+              endTime: { lte: end }
+            }
+          ]
+        }
+      });
+
+      if (conflictingBookings.length > 0) {
+        const earliestConflict = conflictingBookings[0];
+        const conflictStart = new Date(earliestConflict.startTime);
+        return res.status(409).json({ 
+          error: 'Slot is already booked for this time period',
+          conflictingBooking: {
+            startTime: conflictStart.toISOString(),
+            message: `This slot is booked from ${conflictStart.toLocaleString()}`
+          }
+        });
+      }
+    }
+
+    // For open mode, check if there's any active booking
+    if (rentalMode === 'open') {
+      const activeOpenBookings = await prisma.booking.findMany({
+        where: {
+          slotId: parseInt(slotId),
+          status: 'active',
+          rentalMode: 'open'
+        }
+      });
+
+      if (activeOpenBookings.length > 0) {
+        return res.status(409).json({ 
+          error: 'Slot already has an active open-time booking',
+        });
+      }
     }
 
     // Calculate price based on rental mode

@@ -89,6 +89,7 @@ model ParkingSlot {
   lat             Float
   lon             Float
   address         String    // Full address for marketplace listings
+  title           String?   // Short title for listings (e.g., "Downtown Parking")
   floor           String?   // For multi-level parking
   section         String?   // e.g., "Section A", "North Wing"
 

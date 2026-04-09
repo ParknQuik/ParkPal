@@ -18,7 +18,15 @@ const BACKGROUND = '#f6f6f8';
 export const PaymentScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bookingId, amount } = route.params as { bookingId: number; amount: number; spotId?: number };
+  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime } = route.params as { 
+    bookingId: number; 
+    amount: number; 
+    spotId?: number;
+    spotName?: string;
+    spotAddress?: string;
+    startTime?: string;
+    endTime?: string;
+  };
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,7 +53,15 @@ export const PaymentScreen: React.FC = () => {
         Alert.alert(
           'Booking Confirmed!',
           'Please pay in cash when you arrive at the parking location.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          [{ text: 'OK', onPress: () => navigation.navigate('PaymentSuccess' as never, {
+            paymentId: bookingId,
+            bookingId,
+            amount: orderData.total,
+            spotName: spotName || 'Parking Spot',
+            spotAddress: spotAddress || '',
+            startTime: startTime || '',
+            endTime: endTime || '',
+          } as never) }]
         );
         return;
       } catch (err: any) {
@@ -73,6 +89,11 @@ export const PaymentScreen: React.FC = () => {
       navigation.navigate('PaymentSuccess' as never, {
         paymentId: confirmResponse.data.paymentId || paymentIntentId,
         bookingId,
+        amount: orderData.total,
+        spotName: spotName || 'Parking Spot',
+        spotAddress: spotAddress || '',
+        startTime: startTime || '',
+        endTime: endTime || '',
       } as never);
     } catch (err: any) {
       navigation.navigate('PaymentFailed' as never, {
