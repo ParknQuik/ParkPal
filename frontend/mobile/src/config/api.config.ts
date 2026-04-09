@@ -82,13 +82,7 @@ const getApiBaseUrl = (): string => {
 
   // 4. Development mode - smart platform detection
   if (Platform.OS === 'ios') {
-    const isSimulator = Constants.isDevice === false;
-    if (isSimulator) {
-      return LOCAL_BACKEND_IOS_SIMULATOR;
-    } else {
-      // Physical iOS device - auto-detect IP from Expo
-      return LOCAL_BACKEND_PHYSICAL_DEVICE;
-    }
+    return LOCAL_BACKEND_IOS_SIMULATOR;
   }
 
   if (Platform.OS === 'android') {
