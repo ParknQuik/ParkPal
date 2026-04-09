@@ -40,6 +40,7 @@ const getStatusColor = (status: string) => {
     case 'completed':
       return PRIMARY;
     case 'cancelled':
+    case 'expired':
       return colors.error;
     default:
       return PRIMARY;
@@ -58,6 +59,8 @@ const getStatusLabel = (status: string) => {
       return 'Completed';
     case 'cancelled':
       return 'Cancelled';
+    case 'expired':
+      return 'Expired';
     default:
       return status;
   }
@@ -265,10 +268,10 @@ export const MyBookingsScreen: React.FC = () => {
       return booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'active';
     }
     if (activeTab === 'completed') {
-      return booking.status === 'completed';
+      return booking.status === 'completed' || booking.status === 'expired';
     }
     if (activeTab === 'cancelled') {
-      return booking.status === 'cancelled';
+      return booking.status === 'cancelled' || booking.status === 'expired';
     }
     return true;
   });

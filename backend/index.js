@@ -204,6 +204,29 @@ if (process.env.NODE_ENV !== 'test') {
   });
   
   logger.info('Auto-checkout cron job scheduled (every 30 minutes)');
+
+  // Booking expiry cron jobs
+  const { checkExpiredBookings, sendExpiryReminders } = require('./services/bookingExpiry');
+  
+  // Check for expired bookings every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await checkExpiredBookings();
+    } catch (error) {
+      logger.error('[Cron] Booking expiry check failed:', error);
+    }
+  });
+  
+  // Send expiry reminders every 10 minutes
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      await sendExpiryReminders();
+    } catch (error) {
+      logger.error('[Cron] Expiry reminder check failed:', error);
+    }
+  });
+  
+  logger.info('Booking expiry cron jobs scheduled (expire: every 5min, reminders: every 10min)');
 }
 
 // Only start server if not in test mode
