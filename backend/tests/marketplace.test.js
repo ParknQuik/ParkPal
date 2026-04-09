@@ -1135,3 +1135,63 @@ describe('Marketplace API Tests', () => {
     });
   });
 });
+
+describe('Booking Expiry Status Tests', () => {
+  describe('PATCH /api/v1/marketplace/bookings/:id/cancel - After Expiry', () => {
+    let expiredBooking;
+
+    beforeEach(async () => {
+      expiredBooking = await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.users.driver.id,
+          startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() - 30 * 60 * 1000),
+          rentalMode: 'fixed',
+          status: 'expired',
+          price: 100,
+          platformFee: 5,
+          hostEarnings: 95,
+          cancellationReason: 'Booking expired - user did not check in'
+        }
+      });
+    });
+
+    it('should not allow cancellation of expired booking', async () => {
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/bookings/${expiredBooking.id}/cancel`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('BOOKING_COMPLETED');
+    });
+  });
+
+  describe('Expired Booking in My Bookings', () => {
+    it('should return expired bookings in API', async () => {
+      await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.users.driver.id,
+          startTime: new Date(Date.now() - 3 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() - 1 * 60 * 60 * 1000),
+          rentalMode: 'fixed',
+          status: 'expired',
+          price: 100,
+          platformFee: 5,
+          hostEarnings: 95
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(200);
+      
+      const expiredBooking = response.body.data.find(b => b.status === 'expired');
+      expect(expiredBooking).toBeTruthy();
+      expect(expiredBooking.status).toBe('expired');
+    });
+  });
+});
