@@ -649,4 +649,22 @@ module.exports = (app) => {
     validateParams(idParamSchema),
     marketplaceController.deleteListing
   );
+
+  // Manual trigger for booking expiry check (for testing/development)
+  app.post(
+    '/marketplace/bookings/check-expired',
+    async (req, res) => {
+      try {
+        const { checkExpiredBookings } = require('../services/bookingExpiry');
+        const result = await checkExpiredBookings();
+        res.json({
+          message: 'Booking expiry check completed',
+          processed: result.processed
+        });
+      } catch (error) {
+        console.error('Manual expiry check error:', error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
 };

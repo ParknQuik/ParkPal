@@ -133,21 +133,6 @@ export const MyVehiclesScreen: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Verify authentication before making API call
-      const token = await AsyncStorage.getItem('token');
-      const user = await AsyncStorage.getItem('user');
-
-      console.log('=== Auth Status Check ===');
-      console.log('Has token:', !!token);
-      console.log('Token preview:', token ? `${token.substring(0, 20)}...` : 'NONE');
-      console.log('User data:', user ? JSON.parse(user) : 'NONE');
-
-      if (!token) {
-        Alert.alert('Error', 'Not authenticated. Please login again.');
-        setIsSubmitting(false);
-        return;
-      }
-
       const vehicleData = {
         make: make.trim(),
         model: model.trim(),
@@ -157,58 +142,25 @@ export const MyVehiclesScreen: React.FC = () => {
         isDefault,
       };
 
-      console.log('=== Vehicle Form Submission ===');
-      console.log('Operation:', editingVehicle ? 'UPDATE' : 'CREATE');
-      console.log('Form Values (raw):');
-      console.log('  make:', `"${make}"`);
-      console.log('  model:', `"${model}"`);
-      console.log('  year:', `"${year}"`);
-      console.log('  color:', `"${color}"`);
-      console.log('  licensePlate:', `"${licensePlate}"`);
-      console.log('  isDefault:', isDefault);
-      console.log('Payload to send:', JSON.stringify(vehicleData, null, 2));
-
       if (editingVehicle) {
-        console.log('Updating vehicle ID:', editingVehicle.id);
         await dispatch(updateVehicle({ id: editingVehicle.id, data: vehicleData })).unwrap();
-        console.log('✅ Vehicle updated successfully');
         Alert.alert('Success', 'Vehicle updated successfully');
       } else {
-        console.log('Creating new vehicle...');
-        const result = await dispatch(createVehicle(vehicleData)).unwrap();
-        console.log('✅ Vehicle created successfully:', result);
+        await dispatch(createVehicle(vehicleData)).unwrap();
         Alert.alert('Success', 'Vehicle added successfully');
       }
 
       handleCloseModal();
       loadVehicles();
     } catch (err: any) {
-      console.error('=== Vehicle Creation/Update Error ===');
-      console.error('Error type:', err.constructor.name);
-      console.error('Error message:', err.message);
-      console.error('Error code:', err.code);
-      
-      if (err.response) {
-        console.error('Response status:', err.response.status);
-        console.error('Response data:', JSON.stringify(err.response.data, null, 2));
-        console.error('Response headers:', JSON.stringify(err.response.headers, null, 2));
-        console.error('Request data:', JSON.stringify(err.config?.data, null, 2));
-      } else if (err.request) {
-        console.error('No response received');
-        console.error('Request:', err.request);
-      }
-      
-      console.error('Full error object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      console.error('Failed to save vehicle:', err.response?.data?.error || err.message);
       
       const errorMessage = err.response?.data?.error 
         || err.response?.data?.message 
         || err.message 
         || 'Failed to save vehicle. Please try again.';
       
-      Alert.alert(
-        'Error Saving Vehicle',
-        `${errorMessage}\n\nStatus: ${err.response?.status || 'Unknown'}`
-      );
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
     }

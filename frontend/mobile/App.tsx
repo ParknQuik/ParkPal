@@ -13,21 +13,25 @@ export default function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Clear all async storage to ensure fresh start
+        // Only clear navigation state and redux persist - NOT auth data
+        // The user token and user data should persist across app reloads
         const keys = await AsyncStorage.getAllKeys();
         console.log('AsyncStorage keys:', keys);
         
-        // Clear navigation state and redux persist if any
-        await AsyncStorage.multiRemove([
-          '@react-navigation/NavigationState',
-          'reduxpersist:auth',
-          'reduxpersist:marketplace',
-          'reduxpersist:location'
-        ]);
+        // Clear navigation state and redux persist (keep auth)
+        const keysToRemove = keys.filter(key => 
+          key.includes('@react-navigation/NavigationState') ||
+          key.startsWith('reduxpersist:') ||
+          key.startsWith('user_') // Only clear cache-related keys, not auth
+        );
         
-        console.log('Storage cleared successfully');
+        if (keysToRemove.length > 0) {
+          await AsyncStorage.multiRemove(keysToRemove);
+        }
+        
+        console.log('Storage cleaned (auth preserved)');
       } catch (error) {
-        console.warn('Failed to clear storage:', error);
+        console.warn('Failed to clean storage:', error);
       } finally {
         setIsReady(true);
       }

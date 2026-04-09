@@ -268,10 +268,13 @@ export const MyBookingsScreen: React.FC = () => {
       return booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'active';
     }
     if (activeTab === 'completed') {
+      // Completed: successful bookings that finished + expired (no-shows)
+      // Expired is like a "completed" booking that the user didn't use
       return booking.status === 'completed' || booking.status === 'expired';
     }
     if (activeTab === 'cancelled') {
-      return booking.status === 'cancelled' || booking.status === 'expired';
+      // Cancelled: user-initiated cancellations only
+      return booking.status === 'cancelled';
     }
     return true;
   });
