@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppDispatch } from '../store';
 import { createListing } from '../store/slices/marketplaceSlice';
@@ -29,9 +29,6 @@ const AMENITIES = [
 
 export const ListYourSpot: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute<any>();
-  const { listingId, mode } = route.params || {};
-  const isEditMode = mode === 'edit' || listingId;
   const dispatch = useAppDispatch();
   const [spotName, setSpotName] = useState('');
   const [description, setDescription] = useState('');
