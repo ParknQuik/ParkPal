@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppDispatch } from '../store';
 import { createListing } from '../store/slices/marketplaceSlice';
@@ -29,6 +29,9 @@ const AMENITIES = [
 
 export const ListYourSpot: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const { listingId, mode } = route.params || {};
+  const isEditMode = mode === 'edit' || listingId;
   const dispatch = useAppDispatch();
   const [spotName, setSpotName] = useState('');
   const [description, setDescription] = useState('');
@@ -130,7 +133,7 @@ export const ListYourSpot: React.FC = () => {
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>List Your Spot</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Listing' : 'List Your Spot'}</Text>
           <View style={styles.headerPlaceholder} />
         </View>
       </LinearGradient>
