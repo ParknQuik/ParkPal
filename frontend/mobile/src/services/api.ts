@@ -134,6 +134,7 @@ export const marketplaceAPI = {
     amenities?: string;
     slotType?: string;
     status?: string;
+    q?: string;
   }) => api.get('/marketplace/search', { params }),
 
   // Bookings
@@ -141,6 +142,8 @@ export const marketplaceAPI = {
     slotId: number;
     startTime: string;
     endTime: string;
+    rentalMode?: 'fixed' | 'open';
+    maxDuration?: number;
   }) => api.post('/marketplace/bookings', data),
 
   getMyBookings: () => api.get('/marketplace/bookings'),
@@ -223,6 +226,18 @@ export const userAPI = {
   addPaymentMethod: (data: any) => api.post('/users/payment-methods', data),
   deletePaymentMethod: (id: string) =>
     api.delete(`/users/payment-methods/${id}`),
+  getProfileUploadUrl: (fileName: string) =>
+    api.get<{ uploadUrl: string; fileName: string; expiresAt: string }>('/users/profile/upload-url', {
+      params: { fileName }
+    }),
+  uploadProfilePicture: (fileName: string) =>
+    api.patch<{
+      id: number;
+      name: string;
+      email: string;
+      phone: string | null;
+      profileImageUrl: string | null;
+    }>('/users/profile/upload', { fileName }),
 };
 
 // Payment endpoints (PayMongo integration)

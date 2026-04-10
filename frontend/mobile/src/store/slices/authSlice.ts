@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { AuthState, User } from '../../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../services/api';
+import { notificationService } from '../../services/notifications';
 
 const initialState: AuthState = {
   user: null,
@@ -58,7 +59,7 @@ export const checkAuth = createAsyncThunk('auth/checkAuth', async () => {
 
 export const updateUserProfile = createAsyncThunk(
   'auth/updateProfile',
-  async (data: { name: string; phone: string | null }) => {
+  async (data: { name: string; phone: string | null; profileImageUrl?: string }) => {
     const response = await authAPI.updateProfile(data);
     const updatedUser = response.data;
 
@@ -94,6 +95,18 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.token = action.payload.token;
+
+      (async () => {
+        try {
+          const pushToken = await notificationService.getPushToken();
+          if (pushToken) {
+            console.log('Push token:', pushToken);
+            await AsyncStorage.setItem('pushToken', pushToken);
+          }
+        } catch (error) {
+          console.error('Failed to register push token:', error);
+        }
+      })();
     });
     builder.addCase(login.rejected, (state, action) => {
       state.loading = false;
@@ -110,6 +123,18 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.token = action.payload.token;
+
+      (async () => {
+        try {
+          const pushToken = await notificationService.getPushToken();
+          if (pushToken) {
+            console.log('Push token:', pushToken);
+            await AsyncStorage.setItem('pushToken', pushToken);
+          }
+        } catch (error) {
+          console.error('Failed to register push token:', error);
+        }
+      })();
     });
     builder.addCase(signup.rejected, (state, action) => {
       state.loading = false;
