@@ -42,6 +42,7 @@ export const searchListings = createAsyncThunk(
 
     // Handle v1 API response format: { data: [...], pagination: {...} }
     const listings = response.data?.data || response.data || [];
+    console.log('🔍 Search query:', apiParams.q);
     console.log('📦 Raw listings count:', listings.length);
 
     // Transform API response to match mobile app interface
@@ -72,6 +73,11 @@ export const searchListings = createAsyncThunk(
     }));
 
     console.log('🎯 Transformed listings count:', transformed.length);
+    console.log('📦 Listings after transform:', transformed.length);
+    console.log('✅ Returning transformed listings:', transformed.length);
+    if (transformed.length > 0) {
+      console.log('📍 First result:', transformed[0].address);
+    }
     if (transformed.length > 0) {
       console.log('🎯 First transformed:', {
         id: transformed[0].id,
@@ -142,6 +148,7 @@ export const createListing = createAsyncThunk(
     slotType?: string;
   }) => {
     const apiParams = {
+      title: params.title,
       lat: params.latitude,
       lon: params.longitude,
       price: params.pricePerHour,
