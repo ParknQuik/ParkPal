@@ -1,6 +1,16 @@
 const Joi = require('joi');
 
 exports.createListingSchema = Joi.object({
+  title: Joi.string()
+    .min(3)
+    .max(200)
+    .required()
+    .messages({
+      'string.min': 'Title must be at least 3 characters',
+      'string.max': 'Title must be less than 200 characters',
+      'any.required': 'Title is required'
+    }),
+
   address: Joi.string()
     .min(10)
     .max(500)

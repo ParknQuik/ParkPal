@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { marketplaceAPI } from '../services/api';
@@ -31,6 +32,7 @@ export const WriteReview: React.FC = () => {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -55,8 +57,28 @@ export const WriteReview: React.FC = () => {
     }
   };
 
-  const handlePhotoUpload = () => {
-    Alert.alert('Coming Soon', 'Photo upload coming soon');
+  const handlePhotoUpload = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'Please allow access to your photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotos(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const renderStars = () => {
@@ -138,12 +160,28 @@ export const WriteReview: React.FC = () => {
         {/* Photo Upload Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Add Photos</Text>
-          <TouchableOpacity style={styles.photoUpload} onPress={handlePhotoUpload}>
-            <View style={styles.photoIconContainer}>
-              <Text style={styles.photoIcon}>📷</Text>
-            </View>
-            <Text style={styles.photoUploadText}>Tap to add photos</Text>
-          </TouchableOpacity>
+          <View style={styles.photosGrid}>
+            {photos.map((photo, index) => (
+              <View key={index} style={styles.photoContainer}>
+                <Image source={{ uri: photo }} style={styles.photoThumbnail} />
+                <TouchableOpacity 
+                  style={styles.removePhotoButton} 
+                  onPress={() => handleRemovePhoto(index)}
+                >
+                  <Text style={styles.removePhotoText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            {photos.length < 5 && (
+              <TouchableOpacity style={styles.photoUpload} onPress={handlePhotoUpload}>
+                <View style={styles.photoIconContainer}>
+                  <Text style={styles.photoIcon}>📷</Text>
+                </View>
+                <Text style={styles.photoUploadText}>Tap to add photos</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={styles.photoCount}>{photos.length}/5 photos</Text>
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -331,6 +369,40 @@ const styles = StyleSheet.create({
   photoUploadText: {
     fontSize: 14,
     color: '#64748b',
+  },
+  photosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoContainer: {
+    position: 'relative',
+  },
+  photoThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removePhotoText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  photoCount: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 8,
   },
   bottomSpacer: {
     height: 20,

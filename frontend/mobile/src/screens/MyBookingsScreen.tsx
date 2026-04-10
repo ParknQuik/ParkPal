@@ -138,7 +138,14 @@ export const MyBookingsScreen: React.FC = () => {
           navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId } as never);
           break;
         case 'pending':
-          navigation.navigate('Payment' as never, { bookingId: booking.id, amount: booking.totalAmount } as never);
+          navigation.navigate('Payment' as never, { 
+            bookingId: booking.id, 
+            amount: booking.totalAmount,
+            spotName: booking.spot?.title || booking.spot?.address || 'Parking Spot',
+            spotAddress: booking.spot?.address || '',
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+          } as never);
           break;
         case 'completed':
           navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never);

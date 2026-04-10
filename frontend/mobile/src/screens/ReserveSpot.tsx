@@ -184,12 +184,28 @@ export const ReserveSpot: React.FC = () => {
         bookingId,
         amount: total,
         spotId,
+        spotName: spot?.title || spot?.address || 'Parking Spot',
+        spotAddress: spot?.address || '',
+        startTime: startDate.toISOString(),
+        endTime: endDate.toISOString(),
         rentalMode,
         maxDuration: rentalMode === 'open' ? MAX_DURATION_HOURS : undefined,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Booking failed:', err);
-      Alert.alert('Booking Failed', 'Unable to create booking. Please try again.');
+      const errorMessage = err.response?.data?.error || err.message || 'Unable to create booking';
+      
+      if (err.response?.status === 409) {
+        Alert.alert(
+          'Slot Unavailable', 
+          err.response?.data?.error || 'This slot is already booked for the selected time. Please choose a different time.',
+          [{ text: 'OK' }]
+        );
+      } else if (err.response?.status === 400 && errorMessage.includes('not available')) {
+        Alert.alert('Slot Unavailable', 'This slot is no longer available. Please choose another spot.');
+      } else {
+        Alert.alert('Booking Failed', 'Unable to create booking. Please try again.');
+      }
     } finally {
       setIsBooking(false);
     }

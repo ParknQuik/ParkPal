@@ -1,9 +1,9 @@
 # ParkPal Development Roadmap
 
-**Last Updated:** March 10, 2026
-**Current Week:** Week 3 of 9 (Frontend Deployment Preparation)
-**Current Phase:** Phase 1 Complete ✅ / Phase 2 Starting
-**Target Public Launch:** Late April 2026 (6 weeks remaining)
+**Last Updated:** April 9, 2026
+**Current Week:** Week 7 of 9
+**Current Phase:** Phase 2 Complete ✅ / Phase 3-4 In Progress
+**Target Public Launch:** Late April 2026
 
 ---
 
@@ -28,12 +28,12 @@
 
 This roadmap reflects the **actual state** of ParkPal as of February 24, 2026, based on deployment data and test results. It provides a realistic path from current critical issues to public launch.
 
-### Current Reality (March 10, 2026)
+### Current Reality (April 9, 2026)
 
 - Backend: DEPLOYED and healthy (93.4% test pass rate) ✅
-- Web Frontend: NOT DEPLOYED (needs deployment setup)
-- Mobile App: NOT DEPLOYED (code ready, 100% tests passing)
-- Infrastructure: 4 of 5 services UP (Secret Manager ✅, Email ✅, Database ✅, Redis deferred)
+- Web Frontend: DEPLOYED ✅
+- Mobile App: Code ready, EAS configured
+- Infrastructure: All services UP
 
 ### Target State
 
@@ -49,7 +49,7 @@ This roadmap reflects the **actual state** of ParkPal as of February 24, 2026, b
 
 **Duration:** February 24 - March 10, 2026 (2 weeks + 3 days)
 **Goal:** Fix 221 failing backend tests, restore infrastructure
-**Status:** EXCEEDED TARGETS ✅
+**Status:** EXCEEDED TARGETS ✅ (93.4% test pass rate)
 
 ### Week 1 (Feb 24-28, 2026) ✅ COMPLETE
 
@@ -142,11 +142,12 @@ This roadmap reflects the **actual state** of ParkPal as of February 24, 2026, b
 
 ---
 
-## Phase 2: Frontend Deployments (Week 3) ⏳ STARTING NOW
+## Phase 2: Frontend Deployments (Week 3) ✅ COMPLETE
 
-**Duration:** March 10-14, 2026 (1 week)
-**Goal:** Deploy all user-facing platforms to staging
-**Status:** STARTING (March 10, 2026 - Evening)
+**Status:** COMPLETE ✅
+- Web Frontend: DEPLOYED ✅
+- Mobile App: Code ready, EAS configured ✅
+- Photo Upload: In progress
 
 ### Web Frontend Deployment
 - [ ] Fix any issues found in staging testing
@@ -190,7 +191,26 @@ This roadmap reflects the **actual state** of ParkPal as of February 24, 2026, b
 
 ---
 
-## Phase 3: App Store Submissions (Week 4)
+## Phase 3: App Store Submissions (Week 4) ⚠️ IN PROGRESS
+
+**Status:** IN PROGRESS
+
+### Recently Added (April 2026):
+- [x] Booking system with rental modes (fixed/open time)
+- [x] Booking extensions (1-4 hour extensions)
+- [x] Cash payment method
+- [x] Booking expiry protocol (auto-expire no-shows)
+- [x] Cancellation policy (30-minute deadline)
+- [x] Test suite updates (45+ new tests)
+
+### What's Remaining:
+- [ ] Submit iOS app to App Store
+- [ ] Submit Android app to Play Store
+- [ ] Internal testing with beta users
+
+---
+
+## Phase 4: Beta Testing (Weeks 5-6) ⏳ PENDING
 
 **Duration:** March 17-21, 2026 (1 week)
 **Goal:** Submit mobile apps to app stores, internal testing

@@ -69,6 +69,7 @@ function safeJsonParse(str, fallback = []) {
 exports.createListing = async (req, res) => {
   try {
     const {
+      title,
       lat,
       lon,
       price,
@@ -82,15 +83,16 @@ exports.createListing = async (req, res) => {
     const ownerId = req.user.id;
 
     // Validate required fields
-    if (!lat || !lon || !price || !address || !slotType) {
+    if (!lat || !lon || !price || !address || !slotType || !title) {
       return res.status(400).json({
-        error: 'Missing required fields: lat, lon, price, address, slotType',
+        error: 'Missing required fields: lat, lon, price, address, slotType, title',
       });
     }
 
     // Create parking slot
     const slot = await prisma.parkingSlot.create({
       data: {
+        title,
         lat: parseFloat(lat),
         lon: parseFloat(lon),
         price: parseFloat(price),
@@ -189,7 +191,10 @@ exports.searchListings = async (req, res) => {
       amenities,
       slotType,
       status,
+      q,
     } = req.query;
+
+    console.log('Search params:', { q, lat, lon, radius, status });
 
     // Get pagination and sort info
     const { skip, take } = req.pagination || { skip: 0, take: 20 };
@@ -205,6 +210,7 @@ exports.searchListings = async (req, res) => {
       amenities,
       slotType,
       status,
+      q,
       offset: skip,
       limit: take,
       sort: JSON.stringify(sortOptions),
@@ -228,6 +234,16 @@ exports.searchListings = async (req, res) => {
       where.status = 'available'; // Default to available slots
     }
 
+    // Text search by address or title (case-insensitive)
+    if (q) {
+      where.OR = [
+        { address: { contains: q, mode: 'insensitive' } },
+        { title: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    console.log('Where clause:', JSON.stringify(where));
+
     // Filter by slot type
     if (slotType) {
       where.slotType = slotType;
@@ -246,20 +262,24 @@ exports.searchListings = async (req, res) => {
       const userLon = parseFloat(lon);
       const radiusKm = parseFloat(radius);
 
-      // Calculate approximate lat/lon bounds (much faster than filtering all records)
-      // 1 degree latitude ≈ 111km, 1 degree longitude ≈ 111km * cos(latitude)
-      const latDelta = radiusKm / 111;
-      const lonDelta = radiusKm / (111 * Math.cos((userLat * Math.PI) / 180));
+      console.log('📊 User search params - lat:', userLat, 'lon:', userLon, 'radius:', radiusKm, 'km');
 
-      where.lat = {
-        gte: userLat - latDelta,
-        lte: userLat + latDelta,
-      };
-      where.lon = {
-        gte: userLon - lonDelta,
-        lte: userLon + lonDelta,
-      };
+      // Calculate approximate lat/lon bounds (much faster than filtering all records)
+      // Use 2x radius to capture edge cases, then filter precisely in post-processing
+      // 1 degree latitude ≈ 111km, 1 degree longitude ≈ 111km * cos(latitude)
+      const boundsMultiplier = 2;
+      const latDelta = (radiusKm * boundsMultiplier) / 111;
+      const lonDelta = (radiusKm * boundsMultiplier) / (111 * Math.cos((userLat * Math.PI) / 180));
+
+      // Skip Prisma lat/lon bounds - filter by distance in post-processing instead
+      // This ensures accurate distance-based filtering
+
+      console.log('🔍 Prisma lat bounds:', (userLat - latDelta).toFixed(6), 'to', (userLat + latDelta).toFixed(6));
+      console.log('🔍 Prisma lon bounds:', (userLon - lonDelta).toFixed(6), 'to', (userLon + lonDelta).toFixed(6));
     }
+
+    console.log('🔍 Full where clause:', JSON.stringify(where));
+    console.log('🔍 Query params - take:', take, 'skip:', skip, 'radius:', radius);
 
     // Query with pagination - MUCH more efficient
     const [slots, totalCount] = await prisma.$transaction([
@@ -268,7 +288,21 @@ exports.searchListings = async (req, res) => {
         skip,
         take: take * 2, // Get extra records to account for distance filtering
         orderBy: sortOptions,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          address: true,
+          lat: true,
+          lon: true,
+          price: true,
+          slotType: true,
+          status: true,
+          description: true,
+          amenities: true,
+          photos: true,
+          rating: true,
+          createdAt: true,
+          isActive: true,
           owner: {
             select: { id: true, name: true, email: true },
           },
@@ -291,26 +325,154 @@ exports.searchListings = async (req, res) => {
       prisma.parkingSlot.count({ where }),
     ]);
 
+    console.log('🔍 Prisma query executed, found slots:', slots.length);
+    if (slots.length > 0) {
+      console.log('📍 First slot:', slots[0].address, 'lat:', slots[0].lat, 'lon:', slots[0].lon);
+    }
+
+    // Auto-expand radius fallback configuration
+    const RADIUS_FALLBACK_STEPS = [3, 5, 10, 15];
+    const requestedRadius = radius ? parseFloat(radius) : null;
+    let expandedRadius = null;
+    let radiusExpanded = false;
+
     // Post-process: precise distance filtering and calculation
     let processedSlots = slots;
+    let currentRadius = requestedRadius;
 
-    if (lat && lon && radius) {
+    const performDistanceFilter = (slotsToFilter, radiusValue) => {
       const userLat = parseFloat(lat);
       const userLon = parseFloat(lon);
-      const radiusKm = parseFloat(radius);
+      console.log('📍 Location filter: user at', userLat, userLon, 'radius', radiusValue, 'km');
 
-      processedSlots = slots
+      return slotsToFilter
         .map((slot) => ({
           ...slot,
           distance: calculateDistance(userLat, userLon, slot.lat, slot.lon),
         }))
-        .filter((slot) => slot.distance <= radiusKm)
+        .filter((slot) => slot.distance <= radiusValue)
         .sort((a, b) => a.distance - b.distance)
-        .slice(0, take); // Apply pagination limit after filtering
+        .slice(0, take);
+    };
+
+    if (lat && lon && currentRadius) {
+      processedSlots = performDistanceFilter(slots, currentRadius);
+      console.log('📍 After distance filter:', processedSlots.length, 'slots from', slots.length);
+      if (processedSlots.length > 0) {
+        console.log('📍 Closest slot:', processedSlots[0].address, 'distance:', processedSlots[0].distance?.toFixed(2), 'km');
+      }
     }
 
-    // Filter by amenities if specified
-    if (amenities) {
+    // Auto-expand radius fallback: if no results, expand radius and re-query
+    if (lat && lon && requestedRadius && processedSlots.length === 0) {
+      console.log('🔄 No results found with requested radius:', requestedRadius, 'km, starting radius expansion...');
+
+      for (const fallbackRadius of RADIUS_FALLBACK_STEPS) {
+        if (fallbackRadius <= requestedRadius) continue;
+
+        console.log('🔄 Attempting fallback radius:', fallbackRadius, 'km');
+
+        // Calculate new bounds for larger radius
+        const userLat = parseFloat(lat);
+        const userLon = parseFloat(lon);
+        const boundsMultiplier = 2;
+        const latDelta = (fallbackRadius * boundsMultiplier) / 111;
+        const lonDelta = (fallbackRadius * boundsMultiplier) / (111 * Math.cos((userLat * Math.PI) / 180));
+
+        // Re-query with expanded radius bounds
+        const expandedCacheKey = cache.getListingsCacheKey({
+          lat,
+          lon,
+          radius: fallbackRadius.toString(),
+          minPrice,
+          maxPrice,
+          amenities,
+          slotType,
+          status,
+          q,
+          offset: skip,
+          limit: take,
+          sort: JSON.stringify(sortOptions),
+        });
+
+        // Check expanded cache first
+        const cachedExpanded = await cache.get(expandedCacheKey);
+        if (cachedExpanded) {
+          console.log(`Cache HIT for expanded listings: ${expandedCacheKey}`);
+          processedSlots = cachedExpanded.data;
+          expandedRadius = fallbackRadius;
+          radiusExpanded = true;
+          break;
+        }
+
+        // Re-execute database query with expanded bounds
+        const [expandedSlots, expandedCount] = await prisma.$transaction([
+          prisma.parkingSlot.findMany({
+            where,
+            skip,
+            take: take * 2,
+            orderBy: sortOptions,
+            select: {
+              id: true,
+              title: true,
+              address: true,
+              lat: true,
+              lon: true,
+              price: true,
+              slotType: true,
+              status: true,
+              description: true,
+              amenities: true,
+              photos: true,
+              rating: true,
+              createdAt: true,
+              isActive: true,
+              owner: {
+                select: { id: true, name: true, email: true },
+              },
+              zone: true,
+              reviews: {
+                select: {
+                  id: true,
+                  rating: true,
+                  comment: true,
+                  createdAt: true,
+                  author: {
+                    select: { id: true, name: true },
+                  },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+              },
+            },
+          }),
+          prisma.parkingSlot.count({ where }),
+        ]);
+
+        console.log('🔄 Expanded query found slots:', expandedSlots.length);
+
+        // Filter with expanded radius
+        processedSlots = performDistanceFilter(expandedSlots, fallbackRadius);
+        console.log('🔄 After expanded distance filter:', processedSlots.length, 'slots from', expandedSlots.length);
+
+        if (processedSlots.length > 0) {
+          console.log('🔄 Found', processedSlots.length, 'results with expanded radius:', fallbackRadius, 'km');
+          expandedRadius = fallbackRadius;
+          radiusExpanded = true;
+
+          // Cache expanded results with different key (shorter TTL for expanded)
+          const expandedResponse = {
+            data: processedSlots,
+            pagination: { page: 1, limit: take, total: processedSlots.length, totalPages: Math.ceil(processedSlots.length / take), hasNextPage: false, hasPrevPage: null, nextPage: null, prevPage: null },
+          };
+          await cache.set(expandedCacheKey, expandedResponse, cache.CACHE_TTL.SHORT);
+          break;
+        }
+      }
+    }
+
+    // Filter by amenities if specified (only if not already expanded)
+    if (amenities && !radiusExpanded) {
       const requiredAmenities = amenities.split(',').map((a) => a.trim());
       processedSlots = processedSlots.filter((slot) => {
         if (!slot.amenities) return false;
@@ -328,10 +490,17 @@ exports.searchListings = async (req, res) => {
       photos: safeJsonParse(slot.photos),
     }));
 
-    // Use helper from pagination middleware if available
+    // Use the actual filtered count for pagination
+    const actualTotal = lat && lon && (currentRadius || expandedRadius) ? processedSlots.length : totalCount;
     const response = req.buildPaginatedResponse
-      ? req.buildPaginatedResponse(processedSlots, totalCount)
-      : { count: processedSlots.length, listings: processedSlots, total: totalCount };
+      ? req.buildPaginatedResponse(processedSlots, actualTotal)
+      : {
+          data: processedSlots,
+          pagination: { page: 1, limit: take, total: actualTotal, totalPages: Math.ceil(actualTotal / take), hasNextPage: false, hasPrevPage: null, nextPage: null, prevPage: null },
+          requestedRadius: requestedRadius,
+          radiusExpanded: radiusExpanded,
+          expandedRadius: expandedRadius,
+        };
 
     // Cache the result (5 minute TTL)
     await cache.set(cacheKey, response, cache.CACHE_TTL.MEDIUM);
@@ -377,7 +546,50 @@ exports.searchListings = async (req, res) => {
 exports.createBooking = async (req, res) => {
   try {
     const { slotId, startTime, endTime, rentalMode = 'fixed', maxDuration } = req.body;
+    console.log('Create booking request:', { slotId, startTime, endTime, rentalMode, maxDuration });
     const userId = req.user.id;
+
+    // Parse time inputs
+    const start = new Date(startTime);
+    let end;
+    let hours, totalPrice, authAmount;
+
+    // Check for conflicting bookings (overlapping time slots) - for fixed mode
+    if (rentalMode === 'fixed' && endTime) {
+      end = new Date(endTime);
+      const conflictingBookings = await prisma.booking.findMany({
+        where: {
+          slotId: parseInt(slotId),
+          status: { in: ['confirmed', 'pending', 'active'] },
+          OR: [
+            {
+              startTime: { lte: start },
+              endTime: { gt: start }
+            },
+            {
+              startTime: { lt: end },
+              endTime: { gte: end }
+            },
+            {
+              startTime: { gte: start },
+              endTime: { lte: end }
+            }
+          ]
+        }
+      });
+
+      if (conflictingBookings.length > 0) {
+        const earliestConflict = conflictingBookings[0];
+        const conflictStart = new Date(earliestConflict.startTime);
+        return res.status(409).json({ 
+          error: 'Slot is already booked for this time period',
+          conflictingBooking: {
+            startTime: conflictStart.toISOString(),
+            message: `This slot is booked from ${conflictStart.toLocaleString()}`
+          }
+        });
+      }
+    }
 
     // Validate required fields based on rental mode
     if (!slotId || !startTime) {
@@ -418,9 +630,27 @@ exports.createBooking = async (req, res) => {
       return res.status(400).json({ error: 'Slot is not available' });
     }
 
+    // For open mode, check if there's any active booking
+    if (rentalMode === 'open') {
+      const activeOpenBookings = await prisma.booking.findMany({
+        where: {
+          slotId: parseInt(slotId),
+          status: 'active',
+          rentalMode: 'open'
+        }
+      });
+
+      if (activeOpenBookings.length > 0) {
+        return res.status(409).json({ 
+          error: 'Slot already has an active open-time booking',
+        });
+      }
+    }
+
     // Calculate price based on rental mode
-    const start = new Date(startTime);
-    let end, hours, totalPrice, authAmount;
+    hours = 0;
+    totalPrice = 0;
+    authAmount = 0;
 
     if (rentalMode === 'fixed') {
       // Fixed mode: calculate exact price
@@ -432,8 +662,10 @@ exports.createBooking = async (req, res) => {
       // Open mode: calculate authorization amount for max duration
       end = null;
       hours = maxDuration;
-      authAmount = slot.price * hours; // Pre-auth amount
-      totalPrice = authAmount; // Initial estimate
+      // Pre-auth amount = price per hour × max duration × 1.5 (buffer)
+      const estimatedMaxPrice = slot.price * hours;
+      authAmount = Math.ceil(estimatedMaxPrice * 1.5);
+      totalPrice = authAmount; // Initial charge is the pre-auth amount
     }
 
     // Calculate platform fee (5% commission)
@@ -481,7 +713,9 @@ exports.createBooking = async (req, res) => {
       data: {
         userId: booking.userId,
         title: 'Booking Confirmed! 🎉',
-        body: `Your parking booking at ${booking.slot?.address || 'the parking spot'} is confirmed for ${new Date(booking.startTime).toLocaleDateString()}.`,
+        body: rentalMode === 'open' 
+          ? `Your parking at ${booking.slot?.address || 'the parking spot'} is confirmed. Pre-auth hold: ₱${authAmount}. You'll be charged based on actual usage.`
+          : `Your parking booking at ${booking.slot?.address || 'the parking spot'} is confirmed for ${new Date(booking.startTime).toLocaleDateString()}.`,
         type: 'booking_confirmation',
         data: JSON.stringify({ bookingId: booking.id }),
       },
@@ -572,7 +806,30 @@ exports.qrCheckIn = async (req, res) => {
         return res.status(403).json({ error: 'Invalid booking' });
       }
 
-      // Update booking status
+      // For open mode: require status to be 'confirmed' (not already active/completed)
+      if (booking.rentalMode === 'open') {
+        if (booking.status !== 'confirmed' && booking.status !== 'pending') {
+          return res.status(400).json({ 
+            error: `Cannot check in. Booking status is already '${booking.status}'.` 
+          });
+        }
+        
+        // Check if within allowed time window (start time should be close to now, within maxDuration)
+        const now = new Date();
+        const startTime = new Date(booking.startTime);
+        const maxDuration = booking.maxDuration || 4;
+        const windowEnd = new Date(startTime.getTime() + maxDuration * 60 * 60 * 1000);
+        
+        if (now < new Date(startTime.getTime() - 15 * 60 * 1000)) {
+          return res.status(400).json({ error: 'Check-in not allowed yet. You can check in up to 15 minutes before your booking time.' });
+        }
+        
+        if (now > windowEnd) {
+          return res.status(400).json({ error: 'Your booking window has expired. Please create a new booking.' });
+        }
+      }
+
+      // Update booking status to active
       await prisma.booking.update({
         where: { id: parseInt(bookingId) },
         data: { status: 'active' },
@@ -1257,15 +1514,18 @@ exports.cancelBooking = async (req, res) => {
     }
 
     // Check if booking has already started or is within cancellation deadline
-    const now = new Date();
-    const bookingStartTime = new Date(booking.startTime);
-    const cancellationDeadline = new Date(bookingStartTime.getTime() - 30 * 60 * 1000); // 30 minutes before
+    // Skip this check for pending bookings - they can be cancelled anytime
+    if (booking.status !== 'pending') {
+      const now = new Date();
+      const bookingStartTime = new Date(booking.startTime);
+      const cancellationDeadline = new Date(bookingStartTime.getTime() - 30 * 60 * 1000); // 30 minutes before
 
-    if (now >= cancellationDeadline) {
-      return res.status(400).json({ 
-        error: 'Cannot cancel booking within 30 minutes of start time or after it has started',
-        code: 'CANCELLATION_DEADLINE_PASSED'
-      });
+      if (now >= cancellationDeadline) {
+        return res.status(400).json({ 
+          error: 'Cannot cancel booking within 30 minutes of start time or after it has started',
+          code: 'CANCELLATION_DEADLINE_PASSED'
+        });
+      }
     }
 
     // Cannot cancel if already checked in
@@ -1463,7 +1723,9 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distance in km
+  const dist = R * c;
+  console.log('📏 Distance from', lat1, lon1, 'to', lat2, lon2, '=', dist.toFixed(2), 'km');
+  return dist;
 }
 
 function toRad(degrees) {

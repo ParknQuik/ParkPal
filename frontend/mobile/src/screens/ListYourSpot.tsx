@@ -13,13 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import { useAppDispatch } from '../store';
+import { createListing } from '../store/slices/marketplaceSlice';
 import { colors, typography, spacing, borderRadius } from '../theme';
-
-const MOCK_PHOTOS = [
-  'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
-  'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
-  'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
-];
 
 const AMENITIES = [
   { key: 'covered', label: 'Covered' },
@@ -32,10 +29,17 @@ const AMENITIES = [
 
 export const ListYourSpot: React.FC = () => {
   const navigation = useNavigation();
+  const dispatch = useAppDispatch();
   const [spotName, setSpotName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [photos, setPhotos] = useState<string[]>(MOCK_PHOTOS);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [address, setAddress] = useState('');
+  const [price, setPrice] = useState('');
+  const [lat, setLat] = useState(14.5995);
+  const [lon, setLon] = useState(120.9822);
+  const [slotType, setSlotType] = useState<'roadside_qr' | 'commercial_manual' | 'commercial_iot'>('roadside_qr');
+  const [loading, setLoading] = useState(false);
 
   const toggleAmenity = useCallback((key: string) => {
     setSelectedAmenities((prev) =>
@@ -45,13 +49,68 @@ export const ListYourSpot: React.FC = () => {
     );
   }, []);
 
-  const handleAddMorePhotos = useCallback(() => {
-    Alert.alert('Add Photos', 'Photo picker would open here');
+  const handleAddMorePhotos = useCallback(async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'Please allow access to your photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setPhotos(prev => [...prev, result.assets[0].uri]);
+    }
   }, []);
 
-  const handleContinue = useCallback(() => {
-    Alert.alert('Continue', 'Proceeding to next step');
-  }, []);
+  const handleContinue = useCallback(async () => {
+    if (!spotName.trim()) {
+      Alert.alert('Required', 'Please enter a spot name.');
+      return;
+    }
+    if (!address.trim()) {
+      Alert.alert('Required', 'Please enter an address.');
+      return;
+    }
+    if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
+      Alert.alert('Required', 'Please enter a valid price.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const listingData = {
+        title: spotName.trim(),
+        description: description.trim(),
+        address: address.trim(),
+        latitude: Number(lat) || 14.5995,
+        longitude: Number(lon) || 120.9822,
+        pricePerHour: Number(price),
+        slotType,
+        amenities: selectedAmenities,
+        photos: photos.filter(p => !p.includes('unsplash')),
+      };
+
+      const result = await dispatch(createListing(listingData)).unwrap();
+      
+      Alert.alert(
+        'Success! 🎉',
+        'Your parking spot has been listed.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error: any) {
+      console.error('Create listing error:', error);
+      Alert.alert('Error', error?.message || 'Failed to create listing. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [spotName, address, price, lat, lon, slotType, description, selectedAmenities, photos, dispatch, navigation]);
 
   const handleBack = useCallback(() => {
     navigation.goBack();
@@ -107,7 +166,7 @@ export const ListYourSpot: React.FC = () => {
                 <Text style={styles.addPhotoIcon}>+</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.photoCount}>3/5 photos</Text>
+            <Text style={styles.photoCount}>{photos.length}/5 photos</Text>
           </View>
         </View>
 
@@ -167,11 +226,96 @@ export const ListYourSpot: React.FC = () => {
             })}
           </View>
         </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Location</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Address *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={address}
+              onChangeText={setAddress}
+              placeholder="Full address (e.g., 123 Main Street, Makati City)"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <View style={styles.inputRow}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Latitude</Text>
+              <TextInput
+                style={styles.textInput}
+                value={String(lat)}
+                onChangeText={(t) => setLat(Number(t) || 14.5995)}
+                placeholder="14.5995"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={{ width: spacing.md }} />
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Longitude</Text>
+              <TextInput
+                style={styles.textInput}
+                value={String(lon)}
+                onChangeText={(t) => setLon(Number(t) || 120.9822)}
+                placeholder="120.9822"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pricing</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Price per Hour (PHP) *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={price}
+              onChangeText={setPrice}
+              placeholder="50"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Spot Type</Text>
+          <View style={styles.slotTypeContainer}>
+            {[
+              { key: 'roadside_qr', label: 'Roadside (QR)', desc: 'Street parking with QR code' },
+              { key: 'commercial_manual', label: 'Commercial', desc: 'Managed lot with manual entry' },
+              { key: 'commercial_iot', label: 'Smart Lot', desc: 'IoT-enabled smart parking' },
+            ].map((type) => (
+              <TouchableOpacity
+                key={type.key}
+                style={[styles.slotTypeOption, slotType === type.key && styles.slotTypeOptionSelected]}
+                onPress={() => setSlotType(type.key as any)}
+              >
+                <Text style={[styles.slotTypeLabel, slotType === type.key && styles.slotTypeLabelSelected]}>
+                  {type.label}
+                </Text>
+                <Text style={styles.slotTypeDesc}>{type.desc}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-          <Text style={styles.continueButtonText}>Continue</Text>
+        <TouchableOpacity 
+          style={[styles.continueButton, loading && styles.continueButtonDisabled]} 
+          onPress={handleContinue}
+          disabled={loading}
+        >
+          <Text style={styles.continueButtonText}>
+            {loading ? 'Creating...' : 'Continue'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -339,6 +483,36 @@ const styles = StyleSheet.create({
   amenityTextSelected: {
     color: colors.white,
   },
+  inputRow: {
+    flexDirection: 'row',
+  },
+  slotTypeContainer: {
+    gap: spacing.sm,
+  },
+  slotTypeOption: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  slotTypeOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}10`,
+  },
+  slotTypeLabel: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  slotTypeLabelSelected: {
+    color: colors.primary,
+  },
+  slotTypeDesc: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -360,6 +534,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingVertical: spacing.md,
     alignItems: 'center',
+  },
+  continueButtonDisabled: {
+    opacity: 0.6,
   },
   continueButtonText: {
     ...typography.body,

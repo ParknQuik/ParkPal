@@ -8,6 +8,7 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -217,7 +218,8 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleFilterPress = () => {
-    navigation.navigate('SearchFilters');
+    console.log('Filter pressed - to be implemented');
+    Alert.alert('Filters', 'Filter options coming soon!');
   };
 
   return (

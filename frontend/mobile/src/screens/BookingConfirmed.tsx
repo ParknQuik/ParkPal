@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
+import { marketplaceAPI } from '../services/api';
 import { colors } from '../theme';
 
 const PRIMARY = '#10b77f';
@@ -20,23 +21,34 @@ const SECONDARY = colors.secondary;
 const ACCENT = '#ffeb3b';
 const BACKGROUND = '#f6f6f8';
 
-const bookingData = {
-  bookingId: 'PP-2026-ABC123',
-  locationName: 'Downtown Secure Parking',
-  locationAddress: '123 Main Street, Downtown, CA 90210',
-  checkIn: 'Mar 20, 2026',
-  checkInTime: '10:00 AM',
-  checkOut: 'Mar 22, 2026',
-  checkOutTime: '10:00 AM',
-  totalPaid: '₱85.00',
-};
-
 export const BookingConfirmed: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { paymentId, bookingId } = route.params as { paymentId: number; bookingId: number };
+  const { paymentId, bookingId, amount, spotName, spotAddress, startTime, endTime } = route.params as any;
   const scaleAnim = new Animated.Value(0);
   const fadeAnim = new Animated.Value(0);
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const displayData = {
+    locationName: spotName || 'Parking Spot',
+    locationAddress: spotAddress || 'Address not available',
+    checkIn: startTime ? formatDate(startTime) : 'N/A',
+    checkInTime: startTime ? formatTime(startTime) : 'N/A',
+    checkOut: endTime ? formatDate(endTime) : 'N/A',
+    checkOutTime: endTime ? formatTime(endTime) : 'N/A',
+    totalPaid: amount ? `₱${Number(amount).toFixed(2)}` : '₱0.00',
+  };
 
   useEffect(() => {
     Animated.sequence([
@@ -55,7 +67,7 @@ export const BookingConfirmed: React.FC = () => {
   }, []);
 
   const handleClose = () => {
-    navigation.goBack();
+    navigation.navigate('MainTabs' as never);
   };
 
   const handleViewBooking = () => {
@@ -111,10 +123,10 @@ export const BookingConfirmed: React.FC = () => {
             {/* Location */}
             <View style={styles.detailSection}>
               <Text style={styles.detailLabel}>Location</Text>
-              <Text style={styles.locationName}>{bookingData.locationName}</Text>
+              <Text style={styles.locationName}>{displayData.locationName}</Text>
               <View style={styles.addressRow}>
                 <Text style={styles.addressIcon}>📍</Text>
-                <Text style={styles.addressText}>{bookingData.locationAddress}</Text>
+                <Text style={styles.addressText}>{displayData.locationAddress}</Text>
               </View>
             </View>
 
@@ -126,16 +138,16 @@ export const BookingConfirmed: React.FC = () => {
               <View style={styles.datesContainer}>
                 <View style={styles.dateBlock}>
                   <Text style={styles.dateLabel}>From</Text>
-                  <Text style={styles.dateValue}>{bookingData.checkIn}</Text>
-                  <Text style={styles.timeValue}>{bookingData.checkInTime}</Text>
+                  <Text style={styles.dateValue}>{displayData.checkIn}</Text>
+                  <Text style={styles.timeValue}>{displayData.checkInTime}</Text>
                 </View>
                 <View style={styles.dateArrow}>
                   <Text style={styles.dateArrowText}>→</Text>
                 </View>
                 <View style={styles.dateBlock}>
                   <Text style={styles.dateLabel}>To</Text>
-                  <Text style={styles.dateValue}>{bookingData.checkOut}</Text>
-                  <Text style={styles.timeValue}>{bookingData.checkOutTime}</Text>
+                  <Text style={styles.dateValue}>{displayData.checkOut}</Text>
+                  <Text style={styles.timeValue}>{displayData.checkOutTime}</Text>
                 </View>
               </View>
             </View>
@@ -145,7 +157,7 @@ export const BookingConfirmed: React.FC = () => {
             {/* Total Paid */}
             <View style={styles.detailSection}>
               <Text style={styles.detailLabel}>Total Paid</Text>
-              <Text style={styles.totalPaid}>{bookingData.totalPaid}</Text>
+              <Text style={styles.totalPaid}>{displayData.totalPaid}</Text>
             </View>
           </View>
 
@@ -154,7 +166,7 @@ export const BookingConfirmed: React.FC = () => {
             <Text style={styles.qrSectionTitle}>Check-in QR Code</Text>
             <View style={styles.qrContainer}>
               <Image
-                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${bookingId}` }}
+                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PARKPAL:${bookingId}` }}
                 style={styles.qrImage}
                 resizeMode="contain"
               />
