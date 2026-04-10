@@ -7,12 +7,18 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Image,
+  ActivityIndicator,
+  Platform,
+  ActionSheetIOS,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppSelector, useAppDispatch } from '../store';
-import { logout, checkAuth } from '../store/slices/authSlice';
+import { logout, checkAuth, updateUserProfile } from '../store/slices/authSlice';
+import { userAPI } from '../services/api';
 import { colors, typography, spacing, borderRadius } from '../theme';
 
 export const ProfileScreen: React.FC = () => {
@@ -20,6 +26,7 @@ export const ProfileScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
 
   const handleLogout = useCallback(() => {
     Alert.alert(
@@ -52,6 +59,97 @@ export const ProfileScreen: React.FC = () => {
       setRefreshing(false);
     }
   }, [dispatch]);
+
+  const getFileName = (uri: string) => {
+    const timestamp = Date.now();
+    const ext = uri.split('.').pop() || 'jpg';
+    return `profile-${timestamp}.${ext}`;
+  };
+
+  const handleChangePhoto = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) openCamera();
+          else if (buttonIndex === 2) openGallery();
+        }
+      );
+    } else {
+      Alert.alert('Change Photo', 'Choose an option', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Take Photo', onPress: openCamera },
+        { text: 'Choose from Gallery', onPress: openGallery },
+      ]);
+    }
+  }, []);
+
+  const openCamera = async () => {
+    const hasPermission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!hasPermission?.granted) {
+      Alert.alert('Permission needed', 'Camera permission is required');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const openGallery = async () => {
+    const hasPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!hasPermission?.granted) {
+      Alert.alert('Permission needed', 'Media library permission is required');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (imageUri: string) => {
+    try {
+      setUploading(true);
+      const fileName = getFileName(imageUri);
+
+      const { uploadUrl, fileName: gcsFileName } = await userAPI.getProfileUploadUrl(fileName).then(res => res.data);
+
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: blob,
+      });
+
+      const updatedUser = await userAPI.uploadProfilePicture(gcsFileName).then(res => res.data);
+
+      await dispatch(updateUserProfile({
+        name: user?.name || '',
+        phone: user?.phone || null,
+        profileImageUrl: updatedUser.profileImageUrl || undefined,
+      })).unwrap();
+
+      Alert.alert('Success', 'Profile picture updated');
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Failed to upload photo');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const userName = user?.name || 'Guest';
   const userEmail = user?.email || 'No email';
@@ -138,8 +236,25 @@ export const ProfileScreen: React.FC = () => {
         }
       >
         <View style={styles.profileInfo}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{userInitial}</Text>
+          <View style={styles.avatarContainer}>
+            {uploading && (
+              <View style={styles.uploadOverlay}>
+                <ActivityIndicator size="small" color={colors.white} />
+              </View>
+            )}
+            {user?.profileImageUrl ? (
+              <Image
+                source={{ uri: user!.profileImageUrl }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>{userInitial}</Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.editButton} onPress={handleChangePhoto}>
+              <MaterialCommunityIcons name="camera" size={14} color={colors.white} />
+            </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{userName}</Text>
           <Text style={styles.userEmail}>{userEmail}</Text>
@@ -229,7 +344,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarContainer: {
+    position: 'relative',
     marginBottom: spacing.md,
+  },
+  editButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  uploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 40,
   },
   avatarText: {
     ...typography.h2,

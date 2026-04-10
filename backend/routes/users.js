@@ -6,6 +6,10 @@ const { authenticate } = require('../services/auth');
  * All routes require authentication
  */
 module.exports = (app) => {
+  // Profile picture routes (must come before /users/profile)
+  app.get('/users/profile/upload-url', authenticate, userController.getProfilePictureUrl);
+  app.patch('/users/profile/upload', authenticate, userController.uploadProfilePicture);
+
   // Get current user profile
   app.get('/users/profile', authenticate, userController.getProfile);
 
