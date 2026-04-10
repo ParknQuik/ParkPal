@@ -130,7 +130,7 @@ export const ListYourSpot: React.FC = () => {
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>List Your Spot</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Listing' : 'List Your Spot'}</Text>
           <View style={styles.headerPlaceholder} />
         </View>
       </LinearGradient>
