@@ -64,12 +64,15 @@ export const MyListingsScreen: React.FC = () => {
     navigation.navigate('ListSpot' as never, { listingId, mode: 'edit' } as never);
   }, [navigation]);
 
-  const handleToggleAvailability = useCallback(async (listingId: number) => {
+  const handleToggleAvailability = useCallback(async (listingId: number, currentStatus: boolean) => {
     try {
-      await marketplaceAPI.toggleListingAvailability(listingId, true);
+      console.log('Toggling listing:', listingId, 'from', currentStatus, 'to', !currentStatus);
+      const response = await marketplaceAPI.toggleListingAvailability(listingId, !currentStatus);
+      console.log('Toggle response:', response.data);
       fetchData();
-    } catch (err) {
-      console.error('Toggle failed:', err);
+    } catch (err: any) {
+      console.error('Toggle failed:', err?.response?.data || err);
+      Alert.alert('Error', err?.response?.data?.error || 'Failed to toggle availability');
     }
   }, [fetchData]);
 
@@ -222,7 +225,7 @@ const handleFilterPress = useCallback(async () => {
                           styles.actionButton,
                           isActive ? styles.editButton : styles.activateButton
                         ]}
-                        onPress={() => isActive ? handleEditPress(listing.id) : handleToggleAvailability(listing.id)}
+                        onPress={() => isActive ? handleEditPress(listing.id) : handleToggleAvailability(listing.id, listing.availability)}
                         {...accessibility.button(
                           isActive ? 'Edit Listing' : 'Activate Listing',
                           `${isActive ? 'Edit' : 'Activate'} ${listing.title || listing.address}`
@@ -234,20 +237,14 @@ const handleFilterPress = useCallback(async () => {
                         ]}>
                           {isActive ? 'Edit Listing' : 'Activate'}
                         </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.qrButton}
-                        onPress={() => handleShowQR(listing)}
-                        {...accessibility.button('QR Code', 'Show QR code for ' + (listing.title || listing.address))}
-                      >
-                        <Text style={styles.qrButtonText}>QR</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                    </TouchableOpacity>
+                    <TouchableOpacity
                         style={styles.moreButton}
                         onPress={() => {
                           if (isActive) {
                             Alert.alert('Listing Options', listing.title || listing.address, [
-                              { text: 'Toggle Availability', onPress: () => handleToggleAvailability(listing.id) },
+                              { text: 'Show QR Code', onPress: () => handleShowQR(listing) },
+                              { text: 'Toggle Availability', onPress: () => handleToggleAvailability(listing.id, listing.availability) },
                               { text: 'Delete', style: 'destructive', onPress: () => handleDeleteListing(listing.id) },
                               { text: 'Cancel', style: 'cancel' },
                             ]);
@@ -322,6 +319,13 @@ const handleFilterPress = useCallback(async () => {
           </View>
         </TouchableOpacity>
       </Modal>
+      {/* FAB for creating new listing */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('ListSpot' as never)}
+      >
+        <MaterialIcons name="add" size={28} color={colors.white} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -674,5 +678,21 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.white,
     fontWeight: '600',
+  },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 });

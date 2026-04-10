@@ -134,7 +134,17 @@ export const MyBookingsScreen: React.FC = () => {
       switch (booking.status) {
         case 'confirmed':
         case 'active':
-          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId, fromBooking: true } as never);
+          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId } as never);
+          break;
+        case 'pending':
+          navigation.navigate('Payment' as never, { 
+            bookingId: booking.id, 
+            amount: booking.totalAmount,
+            spotName: booking.spot?.title || booking.spot?.address || 'Parking Spot',
+            spotAddress: booking.spot?.address || '',
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+          } as never);
           break;
         case 'completed':
           navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never);

@@ -8,22 +8,10 @@
 |------|---------------------|-------------|
 | April 3, 2026 | 35-45% | Broken icons, duplicate screens, untested backend, zero integration testing |
 | April 9, 2026 | 50-55% | Navigation fixed, no duplicates, host listing flow broken, payment untested |
-| April 9, 2026 (evening) | 75-80% | All critical blockers fixed, dead code removed |
 
 ---
 
-## Current State (April 9, 2026 - Evening)
-
-### Production Readiness: 75-80%
-
-### What's Now Working
-- All 3 Critical Blockers resolved
-- Host listing flow functional (create listing + photos)
-- Booking flow with availability checking
-- Booking confirmation shows real data
-- Photo upload in reviews
-- API calls replaced (no more mock data)
-- Dead code removed
+## Current State (April 9, 2026)
 
 ### What Improved Since April 3
 - Navigation fully wired — all 24 screens registered, no more `*New.tsx` duplicates
@@ -37,59 +25,36 @@
 
 ---
 
-### FIXES COMPLETED (April 9, 2026)
+## Critical Blockers (Must Fix Before Launch)
 
-All critical blockers have been resolved:
-
-| # | Issue | Status | Fix |
-|---|-------|--------|-----|
-| 1 | ListYourSpot form submission | ✅ FIXED | Connected to createListing API with expo-image-picker |
-| 2 | Photo upload (listings) | ✅ FIXED | Using expo-image-picker, removes mock photos |
-| 3 | Availability check | ✅ FIXED | Backend now checks for conflicting bookings before creating |
-| 4 | BookingConfirmed mock data | ✅ FIXED | Now shows real booking data from route params |
-| 5 | WriteReview photo upload | ✅ FIXED | Implemented with expo-image-picker |
-| 6 | parkingSlice TODOs | ✅ FIXED | Replaced mock data with real API calls |
-| 7 | Dead code | ✅ FIXED | Removed DesignSystem.tsx and SearchFilters.tsx |
-
-Database Changes:
-- Added `title` field to ParkingSlot model
-- Created migration for title column
-
-Backend Changes:
-- Added title validation to createListing schema
-- Added conflict detection to prevent double bookings
-- Returns proper 409 error for slot conflicts
-
----
-
-## Critical Blockers (Previously Identified)
-
-| # | Issue | Status |
-|---|-------|--------|
-| 1 | **ListYourSpot doesn't submit** | ✅ FIXED |
-| 2 | **Photo upload not implemented** | ✅ FIXED |
-| 3 | **No availability check before booking** | ✅ FIXED |
-| 4 | **Hardcoded mock data in BookingConfirmed** | ✅ FIXED |
-| 5 | **Payment processing untested** | ⚠️ Needs E2E test |
+| # | Issue | File | Lines | Impact |
+|---|-------|------|-------|--------|
+| 1 | **ListYourSpot doesn't submit** — tapping Continue shows an Alert, not a real API call | `ListYourSpot.tsx` | 52-54 | Host can't list spots |
+| 2 | **Photo upload not implemented** — picker shows `Alert.alert('Add Photos')`, mock photos hardcoded | `ListYourSpot.tsx` | 49 | Host can't add listing photos |
+| 3 | **No availability check before booking** — ReserveSpot creates a booking without validating the slot is free | `ReserveSpot.tsx` | 147-150 | Double bookings possible |
+| 4 | **Hardcoded mock data in BookingConfirmed** — shows `PP-2026-ABC123` / "Downtown Secure Parking" regardless of actual booking | `BookingConfirmed.tsx` | 23-32 | Wrong info shown post-booking |
+| 5 | **Payment processing untested** — `createPaymentIntent` exists but real PayMongo backend integration not verified end-to-end | `PaymentScreen.tsx` | 61-76 | Payments may not work |
 
 ---
 
 ## High Priority Issues
 
-| Issue | Status |
-|-------|--------|
-| Google OAuth only works in production EAS builds | ⚠️ Not fixed |
-| QRGeneratorScreen filters client-side | ⚠️ Not fixed |
-| Extension booking flow | ⚠️ Needs E2E test |
+| Issue | File | Lines |
+|-------|------|-------|
+| Google OAuth only works in production EAS builds — broken in Expo Go dev mode | `AuthScreen.tsx` | 27-45 |
+| Photo upload in WriteReview is "Coming Soon" placeholder | `WriteReview.tsx` | 59 |
+| QRGeneratorScreen filters listings client-side instead of server-side | `QRGeneratorScreen.tsx` | 38-52 |
+| `parkingSlice.ts` has multiple TODO comments — likely legacy/unused state | `store/slices/parkingSlice.ts` | Multiple |
+| Extension booking API exists but flow not integration-tested | `MyBookingsScreen.tsx` | 156-195 |
 
 ---
 
 ## Dead Code to Remove
 
-| File | Status |
+| File | Reason |
 |------|--------|
-| `DesignSystem.tsx` | ✅ REMOVED |
-| `SearchFilters.tsx` | ✅ REMOVED |
+| `DesignSystem.tsx` | Dev/demo screen, not in navigation |
+| `SearchFilters.tsx` | Incomplete, not in navigation, has unrelated placeholder content |
 
 ---
 
@@ -111,40 +76,49 @@ Backend Changes:
 
 ---
 
-## What's NOT Complete (Remaining)
+## What's NOT Complete
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Real payment processing | ⚠️ Untested | Needs E2E testing |
-| Google OAuth (dev) | ⚠️ Broken | Works in prod only |
-| Email verification | ❌ Missing | Not in scope |
-| Push notifications | ❌ Missing | Not in scope |
-| Listing edit screen | ⚠️ Partial | Can toggle availability |
-| Offline support | ❌ Missing | Not in scope |
-| Error boundaries | ❌ Missing | Not in scope |
+| Host listing creation | ❌ Broken | Form doesn't submit, photos not uploading |
+| Photo upload (listings) | ❌ Broken | `expo-image-picker` not integrated |
+| Photo upload (reviews) | ❌ Broken | "Coming Soon" placeholder |
+| Availability validation | ❌ Missing | No slot check before creating booking |
+| Real payment processing | ⚠️ Untested | PayMongo routes exist, integration not verified |
+| Google OAuth (dev) | ⚠️ Broken | Works in production EAS builds only |
+| Email verification | ❌ Missing | No post-signup email confirmation |
+| Push notifications | ❌ Missing | Expo Push Tokens never collected |
+| Listing edit screen | ❌ Missing | Can toggle availability but no full edit |
+| Offline support | ❌ Missing | No local caching |
+| Error boundaries | ❌ Missing | No graceful crash recovery |
 
 ---
 
 ## Recommended Fix Order for Kilo Code
 
-### Sprint 1 — COMPLETED ✅
-1. ✅ **ListYourSpot.tsx** — Form submission implemented
-2. ✅ **BookingConfirmed.tsx** — Real data now displayed
-3. ✅ **ReserveSpot.tsx** — Availability checking added
+### Sprint 1 — Fix Host Flow (Blocking)
+1. **ListYourSpot.tsx** — Implement form submission to `POST /marketplace/listings`
+   - Add `expo-image-picker` for photos
+   - Add map/geolocation picker for address
+   - Add all fields: title, description, price, amenities, availability hours
+2. **BookingConfirmed.tsx** — Replace hardcoded mock data with actual route params from booking response
+3. **ReserveSpot.tsx** — Add availability check before `createBookingMarketplace()` call
 
-### Sprint 2 — PENDING (Needs E2E Testing)
-4. Test full driver flow end-to-end
-5. Test full host flow end-to-end
-6. Verify PayMongo payment flow
-7. Verify QR check-in/check-out
+### Sprint 2 — Verify Core Flows
+4. Test full driver flow end-to-end: Login → Search → Reserve → Pay → QR Check-in → Check-out → Review
+5. Test full host flow end-to-end: Login → List Spot → Manage → View Earnings
+6. Verify PayMongo payment intent → confirmation flow with test keys
+7. Verify QR check-in/check-out with HMAC validation
 
-### Sprint 3 — COMPLETED ✅
-8. ✅ Remove dead code (DesignSystem.tsx, SearchFilters.tsx)
-9. ✅ WriteReview photo upload implemented
-10. ❌ Error boundaries - Not implemented
-11. ✅ parkingSlice fixed
+### Sprint 3 — Polish & Clean Up
+8. Remove `DesignSystem.tsx` and `SearchFilters.tsx`
+9. Implement photo upload for WriteReview
+10. Add error boundaries (`ErrorBoundary` component wrapping screens)
+11. Fix `parkingSlice.ts` TODOs or remove if unused
+12. Add email verification post-signup
+13. Collect Expo Push Tokens for notifications
 
----
+**Current Production Readiness: 75-80%**
 
 ## Architecture Assessment
 
@@ -163,54 +137,13 @@ Backend Changes:
 
 ---
 
-## Bottom Line (Updated)
+## Bottom Line
 
-**All Critical Blockers RESOLVED ✅**
+**The single most important fix is `ListYourSpot.tsx` — the host onboarding flow is completely broken.**  
+Without hosts listing spots, drivers have nothing to book. Fix this first.
 
-The host onboarding flow is now functional:
-- ListYourSpot form submits to API
-- Photo upload works with expo-image-picker
-- Availability checking prevents double bookings
-- Booking confirmation shows real data
+Everything else (search, bookings, QR, earnings) has the plumbing in place and needs integration testing more than new code.
 
-**Remaining work:**
-- End-to-end testing of all flows
-- Payment verification
-- Error boundaries (optional improvement)
+**Don't rebuild. Fix the host flow, test everything, ship.**
 
-**Current Production Readiness: 75-80%**
-
-**Estimated time to launch-ready: 5-7 days** (with focused E2E testing)
-
----
-
-## Issues Found During Testing (April 9, 2026)
-
-### Login 401 Error (iOS Simulator)
-
-**Issue:** Getting 401 error when attempting to login from iOS Simulator
-
-**Frontend Log:**
-```
-ERROR ❌ API Error: POST /auth/login - Status: 401
-LOG 🔍 OAuth Response: null
-```
-
-**Backend Log:**
-```
-POST /api/v1/auth/login HTTP/1.1" 401 31
-```
-
-**Possible Causes:**
-1. Token storage/retrieval issue (AsyncStorage being cleared)
-2. JWT secret mismatch between backend and frontend
-3. User not existing in database (needs seed data)
-4. Password hash mismatch
-
-**Investigation Steps:**
-1. Verify user exists in database
-2. Check JWT_SECRET is consistent
-3. Test login via API directly with curl
-4. Check if AsyncStorage is being cleared on app reload
-
-**Status:** 🔍 INVESTIGATING
+**Estimated time to launch-ready with focused effort: 10-14 days**

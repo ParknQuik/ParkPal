@@ -9,7 +9,7 @@ const storage = new Storage({
   keyFilename: process.env.GCP_KEYFILE_PATH
 });
 
-const bucketName = process.env.GCS_BUCKET_NAME || 'parkpal-photos';
+const bucketName = process.env.GCS_BUCKET_NAME || 'parkpal-prod-photos';
 const bucket = storage.bucket(bucketName);
 
 // Image size configurations
@@ -183,10 +183,87 @@ async function generateViewUrl(fileName, expiresInMinutes = 60) {
   }
 }
 
+/**
+ * Generate a signed URL for uploading a profile picture
+ * @param {number|string} userId - User ID
+ * @param {string} fileName - Original file name
+ * @returns {Promise<{uploadUrl: string, fileName: string, expiresAt: Date}>}
+ */
+async function generateProfileUploadUrl(userId, fileName) {
+  try {
+    const timestamp = Date.now();
+    const uniqueFileName = `profiles/${userId}/original_${timestamp}.jpg`;
+
+    const file = bucket.file(uniqueFileName);
+
+    const [uploadUrl] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000,
+      contentType: 'image/jpeg'
+    });
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    logger.info(`Generated profile upload URL for user ${userId}: ${uniqueFileName}`);
+
+    return {
+      uploadUrl,
+      fileName: uniqueFileName,
+      expiresAt
+    };
+  } catch (error) {
+    logger.error('Error generating profile upload URL:', error);
+    throw new Error('Failed to generate profile upload URL');
+  }
+}
+
+/**
+ * Process uploaded profile image
+ * @param {string} originalFileName - Original file path in GCS
+ * @param {number|string} userId - User ID
+ * @returns {Promise<string>} Public URL of the processed profile image
+ */
+async function processProfileImage(originalFileName, userId) {
+  try {
+    const originalFile = bucket.file(originalFileName);
+
+    const [imageBuffer] = await originalFile.download();
+
+    const resizedBuffer = await sharp(imageBuffer)
+      .resize(200, 200, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 85, progressive: true })
+      .toBuffer();
+
+    const resizedFileName = `profiles/${userId}/profile_200x200.jpg`;
+    const resizedFile = bucket.file(resizedFileName);
+
+    await resizedFile.save(resizedBuffer, {
+      contentType: 'image/jpeg',
+      metadata: {
+        cacheControl: 'public, max-age=31536000'
+      }
+    });
+
+    await resizedFile.makePublic();
+
+    const publicUrl = await getPublicUrl(resizedFileName);
+
+    logger.info(`Processed profile image for user ${userId}`);
+
+    return publicUrl;
+  } catch (error) {
+    logger.error('Error processing profile image:', error);
+    throw new Error('Failed to process profile image');
+  }
+}
+
 module.exports = {
   generateUploadUrl,
   processUploadedImage,
   deletePhoto,
   generateViewUrl,
-  getPublicUrl
+  getPublicUrl,
+  generateProfileUploadUrl,
+  processProfileImage
 };

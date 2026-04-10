@@ -153,11 +153,21 @@ exports.createBookingSchema = Joi.object({
 
   endTime: Joi.date()
     .iso()
-    .greater(Joi.ref('startTime'))
-    .required()
+    .optional()
     .messages({
-      'date.greater': 'End time must be after start time',
-      'any.required': 'End time is required'
+      'date.base': 'End time must be a valid date'
+    }),
+
+  rentalMode: Joi.string()
+    .valid('fixed', 'open')
+    .default('fixed'),
+
+  maxDuration: Joi.number()
+    .integer()
+    .positive()
+    .optional()
+    .messages({
+      'number.positive': 'Max duration must be a positive number'
     }),
 
   vehicleType: Joi.string()
@@ -209,6 +219,7 @@ exports.reviewSchema = Joi.object({
 });
 
 exports.searchListingsSchema = Joi.object({
+  q: Joi.string().optional(),  // Add search query
   lat: Joi.number().min(-90).max(90).optional(),
   lon: Joi.number().min(-180).max(180).optional(),
   radius: Joi.number().min(0).max(50).default(5).optional(),

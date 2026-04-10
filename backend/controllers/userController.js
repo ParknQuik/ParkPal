@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const mediaService = require('../services/mediaService');
 
 /**
  * Get current user profile
@@ -13,6 +14,7 @@ exports.getProfile = async (req, res) => {
         name: true,
         phone: true,
         role: true,
+        profileImageUrl: true,
         createdAt: true,
       },
     });
@@ -54,6 +56,7 @@ exports.updateProfile = async (req, res) => {
         name: true,
         phone: true,
         role: true,
+        profileImageUrl: true,
         createdAt: true,
       },
     });
@@ -192,6 +195,62 @@ exports.deletePaymentMethod = async (req, res) => {
     });
   } catch (error) {
     console.error('Delete payment method error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get profile picture upload URL
+ */
+exports.getProfilePictureUrl = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { fileName } = req.query;
+
+    if (!fileName) {
+      return res.status(400).json({ error: 'File name is required' });
+    }
+
+    const result = await mediaService.generateProfileUploadUrl(userId, fileName);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get profile picture URL error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Upload profile picture (after upload completes)
+ */
+exports.uploadProfilePicture = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { fileName } = req.body;
+
+    if (!fileName) {
+      return res.status(400).json({ error: 'File name is required' });
+    }
+
+    const profileImageUrl = await mediaService.processProfileImage(fileName, userId);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { profileImageUrl },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        profileImageUrl: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Upload profile picture error:', error);
     res.status(500).json({ error: error.message });
   }
 };
