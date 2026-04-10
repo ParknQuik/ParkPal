@@ -155,6 +155,7 @@ exports.getCurrentUser = async (req, res) => {
         name: true,
         role: true,
         phone: true,
+        profileImageUrl: true,
         createdAt: true
       }
     });

@@ -21,8 +21,9 @@ type ParkingDetailsRouteProp = RouteProp<RootStackParamList, 'ParkingDetail'>;
 
 export const ParkingDetails: React.FC = () => {
   const navigation = useNavigation<any>();
-  const route = useRoute<ParkingDetailsRouteProp>();
-  const spotId = route.params?.spotId;
+  const route = useRoute<any>();
+  const { spotId, fromBooking } = route.params || {};
+  const showReserveButton = fromBooking !== true;
   // Debug: log the params for debugging
   console.log("[ParkingDetails] route.params:", route.params);
   console.log("[ParkingDetails] spotId:", spotId);
@@ -192,14 +193,16 @@ export const ParkingDetails: React.FC = () => {
       </ScrollView>
 
       {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.reserveButton}
-          onPress={() => navigation.navigate('Reservation', { spotId })}
-        >
-          <Text style={styles.reserveButtonText}>Reserve Now</Text>
-        </TouchableOpacity>
-      </View>
+      {showReserveButton && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.reserveButton}
+            onPress={() => navigation.navigate('Reservation', { spotId })}
+          >
+            <Text style={styles.reserveButtonText}>Reserve Now</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };

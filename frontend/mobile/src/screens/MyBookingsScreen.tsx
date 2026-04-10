@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -35,8 +36,6 @@ const getStatusColor = (status: string) => {
     case 'confirmed':
     case 'active':
       return PRIMARY;
-    case 'pending':
-      return colors.secondary;
     case 'completed':
       return PRIMARY;
     case 'cancelled':
@@ -53,8 +52,6 @@ const getStatusLabel = (status: string) => {
       return 'Confirmed';
     case 'active':
       return 'Active';
-    case 'pending':
-      return 'Payment Pending';
     case 'completed':
       return 'Completed';
     case 'cancelled':
@@ -68,8 +65,6 @@ const getStatusLabel = (status: string) => {
 
 const getActionButtonText = (status: string) => {
   switch (status) {
-    case 'pending':
-      return 'Complete Payment';
     case 'confirmed':
     case 'active':
       return 'View Details';
@@ -81,16 +76,20 @@ const getActionButtonText = (status: string) => {
 };
 
 const getActionButtonColor = (status: string) => {
-  if (status === 'pending') return colors.secondary;
   if (status === 'completed') return colors.accent;
   return PRIMARY;
 };
 
-const formatBookingDate = (startTime: string, endTime: string) => {
+const formatBookingDate = (startTime: string, endTime: string | null, rentalMode: string) => {
   const start = new Date(startTime);
-  const end = new Date(endTime);
+  const end = endTime ? new Date(endTime) : null;
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
   const timeOpts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+  
+  if (rentalMode === 'open' || !end) {
+    return `${start.toLocaleDateString('en-US', opts)}, ${start.toLocaleTimeString('en-US', timeOpts)} (Open)`;
+  }
+  
   return `${start.toLocaleDateString('en-US', opts)}, ${start.toLocaleTimeString('en-US', timeOpts)} - ${end.toLocaleTimeString('en-US', timeOpts)}`;
 };
 
@@ -151,7 +150,7 @@ export const MyBookingsScreen: React.FC = () => {
           navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never);
           break;
         default:
-          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId } as never);
+          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId, fromBooking: true } as never);
           break;
       }
     },
@@ -272,15 +271,12 @@ export const MyBookingsScreen: React.FC = () => {
 
   const filteredBookings = bookings.filter((booking) => {
     if (activeTab === 'upcoming') {
-      return booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'active';
+      return booking.status === 'confirmed' || booking.status === 'active' || booking.status === 'pending';
     }
     if (activeTab === 'completed') {
-      // Completed: successful bookings that finished + expired (no-shows)
-      // Expired is like a "completed" booking that the user didn't use
-      return booking.status === 'completed' || booking.status === 'expired';
+      return booking.status === 'completed';
     }
     if (activeTab === 'cancelled') {
-      // Cancelled: user-initiated cancellations only
       return booking.status === 'cancelled';
     }
     return true;
@@ -351,7 +347,7 @@ export const MyBookingsScreen: React.FC = () => {
                   <Text style={styles.bookingName} numberOfLines={1}>{booking.listingTitle || booking.listingAddress}</Text>
                   <View style={styles.dateContainer}>
                     <Text style={styles.dateIcon}>📅</Text>
-                    <Text style={styles.dateText}>{formatBookingDate(booking.startTime, booking.endTime)}</Text>
+                    <Text style={styles.dateText}>{formatBookingDate(booking.startTime, booking.endTime, booking.rentalMode)}</Text>
                   </View>
                   {booking.listingAddress && (
                     <View style={styles.dateContainer}>
@@ -368,68 +364,73 @@ export const MyBookingsScreen: React.FC = () => {
                   <Image source={{ uri: booking.listingPhoto }} style={styles.cardImage} contentFit="cover" transition={200} />
                 ) : (
                   <View style={[styles.cardImage, styles.placeholderImage]}>
-                    <Text style={styles.placeholderIcon}>🅿️</Text>
+                    <MaterialCommunityIcons name="car-outline" size={32} color="#94a3b8" />
                   </View>
                 )}
               </View>
               <View style={styles.cardActions}>
+                {/* Row 1: QR + Extend (only for confirmed/active) */}
                 {(booking.status === 'confirmed' || booking.status === 'active') && (
-                  <TouchableOpacity
-                    style={[
-                      styles.scanQRButton,
-                      booking.status === 'active' && styles.scanQRButtonCheckout,
-                    ]}
-                    onPress={() => handleScanQR(booking)}
-                  >
-                    <Text style={styles.scanQRButtonIcon}>📷</Text>
-                    <Text style={styles.scanQRButtonText}>
-                      {booking.status === 'active' ? 'Scan QR to Check-Out' : 'Scan QR to Check-In'}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.cardActionsRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.scanQRButton,
+                        booking.status === 'active' && styles.scanQRButtonCheckout,
+                      ]}
+                      onPress={() => handleScanQR(booking)}
+                    >
+                      <MaterialCommunityIcons name="qrcode-scan" size={16} color="#fff" />
+                      <Text style={styles.scanQRButtonText}>
+                        {booking.status === 'active' ? 'Check-Out' : 'Check-In'}
+                      </Text>
+                    </TouchableOpacity>
+                    {booking.rentalMode === 'fixed' && new Date(booking.endTime) > new Date() && (
+                      <TouchableOpacity
+                        style={styles.extendButton}
+                        onPress={() => handleOpenExtendModal(booking)}
+                      >
+                        <MaterialCommunityIcons name="clock-plus-outline" size={16} color="#fff" />
+                        <Text style={styles.extendButtonText}>Extend</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: buttonColor }]}
+                      onPress={() => handleAction(booking)}
+                    >
+                      <Text style={styles.actionButtonText}>{buttonText}</Text>
+                      <MaterialCommunityIcons name="chevron-right" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                 )}
-                {booking.rentalMode === 'fixed' && 
-                 (booking.status === 'confirmed' || booking.status === 'active') && 
-                 new Date(booking.endTime) > new Date() && (
-                  <TouchableOpacity
-                    style={styles.extendButton}
-                    onPress={() => handleOpenExtendModal(booking)}
-                  >
-                    <Text style={styles.extendButtonIcon}>⏰</Text>
-                    <Text style={styles.extendButtonText}>Extend Time</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: buttonColor },
-                  ]}
-                  onPress={() => handleAction(booking)}
-                >
-                  <Text style={styles.actionButtonText}>{buttonText}</Text>
-                  <Text style={styles.actionButtonIcon}>→</Text>
-                </TouchableOpacity>
-                {booking.status === 'completed' && (
-                  <TouchableOpacity
-                    style={styles.rateButton}
-                    onPress={() => navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never)}
-                  >
-                    <Text style={styles.rateButtonIcon}>⭐</Text>
-                  </TouchableOpacity>
+                {/* Row for completed/cancelled: just the action button */}
+                {booking.status !== 'confirmed' && booking.status !== 'active' && (
+                  <View style={styles.cardActionsRow}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: buttonColor }]}
+                      onPress={() => handleAction(booking)}
+                    >
+                      <Text style={styles.actionButtonText}>{buttonText}</Text>
+                      <MaterialCommunityIcons name="chevron-right" size={16} color="#fff" />
+                    </TouchableOpacity>
+                    {booking.status === 'completed' && (
+                      <TouchableOpacity
+                        style={styles.rateButton}
+                        onPress={() => navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never)}
+                      >
+                        <MaterialCommunityIcons name="star-outline" size={18} color={colors.accent} />
+                        <Text style={styles.rateButtonText}>Rate</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
               </View>
-              {(booking.status === 'confirmed' || booking.status === 'active') && (booking.qrCode || booking.id) && (
-                <TouchableOpacity style={styles.qrButton} onPress={() => handleShowQR(booking)}>
-                  <Text style={styles.qrButtonText}>Show QR Code</Text>
-                </TouchableOpacity>
-              )}
               {(() => {
-                if (booking.status === 'active') return null;
-                if (booking.status === 'completed' || booking.status === 'cancelled') return null;
+                if (booking.status === 'active' || booking.status === 'completed' || booking.status === 'cancelled') return null;
                 
                 const now = new Date();
                 const startTime = new Date(booking.startTime);
                 const cancellationDeadline = new Date(startTime.getTime() - 30 * 60 * 1000); // 30 min before
-                const canCancel = now < cancellationDeadline;
+                const canCancel = booking.status === 'pending' || now < cancellationDeadline;
                 
                 if (!canCancel) {
                   return (
@@ -776,9 +777,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   cardActions: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  cardActionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   actionButton: {
     flex: 1,
@@ -799,17 +803,21 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   rateButton: {
-    width: 40,
-    height: 40,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
-    backgroundColor: `${colors.accent}10`,
+    backgroundColor: `${colors.accent}15`,
     borderWidth: 1,
-    borderColor: `${colors.accent}20`,
+    borderColor: `${colors.accent}30`,
+    gap: 4,
   },
-  rateButtonIcon: {
-    fontSize: 18,
+  rateButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.accent,
   },
   emptyState: {
     alignItems: 'center',
@@ -894,9 +902,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     shadowColor: colors.accent,
   },
-  scanQRButtonIcon: {
-    fontSize: 16,
-  },
   scanQRButtonText: {
     fontSize: typography.sm.fontSize,
     fontWeight: '700',
@@ -963,9 +968,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     gap: 6,
-  },
-  extendButtonIcon: {
-    fontSize: 16,
   },
   extendButtonText: {
     color: '#fff',

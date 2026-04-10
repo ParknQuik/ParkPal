@@ -108,7 +108,7 @@ export const ExploreMap: React.FC = () => {
       await dispatch(searchListings({
         latitude: lat,
         longitude: lon,
-        radius: 10,
+        radius: 3,
         ...(searchQuery ? { q: searchQuery } : {}),
       })).unwrap();
     } catch (err) {

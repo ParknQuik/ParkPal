@@ -4,8 +4,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { store } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { notificationService } from './src/services/notifications';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -30,6 +33,44 @@ export default function App() {
         }
         
         console.log('Storage cleaned (auth preserved)');
+        
+        // Setup push notifications
+        if (Device.isDevice) {
+          const { status: existingStatus } = await Notifications.getPermissionsAsync();
+          let finalStatus = existingStatus;
+          
+          if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+          }
+          
+          if (finalStatus !== 'granted') {
+            console.log('Failed to get push notification permissions');
+          } else {
+            console.log('Push notification permissions granted');
+          }
+        }
+
+        // Configure notification handling
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          }),
+        });
+
+        // Register push token if user is logged in
+        const pushToken = await notificationService.getPushToken();
+        if (pushToken) {
+          const userStr = await AsyncStorage.getItem('user');
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            await notificationService.registerPushToken(pushToken, user.id);
+          }
+        }
       } catch (error) {
         console.warn('Failed to clean storage:', error);
       } finally {

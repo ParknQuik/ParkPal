@@ -21,6 +21,7 @@ model User {
   phone           String?
   googleId        String?   @unique @map("google_id")
   profileImageUrl String?   @map("profile_image_url")
+  pushToken       String?   @map("push_token") // Expo push token for notifications
   isActive        Boolean   @default(true) @map("is_active")
 
   // Password Reset
