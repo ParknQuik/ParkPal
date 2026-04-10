@@ -18,14 +18,17 @@ const BACKGROUND = '#f6f6f8';
 export const PaymentScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime } = route.params as { 
-    bookingId: number; 
+  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, rentalMode, maxDuration, createBookingOnSuccess } = route.params as { 
+    bookingId?: number; 
     amount: number; 
-    spotId?: number;
+    spotId?: number | string;
     spotName?: string;
     spotAddress?: string;
     startTime?: string;
     endTime?: string;
+    rentalMode?: string;
+    maxDuration?: number;
+    createBookingOnSuccess?: boolean;
   };
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
@@ -48,14 +51,35 @@ export const PaymentScreen: React.FC = () => {
       try {
         setLoading(true);
         
-        const response = await marketplaceAPI.confirmBooking(bookingId);
+        let finalBookingId = bookingId;
+        
+        if (createBookingOnSuccess && !bookingId && spotId) {
+          console.log('Creating booking, spotId:', spotId);
+          const createResponse = await marketplaceAPI.createBookingMarketplace({
+            slotId: Number(spotId),
+            startTime: startTime!,
+            endTime: endTime!,
+            rentalMode: rentalMode as 'fixed' | 'open',
+            maxDuration: rentalMode === 'open' ? maxDuration : undefined,
+          });
+          console.log('Create booking response:', createResponse.data);
+          const rawData = createResponse.data;
+          finalBookingId = rawData?.id || rawData?.data?.id || rawData?.data?.data?.id || rawData?.booking?.id;
+          console.log('Extracted bookingId:', finalBookingId);
+        }
+        
+        if (!finalBookingId) {
+          throw new Error('Failed to create booking');
+        }
+        
+        const response = await marketplaceAPI.confirmBooking(finalBookingId);
         
         Alert.alert(
           'Booking Confirmed!',
           'Please pay in cash when you arrive at the parking location.',
           [{ text: 'OK', onPress: () => navigation.navigate('PaymentSuccess' as never, {
-            paymentId: bookingId,
-            bookingId,
+            paymentId: finalBookingId,
+            bookingId: finalBookingId,
             amount: orderData.total,
             spotName: spotName || 'Parking Spot',
             spotAddress: spotAddress || '',
@@ -65,7 +89,18 @@ export const PaymentScreen: React.FC = () => {
         );
         return;
       } catch (err: any) {
-        Alert.alert('Error', 'Failed to confirm booking. Please try again.');
+        console.error('Booking/confirm error:', err);
+        
+        if (err.response?.status === 409) {
+          Alert.alert(
+            'Slot Unavailable',
+            err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+          return;
+        }
+        
+        Alert.alert('Error', err.message || 'Failed to confirm booking. Please try again.');
         return;
       } finally {
         setLoading(false);
@@ -74,10 +109,27 @@ export const PaymentScreen: React.FC = () => {
 
     setLoading(true);
     try {
+      let finalBookingId = bookingId;
+      
+      if (createBookingOnSuccess && !bookingId && spotId) {
+        const createResponse = await marketplaceAPI.createBookingMarketplace({
+          slotId: Number(spotId),
+          startTime: startTime!,
+          endTime: endTime!,
+          rentalMode: rentalMode as 'fixed' | 'open',
+          maxDuration: rentalMode === 'open' ? maxDuration : undefined,
+        });
+        finalBookingId = createResponse.data?.id || createResponse.data?.data?.id || createResponse.data?.data?.data?.id || createResponse.data?.booking?.id;
+      }
+      
+      if (!finalBookingId) {
+        throw new Error('Failed to create booking');
+      }
+      
       const intentResponse = await paymentAPI.createPaymentIntent({
         amount: orderData.total,
         paymentMethod: selectedPayment as 'cash' | 'gcash' | 'card' | 'grab_pay' | 'paymaya',
-        bookingId,
+        bookingId: finalBookingId,
       });
 
       const { paymentIntentId, clientSecret } = intentResponse.data;
@@ -88,7 +140,7 @@ export const PaymentScreen: React.FC = () => {
 
       navigation.navigate('PaymentSuccess' as never, {
         paymentId: confirmResponse.data.paymentId || paymentIntentId,
-        bookingId,
+        bookingId: finalBookingId,
         amount: orderData.total,
         spotName: spotName || 'Parking Spot',
         spotAddress: spotAddress || '',
@@ -96,9 +148,20 @@ export const PaymentScreen: React.FC = () => {
         endTime: endTime || '',
       } as never);
     } catch (err: any) {
+      console.error('Booking/payment error:', err);
+      
+      if (err.response?.status === 409) {
+        Alert.alert(
+          'Slot Unavailable',
+          err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        return;
+      }
+      
       navigation.navigate('PaymentFailed' as never, {
         error: err.response?.data?.error || err.message || 'Payment failed',
-        bookingId,
+        bookingId: bookingId,
       } as never);
     } finally {
       setLoading(false);

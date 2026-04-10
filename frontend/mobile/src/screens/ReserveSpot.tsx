@@ -174,14 +174,9 @@ export const ReserveSpot: React.FC = () => {
 
     setIsBooking(true);
     try {
-      const response = await marketplaceAPI.createBookingMarketplace({
-        slotId: Number(spotId),
-        startTime: startDate.toISOString(),
-        endTime: endDate.toISOString(),
-      });
-      const bookingId = response.data?.data?.id || response.data?.id;
+      // Navigate to Payment first - booking will be created after payment
       (navigation as any).navigate('Payment', {
-        bookingId,
+        bookingId: undefined, // Will be created after payment
         amount: total,
         spotId,
         spotName: spot?.title || spot?.address || 'Parking Spot',
@@ -190,22 +185,11 @@ export const ReserveSpot: React.FC = () => {
         endTime: endDate.toISOString(),
         rentalMode,
         maxDuration: rentalMode === 'open' ? MAX_DURATION_HOURS : undefined,
+        createBookingOnSuccess: true, // Flag to create booking after payment
       });
     } catch (err: any) {
-      console.error('Booking failed:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Unable to create booking';
-      
-      if (err.response?.status === 409) {
-        Alert.alert(
-          'Slot Unavailable', 
-          err.response?.data?.error || 'This slot is already booked for the selected time. Please choose a different time.',
-          [{ text: 'OK' }]
-        );
-      } else if (err.response?.status === 400 && errorMessage.includes('not available')) {
-        Alert.alert('Slot Unavailable', 'This slot is no longer available. Please choose another spot.');
-      } else {
-        Alert.alert('Booking Failed', 'Unable to create booking. Please try again.');
-      }
+      console.error('Navigation to payment failed:', err);
+      Alert.alert('Error', 'Unable to proceed to payment. Please try again.');
     } finally {
       setIsBooking(false);
     }
@@ -453,6 +437,17 @@ export const ReserveSpot: React.FC = () => {
             <Text style={styles.totalLabel}>{priceLabel}</Text>
             <Text style={styles.totalValue}>₱{total.toFixed(2)}</Text>
           </View>
+          {rentalMode === 'open' && (
+            <View style={styles.preAuthContainer}>
+              <Text style={styles.preAuthLabel}>Pre-Authorization Hold</Text>
+              <Text style={styles.preAuthText}>
+                ₱{(pricePerHour * MAX_DURATION_HOURS * 1.5).toFixed(0)} (estimated max × 1.5)
+              </Text>
+              <Text style={styles.preAuthNote}>
+                You will be charged based on actual usage. This hold will be released after check-out.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -832,6 +827,29 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 12,
-    paddingHorizontal: 16,
+  },
+  preAuthContainer: {
+    backgroundColor: '#fef3c7',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  preAuthLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 4,
+  },
+  preAuthText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  preAuthNote: {
+    fontSize: 12,
+    color: '#92400e',
+    marginTop: 4,
   },
 });
