@@ -5,6 +5,7 @@ export interface User {
   name: string;
   phone?: string;
   avatar?: string;
+  profileImageUrl?: string | null;
   totalBookings: number;
   totalSpent: number;
   activeSince: string;

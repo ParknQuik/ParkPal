@@ -126,16 +126,19 @@ function getListingsCacheKey(params) {
     amenities,
     slotType,
     status,
+    q,
     offset,
     limit,
     sort,
   } = params;
 
   // Create deterministic key from params
+  const searchPart = q ? `q:${q}` : '';
   const parts = [
     'listings',
     status || 'available',
     slotType || 'all',
+    searchPart,
     lat && lon && radius ? `loc:${parseFloat(lat).toFixed(3)},${parseFloat(lon).toFixed(3)},${radius}` : 'anywhere',
     minPrice ? `min:${minPrice}` : '',
     maxPrice ? `max:${maxPrice}` : '',

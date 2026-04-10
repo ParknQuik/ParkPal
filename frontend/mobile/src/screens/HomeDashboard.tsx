@@ -46,7 +46,7 @@ export const HomeDashboard: React.FC = () => {
     try {
       const lat = currentLocation?.latitude || 14.5995;
       const lon = currentLocation?.longitude || 120.9842;
-      await dispatch(searchListings({ latitude: lat, longitude: lon, radius: 10 })).unwrap();
+      await dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })).unwrap();
       if (user?.id) {
         await dispatch(getMyBookings()).unwrap();
       }
@@ -66,7 +66,7 @@ export const HomeDashboard: React.FC = () => {
       } catch {
         // permission denied or error — fall back to Manila
       }
-      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 10 }));
+      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 }));
       if (user?.id) {
         dispatch(getMyBookings());
       }
@@ -76,27 +76,42 @@ export const HomeDashboard: React.FC = () => {
 
   const handleRefresh = useCallback(() => {
     if (refreshing) return;
+    console.log('🔄 Starting refresh, clearing search');
+    setSearchQuery(''); // Clear search query on refresh
+    console.log('🔍 Search query cleared, fetching all listings');
     setRefreshing(true);
     const lat = currentLocation?.latitude || 14.5995;
     const lon = currentLocation?.longitude || 120.9842;
+    console.log('📍 Fetching with lat:', lat, 'lon:', lon, 'radius: 3');
     const fetches: Promise<any>[] = [
-      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 10 })),
+      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })),
     ];
     if (user?.id) {
       fetches.push(dispatch(getMyBookings()));
     }
-    Promise.allSettled(fetches).finally(() => setRefreshing(false));
+    Promise.allSettled(fetches).finally(() => {
+      console.log('✅ Refresh complete');
+      setRefreshing(false);
+    });
   }, [dispatch, currentLocation, user?.id, refreshing]);
 
   const debouncedSearch = useDebouncedCallback((query: string) => {
-    if (currentLocation) {
+    if (currentLocation && query.trim()) {
       dispatch(
         searchListings({
-          q: query,
+          q: query.trim(),
           latitude: currentLocation.latitude,
           longitude: currentLocation.longitude,
-          radius: 5,
+          radius: 3,
           sortBy: filters.sortBy,
+        })
+      );
+    } else if (!query.trim()) {
+      dispatch(
+        searchListings({
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          radius: 3,
         })
       );
     }
@@ -156,8 +171,8 @@ export const HomeDashboard: React.FC = () => {
       >
         <View style={styles.greetingHeader}>
           <View style={styles.greetingLeft}>
-            {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.headerAvatar} contentFit="cover" />
+            {user?.profileImageUrl ? (
+              <Image source={{ uri: user.profileImageUrl }} style={styles.headerAvatar} contentFit="cover" />
             ) : (
               <View style={styles.headerAvatar}>
                 <Text style={styles.headerAvatarText}>{userName.charAt(0).toUpperCase()}</Text>
@@ -249,12 +264,17 @@ export const HomeDashboard: React.FC = () => {
               onPress={() => handleSpotPress(String(parking.id))}
               {...accessibility.button(parking.title || parking.address, `View details for ${parking.title || parking.address}`)}
             >
-              <Image 
-                source={{ uri: parking.photos?.[0] || 'https://via.placeholder.com/96' }} 
-                style={styles.parkingImage}
-                contentFit="cover"
-                transition={200}
-              />
+              {parking.photos && parking.photos[0] ? (
+                <Image
+                  source={{ uri: parking.photos[0] }}
+                  style={styles.parkingImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={[styles.parkingImage, styles.parkingImagePlaceholder]}>
+                  <MaterialCommunityIcons name="car-outline" size={32} color="#94a3b8" />
+                </View>
+              )}
               <View style={styles.parkingInfo}>
                 <View style={styles.parkingTopRow}>
                   <Text style={styles.parkingName} numberOfLines={1}>{parking.title || parking.address}</Text>
@@ -264,7 +284,10 @@ export const HomeDashboard: React.FC = () => {
                   </View>
                 </View>
                 <View style={styles.parkingMiddleRow}>
-                  <Text style={styles.distanceText}>location_on {parking.distance ? `${parking.distance.toFixed(1)} km away` : 'Nearby'}</Text>
+                <View style={styles.distanceRow}>
+                  <MaterialCommunityIcons name="map-marker" size={14} color={colors.textSecondary} />
+                  <Text style={styles.distanceText}> {parking.distance ? `${parking.distance.toFixed(1)} km away` : 'Nearby'}</Text>
+                </View>
                 </View>
                 <View style={styles.parkingBottomRow}>
                   <Text style={styles.priceText}>
@@ -563,6 +586,11 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: borderRadius.lg,
   },
+  parkingImagePlaceholder: {
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   parkingInfo: {
     flex: 1,
     marginLeft: spacing.md,
@@ -601,6 +629,10 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.textSecondary,
     fontSize: 12,
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   parkingBottomRow: {
     flexDirection: 'row',

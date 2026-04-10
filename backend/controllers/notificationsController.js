@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const expoPush = require('../services/expoPush');
 
 /**
  * Get all notifications for current user
@@ -150,7 +151,7 @@ exports.getUnreadCount = async (req, res) => {
  * Create a notification (for internal use)
  */
 exports.createNotification = async (userId, data) => {
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: {
       userId,
       title: data.title,
@@ -159,4 +160,27 @@ exports.createNotification = async (userId, data) => {
       data: data.data || {},
     },
   });
+
+  if (notification) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: notification.userId },
+        select: { pushToken: true }
+      });
+      
+      if (user?.pushToken) {
+        const notificationData = typeof notification.data === 'object' ? notification.data : {};
+        await expoPush.sendPushNotification(
+          user.pushToken,
+          notification.title,
+          notification.body,
+          notificationData
+        );
+      }
+    } catch (pushError) {
+      console.error('Failed to send push notification:', pushError);
+    }
+  }
+
+  return notification;
 };
