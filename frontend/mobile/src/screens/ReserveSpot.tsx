@@ -188,8 +188,20 @@ export const ReserveSpot: React.FC = () => {
         createBookingOnSuccess: true, // Flag to create booking after payment
       });
     } catch (err: any) {
-      console.error('Navigation to payment failed:', err);
-      Alert.alert('Error', 'Unable to proceed to payment. Please try again.');
+      console.error('Booking failed:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Unable to create booking';
+      
+      if (err.response?.status === 409) {
+        Alert.alert(
+          'Slot Unavailable', 
+          err.response?.data?.error || 'This slot is already booked for the selected time. Please choose a different time.',
+          [{ text: 'OK' }]
+        );
+      } else if (err.response?.status === 400 && errorMessage.includes('not available')) {
+        Alert.alert('Slot Unavailable', 'This slot is no longer available. Please choose another spot.');
+      } else {
+        Alert.alert('Booking Failed', 'Unable to create booking. Please try again.');
+      }
     } finally {
       setIsBooking(false);
     }

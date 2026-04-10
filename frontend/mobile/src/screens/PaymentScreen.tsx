@@ -18,17 +18,14 @@ const BACKGROUND = '#f6f6f8';
 export const PaymentScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, rentalMode, maxDuration, createBookingOnSuccess } = route.params as { 
-    bookingId?: number; 
+  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime } = route.params as { 
+    bookingId: number; 
     amount: number; 
-    spotId?: number | string;
+    spotId?: number;
     spotName?: string;
     spotAddress?: string;
     startTime?: string;
     endTime?: string;
-    rentalMode?: string;
-    maxDuration?: number;
-    createBookingOnSuccess?: boolean;
   };
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
@@ -78,8 +75,8 @@ export const PaymentScreen: React.FC = () => {
           'Booking Confirmed!',
           'Please pay in cash when you arrive at the parking location.',
           [{ text: 'OK', onPress: () => navigation.navigate('PaymentSuccess' as never, {
-            paymentId: finalBookingId,
-            bookingId: finalBookingId,
+            paymentId: bookingId,
+            bookingId,
             amount: orderData.total,
             spotName: spotName || 'Parking Spot',
             spotAddress: spotAddress || '',
@@ -140,7 +137,7 @@ export const PaymentScreen: React.FC = () => {
 
       navigation.navigate('PaymentSuccess' as never, {
         paymentId: confirmResponse.data.paymentId || paymentIntentId,
-        bookingId: finalBookingId,
+        bookingId,
         amount: orderData.total,
         spotName: spotName || 'Parking Spot',
         spotAddress: spotAddress || '',
