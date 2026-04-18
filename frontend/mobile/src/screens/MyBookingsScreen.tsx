@@ -127,35 +127,35 @@ export const MyBookingsScreen: React.FC = () => {
     setRefreshing(false);
   }, [fetchBookings]);
 
-  const handleAction = useCallback(
-    (booking: any) => {
-      console.log('[MyBookings] booking:', JSON.stringify(booking));
-      console.log('[MyBookings] slotId:', booking.slotId);
-      switch (booking.status) {
-        case 'confirmed':
-        case 'active':
-          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId } as never);
-          break;
-        case 'pending':
-          navigation.navigate('Payment' as never, { 
-            bookingId: booking.id, 
-            amount: booking.totalAmount,
-            spotName: booking.spot?.title || booking.spot?.address || 'Parking Spot',
-            spotAddress: booking.spot?.address || '',
-            startTime: booking.startTime,
-            endTime: booking.endTime,
-          } as never);
-          break;
-        case 'completed':
-          navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never);
-          break;
-        default:
-          navigation.navigate('ParkingDetail' as never, { spotId: booking.slotId, fromBooking: true } as never);
-          break;
-      }
-    },
-    [navigation],
-  );
+   const handleAction = useCallback(
+     (booking: any) => {
+       console.log('[MyBookings] booking:', JSON.stringify(booking));
+       console.log('[MyBookings] slotId:', booking.slotId);
+       // Always go to ParkingDetail for viewing - user can rate from there if needed
+       if (booking.status === 'pending') {
+         navigation.navigate('Payment' as never, { 
+           bookingId: booking.id, 
+           amount: booking.totalAmount,
+           spotName: booking.spot?.title || booking.spot?.address || 'Parking Spot',
+           spotAddress: booking.spot?.address || '',
+           startTime: booking.startTime,
+           endTime: booking.endTime,
+         } as never);
+       } else {
+         navigation.navigate('ParkingDetail' as never, { 
+  spotId: booking.slotId, 
+  fromBooking: true,
+  bookingId: booking.id,
+  bookingStatus: booking.status,
+  startTime: booking.startTime,
+  endTime: booking.endTime,
+  totalAmount: booking.totalAmount,
+  rentalMode: booking.rentalMode,
+} as never);
+       }
+     },
+     [navigation],
+   );
 
   const handleCancelBooking = useCallback(
     (bookingId: string) => {
@@ -270,14 +270,23 @@ export const MyBookingsScreen: React.FC = () => {
   );
 
   const filteredBookings = bookings.filter((booking) => {
+    const now = new Date();
+    const startTime = new Date(booking.startTime);
+    const endTime = new Date(booking.endTime);
+    
     if (activeTab === 'upcoming') {
-      return booking.status === 'confirmed' || booking.status === 'active' || booking.status === 'pending';
+      // Upcoming: status is pending/confirmed/active AND startTime hasn't passed
+      return (booking.status === 'confirmed' || booking.status === 'active' || booking.status === 'pending')
+        && startTime > now;
     }
     if (activeTab === 'completed') {
-      return booking.status === 'completed';
+      // Completed: status is completed OR (startTime has passed AND status was confirmed/active)
+      return booking.status === 'completed' || 
+        (booking.status === 'confirmed' && startTime <= now) ||
+        (booking.status === 'active' && endTime <= now);
     }
     if (activeTab === 'cancelled') {
-      return booking.status === 'cancelled';
+      return booking.status === 'cancelled' || booking.status === 'expired';
     }
     return true;
   });
@@ -370,7 +379,7 @@ export const MyBookingsScreen: React.FC = () => {
               </View>
               <View style={styles.cardActions}>
                 {/* Row 1: QR + Extend (only for confirmed/active) */}
-                {(booking.status === 'confirmed' || booking.status === 'active') && (
+                {(booking.status === 'confirmed' || booking.status === 'active') && new Date(booking.startTime) > new Date() && (
                   <View style={styles.cardActionsRow}>
                     <TouchableOpacity
                       style={[
@@ -403,7 +412,7 @@ export const MyBookingsScreen: React.FC = () => {
                   </View>
                 )}
                 {/* Row for completed/cancelled: just the action button */}
-                {booking.status !== 'confirmed' && booking.status !== 'active' && (
+                {((booking.status !== 'confirmed' && booking.status !== 'active') || (booking.status === 'confirmed' && new Date(booking.startTime) <= new Date())) && (
                   <View style={styles.cardActionsRow}>
                     <TouchableOpacity
                       style={[styles.actionButton, { backgroundColor: buttonColor }]}

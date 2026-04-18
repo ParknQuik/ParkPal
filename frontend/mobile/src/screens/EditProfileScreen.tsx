@@ -16,7 +16,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
-import { updateUserProfile } from '../store/slices/authSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { updateUserProfile, setUser } from '../store/slices/authSlice';
 import { userAPI } from '../services/api';
 import { Card } from '../components/Card';
 import { colors, typography, spacing, borderRadius } from '../theme';
@@ -105,29 +106,70 @@ export const EditProfileScreen: React.FC = () => {
     try {
       setUploading(true);
       const fileName = getFileName(uri);
+      console.log('[ProfileUpload] Step 1: Starting upload for:', fileName);
 
-      const { data: { uploadUrl } } = await userAPI.getProfileUploadUrl(fileName);
+      const { data: { uploadUrl, fileName: gcsFileName } } = await userAPI.getProfileUploadUrl(fileName);
+      console.log('[ProfileUpload] Step 2: Got signed URL, gcsFileName:', gcsFileName);
 
       const response = await fetch(uri);
       const blob = await response.blob();
+      console.log('[ProfileUpload] Step 3: Fetched image blob, size:', blob.size);
 
-      await fetch(uploadUrl, {
+      // Upload to GCS with proper error handling
+      const uploadResult = await fetch(uploadUrl, {
         method: 'PUT',
         body: blob,
         headers: {
           'Content-Type': 'image/jpeg',
         },
       });
+      
+      console.log('[ProfileUpload] Step 4: Upload to GCS, status:', uploadResult.status);
+      
+      if (!uploadResult.ok) {
+        const errorText = await uploadResult.text();
+        console.error('[ProfileUpload] GCS upload failed:', errorText);
+        throw new Error(`Upload failed: ${uploadResult.status} - ${errorText}`);
+      }
 
-      await userAPI.uploadProfilePicture(fileName);
+      console.log('[ProfileUpload] Step 4b: Verifying upload...');
+      
+      // Small delay to ensure GCS has processed the file
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const newImageUrl = `https://storage.googleapis.com/parkpal-images/${fileName}`;
-      setProfileImage(newImageUrl);
-
-      dispatch(updateUserProfile({ name: name || '', phone: phone || null, profileImageUrl: newImageUrl }));
-
-      Alert.alert('Success', 'Profile photo updated successfully');
+      const processResult = await userAPI.uploadProfilePicture(gcsFileName);
+      console.log('[ProfileUpload] Step 5: Full response:', processResult);
+      
+      // The API returns the user object in processResult.data
+      const responseData = processResult.data;
+      console.log('[ProfileUpload] Step 5b: Response data:', responseData);
+      
+      // Extract profileImageUrl from the response - it's the resized image URL
+      const newImageUrl = responseData?.profileImageUrl;
+      console.log('[ProfileUpload] Step 6: Server returned URL:', newImageUrl);
+      console.log('[ProfileUpload] Step 6b: GCS filename was:', gcsFileName);
+      
+      if (newImageUrl) {
+        setProfileImage(newImageUrl);
+        
+        // Directly update Redux user state without making another API call
+        dispatch(setUser({ 
+          ...user!,
+          profileImageUrl: newImageUrl 
+        }));
+        
+        // Also persist to AsyncStorage
+        const updatedUser = { ...user!, profileImageUrl: newImageUrl };
+        AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        console.log('[ProfileUpload] Step 7: SUCCESS - Profile updated with:', newImageUrl);
+        Alert.alert('Success', 'Profile photo updated successfully');
+      } else {
+        console.error('[ProfileUpload] No profileImageUrl in response!');
+        Alert.alert('Error', 'Failed to get profile image URL');
+      }
     } catch (error: any) {
+      console.error('[ProfileUpload] Error:', error);
       Alert.alert('Error', error.message || 'Failed to upload image');
     } finally {
       setUploading(false);
@@ -177,7 +219,9 @@ export const EditProfileScreen: React.FC = () => {
           <View style={styles.photoSection}>
             <View style={styles.profileImageContainer}>
               {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                <Image 
+                  source={{ uri: profileImage + '?t=' + Date.now() }} 
+                  style={styles.profileImage} />
               ) : (
                 <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
                   <Text style={styles.profileImagePlaceholderText}>👤</Text>

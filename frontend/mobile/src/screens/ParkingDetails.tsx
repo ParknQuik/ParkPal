@@ -8,10 +8,13 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { marketplaceAPI } from '../services/api';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors } from '../theme';
 import type { RootStackParamList } from '../types';
 
@@ -22,7 +25,7 @@ type ParkingDetailsRouteProp = RouteProp<RootStackParamList, 'ParkingDetail'>;
 export const ParkingDetails: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { spotId, fromBooking } = route.params || {};
+  const { spotId, fromBooking, bookingId, bookingStatus, startTime, endTime, totalAmount, rentalMode } = route.params || {};
   const showReserveButton = fromBooking !== true;
   // Debug: log the params for debugging
   console.log("[ParkingDetails] route.params:", route.params);
@@ -91,6 +94,8 @@ export const ParkingDetails: React.FC = () => {
   const price = spot.price ?? spot.pricePerHour ?? 0;
   const amenities: any[] = Array.isArray(spot?.amenities) ? spot.amenities : [];
   const heroImage = spot.photos?.[0] || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&h=400&fit=crop';
+  const spotLat = spot.lat || spot.latitude || 0;
+  const spotLon = spot.lon || spot.longitude || 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -138,6 +143,56 @@ export const ParkingDetails: React.FC = () => {
             </View>
           </View>
 
+          {/* Booking Details - Show first when viewing from booking */}
+          {bookingId && (
+            <View style={styles.bookingInfoSection}>
+              <View style={styles.bookingHeader}>
+                <View style={styles.bookingIconContainer}>
+                  <MaterialCommunityIcons name="calendar-check" size={24} color="#10b77f" />
+                </View>
+                <View style={styles.bookingHeaderText}>
+                  <Text style={styles.bookingTitle}>Your Booking</Text>
+                  <Text style={styles.bookingId}>#{bookingId}</Text>
+                </View>
+                <View style={[styles.statusBadge, bookingStatus === 'completed' && styles.statusCompleted]}>
+                  <Text style={styles.statusText}>{bookingStatus}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.bookingDivider} />
+              
+              <View style={styles.bookingGrid}>
+                <View style={styles.bookingGridItem}>
+                  <MaterialCommunityIcons name="clock-start" size={18} color="#10b77f" />
+                  <Text style={styles.bookingGridLabel}>Start</Text>
+                  <Text style={styles.bookingGridValue}>
+                    {startTime ? new Date(startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                  </Text>
+                </View>
+                <View style={styles.bookingGridItem}>
+                  <MaterialCommunityIcons name="clock-end" size={18} color="#10b77f" />
+                  <Text style={styles.bookingGridLabel}>End</Text>
+                  <Text style={styles.bookingGridValue}>
+                    {endTime ? new Date(endTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.bookingDivider} />
+              
+              <View style={styles.bookingFooter}>
+                <View style={styles.bookingFooterItem}>
+                  <Text style={styles.bookingFooterLabel}>Total Paid</Text>
+                  <Text style={styles.bookingFooterValue}>₱{totalAmount}</Text>
+                </View>
+                <View style={styles.bookingFooterItem}>
+                  <Text style={styles.bookingFooterLabel}>Duration</Text>
+                  <Text style={styles.bookingFooterValue}>{rentalMode === 'open' ? 'Open' : 'Fixed'}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Quick Info Cards */}
           <View style={styles.quickInfoSection}>
             <View style={styles.quickInfoCard}>
@@ -178,17 +233,29 @@ export const ParkingDetails: React.FC = () => {
             </View>
           </View>
 
-          {/* Map Section */}
-          <View style={styles.mapSection}>
+          {/* Map Section - Navigate to Explore Map */}
+          <TouchableOpacity 
+            style={styles.mapSection}
+            activeOpacity={0.7}
+            onPress={() => {
+              navigation.navigate('Explore' as never, {
+                latitude: spotLat,
+                longitude: spotLon,
+                focusSpotId: spotId,
+              } as never);
+            }}
+          >
             <Text style={styles.sectionTitle}>Location</Text>
-            <View style={styles.mapPlaceholder}>
-              <View style={styles.mapIconContainer}>
-                <Text style={styles.mapIcon}>🗺️</Text>
+            <View style={styles.mapPreviewContainer}>
+              <View style={styles.mapPreviewPlaceholder}>
+                <View style={styles.mapIconContainer}>
+                  <Text style={styles.mapIcon}>🗺️</Text>
+                </View>
+                <Text style={styles.mapText}>View on Map</Text>
+                <Text style={styles.mapAddress}>{location}</Text>
               </View>
-              <Text style={styles.mapText}>View on Map</Text>
-              <Text style={styles.mapAddress}>{location}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -419,6 +486,18 @@ const styles = StyleSheet.create({
   mapSection: {
     marginBottom: 24,
   },
+  mapPreviewContainer: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#f1f5f9',
+  },
+  mapPreviewPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   mapPlaceholder: {
     height: 180,
     backgroundColor: '#ffffff',
@@ -472,5 +551,123 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  bookingInfoSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bookingIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bookingHeaderText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  bookingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  bookingId: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#fef3c7',
+  },
+  statusCompleted: {
+    backgroundColor: '#dcfce7',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400e',
+  },
+  bookingDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 16,
+  },
+  bookingGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  bookingGridItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  bookingGridLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4,
+  },
+  bookingGridValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  bookingFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  bookingFooterItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  bookingFooterLabel: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  bookingFooterValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#10b77f',
+    marginTop: 4,
+  },
+  embeddedMap: {
+    width: '100%',
+    height: '100%',
+  },
+  mapContainer: {
+    width: '100%',
+    height: 250,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  mapOverlayText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '500',
   },
 });

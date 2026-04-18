@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Image,
   ActivityIndicator,
   Platform,
   ActionSheetIOS,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -243,9 +243,10 @@ export const ProfileScreen: React.FC = () => {
               </View>
             )}
             {user?.profileImageUrl ? (
-              <Image
-                source={{ uri: user!.profileImageUrl }}
+              <Image 
+                source={{ uri: user!.profileImageUrl + '?t=' + Date.now() }} 
                 style={styles.avatarImage}
+                cachePolicy="none"
               />
             ) : (
               <View style={styles.avatarCircle}>

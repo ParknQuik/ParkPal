@@ -40,6 +40,12 @@ export const HomeDashboard: React.FC = () => {
   const { currentLocation } = useAppSelector((state) => state.location);
   const { listings, bookings, filters, loading, error } = useAppSelector((state) => state.marketplace);
 
+  // Force re-render when user is updated (for profile image changes)
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    forceUpdate(n => n + 1);
+  }, [user?.profileImageUrl]);
+
   const userName = user?.name || 'Guest';
 
   const fetchData = useCallback(async () => {
@@ -172,7 +178,12 @@ export const HomeDashboard: React.FC = () => {
         <View style={styles.greetingHeader}>
           <View style={styles.greetingLeft}>
             {user?.profileImageUrl ? (
-              <Image source={{ uri: user.profileImageUrl }} style={styles.headerAvatar} contentFit="cover" />
+              <Image 
+                source={{ uri: user.profileImageUrl + '?t=' + Date.now() }} 
+                style={styles.headerAvatar} 
+                contentFit="cover"
+                cachePolicy="none"
+              />
             ) : (
               <View style={styles.headerAvatar}>
                 <Text style={styles.headerAvatarText}>{userName.charAt(0).toUpperCase()}</Text>

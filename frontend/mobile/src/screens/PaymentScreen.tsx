@@ -18,7 +18,7 @@ const BACKGROUND = '#f6f6f8';
 export const PaymentScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime } = route.params as { 
+  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, createBookingOnSuccess, rentalMode, maxDuration } = route.params as { 
     bookingId: number; 
     amount: number; 
     spotId?: number;
@@ -26,6 +26,9 @@ export const PaymentScreen: React.FC = () => {
     spotAddress?: string;
     startTime?: string;
     endTime?: string;
+    createBookingOnSuccess?: boolean;
+    rentalMode?: 'fixed' | 'open';
+    maxDuration?: number;
   };
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
