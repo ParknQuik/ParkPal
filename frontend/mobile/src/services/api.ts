@@ -62,7 +62,7 @@ export const authAPI = {
     api.post('/auth/register', { name, email, password, role: 'driver' }),
   logout: () => api.post('/auth/logout'),
   getCurrentUser: () => api.get('/auth/me'),
-  updateProfile: (data: { name: string; phone: string | null }) =>
+  updateProfile: (data: { name: string; phone: string | null; profileImageUrl?: string | null }) =>
     api.patch('/users/profile', data),
   forgotPassword: (email: string) =>
     api.post('/auth/forgot-password', { email }),

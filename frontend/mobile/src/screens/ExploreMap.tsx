@@ -11,9 +11,9 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -79,6 +79,8 @@ const PriceMarker = React.memo(({ listing, selected, onPress }: {
 
 export const ExploreMap: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { latitude, longitude, focusSpotId } = route.params || {};
   const dispatch = useAppDispatch();
   const mapRef = useRef<MapView>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,7 +89,12 @@ export const ExploreMap: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMovedMap, setHasMovedMap] = useState(false);
 
-  const [region, setRegion] = useState({
+  const [region, setRegion] = useState(latitude && longitude ? {
+    latitude,
+    longitude,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  } : {
     latitude: 14.5995,
     longitude: 120.9842,
     latitudeDelta: 0.01,
@@ -117,6 +124,29 @@ export const ExploreMap: React.FC = () => {
   }, [dispatch, searchQuery]);
 
   const centerOnUser = useCallback(async () => {
+    // If params were passed from ParkingDetails, use those instead
+    if (latitude && longitude) {
+      const newRegion = {
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setRegion(newRegion);
+      mapRef.current?.animateToRegion(newRegion, 500);
+      
+      // Fetch listings for this location
+      fetchListings(latitude, longitude);
+      
+      // If focusSpotId provided, select it after listings load
+      if (focusSpotId) {
+        setTimeout(() => setSelectedMarker(focusSpotId), 1000);
+      }
+      setLocationReady(true);
+      return;
+    }
+    
+    // Otherwise, use user's current location (original behavior)
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
@@ -140,7 +170,7 @@ export const ExploreMap: React.FC = () => {
     } finally {
       setLocationReady(true);
     }
-  }, [fetchListings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchListings, latitude, longitude, focusSpotId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Center on user every time this tab is focused
   useFocusEffect(
@@ -266,6 +296,16 @@ export const ExploreMap: React.FC = () => {
               onPress={handleMarkerPress}
             />
           ))}
+          <Circle
+            center={{
+              latitude: region.latitude,
+              longitude: region.longitude,
+            }}
+            radius={3000}
+            fillColor="rgba(16, 183, 127, 0.1)"
+            strokeColor="rgba(16, 183, 127, 0.5)"
+            strokeWidth={2}
+          />
         </MapView>
 
         {/* Search this area button */}

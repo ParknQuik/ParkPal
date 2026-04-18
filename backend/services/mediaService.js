@@ -230,6 +230,9 @@ async function processProfileImage(originalFileName, userId) {
 
     const [imageBuffer] = await originalFile.download();
 
+    // Clean up old original files for this user (keep only the latest)
+    await cleanupOldProfileFiles(userId, originalFileName);
+
     const resizedBuffer = await sharp(imageBuffer)
       .resize(200, 200, { fit: 'cover', position: 'center' })
       .jpeg({ quality: 85, progressive: true })
@@ -255,6 +258,24 @@ async function processProfileImage(originalFileName, userId) {
   } catch (error) {
     logger.error('Error processing profile image:', error);
     throw new Error('Failed to process profile image');
+  }
+}
+
+// Helper function to clean up old profile images
+async function cleanupOldProfileFiles(userId, keepFileName) {
+  try {
+    const [files] = await bucket.getFiles({ prefix: `profiles/${userId}/original_` });
+    
+    for (const file of files) {
+      // Delete files that are NOT the one we just uploaded
+      if (file.name !== keepFileName) {
+        await file.delete();
+        logger.info(`Deleted old profile image: ${file.name}`);
+      }
+    }
+  } catch (error) {
+    // Log but don't fail if cleanup fails
+    logger.warn(`Failed to cleanup old profile files for user ${userId}:`, error.message);
   }
 }
 

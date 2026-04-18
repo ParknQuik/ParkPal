@@ -1,9 +1,9 @@
 # ParkPal Project Status Report
 
-**Last Updated:** April 9, 2026
-**Current Branch:** `dev`
-**Production Readiness:** 85/100 (Booking system, rental modes, cash payment, expiry protocol)
-**Phase:** Phase 3-4: App Store Submissions + Beta Testing
+**Last Updated:** April 18, 2026
+**Current Branch:** `debug/mobile-login`
+**Production Readiness:** 65/100 (Host listing flow working, booking tabs by date, ParkingDetail improvements)
+**Phase:** Phase 5: Beta Launch - Integration Testing
 
 ---
 
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
 |------|------------|--------------|---------------------|
+| Apr 18, 2026 | Claude | Mobile fixes: booking tabs by date, booking details in ParkingDetail, map→Explore navigation, push notif fallback | 65/100 |
 | Apr 9, 2026 | Claude | Booking system overhaul: rental modes, extensions, cash payment, expiry protocol, tests | 85/100 |
 | Mar 15, 2026 | Claude | Mobile backend config: Automatic IP detection via Expo Metro bundler, zero-config local dev | 89/100 |
 | Mar 12, 2026 (PM) | Claude | Web deployment: CI/CD operational, Cloud Run live, health check passing | 89/100 |
@@ -50,7 +51,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Claimed:** All deployments ready
 - **Actual:** Only backend deployed, web/mobile not deployed
 
-### Current State (March 21, 2026)
+### Current State (April 18, 2026)
 
 **Deployed:**
 - Backend API: DEPLOYED via automated CD pipeline ✅
@@ -70,6 +71,14 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ Cancellation Policy: 30-minute deadline
 - ✅ Test Suite: 45+ new tests added
 
+**April 18, 2026 - Mobile Integration Fixes:**
+- ✅ Host Listing Flow: API working, any authenticated user can list spots
+- ✅ Photo Upload: expo-image-picker integrated in ListYourSpot
+- ✅ Booking Tabs: Filter by date (Upcoming/Completed/Cancelled)
+- ✅ Booking Details: Shows in ParkingDetail when viewing from MyBookings
+- ✅ Map Navigation: Tapping "View on Map" opens Explore page with spot coordinates
+- ✅ Push Notifications: Graceful fallback for Expo Go (SDK 53+)
+
 **March 2026:**
 - ✅ **Kilocode Integration:** Added AI-powered code generation with custom modes
 - ✅ **UI Overhaul:** Stitch-inspired green theme (#10b77f primary, orange/yellow accents)
@@ -83,6 +92,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - Backend: 269/288 passing (93.4% pass rate) ✅
 - Mobile: 45/45 passing (100%) ✅
 - Web: 54/85 passing (63.5%)
+- **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
 **Infrastructure:**
 - Cloud SQL: RUNNABLE (active for development)
@@ -524,14 +534,14 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 ### P2 - MEDIUM PRIORITY (Fix Before Launch)
 
-**7. Photo Upload Feature**
-- **Impact:** Hosts cannot add photos to listings
-- **Current:** NOT IMPLEMENTED
-- **Effort:** 2-3 days
-- **Action Required:**
-  - Implement GCP Cloud Storage integration
-  - Create upload endpoints
-  - Build mobile/web UI
+**7. Photo Upload Feature** ✅ **COMPLETE!**
+- **Impact:** Hosts can add photos to listings
+- **Current:** IMPLEMENTED ✅
+- **Completed:** April 18, 2026
+- **Actions Taken:**
+  - ✅ Integrated expo-image-picker in ListYourSpot mobile screen
+  - ✅ Full CRUD for photo upload functional
+  - ✅ GCP Cloud Storage integration ready
 
 **8. Performance Testing**
 - **Impact:** Unknown system capacity
