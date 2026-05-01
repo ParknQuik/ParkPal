@@ -364,6 +364,9 @@ export const analyticsAPI = {
     endDate?: string;
     interval?: 'hour' | 'day' | 'week';
   }) => api.get(`/analytics/zones/${zoneId}/metrics`, { params }),
+
+  // List all zones (used by geofence service on startup)
+  getZones: () => api.get('/analytics/zones'),
 };
 
 export default api;
