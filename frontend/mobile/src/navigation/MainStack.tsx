@@ -16,6 +16,8 @@ import { EarningsScreen } from '../screens/EarningsScreen';
 import { MyListingsScreen } from '../screens/MyListingsScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { MyVehiclesScreen } from '../screens/MyVehiclesScreen';
+import { SecurityPrivacyScreen } from '../screens/SecurityPrivacyScreen';
+import { HelpCenterScreen } from '../screens/HelpCenterScreen';
 
 const Stack = createStackNavigator();
 
@@ -148,6 +150,16 @@ export const MainStack: React.FC = () => {
           headerShown: false,
           presentation: 'card',
         }}
+      />
+      <Stack.Screen
+        name="SecurityPrivacy"
+        component={SecurityPrivacyScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="HelpCenter"
+        component={HelpCenterScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

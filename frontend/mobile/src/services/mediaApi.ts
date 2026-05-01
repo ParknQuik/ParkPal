@@ -1,12 +1,9 @@
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
+import { API_BASE_URL } from '../config/api.config';
 
-// Get API URL from app config, fallback to dev URL
-const API_BASE_URL =
-  Constants.expoConfig?.extra?.apiUrl ||
-  (__DEV__ ? 'http://192.168.100.176:3001/api/v1' : 'https://api.parkpal.com/api/v1');
+// Use the same API URL configuration as the main api.ts
 
 export interface UploadUrlResponse {
   uploadUrl: string;
@@ -90,6 +87,59 @@ export const mediaAPI = {
     );
 
     return response.data;
+  },
+
+  /**
+   * Get signed URL for uploading a listing photo
+   */
+  async getListingPhotoUploadUrl(listingId: number, fileName: string): Promise<UploadUrlResponse> {
+    const token = await AsyncStorage.getItem('token');
+
+    const response = await axios.get(
+      `${API_BASE_URL}/marketplace/listings/${listingId}/photos/upload-url`,
+      {
+        params: { fileName },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+  },
+
+  /**
+   * Upload a listing photo to GCS
+   */
+  async uploadListingPhoto(listingId: number, imageUri: string): Promise<any> {
+    try {
+      const fileExtension = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `photo-${Date.now()}.${fileExtension}`;
+
+      const { uploadUrl, fileName: gcsFileName } = await this.getListingPhotoUploadUrl(
+        listingId,
+        fileName
+      );
+
+      await this.uploadToGCS(uploadUrl, imageUri, `image/${fileExtension}`);
+
+      const token = await AsyncStorage.getItem('token');
+      const response = await axios.post(
+        `${API_BASE_URL}/marketplace/listings/${listingId}/photos/confirm`,
+        { fileName: gcsFileName },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Listing photo upload error:', error);
+      throw error;
+    }
   },
 
   /**

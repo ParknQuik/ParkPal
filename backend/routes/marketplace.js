@@ -78,7 +78,25 @@ module.exports = (app) => {
     '/marketplace/listings',
     authenticate,
     validateBody(createListingSchema),
-    marketplaceController.createListing
+marketplaceController.createListing
+   );
+
+  /**
+   * Get signed URL for uploading a listing photo
+   */
+  app.get(
+    '/marketplace/listings/:id/photos/upload-url',
+    authenticate,
+    marketplaceController.getListingPhotoUploadUrl
+  );
+
+  /**
+   * Confirm listing photo upload
+   */
+  app.post(
+    '/marketplace/listings/:id/photos/confirm',
+    authenticate,
+    marketplaceController.confirmListingPhotoUpload
   );
 
   /**
@@ -611,6 +629,59 @@ module.exports = (app) => {
     '/marketplace/listings/:id/reviews',
     validateParams(idParamSchema),
     marketplaceController.getListingReviews
+  );
+
+  /**
+   * @swagger
+   * /api/v1/marketplace/listings/{id}:
+   *   put:
+   *     summary: Update a listing
+   *     tags: [Marketplace]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               title:
+   *                 type: string
+   *               description:
+   *                 type: string
+   *               address:
+   *                 type: string
+   *               lat:
+   *                 type: number
+   *               lon:
+   *                 type: number
+   *               price:
+   *                 type: number
+   *               slotType:
+   *                 type: string
+   *               amenities:
+   *                 type: array
+   *               photos:
+   *                 type: array
+   *     responses:
+   *       200:
+   *         description: Listing updated successfully
+   *       404:
+   *         description: Listing not found
+   */
+  app.put(
+    '/marketplace/listings/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    validateBody(updateListingSchema),
+    marketplaceController.updateListing
   );
 
   /**

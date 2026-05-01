@@ -129,8 +129,7 @@ export const MyBookingsScreen: React.FC = () => {
 
    const handleAction = useCallback(
      (booking: any) => {
-       console.log('[MyBookings] booking:', JSON.stringify(booking));
-       console.log('[MyBookings] slotId:', booking.slotId);
+
        // Always go to ParkingDetail for viewing - user can rate from there if needed
        if (booking.status === 'pending') {
          navigation.navigate('Payment' as never, { 

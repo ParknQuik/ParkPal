@@ -279,6 +279,97 @@ async function cleanupOldProfileFiles(userId, keepFileName) {
   }
 }
 
+/**
+ * Generate signed URL for uploading a listing photo
+ * @param {number} listingId - The listing ID
+ * @param {string} fileName - Original file name
+ * @returns {Promise<{uploadUrl: string, fileName: string, expiresAt: Date}>}
+ */
+async function generateListingPhotoUploadUrl(listingId, fileName) {
+  try {
+    const timestamp = Date.now();
+    const ext = fileName.split('.').pop() || 'jpg';
+    const uniqueFileName = `listings/${listingId}/original_${timestamp}.${ext}`;
+
+    const file = bucket.file(uniqueFileName);
+
+    const [uploadUrl] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000,
+      contentType: 'image/jpeg'
+    });
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    logger.info(`Generated listing photo upload URL for listing ${listingId}: ${uniqueFileName}`);
+
+    return {
+      uploadUrl,
+      fileName: uniqueFileName,
+      expiresAt
+    };
+  } catch (error) {
+    logger.error('Error generating listing photo upload URL:', error);
+    throw new Error('Failed to generate upload URL');
+  }
+}
+
+/**
+ * Process and resize a listing photo
+ * @param {string} originalFileName - GCS file path
+ * @param {number} listingId - The listing ID
+ * @returns {Promise<string>} Public URL of the processed image
+ */
+async function processListingPhoto(originalFileName, listingId) {
+  try {
+    const originalFile = bucket.file(originalFileName);
+    const [imageBuffer] = await originalFile.download();
+
+    const sizes = [
+      { name: 'large', width: 1200 },
+      { name: 'medium', width: 800 },
+      { name: 'thumbnail', width: 400 }
+    ];
+
+    const uploadedUrls = [];
+
+    for (const size of sizes) {
+      const resizedBuffer = await sharp(imageBuffer)
+        .resize(size.width, null, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85, progressive: true })
+        .toBuffer();
+
+      const resizedFileName = `listings/${listingId}/${size.name}_${Date.now()}.jpg`;
+      const resizedFile = bucket.file(resizedFileName);
+
+      await resizedFile.save(resizedBuffer, {
+        contentType: 'image/jpeg',
+        metadata: { cacheControl: 'public, max-age=31536000' }
+      });
+
+      await resizedFile.makePublic();
+      const publicUrl = await getPublicUrl(resizedFileName);
+      uploadedUrls.push(publicUrl);
+    }
+
+    await originalFile.makePublic();
+    const originalUrl = await getPublicUrl(originalFileName);
+
+    logger.info(`Processed listing photo for listing ${listingId}`);
+
+    return {
+      original: originalUrl,
+      large: uploadedUrls[0],
+      medium: uploadedUrls[1],
+      thumbnail: uploadedUrls[2]
+    };
+  } catch (error) {
+    logger.error('Error processing listing photo:', error);
+    throw new Error('Failed to process listing photo');
+  }
+}
+
 module.exports = {
   generateUploadUrl,
   processUploadedImage,
@@ -286,5 +377,7 @@ module.exports = {
   generateViewUrl,
   getPublicUrl,
   generateProfileUploadUrl,
-  processProfileImage
+  processProfileImage,
+  generateListingPhotoUploadUrl,
+  processListingPhoto
 };

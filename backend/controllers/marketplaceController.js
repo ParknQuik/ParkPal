@@ -2,6 +2,7 @@ const prisma = require('../config/prisma');
 const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../services/qrcode');
 const cache = require('../services/cache');
+const mediaService = require('../services/mediaService');
 
 // Safe JSON parse that returns a fallback on invalid JSON
 function safeJsonParse(str, fallback = []) {
@@ -130,6 +131,110 @@ exports.createListing = async (req, res) => {
     res.status(201).json(updatedSlot);
   } catch (error) {
     console.error('Create listing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Get signed URL for uploading a listing photo
+ */
+exports.getListingPhotoUploadUrl = async (req, res) => {
+  try {
+    const { listingId, fileName } = req.query;
+    
+    if (!listingId || !fileName) {
+      return res.status(400).json({ error: 'listingId and fileName are required' });
+    }
+
+    const result = await mediaService.generateListingPhotoUploadUrl(
+      parseInt(listingId),
+      fileName
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get listing photo upload URL error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Confirm listing photo upload and process it
+ */
+exports.confirmListingPhotoUpload = async (req, res) => {
+  try {
+    const { listingId, fileName } = req.body;
+    
+    if (!listingId || !fileName) {
+      return res.status(400).json({ error: 'listingId and fileName are required' });
+    }
+
+    const result = await mediaService.processListingPhoto(
+      fileName,
+      parseInt(listingId)
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Confirm listing photo upload error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Update a parking slot listing
+ */
+exports.updateListing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      description,
+      address,
+      lat,
+      lon,
+      price,
+      slotType,
+      amenities,
+      photos,
+    } = req.body;
+    const userId = req.user.id;
+
+    const existingListing = await prisma.parkingSlot.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!existingListing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (existingListing.ownerId !== userId) {
+      return res.status(403).json({ error: 'You can only edit your own listings' });
+    }
+
+    const updatedListing = await prisma.parkingSlot.update({
+      where: { id: parseInt(id) },
+      data: {
+        ...(title && { title }),
+        ...(description && { description }),
+        ...(address && { address }),
+        ...(lat && { lat: parseFloat(lat) }),
+        ...(lon && { lon: parseFloat(lon) }),
+        ...(price && { price: parseFloat(price) }),
+        ...(slotType && { slotType }),
+        ...(amenities && { amenities: JSON.stringify(amenities) }),
+        ...(photos && { photos: JSON.stringify(photos) }),
+      },
+      include: {
+        owner: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    res.json(updatedListing);
+  } catch (error) {
+    console.error('Update listing error:', error);
     res.status(500).json({ error: error.message });
   }
 };

@@ -9,6 +9,7 @@ import * as Device from 'expo-device';
 import { store } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { notificationService } from './src/services/notifications';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -88,7 +89,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
         <SafeAreaProvider>
-          <AppNavigator />
+          <ErrorBoundary>
+            <AppNavigator />
+          </ErrorBoundary>
           <StatusBar style="auto" />
         </SafeAreaProvider>
       </Provider>
