@@ -219,6 +219,7 @@ export interface MarketplaceListing {
   reviewCount: number;
   distance?: number;
   availability: boolean;
+  zoneId?: number;
 }
 
 export interface MarketplaceBooking {
@@ -307,6 +308,54 @@ export interface VehiclesState {
   error: string | null;
 }
 
+// Analytics types (Phase 6A)
+export type ActivityType = 'IN_VEHICLE' | 'STILL' | 'ON_FOOT' | 'WALKING' | 'RUNNING' | 'ON_BICYCLE';
+
+export interface Zone {
+  id: number;
+  name: string;
+  geofencePolygon: Array<{ latitude: number; longitude: number }>;
+  centroidLat: number;
+  centroidLon: number;
+  radiusMeters: number;
+}
+
+export interface ZoneAvailability {
+  zoneId: number;
+  name: string;
+  totalSlots: number;
+  occupied: number;
+  available: number;
+  occupancyPercentage: number;
+  estimatedCirclingTime: number; // seconds
+  dataFreshness: string | null;
+  message: string;
+}
+
+export interface ParkingSession {
+  id: number;
+  userId: number;
+  zoneId: number;
+  circlingStartTime: string;
+  circlingEndTime?: string;
+  parked?: boolean;
+}
+
+export interface ActivityEvent {
+  activityEventId: number;
+  timestamp: string;
+  status: 'logged';
+}
+
+export interface AnalyticsState {
+  activeSession: ParkingSession | null;
+  activeZoneId: number | null;
+  zoneAvailability: Record<number, ZoneAvailability>;
+  optedIn: boolean;
+  loading: boolean;
+  error: string | null;
+}
+
 export interface RootState {
   auth: AuthState;
   parking: ParkingState;
@@ -314,4 +363,5 @@ export interface RootState {
   location: LocationState;
   marketplace: MarketplaceState;
   vehicles: VehiclesState;
+  analytics: AnalyticsState;
 }

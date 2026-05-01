@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings } from '../store/slices/marketplaceSlice';
+import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
 import { colors } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
@@ -104,9 +105,21 @@ export const ExploreMap: React.FC = () => {
   const [mapReady, setMapReady] = useState(false);
 
   const { listings, loading } = useAppSelector((state) => state.marketplace);
+  const { zoneAvailability } = useAppSelector((state) => state.analytics);
 
   const selectedListing = selectedMarker !== null
     ? listings.find((l: any) => l.id === selectedMarker)
+    : null;
+
+  // Fetch zone availability when a listing is selected and has a zoneId
+  useEffect(() => {
+    if (selectedListing?.zoneId) {
+      dispatch(fetchZoneAvailability(selectedListing.zoneId));
+    }
+  }, [selectedListing?.zoneId]);
+
+  const selectedZoneAvail = selectedListing?.zoneId
+    ? zoneAvailability[selectedListing.zoneId]
     : null;
 
   // Fetch listings for a given region
@@ -385,6 +398,25 @@ export const ExploreMap: React.FC = () => {
                 </View>
                 <Text style={styles.reviewsText}>({selectedListing.reviewCount || 0} reviews)</Text>
               </View>
+              {selectedZoneAvail && (
+                <View style={styles.zoneAvailRow}>
+                  <View style={[
+                    styles.availBadge,
+                    selectedZoneAvail.occupancyPercentage >= 80
+                      ? styles.availBadgeFull
+                      : selectedZoneAvail.occupancyPercentage >= 50
+                        ? styles.availBadgeMid
+                        : styles.availBadgeOpen,
+                  ]}>
+                    <Text style={styles.availBadgeText}>
+                      {selectedZoneAvail.available}/{selectedZoneAvail.totalSlots} open
+                    </Text>
+                  </View>
+                  <Text style={styles.circlingText}>
+                    ~{Math.ceil(selectedZoneAvail.estimatedCirclingTime / 60)} min to park
+                  </Text>
+                </View>
+              )}
               <View style={styles.actionButtons}>
                 <TouchableOpacity
                   style={styles.directionsButton}
@@ -680,6 +712,35 @@ const styles = StyleSheet.create({
   },
   shareIcon: {
     fontSize: 18,
+  },
+  zoneAvailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 8,
+  },
+  availBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  availBadgeOpen: {
+    backgroundColor: '#dcfce7',
+  },
+  availBadgeMid: {
+    backgroundColor: '#fef9c3',
+  },
+  availBadgeFull: {
+    backgroundColor: '#fee2e2',
+  },
+  availBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  circlingText: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 });
 

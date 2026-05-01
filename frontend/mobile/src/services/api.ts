@@ -327,4 +327,46 @@ export const notificationsAPI = {
   deleteNotification: (id: number) => api.delete(`/notifications/${id}`),
 };
 
+// Analytics endpoints (Phase 6A — Service 1)
+export const analyticsAPI = {
+  // Notify backend when user enters a parking zone geofence
+  zoneEnter: (data: {
+    userId: number;
+    zoneId: number;
+    latitude: number;
+    longitude: number;
+  }) => api.post('/analytics/zone/enter', data),
+
+  // Notify backend when user exits a parking zone geofence
+  zoneExit: (data: {
+    sessionId: number;
+    exitTime?: string;
+    parked?: boolean;
+  }) => api.post('/analytics/zone/exit', data),
+
+  // Log an activity recognition event during a zone session
+  logActivity: (data: {
+    userId: number;
+    sessionId: number;
+    activityType: 'IN_VEHICLE' | 'STILL' | 'ON_FOOT' | 'WALKING' | 'RUNNING' | 'ON_BICYCLE';
+    confidence: number;
+    latitude?: number;
+    longitude?: number;
+  }) => api.post('/analytics/activity', data),
+
+  // Get real-time availability + circling time estimate for a zone
+  getZoneAvailability: (zoneId: number) =>
+    api.get(`/analytics/zones/${zoneId}/availability`),
+
+  // Get aggregated zone metrics (historical)
+  getZoneMetrics: (zoneId: number, params?: {
+    startDate?: string;
+    endDate?: string;
+    interval?: 'hour' | 'day' | 'week';
+  }) => api.get(`/analytics/zones/${zoneId}/metrics`, { params }),
+
+  // List all zones (used by geofence service on startup)
+  getZones: () => api.get('/analytics/zones'),
+};
+
 export default api;
