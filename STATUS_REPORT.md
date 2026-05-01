@@ -2,8 +2,8 @@
 
 **Last Updated:** May 1, 2026
 **Current Branch:** `feat/mobile-analytics-integration`
-**Production Readiness:** 70/100 (Phase 6A analytics foundation complete)
-**Phase:** Phase 6A: Mobile Analytics Integration
+**Production Readiness:** 71/100 (Phase 6A complete + backend field name fix by Kilo Code)
+**Phase:** Phase 6A: Mobile Analytics Integration — complete, pending PR to dev
 
 ---
 
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
 |------|------------|--------------|---------------------|
+| May 1, 2026 | Kilo Code | Backend fix: GET /analytics/zones response renamed centerLat/centerLon → centroidLat/centroidLon to match mobile Zone type | 71/100 |
 | May 1, 2026 | Claude | Phase 6A analytics: Redux slice, geofence service, opt-in modal, ExploreMap zone availability badges, analyticsAPI (6 endpoints), types | 70/100 |
 | Apr 18, 2026 | Claude | Mobile fixes: booking tabs by date, booking details in ParkingDetail, map→Explore navigation, push notif fallback | 65/100 |
 | Apr 9, 2026 | Claude | Booking system overhaul: rental modes, extensions, cash payment, expiry protocol, tests | 85/100 |
@@ -64,7 +65,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 **Recent Major Progress (May 1, 2026):**
 
-**Phase 6A — Mobile Analytics Foundation:**
+**Phase 6A — Mobile Analytics Foundation (Claude + Kilo Code):**
 - ✅ `analyticsAPI` — 6 endpoints wired to backend (zone enter/exit, activity log, zone availability, metrics, zones list)
 - ✅ `analyticsSlice` — Redux state for active sessions, zone availability cache, opt-in persistence
 - ✅ `analyticsGeofenceService` — foreground GPS watcher with @turf/turf polygon geofencing, speed-based activity inference
@@ -74,6 +75,12 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ Analytics types added: `Zone`, `ZoneAvailability`, `ParkingSession`, `ActivityEvent`, `AnalyticsState`
 - ✅ Packages installed: `expo-task-manager`, `@turf/turf`
 - ✅ Doc consolidation: 36 redundant MD files merged into 8, PAYMONGO.md secret placeholder fixed
+- ✅ **Kilo Code fix:** `GET /analytics/zones` response field names `centerLat`/`centerLon` → `centroidLat`/`centroidLon` to match mobile `Zone` type
+
+**Phase 6B — Next (Not Started):**
+- ⏳ Settings toggle for analytics opt-in (`SecurityPrivacyScreen.tsx`)
+- ⏳ Zone availability circle overlays on ExploreMap map view
+- ⏳ Background location tracking (requires EAS build + entitlements)
 
 **April 2026 - Booking System Overhaul:**
 - ✅ Rental Modes: Fixed duration + Open time (pay-on-exit)
