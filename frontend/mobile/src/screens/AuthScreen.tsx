@@ -409,9 +409,12 @@ export const AuthScreen: React.FC = () => {
                   {googleLoading ? 'Signing in...' : 'Google'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
+              <TouchableOpacity 
+                style={[styles.socialButton, styles.socialButtonDisabled]}
+                disabled={true}
+              >
                 <Text style={styles.socialIcon}>🍎</Text>
-                <Text style={styles.socialButtonText}>Apple</Text>
+                <Text style={[styles.socialButtonText, styles.socialButtonTextDisabled]}>Apple (Soon)</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -704,6 +707,13 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  socialButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#e2e8f0',
+  },
+  socialButtonTextDisabled: {
+    color: '#94a3b8',
   },
   bottomBar: {
     height: 8,

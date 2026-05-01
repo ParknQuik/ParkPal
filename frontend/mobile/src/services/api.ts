@@ -122,6 +122,18 @@ export const marketplaceAPI = {
 
   getMyListings: () => api.get('/marketplace/host/listings'),
 
+  updateListing: (id: number, data: {
+    title?: string;
+    description?: string;
+    address?: string;
+    lat?: number;
+    lon?: number;
+    price?: number;
+    slotType?: 'roadside_qr' | 'commercial_manual' | 'commercial_iot';
+    amenities?: string[];
+    photos?: string[];
+  }) => api.put(`/marketplace/listings/${id}`, data),
+
   deleteListing: (listingId: number) => api.delete(`/marketplace/listings/${listingId}`),
 
   // Search with filters

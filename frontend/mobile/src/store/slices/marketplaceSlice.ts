@@ -149,16 +149,46 @@ export const createListing = createAsyncThunk(
   }) => {
     const apiParams = {
       title: params.title,
+      description: params.description,
+      address: params.address,
       lat: params.latitude,
       lon: params.longitude,
       price: params.pricePerHour,
-      address: params.address,
-      slotType: (params.slotType as 'roadside_qr' | 'commercial_manual' | 'commercial_iot') || 'commercial_manual',
-      description: params.description,
+      slotType: params.slotType as 'roadside_qr' | 'commercial_manual' | 'commercial_iot',
       amenities: params.amenities,
       photos: params.photos,
     };
     const response = await marketplaceAPI.createListing(apiParams);
+    return response.data;
+  }
+);
+
+export const updateListing = createAsyncThunk(
+  'marketplace/updateListing',
+  async (params: {
+    listingId: number;
+    title: string;
+    description: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    pricePerHour: number;
+    photos?: string[];
+    amenities?: string[];
+    slotType: string;
+  }) => {
+    const apiParams = {
+      title: params.title,
+      description: params.description,
+      address: params.address,
+      lat: params.latitude,
+      lon: params.longitude,
+      price: params.pricePerHour,
+      slotType: params.slotType as 'roadside_qr' | 'commercial_manual' | 'commercial_iot',
+      amenities: params.amenities,
+      photos: params.photos,
+    };
+    const response = await marketplaceAPI.updateListing(params.listingId, apiParams);
     return response.data;
   }
 );
@@ -331,6 +361,23 @@ const marketplaceSlice = createSlice({
     builder.addCase(createListing.rejected, (state, action) => {
       state.loading = false;
       state.error = action.error.message || 'Failed to create listing';
+    });
+
+    // Update listing
+    builder.addCase(updateListing.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(updateListing.fulfilled, (state, action) => {
+      state.loading = false;
+      const index = state.myListings.findIndex((l) => l.id === action.payload.id);
+      if (index !== -1) {
+        state.myListings[index] = action.payload;
+      }
+    });
+    builder.addCase(updateListing.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message || 'Failed to update listing';
     });
 
     // Create booking

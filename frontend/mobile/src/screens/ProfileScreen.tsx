@@ -165,12 +165,7 @@ export const ProfileScreen: React.FC = () => {
           label: 'My Vehicles',
           onPress: () => navigation.navigate('MyVehicles' as never),
         },
-        {
-          icon: 'credit-card-outline' as const,
-          iconColor: colors.accentOrange,
-          label: 'Payment Methods',
-          onPress: () => navigation.navigate('PaymentMethods' as never),
-        },
+
         {
           icon: 'format-list-bulleted' as const,
           iconColor: colors.accentYellow,
@@ -198,7 +193,7 @@ export const ProfileScreen: React.FC = () => {
           icon: 'shield-lock-outline' as const,
           iconColor: colors.primary,
           label: 'Security & Privacy',
-          onPress: () => {},
+          onPress: () => navigation.navigate('SecurityPrivacy' as never),
         },
       ],
     },
@@ -209,13 +204,8 @@ export const ProfileScreen: React.FC = () => {
           icon: 'help-circle-outline' as const,
           iconColor: colors.textTertiary,
           label: 'Help Center',
-          onPress: () => {},
+          onPress: () => navigation.navigate('HelpCenter' as never),
         },
-      ],
-    },
-    {
-      title: '',
-      items: [
         {
           icon: 'logout' as const,
           iconColor: colors.error,

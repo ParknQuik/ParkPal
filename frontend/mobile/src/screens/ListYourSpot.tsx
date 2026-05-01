@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppDispatch } from '../store';
 import { createListing } from '../store/slices/marketplaceSlice';
+import { mediaAPI } from '../services/mediaApi';
+import { marketplaceAPI } from '../services/api';
 import { colors, typography, spacing, borderRadius } from '../theme';
 
 const AMENITIES = [
@@ -28,8 +30,15 @@ const AMENITIES = [
 ];
 
 export const ListYourSpot: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const dispatch = useAppDispatch();
+  
+  // Get params from navigation (passed when editing)
+  const listingId = route.params?.listingId;
+  const isEditMode = !!listingId;
+
+  // State for form fields
   const [spotName, setSpotName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
@@ -40,6 +49,60 @@ export const ListYourSpot: React.FC = () => {
   const [lon, setLon] = useState(120.9822);
   const [slotType, setSlotType] = useState<'roadside_qr' | 'commercial_manual' | 'commercial_iot'>('roadside_qr');
   const [loading, setLoading] = useState(false);
+
+  // Fetch listing data if in edit mode
+  useEffect(() => {
+    if (isEditMode && listingId) {
+      const fetchListing = async () => {
+        try {
+          setLoading(true);
+          const response = await marketplaceAPI.getListingById(listingId);
+          const listing = response.data?.data || response.data;
+
+           if (listing) {
+            setSpotName(listing.title || listing.address || '');
+            setDescription(listing.description || '');
+            setAddress(listing.address || '');
+            setPrice(listing.price?.toString() || '');
+            setLat(listing.lat || listing.latitude || 14.5995);
+            setLon(listing.lon || listing.longitude || 120.9822);
+            setSlotType(listing.slotType || 'roadside_qr');
+            
+            // Parse amenities
+            if (listing.amenities) {
+              try {
+                const parsed = typeof listing.amenities === 'string' 
+                  ? JSON.parse(listing.amenities) 
+                  : listing.amenities;
+                setSelectedAmenities(parsed || []);
+              } catch (e) {
+                // Ignore parse errors
+              }
+            }
+            
+            // Parse photos
+            if (listing.photos) {
+              try {
+                const parsed = typeof listing.photos === 'string' 
+                  ? JSON.parse(listing.photos) 
+                  : listing.photos;
+                setPhotos(parsed || []);
+              } catch (e) {
+                // Ignore parse errors
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch listing:', error);
+          Alert.alert('Error', 'Failed to load listing data');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchListing();
+    }
+  }, [isEditMode, listingId]);
 
   const toggleAmenity = useCallback((key: string) => {
     setSelectedAmenities((prev) =>
@@ -69,48 +132,104 @@ export const ListYourSpot: React.FC = () => {
     }
   }, []);
 
-  const handleContinue = useCallback(async () => {
-    if (!spotName.trim()) {
-      Alert.alert('Required', 'Please enter a spot name.');
-      return;
-    }
-    if (!address.trim()) {
-      Alert.alert('Required', 'Please enter an address.');
-      return;
-    }
-    if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
-      Alert.alert('Required', 'Please enter a valid price.');
-      return;
-    }
+   const handleContinue = useCallback(async () => {
+     if (!spotName.trim()) {
+       Alert.alert('Required', 'Please enter a spot name.');
+       return;
+     }
+     if (!address.trim()) {
+       Alert.alert('Required', 'Please enter an address.');
+       return;
+     }
+     if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
+       Alert.alert('Required', 'Please enter a valid price.');
+       return;
+     }
 
-    setLoading(true);
-    try {
-      const listingData = {
-        title: spotName.trim(),
-        description: description.trim(),
-        address: address.trim(),
-        latitude: Number(lat) || 14.5995,
-        longitude: Number(lon) || 120.9822,
-        pricePerHour: Number(price),
-        slotType,
-        amenities: selectedAmenities,
-        photos: photos.filter(p => !p.includes('unsplash')),
-      };
+     setLoading(true);
+     try {
+       const listingData = {
+         title: spotName.trim(),
+         description: description.trim(),
+         address: address.trim(),
+         latitude: Number(lat) || 14.5995,
+         longitude: Number(lon) || 120.9822,
+         pricePerHour: Number(price),
+         slotType,
+         amenities: selectedAmenities,
+         photos: photos.filter(p => !p.includes('unsplash')),
+       };
 
-      const result = await dispatch(createListing(listingData)).unwrap();
-      
-      Alert.alert(
-        'Success! 🎉',
-        'Your parking spot has been listed.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    } catch (error: any) {
-      console.error('Create listing error:', error);
-      Alert.alert('Error', error?.message || 'Failed to create listing. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [spotName, address, price, lat, lon, slotType, description, selectedAmenities, photos, dispatch, navigation]);
+        let result: any;
+        if (isEditMode && listingId) {
+          // Update existing listing via API - convert to backend field names
+          const updateData = {
+            title: spotName.trim(),
+            description: description.trim(),
+            address: address.trim(),
+            lat: Number(lat) || 14.5995,
+            lon: Number(lon) || 120.9822,
+            price: Number(price),
+            slotType,
+            amenities: selectedAmenities,
+            photos: photos.filter(p => !p.includes('unsplash')),
+          };
+          result = await marketplaceAPI.updateListing(listingId, updateData);
+          Alert.alert(
+            'Updated! 🎉',
+            'Your parking spot has been updated.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        } else {
+         // Create new listing via Redux
+         result = await dispatch(createListing(listingData)).unwrap();
+         
+// Upload local photos if any (only file:// URIs, not existing GCS URLs)
+          const newListingId = result.id || result.data?.id;
+          const localPhotos = photos.filter(p => p.startsWith('file://'));
+          
+          console.log('[ListYourSpot] Photos to upload:', localPhotos.length, 'listingId:', newListingId);
+          
+          if (localPhotos.length > 0 && newListingId) {
+            const uploadedUrls: string[] = [];
+            for (const photoUri of localPhotos) {
+              try {
+                console.log('[ListYourSpot] Uploading photo:', photoUri);
+                const uploadResult = await mediaAPI.uploadListingPhoto(newListingId, photoUri);
+                console.log('[ListYourSpot] Upload result:', uploadResult);
+                // Store the original URL from the result
+                if (uploadResult.original) {
+                  uploadedUrls.push(uploadResult.original);
+                }
+              } catch (uploadError: any) {
+                console.error('[ListYourSpot] Failed to upload photo:', uploadError?.message || uploadError);
+              }
+            }
+            
+            // Update listing with photo URLs if any uploaded
+            if (uploadedUrls.length > 0) {
+              try {
+                await marketplaceAPI.updateListing(newListingId, { photos: uploadedUrls });
+                console.log('[ListYourSpot] Listing updated with photos');
+              } catch (updateError) {
+                console.error('[ListYourSpot] Failed to update listing with photos:', updateError);
+              }
+            }
+          }
+         
+         Alert.alert(
+           'Success! 🎉',
+           'Your parking spot has been listed.',
+           [{ text: 'OK', onPress: () => navigation.goBack() }]
+         );
+       }
+     } catch (error: any) {
+       console.error('Listing error:', error);
+       Alert.alert('Error', error?.message || 'Failed to save listing. Please try again.');
+     } finally {
+       setLoading(false);
+     }
+   }, [spotName, address, price, lat, lon, slotType, description, selectedAmenities, photos, dispatch, navigation, isEditMode, listingId]);
 
   const handleBack = useCallback(() => {
     navigation.goBack();
@@ -314,7 +433,7 @@ export const ListYourSpot: React.FC = () => {
           disabled={loading}
         >
           <Text style={styles.continueButtonText}>
-            {loading ? 'Creating...' : 'Continue'}
+            {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Continue')}
           </Text>
         </TouchableOpacity>
       </View>

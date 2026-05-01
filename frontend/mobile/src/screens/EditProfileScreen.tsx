@@ -106,14 +106,11 @@ export const EditProfileScreen: React.FC = () => {
     try {
       setUploading(true);
       const fileName = getFileName(uri);
-      console.log('[ProfileUpload] Step 1: Starting upload for:', fileName);
 
       const { data: { uploadUrl, fileName: gcsFileName } } = await userAPI.getProfileUploadUrl(fileName);
-      console.log('[ProfileUpload] Step 2: Got signed URL, gcsFileName:', gcsFileName);
 
       const response = await fetch(uri);
       const blob = await response.blob();
-      console.log('[ProfileUpload] Step 3: Fetched image blob, size:', blob.size);
 
       // Upload to GCS with proper error handling
       const uploadResult = await fetch(uploadUrl, {
@@ -123,46 +120,32 @@ export const EditProfileScreen: React.FC = () => {
           'Content-Type': 'image/jpeg',
         },
       });
-      
-      console.log('[ProfileUpload] Step 4: Upload to GCS, status:', uploadResult.status);
-      
+
       if (!uploadResult.ok) {
         const errorText = await uploadResult.text();
         console.error('[ProfileUpload] GCS upload failed:', errorText);
         throw new Error(`Upload failed: ${uploadResult.status} - ${errorText}`);
       }
 
-      console.log('[ProfileUpload] Step 4b: Verifying upload...');
-      
       // Small delay to ensure GCS has processed the file
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const processResult = await userAPI.uploadProfilePicture(gcsFileName);
-      console.log('[ProfileUpload] Step 5: Full response:', processResult);
-      
+
       // The API returns the user object in processResult.data
       const responseData = processResult.data;
-      console.log('[ProfileUpload] Step 5b: Response data:', responseData);
-      
+
       // Extract profileImageUrl from the response - it's the resized image URL
       const newImageUrl = responseData?.profileImageUrl;
-      console.log('[ProfileUpload] Step 6: Server returned URL:', newImageUrl);
-      console.log('[ProfileUpload] Step 6b: GCS filename was:', gcsFileName);
-      
+
       if (newImageUrl) {
         setProfileImage(newImageUrl);
-        
-        // Directly update Redux user state without making another API call
-        dispatch(setUser({ 
-          ...user!,
-          profileImageUrl: newImageUrl 
-        }));
-        
+
+
         // Also persist to AsyncStorage
         const updatedUser = { ...user!, profileImageUrl: newImageUrl };
         AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-        
-        console.log('[ProfileUpload] Step 7: SUCCESS - Profile updated with:', newImageUrl);
+
         Alert.alert('Success', 'Profile photo updated successfully');
       } else {
         console.error('[ProfileUpload] No profileImageUrl in response!');

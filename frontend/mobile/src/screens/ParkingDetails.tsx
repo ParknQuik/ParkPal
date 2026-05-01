@@ -6,6 +6,7 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Share,
   TouchableOpacity,
   ActivityIndicator,
   Linking,
@@ -27,9 +28,6 @@ export const ParkingDetails: React.FC = () => {
   const route = useRoute<any>();
   const { spotId, fromBooking, bookingId, bookingStatus, startTime, endTime, totalAmount, rentalMode } = route.params || {};
   const showReserveButton = fromBooking !== true;
-  // Debug: log the params for debugging
-  console.log("[ParkingDetails] route.params:", route.params);
-  console.log("[ParkingDetails] spotId:", spotId);
 
   const [spot, setSpot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -117,7 +115,16 @@ export const ParkingDetails: React.FC = () => {
               <Text style={styles.headerButtonText}>←</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Parking Details</Text>
-            <TouchableOpacity style={styles.headerButton}>
+            <TouchableOpacity 
+              style={styles.headerButton}
+              onPress={() => {
+                Share.share({
+                  title: title,
+                  message: `Check out this parking spot: ${title}\nAddress: ${location}\nPrice: ₱${price}/hour`,
+                  url: `https://parkpal.app/spot/${spotId}`,
+                });
+              }}
+            >
               <Text style={styles.headerButtonText}>↗</Text>
             </TouchableOpacity>
           </View>
