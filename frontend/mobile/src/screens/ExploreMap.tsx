@@ -20,6 +20,8 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings } from '../store/slices/marketplaceSlice';
 import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
 import { colors } from '../theme/colors';
+import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
+import { analyticsService } from '../services/analytics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -106,6 +108,29 @@ export const ExploreMap: React.FC = () => {
 
   const { listings, loading } = useAppSelector((state) => state.marketplace);
   const { zoneAvailability } = useAppSelector((state) => state.analytics);
+
+  // Analytics zones overlay
+  const [analyticsZones, setAnalyticsZones] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const loadZones = async () => {
+      const zones = await analyticsService.getZones();
+      setAnalyticsZones(zones);
+    };
+    loadZones();
+  }, []);
+
+  // Initialize geofencing hook
+  const { currentZone, sessionId } = useAnalyticsGeofencing(
+    analyticsZones.map(z => ({
+      id: z.id,
+      name: z.name,
+      centerLat: z.centroidLat,
+      centerLon: z.centroidLon,
+      radius: 300,
+    })),
+    true
+  );
 
   const selectedListing = selectedMarker !== null
     ? listings.find((l: any) => l.id === selectedMarker)
@@ -289,6 +314,16 @@ export const ExploreMap: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Analytics Zone Indicator */}
+      {currentZone && (
+        <View style={styles.zoneIndicator}>
+          <View style={styles.zoneIndicatorDot} />
+          <Text style={styles.zoneIndicatorText}>
+            In {currentZone.name}
+          </Text>
+        </View>
+      )}
+
       {/* Map Background */}
       <View style={styles.mapContainer}>
         <MapView
@@ -319,6 +354,30 @@ export const ExploreMap: React.FC = () => {
             strokeColor="rgba(16, 183, 127, 0.5)"
             strokeWidth={2}
           />
+          {/* Analytics Zone Overlays */}
+          {analyticsZones.map((zone: any) => (
+            <React.Fragment key={zone.id}>
+              <Circle
+                center={{
+                  latitude: zone.centroidLat,
+                  longitude: zone.centroidLon,
+                }}
+                radius={300}
+                fillColor={currentZone?.id === zone.id ? 'rgba(16, 183, 127, 0.2)' : 'rgba(100, 116, 139, 0.1)'}
+                strokeColor={currentZone?.id === zone.id ? 'rgba(16, 183, 127, 0.7)' : 'rgba(100, 116, 139, 0.4)'}
+                strokeWidth={currentZone?.id === zone.id ? 3 : 2}
+              />
+              {/* Zone label */}
+              <Marker
+                coordinate={{
+                  latitude: zone.centroidLat,
+                  longitude: zone.centroidLon,
+                }}
+                title={zone.name}
+                description={currentZone?.id === zone.id ? `Active session: ${sessionId}` : 'Tap for availability'}
+              />
+            </React.Fragment>
+          ))}
         </MapView>
 
         {/* Search this area button */}
@@ -741,6 +800,30 @@ const styles = StyleSheet.create({
   circlingText: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  zoneIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 183, 127, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 100,
+  },
+  zoneIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+    marginRight: 8,
+  },
+  zoneIndicatorText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 
