@@ -1,9 +1,9 @@
 # ParkPal Project Status Report
 
-**Last Updated:** April 18, 2026
-**Current Branch:** `debug/mobile-login`
-**Production Readiness:** 65/100 (Host listing flow working, booking tabs by date, ParkingDetail improvements)
-**Phase:** Phase 5: Beta Launch - Integration Testing
+**Last Updated:** May 1, 2026
+**Current Branch:** `feat/mobile-analytics-integration`
+**Production Readiness:** 70/100 (Phase 6A analytics foundation complete)
+**Phase:** Phase 6A: Mobile Analytics Integration
 
 ---
 
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
 |------|------------|--------------|---------------------|
+| May 1, 2026 | Claude | Phase 6A analytics: Redux slice, geofence service, opt-in modal, ExploreMap zone availability badges, analyticsAPI (6 endpoints), types | 70/100 |
 | Apr 18, 2026 | Claude | Mobile fixes: booking tabs by date, booking details in ParkingDetail, map→Explore navigation, push notif fallback | 65/100 |
 | Apr 9, 2026 | Claude | Booking system overhaul: rental modes, extensions, cash payment, expiry protocol, tests | 85/100 |
 | Mar 15, 2026 | Claude | Mobile backend config: Automatic IP detection via Expo Metro bundler, zero-config local dev | 89/100 |
@@ -51,7 +52,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Claimed:** All deployments ready
 - **Actual:** Only backend deployed, web/mobile not deployed
 
-### Current State (April 18, 2026)
+### Current State (May 1, 2026)
 
 **Deployed:**
 - Backend API: DEPLOYED via automated CD pipeline ✅
@@ -61,7 +62,18 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **Not Deployed:**
 - Mobile App: NOT DEPLOYED (not in app stores)
 
-**Recent Major Progress (April 9, 2026):**
+**Recent Major Progress (May 1, 2026):**
+
+**Phase 6A — Mobile Analytics Foundation:**
+- ✅ `analyticsAPI` — 6 endpoints wired to backend (zone enter/exit, activity log, zone availability, metrics, zones list)
+- ✅ `analyticsSlice` — Redux state for active sessions, zone availability cache, opt-in persistence
+- ✅ `analyticsGeofenceService` — foreground GPS watcher with @turf/turf polygon geofencing, speed-based activity inference
+- ✅ `AnalyticsOptInModal` — privacy consent bottom sheet, shown once after first login
+- ✅ `AppNavigator` wired — auto-starts/stops geofence on login + opt-in, fetches zones from backend
+- ✅ `ExploreMap` — zone availability badge (open/moderate/full) + circling time estimate on listing card
+- ✅ Analytics types added: `Zone`, `ZoneAvailability`, `ParkingSession`, `ActivityEvent`, `AnalyticsState`
+- ✅ Packages installed: `expo-task-manager`, `@turf/turf`
+- ✅ Doc consolidation: 36 redundant MD files merged into 8, PAYMONGO.md secret placeholder fixed
 
 **April 2026 - Booking System Overhaul:**
 - ✅ Rental Modes: Fixed duration + Open time (pay-on-exit)

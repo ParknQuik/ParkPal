@@ -1,9 +1,9 @@
 # ParkPal Development Roadmap
 
-**Last Updated:** April 9, 2026
-**Current Week:** Week 7 of 9
-**Current Phase:** Phase 2 Complete ✅ / Phase 3-4 In Progress
-**Target Public Launch:** Late April 2026
+**Last Updated:** May 1, 2026
+**Current Week:** Phase 6A In Progress
+**Current Phase:** Phase 6A — Mobile Analytics Integration
+**Target Public Launch:** May-June 2026
 
 ---
 
@@ -575,8 +575,34 @@ This roadmap reflects the **actual state** of ParkPal as of February 24, 2026, b
 ### Week 13+: Growth & Iteration
 - [ ] Implement post-launch features
 - [ ] Expand to new cities/regions
-- [ ] Build Service 1 (Analytics) - See SERVICE_1_ANALYTICS_GUIDE.md
+- [x] Build Service 1 (Analytics) — Phase 6A complete ✅ [May 1, 2026]
+- [ ] Phase 6B: Background location tracking (Apple/Google entitlements)
+- [ ] Phase 6B: Settings toggle for analytics opt-in/out
+- [ ] Phase 6B: Zone availability overlays on map (colored circles)
 - [ ] Continuous improvement based on data
+
+---
+
+## Phase 6A: Mobile Analytics (May 1, 2026) ✅ COMPLETE
+
+**Branch:** `feat/mobile-analytics-integration`
+**Status:** Complete — pending PR to dev
+
+### Completed:
+- [x] Install `expo-task-manager` + `@turf/turf` ✅ [May 1]
+- [x] `analyticsAPI` — 6 endpoints in `api.ts` ✅ [May 1]
+- [x] `analyticsSlice.ts` — Redux slice with thunks ✅ [May 1]
+- [x] `analyticsGeofenceService.ts` — foreground GPS + turf polygon geofencing ✅ [May 1]
+- [x] `AnalyticsOptInModal` — privacy consent UI ✅ [May 1]
+- [x] `AppNavigator` wired — start/stop geofence on auth state ✅ [May 1]
+- [x] `ExploreMap` — zone availability badge + circling time ✅ [May 1]
+- [x] Analytics types in `types/index.ts` ✅ [May 1]
+
+### Phase 6B (Next):
+- [ ] Background location tracking (requires Apple/Google background location entitlement)
+- [ ] Settings screen opt-in toggle (let users change decision post-prompt)
+- [ ] Zone availability circle overlays on ExploreMap
+- [ ] Databricks pipeline integration (see `docs/future-phases/SERVICE_1_ANALYTICS.md`)
 
 ---
 
