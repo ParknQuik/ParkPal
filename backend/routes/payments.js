@@ -3,6 +3,7 @@ const { authenticate } = require('../services/auth');
 const { validateBody, validateQuery, validateParams } = require('../middleware/validation');
 const {
   createPaymentSchema,
+  confirmPaymentSchema,
   getPaymentsQuerySchema,
   idParamSchema
 } = require('../validators/payments');
@@ -19,6 +20,7 @@ module.exports = (app) => {
   app.post(
     '/payments/confirm',
     authenticate,
+    validateBody(confirmPaymentSchema),
     paymentsController.confirmPayment
   );
 

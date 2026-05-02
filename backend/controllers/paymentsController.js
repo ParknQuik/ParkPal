@@ -455,7 +455,7 @@ exports.handleWebhook = async (req, res) => {
     // Verify webhook signature using RAW body (not re-serialized JSON)
     const isValid = paymongoService.verifyWebhookSignature(rawBody, signature);
 
-    if (!isValid && process.env.NODE_ENV === 'production') {
+    if (!isValid) {
       console.error('Invalid webhook signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }

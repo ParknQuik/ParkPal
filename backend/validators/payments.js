@@ -96,6 +96,20 @@ exports.getPaymentsQuerySchema = Joi.object({
 });
 
 /**
+ * Validator for confirming a payment
+ */
+exports.confirmPaymentSchema = Joi.object({
+  paymentIntentId: Joi.string()
+    .min(1)
+    .required()
+    .messages({
+      'string.base': 'paymentIntentId must be a string',
+      'string.empty': 'paymentIntentId cannot be empty',
+      'any.required': 'paymentIntentId is required'
+    })
+});
+
+/**
  * Validator for ID path parameter
  */
 exports.idParamSchema = Joi.object({

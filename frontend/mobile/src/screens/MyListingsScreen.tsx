@@ -263,18 +263,12 @@ const handleFilterPress = useCallback(async () => {
             contentContainerStyle={styles.listingsList}
             ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <MaterialIcons name="add-location" size={48} color={colors.textSecondary} />
-                <Text style={styles.emptyText}>No listings yet</Text>
-                <TouchableOpacity
-                  style={styles.addListingButton}
-                  onPress={() => navigation.navigate('ListSpot' as never)}
-                >
-                  <Text style={styles.addListingText}>Create Your First Listing</Text>
-                </TouchableOpacity>
-              </View>
-            }
+             ListEmptyComponent={
+               <View style={styles.emptyContainer}>
+                 <MaterialIcons name="add-location" size={48} color={colors.textSecondary} />
+                 <Text style={styles.emptyText}>No listings yet</Text>
+               </View>
+             }
           />
           )}
         </View>
