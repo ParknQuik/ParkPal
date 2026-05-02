@@ -11,6 +11,7 @@
 | April 18, 2026 | 85-90% | All critical blockers fixed except payment testing — **RATING WAS INFLATED** |
 | April 18, 2026 (re-audit) | 60-65% | Runtime crash in ListYourSpot, photo upload broken, hardcoded IP still present |
 | April 20, 2026 | 90-95% | All crash-level bugs fixed, core features working, photo upload implemented, payment methods functional |
+| May 2, 2026 | 95-100% | Auto-release for open-time bookings, cash payment UX, bookings tab filtering all fixed |
 
 ---
 
@@ -153,6 +154,9 @@ The Apple button renders but has no `onPress` and there is no backend OAuth endp
 - ✅ Security & Privacy and Help Center screens added
 - ✅ Parking details share functionality implemented
 - ✅ Apple Sign-In button removed to avoid confusion
+- ✅ Auto-release for open-time bookings — slots automatically released after 30min grace period if user doesn't check in
+- ✅ BookingConfirmed screen properly handles cash payments — shows "Booking Confirmed" instead of "Payment Success" with appropriate messaging
+- ✅ MyBookingsScreen tab filtering fixed — confirmed bookings without sessions display correctly in "Upcoming" tab
 
 ---
 
@@ -167,6 +171,7 @@ The Apple button renders but has no `onPress` and there is no backend OAuth endp
 | Offline support | ❌ Missing | No local caching |
 | Error boundaries | ❌ Missing | No graceful crash recovery |
 | Photo upload (reviews) | ⏸️ Deferred | "Coming Soon" placeholder — deprioritized |
+| Push notifications for auto-release | ⏸️ Deferred | No notification sent when slot auto-releases — notification system exists but not integrated |
 
 ---
 
