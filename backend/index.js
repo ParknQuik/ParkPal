@@ -206,7 +206,7 @@ if (process.env.NODE_ENV !== 'test') {
   logger.info('Auto-checkout cron job scheduled (every 30 minutes)');
 
   // Booking expiry cron jobs
-  const { checkExpiredBookings, sendExpiryReminders } = require('./services/bookingExpiry');
+  const { checkExpiredBookings, checkMissedOpenTimeBookings, sendExpiryReminders } = require('./services/bookingExpiry');
   
   // Check for expired bookings every 5 minutes
   cron.schedule('*/5 * * * *', async () => {
@@ -214,6 +214,15 @@ if (process.env.NODE_ENV !== 'test') {
       await checkExpiredBookings();
     } catch (error) {
       logger.error('[Cron] Booking expiry check failed:', error);
+    }
+  });
+
+  // Check for missed open time bookings every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await checkMissedOpenTimeBookings();
+    } catch (error) {
+      logger.error('[Cron] Missed open time bookings check failed:', error);
     }
   });
   

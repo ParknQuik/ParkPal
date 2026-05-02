@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -24,7 +25,7 @@ const BACKGROUND = '#f6f6f8';
 export const BookingConfirmed: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { paymentId, bookingId, amount, spotName, spotAddress, startTime, endTime } = route.params as any;
+  const { paymentId, bookingId, amount, spotName, spotAddress, startTime, endTime, paymentMethod, rentalMode } = route.params as any;
   const scaleAnim = new Animated.Value(0);
   const fadeAnim = new Animated.Value(0);
 
@@ -78,6 +79,13 @@ export const BookingConfirmed: React.FC = () => {
     Alert.alert('Receipt', 'Receipt downloading...');
   };
 
+  const handleScanToCheckIn = () => {
+    navigation.navigate('QRScanner' as never, {
+      mode: 'checkin',
+      bookingId: bookingId,
+    } as never);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -86,7 +94,7 @@ export const BookingConfirmed: React.FC = () => {
           <TouchableOpacity style={styles.headerButton} onPress={handleClose}>
             <Text style={styles.headerButtonText}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment Success</Text>
+          <Text style={styles.headerTitle}>{paymentMethod === 'cash' ? 'Booking Confirmed' : 'Payment Success'}</Text>
           <View style={styles.headerButton} />
         </View>
 
@@ -110,7 +118,7 @@ export const BookingConfirmed: React.FC = () => {
           <View style={styles.titleSection}>
             <Text style={styles.mainTitle}>Booking Confirmed!</Text>
             <Text style={styles.subtitle}>
-              Your parking spot has been reserved successfully
+              {paymentMethod === 'cash' ? 'Please pay in cash when you arrive at the parking location.' : 'Your parking spot has been reserved successfully'}
             </Text>
             <View style={styles.bookingIdBadge}>
               <Text style={styles.bookingIdLabel}>Booking ID</Text>
@@ -152,34 +160,44 @@ export const BookingConfirmed: React.FC = () => {
               </View>
             </View>
 
-            <View style={styles.divider} />
-
-            {/* Total Paid */}
-            <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>Total Paid</Text>
-              <Text style={styles.totalPaid}>{displayData.totalPaid}</Text>
-            </View>
+        {paymentMethod !== 'cash' && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Total Paid</Text>
+                  <Text style={styles.totalPaid}>{displayData.totalPaid}</Text>
+                </View>
+              </>
+        )}
           </View>
 
           {/* QR Code Section */}
-          <View style={styles.qrSection}>
-            <Text style={styles.qrSectionTitle}>Check-in QR Code</Text>
-            <View style={styles.qrContainer}>
-              <Image
-                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PARKPAL:${bookingId}` }}
-                style={styles.qrImage}
-                resizeMode="contain"
-              />
+        <View style={styles.qrSection}>
+              <Text style={styles.qrSectionTitle}>Check-in QR Code</Text>
+              <View style={styles.qrContainer}>
+                <Image
+                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PARKPAL:${bookingId}` }}
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text style={styles.qrInstruction}>
+                Show this QR code at check-in
+              </Text>
             </View>
-            <Text style={styles.qrInstruction}>
-              Show this QR code at check-in
-            </Text>
-          </View>
         </Animated.View>
       </ScrollView>
 
       {/* Footer Buttons */}
       <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.scanCheckInButton}
+          onPress={handleScanToCheckIn}
+        >
+          <MaterialCommunityIcons name="qrcode-scan" size={18} color="#ffffff" style={styles.scanCheckInButtonIcon} />
+          <Text style={styles.scanCheckInButtonText}>Scan to Check In</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={handleViewBooking}
@@ -187,12 +205,14 @@ export const BookingConfirmed: React.FC = () => {
           <Text style={styles.primaryButtonText}>View Booking</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.outlineButton}
-          onPress={handleDownloadReceipt}
-        >
-          <Text style={styles.outlineButtonText}>Download Receipt</Text>
-        </TouchableOpacity>
+        {paymentMethod !== 'cash' && (
+          <TouchableOpacity
+            style={styles.outlineButton}
+            onPress={handleDownloadReceipt}
+          >
+            <Text style={styles.outlineButtonText}>Download Receipt</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.supportRow}>
           <Text style={styles.supportText}>Questions? </Text>
@@ -457,5 +477,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: PRIMARY,
+  },
+  scanCheckInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  scanCheckInButtonIcon: {
+    marginRight: 8,
+  },
+  scanCheckInButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });

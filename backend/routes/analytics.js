@@ -358,7 +358,7 @@ router.get('/analytics/zones', validateQuery(zonesListQuerySchema), async (req, 
     const where = {};
     if (city) where.city = city;
     if (type) where.type = type;
-    if (isActive !== undefined) where.isActive = isActive === 'true';
+    if (isActive !== undefined) where.isActive = isActive === true || isActive === 'true';
 
     const zones = await prisma.zone.findMany({
       where,

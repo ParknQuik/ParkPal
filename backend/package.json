@@ -2,6 +2,9 @@
   "name": "parknquik-backend",
   "version": "1.0.0",
   "main": "index.js",
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "scripts": {
     "start": "FORCE_COLOR=0 node index.js",
     "dev": "FORCE_COLOR=0 nodemon index.js",

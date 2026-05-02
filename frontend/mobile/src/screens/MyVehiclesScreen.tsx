@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,20 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Modal,
-  TextInput,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
   getVehicles,
-  createVehicle,
-  updateVehicle,
   deleteVehicle,
   setDefaultVehicle,
   Vehicle,
@@ -29,24 +23,14 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { colors, typography, spacing, borderRadius } from '../theme';
+import type { RootStackParamList } from '../types';
 
 export const MyVehiclesScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'MyVehicles'>>();
   const dispatch = useAppDispatch();
   const { vehicles, loading, error } = useAppSelector((state) => state.vehicles);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Form state
-  const [make, setMake] = useState('');
-  const [model, setModel] = useState('');
-  const [year, setYear] = useState('');
-  const [color, setColor] = useState('');
-  const [licensePlate, setLicensePlate] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -68,103 +52,15 @@ export const MyVehiclesScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  const resetForm = () => {
-    setMake('');
-    setModel('');
-    setYear('');
-    setColor('');
-    setLicensePlate('');
-    setIsDefault(false);
-    setEditingVehicle(null);
-  };
-
   const handleAddVehicle = () => {
-    resetForm();
-    setShowModal(true);
+    navigation.navigate('AddVehicleWizard', {});
   };
 
   const handleEditVehicle = (vehicle: Vehicle) => {
-    setEditingVehicle(vehicle);
-    setMake(vehicle.make);
-    setModel(vehicle.model);
-    setYear(vehicle.year.toString());
-    setColor(vehicle.color);
-    setLicensePlate(vehicle.licensePlate);
-    setIsDefault(vehicle.isDefault);
-    setShowModal(true);
+    navigation.navigate('AddVehicleWizard', { vehicleId: vehicle.id });
   };
 
-  const handleCloseModal = () => {
-    setShowModal(false);
-    resetForm();
-  };
 
-  const validateForm = (): boolean => {
-    if (!make.trim()) {
-      Alert.alert('Validation Error', 'Make is required');
-      return false;
-    }
-    if (!model.trim()) {
-      Alert.alert('Validation Error', 'Model is required');
-      return false;
-    }
-    if (!year.trim()) {
-      Alert.alert('Validation Error', 'Year is required');
-      return false;
-    }
-    const yearNum = parseInt(year);
-    if (isNaN(yearNum) || yearNum < 1900 || yearNum > new Date().getFullYear() + 1) {
-      Alert.alert('Validation Error', 'Please enter a valid year');
-      return false;
-    }
-    if (!color.trim()) {
-      Alert.alert('Validation Error', 'Color is required');
-      return false;
-    }
-    if (!licensePlate.trim()) {
-      Alert.alert('Validation Error', 'License plate is required');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-    try {
-      const vehicleData = {
-        make: make.trim(),
-        model: model.trim(),
-        year: parseInt(year),
-        color: color.trim(),
-        licensePlate: licensePlate.trim().toUpperCase(),
-        isDefault,
-      };
-
-      if (editingVehicle) {
-        await dispatch(updateVehicle({ id: editingVehicle.id, data: vehicleData })).unwrap();
-        Alert.alert('Success', 'Vehicle updated successfully');
-      } else {
-        await dispatch(createVehicle(vehicleData)).unwrap();
-        Alert.alert('Success', 'Vehicle added successfully');
-      }
-
-      handleCloseModal();
-      loadVehicles();
-    } catch (err: any) {
-      console.error('Failed to save vehicle:', err.response?.data?.error || err.message);
-      
-      const errorMessage = err.response?.data?.error 
-        || err.response?.data?.message 
-        || err.message 
-        || 'Failed to save vehicle. Please try again.';
-      
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleDeleteVehicle = (vehicle: Vehicle) => {
     Alert.alert(
@@ -296,115 +192,8 @@ export const MyVehiclesScreen: React.FC = () => {
             ))}
           </View>
         )}
-      </ScrollView>
-
-      {/* Add/Edit Modal */}
-      <Modal
-        visible={showModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={handleCloseModal}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalContainer}
-        >
-          <SafeAreaView style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={handleCloseModal}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>
-                {editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}
-              </Text>
-              <View style={{ width: 60 }} />
-            </View>
-
-            <ScrollView style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Make *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={make}
-                  onChangeText={setMake}
-                  placeholder="e.g., Toyota"
-                  placeholderTextColor={colors.textSecondary}
-                  autoCapitalize="words"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Model *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={model}
-                  onChangeText={setModel}
-                  placeholder="e.g., Vios"
-                  placeholderTextColor={colors.textSecondary}
-                  autoCapitalize="words"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Year *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={year}
-                  onChangeText={setYear}
-                  placeholder="e.g., 2023"
-                  placeholderTextColor={colors.textSecondary}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Color *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={color}
-                  onChangeText={setColor}
-                  placeholder="e.g., Silver"
-                  placeholderTextColor={colors.textSecondary}
-                  autoCapitalize="words"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>License Plate *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={licensePlate}
-                  onChangeText={setLicensePlate}
-                  placeholder="e.g., ABC-1234"
-                  placeholderTextColor={colors.textSecondary}
-                  autoCapitalize="characters"
-                  maxLength={10}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => setIsDefault(!isDefault)}
-              >
-                <View style={[styles.checkbox, isDefault && styles.checkboxChecked]}>
-                  {isDefault && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.checkboxLabel}>Set as default vehicle</Text>
-              </TouchableOpacity>
-
-              <Button
-                title={isSubmitting ? 'Saving...' : editingVehicle ? 'Update Vehicle' : 'Add Vehicle'}
-                onPress={handleSubmit}
-                variant="primary"
-                disabled={isSubmitting}
-                style={styles.submitButton}
-              />
-            </ScrollView>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
-      </Modal>
-    </SafeAreaView>
+       </ScrollView>
+     </SafeAreaView>
   );
 };
 
@@ -525,81 +314,5 @@ const styles = StyleSheet.create({
   vehicleDetail: {
     ...typography.body,
     color: colors.textSecondary,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  modalContent: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  cancelText: {
-    ...typography.body,
-    color: colors.primary,
-  },
-  modalTitle: {
-    ...typography.h4,
-    color: colors.text,
-  },
-  form: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
-  label: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...typography.body,
-    color: colors.text,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    marginRight: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  checkmark: {
-    color: colors.white,
-    fontWeight: 'bold',
-  },
-  checkboxLabel: {
-    ...typography.body,
-    color: colors.text,
-  },
-  submitButton: {
-    marginBottom: spacing.xl,
   },
 });
