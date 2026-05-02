@@ -1,6 +1,11 @@
 const prisma = require('../config/prisma');
 const { broadcast } = require('../services/websocket');
 const paymongoService = require('../services/paymongo');
+const crypto = require('crypto');
+
+function generateSecureToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 /**
  * Create a payment intent for a booking
@@ -28,12 +33,26 @@ exports.createPaymentIntent = async (req, res) => {
     }
 
     if (paymentMethod === 'cash') {
+      const cashToken = generateSecureToken();
+      
+      const payment = await prisma.payment.create({
+        data: {
+          userId,
+          bookingId: parseInt(bookingId),
+          paymentMethod: 'cash',
+          amount: parseFloat(amount),
+          status: 'pending',
+          transactionId: `cash_${cashToken}`
+        }
+      });
+
       return res.json({
-        paymentIntentId: `cash_${booking.id}_${Date.now()}`,
+        paymentIntentId: `cash_${cashToken}`,
         message: 'Cash payment selected. Pay at location.',
         requiresPayment: false,
-        amount: amount,
-        bookingId: parseInt(bookingId)
+        amount: parseFloat(amount),
+        bookingId: parseInt(bookingId),
+        paymentId: payment.id
       });
     }
 
@@ -119,11 +138,25 @@ exports.confirmPayment = async (req, res) => {
     const userId = req.user.id;
 
     if (paymentIntentId.startsWith('cash_')) {
-      const bookingId = parseInt(paymentIntentId.split('_')[1]);
+      const cashToken = paymentIntentId.replace('cash_', '');
       
-      const booking = await prisma.booking.findUnique({
-        where: { id: bookingId }
+      const payment = await prisma.payment.findFirst({
+        where: {
+          transactionId: paymentIntentId,
+          status: 'pending'
+        },
+        include: { 
+          booking: {
+            include: { slot: true }
+          }
+        }
       });
+      
+      if (!payment) {
+        return res.status(404).json({ error: 'Payment not found or already confirmed' });
+      }
+      
+      const booking = payment.booking;
       
       if (!booking) {
         return res.status(404).json({ error: 'Booking not found' });
@@ -133,35 +166,32 @@ exports.confirmPayment = async (req, res) => {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       
-      const payment = await prisma.payment.create({
+      const updatedPayment = await prisma.payment.update({
+        where: { id: payment.id },
         data: {
-          userId: req.user.id,
-          bookingId: bookingId,
-          amount: booking.price,
-          paymentMethod: 'cash',
           status: 'pending',
-          paymentIntent: paymentIntentId,
+          paymentMethod: 'cash'
         }
       });
       
       await prisma.booking.update({
-        where: { id: bookingId },
+        where: { id: booking.id },
         data: { status: 'confirmed' }
       });
       
       await prisma.notification.create({
         data: {
-          userId: booking.hostId,
+          userId: booking.slot?.ownerId,
           title: 'Booking Confirmed - Cash Payment',
-          body: `Booking #${bookingId} confirmed. Guest will pay in cash.`,
+          body: `Booking #${booking.id} confirmed. Guest will pay in cash.`,
           type: 'booking_confirmed',
-          data: JSON.stringify({ bookingId, paymentMethod: 'cash' })
+          data: JSON.stringify({ bookingId: booking.id, paymentMethod: 'cash' })
         }
       });
-      
+
       return res.json({
         message: 'Booking confirmed. Please collect cash payment from customer.',
-        payment: payment,
+        payment: updatedPayment,
         booking: { ...booking, status: 'confirmed' }
       });
     }
@@ -415,20 +445,23 @@ exports.getPaymentById = async (req, res) => {
 /**
  * Handle PayMongo webhooks
  * Webhook events: payment.paid, payment.failed, source.chargeable
+ * Note: This endpoint uses express.raw() so req.body is a Buffer
  */
 exports.handleWebhook = async (req, res) => {
   try {
     const signature = req.headers['paymongo-signature'];
-    const payload = req.body;
+    const rawBody = req.body.toString('utf-8');
 
-    // Verify webhook signature
-    const isValid = paymongoService.verifyWebhookSignature(payload, signature);
+    // Verify webhook signature using RAW body (not re-serialized JSON)
+    const isValid = paymongoService.verifyWebhookSignature(rawBody, signature);
 
     if (!isValid && process.env.NODE_ENV === 'production') {
       console.error('Invalid webhook signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
+    // Parse JSON payload after signature verification
+    const payload = JSON.parse(rawBody);
     const event = payload.data;
     const eventType = event.attributes.type;
 

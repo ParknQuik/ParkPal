@@ -22,21 +22,15 @@ module.exports = (app) => {
     paymentsController.confirmPayment
   );
 
-  // GCash direct payment (alternative flow)
-  app.post(
-    '/payments/gcash',
-    authenticate,
-    validateBody(createPaymentSchema),
-    paymentsController.createGCashPayment
-  );
+   // GCash direct payment (alternative flow)
+   app.post(
+     '/payments/gcash',
+     authenticate,
+     validateBody(createPaymentSchema),
+     paymentsController.createGCashPayment
+   );
 
-  // PayMongo Webhooks (no authentication - verified by signature)
-  app.post(
-    '/payments/webhook',
-    paymentsController.handleWebhook
-  );
-
-  // Legacy payment endpoint (backward compatibility)
+   // Legacy payment endpoint (backward compatibility)
   app.post(
     '/payments',
     authenticate,

@@ -3,6 +3,7 @@ const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../services/qrcode');
 const cache = require('../services/cache');
 const mediaService = require('../services/mediaService');
+const paymongoService = require('../services/paymongo');
 
 // Safe JSON parse that returns a fallback on invalid JSON
 function safeJsonParse(str, fallback = []) {
@@ -2060,6 +2061,24 @@ exports.extendBooking = async (req, res) => {
     if (extensionHours < 1 || extensionHours > 4) {
       return res.status(400).json({ 
         error: 'Extension hours must be between 1 and 4' 
+      });
+    }
+
+    // Verify payment intent with PayMongo
+    const verifyResult = await paymongoService.getPaymentIntent(paymentIntentId);
+    if (!verifyResult.success) {
+      return res.status(500).json({
+        error: 'Failed to verify payment',
+        details: verifyResult.error?.message || 'PayMongo verification failed'
+      });
+    }
+
+    const paymentIntent = verifyResult.paymentIntent;
+    const piStatus = paymentIntent.attributes.status;
+    if (piStatus !== 'succeeded' && piStatus !== 'authorized') {
+      return res.status(400).json({
+        error: 'Invalid payment status',
+        details: `Payment intent must be succeeded or authorized, but is ${piStatus}`
       });
     }
 
