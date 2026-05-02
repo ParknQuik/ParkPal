@@ -73,7 +73,7 @@ export const PaymentScreen: React.FC = () => {
         }
         
         const response = await marketplaceAPI.confirmBooking(finalBookingId);
-        
+
         Alert.alert(
           'Booking Confirmed!',
           'Please pay in cash when you arrive at the parking location.',
@@ -85,6 +85,8 @@ export const PaymentScreen: React.FC = () => {
             spotAddress: spotAddress || '',
             startTime: startTime || '',
             endTime: endTime || '',
+            paymentMethod: selectedPayment,
+            rentalMode,
           } as never) }]
         );
         return;
@@ -146,6 +148,8 @@ export const PaymentScreen: React.FC = () => {
         spotAddress: spotAddress || '',
         startTime: startTime || '',
         endTime: endTime || '',
+        paymentMethod: selectedPayment,
+        rentalMode,
       } as never);
     } catch (err: any) {
       console.error('Booking/payment error:', err);
@@ -158,7 +162,6 @@ export const PaymentScreen: React.FC = () => {
         );
         return;
       }
-      
       navigation.navigate('PaymentFailed' as never, {
         error: err.response?.data?.error || err.message || 'Payment failed',
         bookingId: bookingId,

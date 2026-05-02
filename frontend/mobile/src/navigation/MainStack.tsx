@@ -18,8 +18,10 @@ import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { MyVehiclesScreen } from '../screens/MyVehiclesScreen';
 import { SecurityPrivacyScreen } from '../screens/SecurityPrivacyScreen';
 import { HelpCenterScreen } from '../screens/HelpCenterScreen';
+import { AddVehicleWizardScreen } from '../screens/AddVehicleWizardScreen';
+import { RootStackParamList } from '../types';
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 
 export const MainStack: React.FC = () => {
   return (
@@ -146,6 +148,14 @@ export const MainStack: React.FC = () => {
       <Stack.Screen
         name="MyVehicles"
         component={MyVehiclesScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="AddVehicleWizard"
+        component={AddVehicleWizardScreen}
         options={{
           headerShown: false,
           presentation: 'card',
