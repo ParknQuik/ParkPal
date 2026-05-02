@@ -12,7 +12,7 @@
 | Date | Rating | Key Finding |
 |------|--------|-------------|
 | May 1, 2026 | Phase 6A complete | Analytics backend + mobile layer built, opt-in modal wired |
-| May 2, 2026 | See below | 5-agent audit: 6 critical security issues, 15 high, 18 medium found |
+| May 2, 2026 | **CRITICAL FIXED** | All 6 critical security issues resolved; 15 high, 18 medium remain |
 
 ---
 
@@ -20,7 +20,7 @@
 
 These are security vulnerabilities. Do not ship until resolved.
 
-### C1. Analytics routes have zero authentication
+### ✅ FIXED — C1. Analytics routes have zero authentication
 **File:** `backend/routes/analytics.js:30, 92, 143, 173, 244, 301, 354`
 
 All 7 analytics endpoints (`/zone/enter`, `/activity`, `/zone/exit`, `/zones/:id/availability`, `/zones/:id/metrics`, `/sessions/:sessionId`, `/zones`) have no `authenticate` middleware. Worse, `/zone/enter` and `/activity` accept `userId` from the request body — any anonymous caller can poison analytics data for any user, or read another user's parking session.
@@ -35,7 +35,7 @@ router.post('/analytics/zone/enter', authenticate, validateBody(zoneEnterSchema)
 
 ---
 
-### C2 + C3. PayMongo webhook signature verification is broken in two ways
+### ✅ FIXED — C2 + C3. PayMongo webhook signature verification is broken in two ways
 **Files:** `services/paymongo.js:412-415`, `paymentsController.js:427`, `index.js:105`
 
 **Problem 1 (C2):** Signature verification is skipped when `NODE_ENV !== 'production'`. A forged `payment.paid` webhook POSTed to `/api/v1/payments/webhook` (unauthenticated route) marks any booking as paid in dev/staging.
@@ -57,7 +57,7 @@ if (!webhookSecret) throw new Error('PAYMONGO_WEBHOOK_SECRET missing');
 
 ---
 
-### C4. Unauthenticated booking expiry endpoint exposed in production
+### ✅ FIXED — C4. Unauthenticated booking expiry endpoint exposed in production
 **File:** `backend/routes/marketplace.js:725-740`
 
 `POST /marketplace/bookings/check-expired` has no `authenticate` middleware and no environment guard. Any anonymous caller can trigger booking expiry processing, causing state changes, slot releases, and notification sends. Comment says "for testing/development" but it's mounted in production routes.
@@ -66,7 +66,7 @@ if (!webhookSecret) throw new Error('PAYMONGO_WEBHOOK_SECRET missing');
 
 ---
 
-### C5. Cash payment intent ID is forgeable
+### ✅ FIXED — C5. Cash payment intent ID is forgeable
 **File:** `backend/controllers/paymentsController.js:31-38, 121-167`
 
 `createPaymentIntent` returns `paymentIntentId: cash_${booking.id}_${Date.now()}`. Then `confirmPayment` detects the `cash_` prefix, parses `bookingId` from the string, and immediately marks the booking confirmed. A user can call `/payments/confirm` with `cash_<theirBookingId>_<anything>` to confirm without a real payment.
@@ -75,7 +75,7 @@ if (!webhookSecret) throw new Error('PAYMONGO_WEBHOOK_SECRET missing');
 
 ---
 
-### C6. `extendBooking` marks payment `completed` with any client-supplied string
+### ✅ FIXED — C6. `extendBooking` marks payment `completed` with any client-supplied string
 **File:** `backend/controllers/marketplaceController.js:2046-2186`
 
 The booking extension inserts a Payment row with `status: 'completed'` merely because the client sent a `paymentIntentId` string. There is no PayMongo verification of the intent's state. A user can extend for free by POSTing any non-empty string.
@@ -295,17 +295,22 @@ getZones: (isActive = true) => api.get('/analytics/zones', { params: { isActive 
 - Bcrypt + HIBP password validation solid ✓
 - Joi validation schemas cover most routes ✓
 - `errorHandler.js` well-structured (just not used by controllers)
+- Analytics routes: Authentication + secure userId from token (C1 fixed)
+- PayMongo webhook: Raw body + signature verification (C2, C3 fixed)
+- Unauthenticated endpoints: Removed (C4 fixed)
+- Cash payments: Cryptographically random tokens (C5 fixed)
+- Booking extension: PayMongo verification for payment intents (C6 fixed)
 
 ---
 
 ## Recommended Fix Order for Kilo Code
 
 ### Sprint 1 — Security (Do This First)
-1. **`routes/analytics.js`** — Add `authenticate` to all 7 routes, derive `userId` from `req.user.id` (C1)
-2. **`index.js` + `paymongo.js` + `paymentsController.js`** — Fix webhook raw body + always require signature (C2, C3)
-3. **`routes/marketplace.js:725`** — Remove unauthenticated check-expired endpoint (C4)
-4. **`paymentsController.js:31-38`** — Replace forgeable cash intent ID with server-issued token (C5)
-5. **`marketplaceController.js:2046`** — Verify PayMongo intent status before marking extension paid (C6)
+1. ✅ FIXED — `routes/analytics.js` — Add `authenticate` to all 7 routes, derive `userId` from `req.user.id` (C1)
+2. ✅ FIXED — `index.js` + `paymongo.js` + `paymentsController.js` — Fix webhook raw body + always require signature (C2, C3)
+3. ✅ FIXED — `routes/marketplace.js:725` — Remove unauthenticated check-expired endpoint (C4)
+4. ✅ FIXED — `paymentsController.js:31-38` — Replace forgeable cash intent ID with server-issued token (C5)
+5. ✅ FIXED — `marketplaceController.js:2046` — Verify PayMongo intent status before marking extension paid (C6)
 
 ### Sprint 2 — High Priority Bugs
 6. **`AppNavigator.tsx:61`** — Parse GeoJSON string into `Array<{lat,lon}>` for geofencePolygon (H3)
@@ -342,11 +347,8 @@ getZones: (isActive = true) => api.get('/analytics/zones', { params: { isActive 
 
 | File | Issues |
 |------|--------|
-| `backend/routes/analytics.js` | C1 — missing auth on every route |
-| `backend/controllers/paymentsController.js` | C5, H8, H11, H12 |
-| `backend/services/paymongo.js` | C2, C3 — webhook verification |
-| `backend/index.js` | C3 — global JSON parser before webhook route |
-| `backend/controllers/marketplaceController.js` | C6, H5, H13, H14, M3, M7, M17 |
+| `backend/controllers/paymentsController.js` | H8, H11, H12 |
+| `backend/controllers/marketplaceController.js` | H5, H13, H14, M3, M7, M17 |
 | `backend/controllers/earningsController.js` | H10, M2 — all mock data |
 | `frontend/mobile/src/navigation/AppNavigator.tsx` | H3 — geofencePolygon parsing |
 | `frontend/mobile/src/services/analyticsGeofenceService.ts` | H4 — race condition |
