@@ -57,8 +57,10 @@ export const EarningsScreen: React.FC = () => {
       ]);
 
       setSummary(summaryRes.data?.data || summaryRes.data || null);
-      setAnalytics(analyticsRes.data?.data || analyticsRes.data || []);
-      setTransactions(transactionsRes.data?.data || transactionsRes.data || []);
+      const analyticsData = analyticsRes.data?.data || analyticsRes.data;
+      setAnalytics(Array.isArray(analyticsData) ? analyticsData : []);
+      const txData = transactionsRes.data?.data || transactionsRes.data;
+      setTransactions(Array.isArray(txData) ? txData : []);
     } catch (error) {
       ;
       if (!isRefresh) {
@@ -80,7 +82,8 @@ export const EarningsScreen: React.FC = () => {
     const fetchAnalytics = async () => {
       try {
         const analyticsResponse = await earningsAPI.getAnalytics(period);
-        setAnalytics(analyticsResponse.data?.data || analyticsResponse.data || []);
+        const analyticsData = analyticsResponse.data?.data || analyticsResponse.data;
+        setAnalytics(Array.isArray(analyticsData) ? analyticsData : []);
       } catch (err) {
         ;
       }

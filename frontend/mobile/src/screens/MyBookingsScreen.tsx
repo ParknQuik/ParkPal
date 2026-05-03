@@ -358,20 +358,20 @@ const handleAction = useCallback(
                     </Text>
                   </View>
                   <Text style={styles.bookingName} numberOfLines={1}>{booking.listingTitle || booking.listingAddress}</Text>
-                  <View style={styles.dateContainer}>
-                    <Text style={styles.dateIcon}>📅</Text>
-                    <Text style={styles.dateText}>{formatBookingDate(booking.startTime, booking.endTime, booking.rentalMode)}</Text>
-                  </View>
-                  {booking.listingAddress && (
-                    <View style={styles.dateContainer}>
-                      <Text style={styles.dateIcon}>📍</Text>
-                      <Text style={styles.dateText} numberOfLines={1}>{booking.listingAddress}</Text>
-                    </View>
-                  )}
-                  <View style={styles.dateContainer}>
-                    <Text style={styles.dateIcon}>💰</Text>
-                    <Text style={styles.dateText}>₱{(booking.totalAmount || 0).toFixed(2)}</Text>
-                  </View>
+                   <View style={styles.dateContainer}>
+                     <MaterialCommunityIcons name="calendar-outline" size={14} color={colors.textSecondary} style={styles.dateIcon} />
+                     <Text style={styles.dateText}>{formatBookingDate(booking.startTime, booking.endTime, booking.rentalMode)}</Text>
+                   </View>
+                   {booking.listingAddress && (
+                     <View style={styles.dateContainer}>
+                       <MaterialCommunityIcons name="map-marker-outline" size={14} color={colors.textSecondary} style={styles.dateIcon} />
+                       <Text style={styles.dateText} numberOfLines={1}>{booking.listingAddress}</Text>
+                     </View>
+                   )}
+                   <View style={styles.dateContainer}>
+                     <MaterialCommunityIcons name="currency-php" size={14} color={colors.textSecondary} style={styles.dateIcon} />
+                     <Text style={styles.dateText}>₱{(booking.totalAmount || 0).toFixed(2)}</Text>
+                   </View>
                 </View>
                 {booking.listingPhoto ? (
                   <Image source={{ uri: booking.listingPhoto }} style={styles.cardImage} contentFit="cover" transition={200} />
