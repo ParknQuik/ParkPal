@@ -9,13 +9,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings } from '../store/slices/marketplaceSlice';
 import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
@@ -91,6 +94,7 @@ export const ExploreMap: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMovedMap, setHasMovedMap] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const [region, setRegion] = useState(latitude && longitude ? {
     latitude,
@@ -282,7 +286,17 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleDirections = () => {
-    ;
+    if (!selectedListing) return;
+    const lat = selectedListing.latitude;
+    const lng = selectedListing.longitude;
+    const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+    const latLng = `${lat},${lng}`;
+    const label = selectedListing.title || selectedListing.address;
+    const url = Platform.select({
+      ios: `${scheme}${label}@${latLng}`,
+      android: `${scheme}${latLng}(${label})`,
+    });
+    if (url) Linking.openURL(url);
   };
 
   const handleFilterPress = () => {
@@ -293,9 +307,9 @@ export const ExploreMap: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Search Bar */}
-      <View style={styles.searchBarContainer}>
+      <View style={[styles.searchBarContainer, { top: insets.top + 8 }]}>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search parking spots..."
@@ -310,7 +324,7 @@ export const ExploreMap: React.FC = () => {
           onPress={handleFilterPress}
           activeOpacity={0.7}
         >
-          <Text style={styles.filterIcon}>⚙️</Text>
+          <MaterialCommunityIcons name="tune" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -383,7 +397,7 @@ export const ExploreMap: React.FC = () => {
         {/* Search this area button */}
         {hasMovedMap && (
           <TouchableOpacity
-            style={styles.searchAreaButton}
+            style={[styles.searchAreaButton, { top: insets.top + 110 }]}
             onPress={async () => {
               setHasMovedMap(false);
               await fetchListings(region.latitude, region.longitude);
@@ -404,6 +418,7 @@ export const ExploreMap: React.FC = () => {
         {/* Empty State */}
         {!loading && listings.length === 0 && (
           <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="map-marker-off-outline" size={48} color={colors.textSecondary} />
             <Text style={styles.emptyStateText}>No parking spots found</Text>
           </View>
         )}
@@ -411,17 +426,17 @@ export const ExploreMap: React.FC = () => {
         {/* Map Controls */}
         <View style={styles.mapControls}>
           <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7}>
-            <Text style={styles.controlIcon}>+</Text>
+            <MaterialCommunityIcons name="plus" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.controlButton, styles.controlBorder]} onPress={handleZoomOut} activeOpacity={0.7}>
-            <Text style={styles.controlIcon}>−</Text>
+            <MaterialCommunityIcons name="minus" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.controlButton, styles.myLocationButton]}
             onPress={handleRecenter}
             activeOpacity={0.7}
           >
-            <Text style={styles.myLocationIcon}>📍</Text>
+            <MaterialCommunityIcons name="crosshairs-gps" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
       </View>
@@ -446,13 +461,23 @@ export const ExploreMap: React.FC = () => {
                 <View style={styles.spotHeaderText}>
                   <Text style={styles.spotName} numberOfLines={1}>{selectedListing.title || selectedListing.address}</Text>
                   <Text style={styles.spotDistance}>
-                    {selectedListing.distance ? `📍 ${selectedListing.distance.toFixed(1)} km away` : '📍 Nearby'}
+                    {selectedListing.distance ? (
+                      <>
+                        <MaterialCommunityIcons name="map-marker" size={12} color={colors.textSecondary} />{' '}
+                        {selectedListing.distance.toFixed(1)} km away
+                      </>
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons name="map-marker" size={12} color={colors.textSecondary} />{' '}
+                        Nearby
+                      </>
+                    )}
                   </Text>
                 </View>
               </View>
               <View style={styles.ratingRow}>
                 <View style={styles.rating}>
-                  <Text style={styles.starIcon}>⭐</Text>
+                  <MaterialCommunityIcons name="star" size={14} color="#FBBF24" style={styles.starIcon} />
                   <Text style={styles.ratingText}>{selectedListing.rating?.toFixed(1) || 'N/A'}</Text>
                 </View>
                 <Text style={styles.reviewsText}>({selectedListing.reviewCount || 0} reviews)</Text>
@@ -482,7 +507,7 @@ export const ExploreMap: React.FC = () => {
                   onPress={handleDirections}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.directionsIcon}>🧭</Text>
+                  <MaterialCommunityIcons name="navigation" size={16} color={colors.white} />
                   <Text style={styles.directionsText}>Directions</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -508,7 +533,6 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     position: 'absolute',
-    top: 50,
     left: 16,
     right: 16,
     zIndex: 10,
@@ -530,7 +554,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchIcon: {
-    fontSize: 16,
     marginRight: 8,
   },
   searchInput: {
@@ -553,7 +576,6 @@ const styles = StyleSheet.create({
   },
   searchAreaButton: {
     position: 'absolute',
-    top: 190,
     alignSelf: 'center',
     backgroundColor: '#10b77f',
     paddingHorizontal: 20,
@@ -712,7 +734,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   starIcon: {
-    fontSize: 14,
+    marginLeft: 0,
   },
   ratingText: {
     fontSize: 14,
