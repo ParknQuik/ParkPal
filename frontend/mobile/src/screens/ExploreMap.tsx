@@ -8,7 +8,6 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
 } from 'react-native';
@@ -25,6 +24,7 @@ import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
 import { colors } from '../theme/colors';
 import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
 import { analyticsService } from '../services/analytics';
+import { FilterModal, FilterConfig } from '../components/FilterModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -94,6 +94,8 @@ export const ExploreMap: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMovedMap, setHasMovedMap] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterConfig>({});
   const insets = useSafeAreaInsets();
 
   const [region, setRegion] = useState(latitude && longitude ? {
@@ -151,19 +153,36 @@ export const ExploreMap: React.FC = () => {
     ? zoneAvailability[selectedListing.zoneId]
     : null;
 
+  const hasActiveFilters = Object.keys(activeFilters).length > 0;
+
   // Fetch listings for a given region
-  const fetchListings = useCallback(async (lat: number, lon: number) => {
+  const fetchListings = useCallback(async (lat: number, lon: number, filters?: FilterConfig) => {
     try {
-      await dispatch(searchListings({
+      const params: any = {
         latitude: lat,
         longitude: lon,
         radius: 3,
         ...(searchQuery ? { q: searchQuery } : {}),
-      })).unwrap();
+      };
+      
+      if (filters) {
+        if (filters.minPrice != null) params.minPrice = filters.minPrice;
+        if (filters.maxPrice != null) params.maxPrice = filters.maxPrice;
+        if (filters.slotTypes?.length) params.slotType = filters.slotTypes.join(',');
+        if (filters.amenities?.length) params.amenities = filters.amenities.join(',');
+        if (filters.availableNow) params.status = 'available';
+      }
+      
+      await dispatch(searchListings(params)).unwrap();
     } catch (err) {
       ;
     }
   }, [dispatch, searchQuery]);
+
+  const handleApplyFilters = (filters: FilterConfig) => {
+    setActiveFilters(filters);
+    fetchListings(region.latitude, region.longitude, filters);
+  };
 
   const centerOnUser = useCallback(async () => {
     // If params were passed from ParkingDetails, use those instead
@@ -227,18 +246,18 @@ export const ExploreMap: React.FC = () => {
       clearTimeout(searchDebounceRef.current);
     }
     searchDebounceRef.current = setTimeout(() => {
-      fetchListings(region.latitude, region.longitude);
+      fetchListings(region.latitude, region.longitude, activeFilters);
     }, 400);
     return () => {
       if (searchDebounceRef.current) {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchQuery]);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchListings(region.latitude, region.longitude);
+    await fetchListings(region.latitude, region.longitude, activeFilters);
     setRefreshing(false);
   }, [fetchListings]);
 
@@ -300,8 +319,12 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleFilterPress = () => {
-    ;
-    Alert.alert('Filters', 'Filter options coming soon!');
+    setFilterModalVisible(true);
+  };
+
+  const handleClearFilters = () => {
+    setActiveFilters({});
+    fetchListings(region.latitude, region.longitude);
   };
 
   return (
@@ -324,9 +347,25 @@ export const ExploreMap: React.FC = () => {
           onPress={handleFilterPress}
           activeOpacity={0.7}
         >
-          <MaterialCommunityIcons name="tune" size={20} color={colors.textSecondary} />
+          <MaterialCommunityIcons 
+            name="tune" 
+            size={20} 
+            color={hasActiveFilters ? colors.primary : colors.textSecondary} 
+          />
         </TouchableOpacity>
       </View>
+
+      {/* Clear Filters Chip */}
+      {hasActiveFilters && (
+        <TouchableOpacity
+          style={[styles.clearFiltersChip, { top: insets.top + 64 }]}
+          onPress={handleClearFilters}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="close" size={14} color={colors.error} />
+          <Text style={styles.clearFiltersText}>Clear Filters</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Analytics Zone Indicator */}
       {currentZone && (
@@ -400,7 +439,7 @@ export const ExploreMap: React.FC = () => {
             style={[styles.searchAreaButton, { top: insets.top + 110 }]}
             onPress={async () => {
               setHasMovedMap(false);
-              await fetchListings(region.latitude, region.longitude);
+              await fetchListings(region.latitude, region.longitude, activeFilters);
             }}
             activeOpacity={0.8}
           >
@@ -522,6 +561,13 @@ export const ExploreMap: React.FC = () => {
           </View>
         </TouchableOpacity>
       ) : null}
+
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={handleApplyFilters}
+        initialFilters={activeFilters}
+      />
     </SafeAreaView>
   );
 };
@@ -573,6 +619,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
+  },
+  clearFiltersChip: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  clearFiltersText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.error,
   },
   searchAreaButton: {
     position: 'absolute',
