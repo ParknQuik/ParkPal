@@ -33,6 +33,9 @@ model User {
   reviews              Review[]         @relation("ReviewAuthor")
   receivedReviews      Review[]         @relation("ReviewTarget")
   vehicles             Vehicle[]
+  pointsTransactions   PointsTransaction[]
+  referralsGiven       Referral[]       @relation("ReferrerReferrals")
+  referralsReceived    Referral[]       @relation("ReferredReferrals")
 
   @@map("users")
 }
@@ -393,8 +396,8 @@ model Referral {
   rewardAmount         Int?      @map("reward_amount") // Points awarded to referrer (100 pts)
   rewardGivenAt        DateTime? @map("reward_given_at") // When reward was issued
 
-  // Reference to reward transaction (if reward was issued)
-  rewardTransactionId  Int?      @map("reward_transaction_id") @unique
+   // Reference to reward transaction (if reward was issued)
+   rewardTransactionId  Int?      @map("reward_transaction_id")
 
   // First booking milestone (when referred user completes first paid booking)
   firstBookingAt       DateTime? @map("first_booking_at")
@@ -413,7 +416,7 @@ model Referral {
   // Unique constraint: referred user can only be referred once
   @@unique([referredId])
   @@unique([referralCode])
-  @@unique([rewardTransactionId])
+   @@unique([rewardTransactionId], map: "referrals_reward_txn_id_key")
 
   // Indexes
   @@index([referrerId])
