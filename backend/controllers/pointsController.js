@@ -199,6 +199,7 @@ exports.generateReferralCode = async (req, res, next) => {
     const referral = await prisma.referral.create({
       data: {
         referrerId: userId,
+        referredId: userId,
         referralCode,
         status: 'active',
         expiresAt: new Date(Date.now() + REFERRAL_VALIDITY_DAYS * 24 * 60 * 60 * 1000),

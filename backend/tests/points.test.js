@@ -83,10 +83,21 @@ describe('Points Balance API Tests', () => {
    });
 
   it('should return correct balance for user with positive balance', async () => {
-    // Create points transaction for driver user
+    // Create a dedicated test user for this test
+    const hashedPassword = await bcrypt.hash('testpass123', 10);
+    const balanceTestUser = await prisma.user.create({
+      data: {
+        email: `balance-test-${Date.now()}@example.com`,
+        password: hashedPassword,
+        name: 'Balance Test User',
+        role: 'driver',
+      },
+    });
+
+    // Create points transaction for this user
     await prisma.pointsTransaction.create({
       data: {
-        userId: testData.users.driver.id,
+        userId: balanceTestUser.id,
         amount: 100,
         balanceAfter: 100,
         type: 'EARNED',
@@ -100,7 +111,7 @@ describe('Points Balance API Tests', () => {
     // Create another transaction
     await prisma.pointsTransaction.create({
       data: {
-        userId: testData.users.driver.id,
+        userId: balanceTestUser.id,
         amount: 50,
         balanceAfter: 150,
         type: 'EARNED',
@@ -109,19 +120,47 @@ describe('Points Balance API Tests', () => {
       },
     });
 
+    // Login as this user
+    const login = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        email: balanceTestUser.email,
+        password: 'testpass123',
+      });
+
     const response = await request(app)
       .get('/api/v1/points/balance')
-      .set('Authorization', `Bearer ${authTokens.driver}`);
+      .set('Authorization', `Bearer ${login.body.token}`);
 
     expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('balance');
     expect(response.body.balance).toBe(150);
   });
 
   it('should calculate balance only from non-expired transactions', async () => {
+    // Create a dedicated test user for this test
+    const hashedPassword = await bcrypt.hash('testpass123', 10);
+    const balanceTestUser = await prisma.user.create({
+      data: {
+        email: `balance-expiry-test-${Date.now()}@example.com`,
+        password: hashedPassword,
+        name: 'Balance Expiry Test User',
+        role: 'driver',
+      },
+    });
+
+    // Login as this user
+    const login = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        email: balanceTestUser.email,
+        password: 'testpass123',
+      });
+
     // Create both active and expired transactions
     await prisma.pointsTransaction.create({
       data: {
-        userId: testData.users.driver.id,
+        userId: balanceTestUser.id,
         amount: 100,
         balanceAfter: 100,
         type: 'EARNED',
@@ -131,7 +170,7 @@ describe('Points Balance API Tests', () => {
 
     await prisma.pointsTransaction.create({
       data: {
-        userId: testData.users.driver.id,
+        userId: balanceTestUser.id,
         amount: 50,
         balanceAfter: 50,
         type: 'EARNED',
@@ -141,7 +180,7 @@ describe('Points Balance API Tests', () => {
 
     const response = await request(app)
       .get('/api/v1/points/balance')
-      .set('Authorization', `Bearer ${authTokens.driver}`);
+      .set('Authorization', `Bearer ${login.body.token}`);
 
     expect(response.status).toBe(200);
     expect(response.body.balance).toBe(100);
@@ -151,6 +190,13 @@ describe('Points Balance API Tests', () => {
     const response = await request(app).get('/api/v1/points/balance');
 
     expect(response.status).toBe(401);
+  });
+
+  afterAll(async () => {
+    // Clean up points transactions for driver to prevent test pollution
+    await prisma.pointsTransaction.deleteMany({
+      where: { userId: testData.users.driver.id },
+    });
   });
 });
 
@@ -223,11 +269,25 @@ describe('Earn Points API Tests', () => {
   });
 
   it('should allow custom amount for earning points', async () => {
+    // Create a separate completed booking for this test
+    const customBooking = await prisma.booking.create({
+      data: {
+        slotId: testData.slot.id,
+        userId: testData.users.driver.id,
+        startTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+        price: 500,
+        platformFee: 25,
+        hostEarnings: 475,
+        status: 'completed',
+      },
+    });
+
     const response = await request(app)
       .post('/api/v1/points/earn')
       .set('Authorization', `Bearer ${authTokens.driver}`)
       .send({
-        bookingId: completedBooking.id,
+        bookingId: customBooking.id,
         amount: 200,
       });
 
@@ -315,20 +375,25 @@ describe('Earn Points API Tests', () => {
   });
 });
 
-describe('Redeem Points API Tests', () => {
-  beforeAll(async () => {
-    // Give driver user some points
-    await prisma.pointsTransaction.create({
-      data: {
-        userId: testData.users.driver.id,
-        amount: 500,
-        balanceAfter: 500,
-        type: 'EARNED',
-        source: 'BOOKING',
-        description: 'Initial points',
-      },
+  describe('Redeem Points API Tests', () => {
+    beforeAll(async () => {
+      // Clean up any existing points transactions for driver
+      await prisma.pointsTransaction.deleteMany({
+        where: { userId: testData.users.driver.id },
+      });
+
+      // Give driver user some points
+      await prisma.pointsTransaction.create({
+        data: {
+          userId: testData.users.driver.id,
+          amount: 500,
+          balanceAfter: 500,
+          type: 'EARNED',
+          source: 'BOOKING',
+          description: 'Initial points',
+        },
+      });
     });
-  });
 
   it('should redeem points with sufficient balance', async () => {
     const response = await request(app)
@@ -430,7 +495,14 @@ describe('Redeem Points API Tests', () => {
         amount: 100,
       });
 
-    expect(response.status).toBe(401);
+     expect(response.status).toBe(401);
+  });
+
+  afterAll(async () => {
+    // Clean up points transactions to prevent test pollution
+    await prisma.pointsTransaction.deleteMany({
+      where: { userId: testData.users.driver.id },
+    });
   });
 });
 
@@ -456,6 +528,11 @@ describe('Referral System Tests', () => {
     });
 
     it('should return existing referral code if already generated', async () => {
+      // Clean up any existing referrals for driver first
+      await prisma.referral.deleteMany({
+        where: { referrerId: testData.users.driver.id },
+      });
+
       // First generation
       const firstResponse = await request(app)
         .post('/api/v1/referrals/generate')
@@ -470,6 +547,13 @@ describe('Referral System Tests', () => {
 
       expect(secondResponse.status).toBe(200);
       expect(secondResponse.body.referralCode).toBe(firstResponse.body.referralCode);
+    });
+
+    afterEach(async () => {
+      // Clean up referrals for driver after each test to prevent test pollution
+      await prisma.referral.deleteMany({
+        where: { referrerId: testData.users.driver.id },
+      });
     });
 
     it('should require authentication', async () => {
@@ -510,12 +594,14 @@ describe('Referral System Tests', () => {
         },
       });
 
-      // Generate referral code for driver
+      // Generate referral code for driver (valid referral code)
       const referralResponse = await request(app)
         .post('/api/v1/referrals/generate')
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       validReferralCode = referralResponse.body.referralCode;
+      // Self-referral test uses the driver's own referral code
+      selfReferralCode = validReferralCode;
 
       // Create an expired referral
       const expiredReferral = await prisma.referral.create({
@@ -528,17 +614,6 @@ describe('Referral System Tests', () => {
         },
       });
       expiredReferralCode = expiredReferral.referralCode;
-
-      // Create referral where referrer is the same as current user
-      const selfReferral = await prisma.referral.create({
-        data: {
-          referrerId: testData.users.driver.id,
-          referredId: testData.users.driver.id,
-          referralCode: 'SELFREF12345',
-          status: 'active',
-        },
-      });
-      selfReferralCode = selfReferral.referralCode;
     });
 
     it('should validate a valid referral code', async () => {
