@@ -30,10 +30,17 @@ import { useAutocomplete } from '../hooks/useAutocomplete';
 
 const { width, height } = Dimensions.get('window');
 
-const PriceMarker = React.memo(({ listing, selected, onPress }: {
+const getOccupancyColor = (percentage: number): string => {
+  if (percentage >= 80) return '#ef4444';
+  if (percentage >= 50) return '#f59e0b';
+  return '#10b77f';
+};
+
+const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: {
   listing: any;
   selected: boolean;
   onPress: (id: any) => void;
+  occupancyColor: string | null;
 }) => {
   const [tracksChanges, setTracksChanges] = React.useState(true);
   const price = listing.pricePerHour != null ? `₱${listing.pricePerHour}` : '₱—';
@@ -75,6 +82,21 @@ const PriceMarker = React.memo(({ listing, selected, onPress }: {
         >
           {price}
         </Text>
+        {occupancyColor && (
+          <View
+            style={{
+              position: 'absolute',
+              top: -3,
+              right: -3,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: occupancyColor,
+              borderWidth: 1,
+              borderColor: '#fff',
+            }}
+          />
+        )}
       </View>
     </Marker>
   );
@@ -88,6 +110,7 @@ export const ExploreMap: React.FC = () => {
   const mapRef = useRef<MapView>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<string | number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,6 +119,10 @@ export const ExploreMap: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<FilterConfig>({});
   const [activeSort, setActiveSort] = useState<SortOption>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [showZoneOverlays, setShowZoneOverlays] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [zoneIndicatorVisible, setZoneIndicatorVisible] = useState(true);
+  const [zoneOccupancyMap, setZoneOccupancyMap] = useState<Record<string, number>>({});
   const insets = useSafeAreaInsets();
   const { history, addToHistory, clearHistory, removeFromHistory } = useSearchHistory();
 
@@ -130,6 +157,26 @@ export const ExploreMap: React.FC = () => {
     loadZones();
   }, []);
 
+  useEffect(() => {
+    const loadZoneMetrics = async () => {
+      const metrics: Record<string, number> = {};
+      for (const zone of analyticsZones) {
+        try {
+          const result = await analyticsService.getZoneAvailability(zone.id);
+          if (result?.occupancyPercentage != null) {
+            metrics[zone.id] = result.occupancyPercentage;
+          }
+        } catch (e) {
+          ;
+        }
+      }
+      setZoneOccupancyMap(metrics);
+    };
+    if (analyticsZones.length > 0) {
+      loadZoneMetrics();
+    }
+  }, [analyticsZones]);
+
   const { currentZone, sessionId } = useAnalyticsGeofencing(
     analyticsZones.map(z => ({
       id: z.id,
@@ -140,6 +187,29 @@ export const ExploreMap: React.FC = () => {
     })),
     true
   );
+
+  useEffect(() => {
+    if (currentZone) {
+      setZoneIndicatorVisible(true);
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = setTimeout(() => {
+        setZoneIndicatorVisible(false);
+      }, 5000);
+    }
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    };
+  }, [currentZone]);
+
+  const resetZoneIndicatorTimer = useCallback(() => {
+    if (currentZone) {
+      setZoneIndicatorVisible(true);
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = setTimeout(() => {
+        setZoneIndicatorVisible(false);
+      }, 5000);
+    }
+  }, [currentZone]);
 
   const selectedListing = selectedMarker !== null
     ? listings.find((l: any) => l.id === selectedMarker)
@@ -156,6 +226,13 @@ export const ExploreMap: React.FC = () => {
     : null;
 
   const hasActiveFilters = Object.keys(activeFilters).length > 0;
+
+  const getListingOccupancyColor = useCallback((listing: any): string | null => {
+    if (!listing.zoneId) return null;
+    const occupancy = zoneOccupancyMap[listing.zoneId];
+    if (occupancy == null) return null;
+    return getOccupancyColor(occupancy);
+  }, [zoneOccupancyMap]);
 
   const sortedListings = useMemo(() => {
     if (!activeSort || !listings.length) return listings;
@@ -303,6 +380,7 @@ export const ExploreMap: React.FC = () => {
 
   const handleMarkerPress = (markerId: string | number) => {
     setSelectedMarker(markerId);
+    resetZoneIndicatorTimer();
     const listing = listings.find((l: any) => l.id === markerId);
     if (listing) {
       mapRef.current?.animateToRegion({
@@ -363,6 +441,12 @@ export const ExploreMap: React.FC = () => {
 
   const handleHistoryItemRemove = (item: string) => {
     removeFromHistory(item);
+  };
+
+  const handleRegionChangeComplete = (r: any) => {
+    setRegion(r);
+    setHasMovedMap(true);
+    resetZoneIndicatorTimer();
   };
 
   const filterChipsTop = insets.top + 64;
@@ -453,13 +537,20 @@ export const ExploreMap: React.FC = () => {
         </TouchableOpacity>
       )}
 
-      {currentZone && (
-        <View style={styles.zoneIndicator}>
-          <View style={styles.zoneIndicatorDot} />
-          <Text style={styles.zoneIndicatorText}>
-            In {currentZone.name}
-          </Text>
-        </View>
+      {currentZone && zoneIndicatorVisible && (
+        <TouchableOpacity
+          style={[styles.zoneIndicator, { top: insets.top + 16 }]}
+          onPress={() => { setZoneIndicatorVisible(false); if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); }}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="map-marker-radius" size={14} color={colors.white} />
+          <Text style={styles.zoneIndicatorText}>{currentZone.name}</Text>
+          {zoneOccupancyMap[currentZone.id] != null && (
+            <View style={styles.zoneOccBadge}>
+              <Text style={styles.zoneOccText}>{zoneOccupancyMap[currentZone.id]}%</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       )}
 
       <View style={styles.mapContainer}>
@@ -469,7 +560,7 @@ export const ExploreMap: React.FC = () => {
           style={styles.map}
           region={region}
           onMapReady={() => { setMapReady(true); centerOnUser(); }}
-          onRegionChangeComplete={(r) => { setRegion(r); setHasMovedMap(true); }}
+          onRegionChangeComplete={handleRegionChangeComplete}
           showsUserLocation
           showsMyLocationButton={false}
         >
@@ -479,6 +570,7 @@ export const ExploreMap: React.FC = () => {
               listing={listing}
               selected={selectedMarker === listing.id}
               onPress={handleMarkerPress}
+              occupancyColor={getListingOccupancyColor(listing)}
             />
           ))}
           <Circle
@@ -491,28 +583,51 @@ export const ExploreMap: React.FC = () => {
             strokeColor="rgba(16, 183, 127, 0.5)"
             strokeWidth={2}
           />
-          {analyticsZones.map((zone: any) => (
-            <React.Fragment key={zone.id}>
+          {showZoneOverlays && analyticsZones.map((zone: any) => {
+            const occupancy = zoneOccupancyMap[zone.id] ?? 50;
+            const isActive = currentZone?.id === zone.id;
+            return (
+              <React.Fragment key={zone.id}>
+                <Circle
+                  center={{
+                    latitude: zone.centroidLat,
+                    longitude: zone.centroidLon,
+                  }}
+                  radius={300}
+                  fillColor={isActive ? 'rgba(16, 183, 127, 0.2)' : 'rgba(100, 116, 139, 0.1)'}
+                  strokeColor={isActive ? 'rgba(16, 183, 127, 0.7)' : 'rgba(100, 116, 139, 0.4)'}
+                  strokeWidth={isActive ? 3 : 2}
+                />
+                <Marker
+                  coordinate={{
+                    latitude: zone.centroidLat,
+                    longitude: zone.centroidLon,
+                  }}
+                  title={zone.name}
+                  description={isActive ? `Active session: ${sessionId}` : 'Tap for availability'}
+                />
+              </React.Fragment>
+            );
+          })}
+          {showHeatmap && showZoneOverlays && analyticsZones.map((zone: any) => {
+            const occupancy = zoneOccupancyMap[zone.id] ?? 50;
+            const fillOpacity = 0.15 + (occupancy / 100) * 0.25;
+            const fillColor = occupancy >= 80
+              ? `rgba(239, 68, 68, ${fillOpacity})`
+              : occupancy >= 50
+                ? `rgba(245, 158, 11, ${fillOpacity})`
+                : `rgba(16, 183, 127, ${fillOpacity})`;
+            return (
               <Circle
-                center={{
-                  latitude: zone.centroidLat,
-                  longitude: zone.centroidLon,
-                }}
-                radius={300}
-                fillColor={currentZone?.id === zone.id ? 'rgba(16, 183, 127, 0.2)' : 'rgba(100, 116, 139, 0.1)'}
-                strokeColor={currentZone?.id === zone.id ? 'rgba(16, 183, 127, 0.7)' : 'rgba(100, 116, 139, 0.4)'}
-                strokeWidth={currentZone?.id === zone.id ? 3 : 2}
+                key={`heatmap-${zone.id}`}
+                center={{ latitude: zone.centroidLat, longitude: zone.centroidLon }}
+                radius={500}
+                fillColor={fillColor}
+                strokeColor="transparent"
+                strokeWidth={0}
               />
-              <Marker
-                coordinate={{
-                  latitude: zone.centroidLat,
-                  longitude: zone.centroidLon,
-                }}
-                title={zone.name}
-                description={currentZone?.id === zone.id ? `Active session: ${sessionId}` : 'Tap for availability'}
-              />
-            </React.Fragment>
-          ))}
+            );
+          })}
         </MapView>
 
         {hasMovedMap && (
@@ -556,6 +671,22 @@ export const ExploreMap: React.FC = () => {
           >
             <MaterialCommunityIcons name="crosshairs-gps" size={20} color={colors.white} />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.controlButton, showZoneOverlays && { backgroundColor: colors.primary + '15' }]}
+            onPress={() => setShowZoneOverlays(!showZoneOverlays)}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="layers" size={20} color={showZoneOverlays ? colors.primary : colors.textSecondary} />
+          </TouchableOpacity>
+          {showZoneOverlays && (
+            <TouchableOpacity
+              style={[styles.controlButton, showHeatmap && { backgroundColor: colors.primary + '15' }]}
+              onPress={() => setShowHeatmap(!showHeatmap)}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="gradient-vertical" size={20} color={showHeatmap ? colors.primary : colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -774,16 +905,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     position: 'absolute',
-    top: 16,
     left: 16,
     zIndex: 100,
+    gap: 6,
   },
-  zoneIndicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-    marginRight: 8,
+  zoneOccBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  zoneOccText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
   },
   zoneIndicatorText: {
     color: '#fff',
