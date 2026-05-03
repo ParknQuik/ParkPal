@@ -11,9 +11,7 @@ import {
   Linking,
   Platform,
 } from 'react-native';
-import { Image } from 'expo-image';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
-import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -24,18 +22,16 @@ import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
 import { colors } from '../theme/colors';
 import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
 import { analyticsService } from '../services/analytics';
+import { ListingBottomSheet } from '../components/ListingBottomSheet';
 import { FilterModal, FilterConfig } from '../components/FilterModal';
 
 const { width, height } = Dimensions.get('window');
 
 // ---------------------------------------------------------------------------
-// SVG-based price marker — Android-safe, no View/Text clipping issues.
-//
-// Strategy (Option C): Build the entire marker as an inline SVG string with
-// explicit width/height. react-native-svg renders it at exact pixel dimensions,
-// so Android knows the canvas size before the first paint and never clips.
-// tracksViewChanges is locked to false immediately after mount so the JS bridge
-// is only crossed once per marker.
+// Native View-based price marker — simpler, better performance than SVG.
+// Uses a View wrapper with borderRadius + Text for the price display.
+// collapsable={false} ensures Android doesn't optimize away the View.
+// tracksViewChanges is locked to false after first render for performance.
 // ---------------------------------------------------------------------------
 
 const PriceMarker = React.memo(({ listing, selected, onPress }: {
@@ -44,9 +40,10 @@ const PriceMarker = React.memo(({ listing, selected, onPress }: {
   onPress: (id: any) => void;
 }) => {
   const [tracksChanges, setTracksChanges] = React.useState(true);
-  const price = listing.pricePerHour != null ? `P${listing.pricePerHour}` : 'P—';
+  const price = listing.pricePerHour != null ? `₱${listing.pricePerHour}` : '₱—';
   const bg = selected ? '#10b77f' : '#ffffff';
   const textColor = selected ? '#ffffff' : '#10b77f';
+  const borderColor = selected ? '#059669' : '#10b77f';
 
   return (
     <Marker
@@ -57,27 +54,31 @@ const PriceMarker = React.memo(({ listing, selected, onPress }: {
     >
       <View
         collapsable={false}
-        style={{ width: 80, height: 36 }}
+        style={{
+          backgroundColor: bg,
+          borderWidth: 2,
+          borderColor,
+          borderRadius: 10,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 3,
+          elevation: 3,
+        }}
         onLayout={() => setTracksChanges(false)}
       >
-        <Svg width={80} height={36}>
-          <Rect
-            x={2} y={2} width={76} height={32}
-            rx={8} ry={8}
-            fill={bg}
-            stroke="#10b77f"
-            strokeWidth={2}
-          />
-          <SvgText
-            x={40} y={22}
-            textAnchor="middle"
-            fontSize={13}
-            fontWeight="bold"
-            fill={textColor}
-          >
-            {price}
-          </SvgText>
-        </Svg>
+        <Text
+          style={{
+            color: textColor,
+            fontSize: 13,
+            fontWeight: 'bold',
+            textAlign: 'center',
+          }}
+        >
+          {price}
+        </Text>
       </View>
     </Marker>
   );
@@ -481,86 +482,14 @@ export const ExploreMap: React.FC = () => {
       </View>
 
       {/* Bottom Sheet Preview */}
-      {selectedListing ? (
-        <TouchableOpacity
-          style={styles.bottomSheet}
-          activeOpacity={0.9}
-          onPress={handleViewDetails}
-        >
-          <View style={styles.dragHandle} />
-          <View style={styles.spotPreview}>
-            <Image
-              source={{ uri: selectedListing.photos?.[0] || 'https://via.placeholder.com/96' }}
-              style={styles.spotImage}
-              contentFit="cover"
-              transition={200}
-            />
-            <View style={styles.spotInfo}>
-              <View style={styles.spotHeader}>
-                <View style={styles.spotHeaderText}>
-                  <Text style={styles.spotName} numberOfLines={1}>{selectedListing.title || selectedListing.address}</Text>
-                  <Text style={styles.spotDistance}>
-                    {selectedListing.distance ? (
-                      <>
-                        <MaterialCommunityIcons name="map-marker" size={12} color={colors.textSecondary} />{' '}
-                        {selectedListing.distance.toFixed(1)} km away
-                      </>
-                    ) : (
-                      <>
-                        <MaterialCommunityIcons name="map-marker" size={12} color={colors.textSecondary} />{' '}
-                        Nearby
-                      </>
-                    )}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.ratingRow}>
-                <View style={styles.rating}>
-                  <MaterialCommunityIcons name="star" size={14} color="#FBBF24" style={styles.starIcon} />
-                  <Text style={styles.ratingText}>{selectedListing.rating?.toFixed(1) || 'N/A'}</Text>
-                </View>
-                <Text style={styles.reviewsText}>({selectedListing.reviewCount || 0} reviews)</Text>
-              </View>
-              {selectedZoneAvail && (
-                <View style={styles.zoneAvailRow}>
-                  <View style={[
-                    styles.availBadge,
-                    selectedZoneAvail.occupancyPercentage >= 80
-                      ? styles.availBadgeFull
-                      : selectedZoneAvail.occupancyPercentage >= 50
-                        ? styles.availBadgeMid
-                        : styles.availBadgeOpen,
-                  ]}>
-                    <Text style={styles.availBadgeText}>
-                      {selectedZoneAvail.available}/{selectedZoneAvail.totalSlots} open
-                    </Text>
-                  </View>
-                  <Text style={styles.circlingText}>
-                    ~{Math.ceil(selectedZoneAvail.estimatedCirclingTime / 60)} min to park
-                  </Text>
-                </View>
-              )}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.directionsButton}
-                  onPress={handleDirections}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons name="navigation" size={16} color={colors.white} />
-                  <Text style={styles.directionsText}>Directions</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.viewDetailsButton}
-                  onPress={handleViewDetails}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.viewDetailsText}>View Details</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      ) : null}
+      <ListingBottomSheet
+        listing={selectedListing}
+        zoneAvailability={selectedZoneAvail}
+        onViewDetails={handleViewDetails}
+        onDirections={handleDirections}
+        onQuickBook={() => navigation.navigate('ParkingDetail', { spotId: selectedListing?.id, quickBook: true })}
+        onClose={() => setSelectedMarker(null)}
+      />
 
       <FilterModal
         visible={filterModalVisible}
@@ -731,167 +660,6 @@ const styles = StyleSheet.create({
   myLocationButton: {
     marginTop: 8,
     backgroundColor: colors.primary,
-  },
-  myLocationIcon: {
-    fontSize: 20,
-  },
-  bottomSheet: {
-    position: 'absolute',
-    bottom: 70,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  dragHandle: {
-    width: 48,
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  spotPreview: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  spotImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 12,
-  },
-  spotInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  spotHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  spotHeaderText: {
-    flex: 1,
-  },
-  spotName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  spotDistance: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  favoriteIcon: {
-    fontSize: 22,
-  },
-  favoriteActive: {
-    color: colors.error,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  rating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  starIcon: {
-    marginLeft: 0,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginLeft: 4,
-  },
-  reviewsText: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    marginLeft: 4,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    marginTop: 12,
-    gap: 8,
-  },
-  directionsButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  directionsIcon: {
-    fontSize: 16,
-  },
-  directionsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.white,
-  },
-  viewDetailsButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary + '15',
-    borderRadius: 8,
-    paddingVertical: 10,
-  },
-  viewDetailsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  shareButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 8,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shareIcon: {
-    fontSize: 18,
-  },
-  zoneAvailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 8,
-  },
-  availBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  availBadgeOpen: {
-    backgroundColor: '#dcfce7',
-  },
-  availBadgeMid: {
-    backgroundColor: '#fef9c3',
-  },
-  availBadgeFull: {
-    backgroundColor: '#fee2e2',
-  },
-  availBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  circlingText: {
-    fontSize: 12,
-    color: colors.textSecondary,
   },
   zoneIndicator: {
     flexDirection: 'row',
