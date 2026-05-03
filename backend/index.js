@@ -75,7 +75,7 @@ app.use(helmet({
 
 // Configure CORS properly
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
+    origin: process.env.NODE_ENV === 'production'
     ? [
         'https://parkpal.com',
         'https://www.parkpal.com',
@@ -89,9 +89,6 @@ const corsOptions = {
         'http://localhost:5173', // Vite dev server
         'http://localhost:5174', // Vite dev server (alternate port)
         'http://localhost:19006', // Expo web
-        'http://192.168.100.233:3000',
-        'http://192.168.100.233:19006',
-        'http://192.168.100.241:5173', // Vite dev server on network
         /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d{4,5}$/, // Allow all local network IPs
         // Cloud Run web frontends (for development)
         'https://parkpal-web-dev-cxntrkjjmq-as.a.run.app',

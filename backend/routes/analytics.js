@@ -21,6 +21,7 @@ const {
   zoneMetricsQuerySchema,
   zonesListQuerySchema
 } = require('../validators/analytics');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (router) => {
 

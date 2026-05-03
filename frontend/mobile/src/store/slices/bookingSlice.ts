@@ -12,15 +12,16 @@ const initialState: BookingState = {
 export const fetchBookings = createAsyncThunk(
   'booking/fetchBookings',
   async (userId: string) => {
-    console.log('Fetching bookings for user:', userId);
+    ;
     const response = await marketplaceAPI.getMyBookings();
-    console.log('Bookings response:', response.data);
+    ;
     const apiBookings = response.data.bookings || response.data;
 
     // Transform API bookings to match Booking type
     const bookings = apiBookings.map((booking: any) => {
       const slot = booking.slot || {};
-      const photos = slot.photos ? JSON.parse(slot.photos) : [];
+      let photos: string[] = [];
+      try { photos = slot.photos ? JSON.parse(slot.photos) : []; } catch { photos = []; }
 
       return {
         id: booking.id.toString(),
@@ -40,7 +41,7 @@ export const fetchBookings = createAsyncThunk(
       };
     });
 
-    console.log('Transformed bookings:', bookings);
+    ;
     return bookings;
   }
 );
@@ -59,11 +60,7 @@ export const createBooking = createAsyncThunk(
     price: number;
     paymentMethod: string;
   }) => {
-    console.log('Creating booking with API call:', {
-      slotId: parseInt(bookingData.spotId),
-      startTime: bookingData.startDate,
-      endTime: bookingData.endDate,
-    });
+    ;
 
     const response = await marketplaceAPI.createBookingMarketplace({
       slotId: parseInt(bookingData.spotId),
@@ -71,7 +68,7 @@ export const createBooking = createAsyncThunk(
       endTime: bookingData.endDate,
     });
 
-    console.log('Booking created - API response:', response.data);
+    ;
     const booking = response.data.booking || response.data;
 
     // Transform API response to match Booking type
@@ -92,7 +89,7 @@ export const createBooking = createAsyncThunk(
       createdAt: booking.createdAt,
     } as Booking;
 
-    console.log('Transformed booking:', transformed);
+    ;
     return transformed;
   }
 );
@@ -100,9 +97,9 @@ export const createBooking = createAsyncThunk(
 export const cancelBooking = createAsyncThunk(
   'booking/cancelBooking',
   async (bookingId: string) => {
-    console.log('Cancelling booking:', bookingId);
+    ;
     const response = await marketplaceAPI.cancelBooking(parseInt(bookingId));
-    console.log('Cancel response:', response.data);
+    ;
     return bookingId;
   }
 );

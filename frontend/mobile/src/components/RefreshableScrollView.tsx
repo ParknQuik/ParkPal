@@ -28,7 +28,7 @@ export const RefreshableScrollView: React.FC<RefreshableScrollViewProps> = ({
       await haptics.success();
     } catch (error) {
       await haptics.error();
-      console.error('Refresh failed:', error);
+      ;
     } finally {
       setRefreshing(false);
     }

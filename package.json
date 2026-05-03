@@ -23,7 +23,9 @@
     "perf:all": "npm run perf:load && npm run perf:k6:load && npm run perf:lighthouse"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^5.0.4"
-  },
-  "devDependencies": {}
+    "@types/react": "~19.2.10",
+    "@vitejs/plugin-react": "^5.0.4",
+    "expo": "^55.0.19",
+    "typescript": "~5.9.2"
+  }
 }

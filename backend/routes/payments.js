@@ -7,6 +7,7 @@ const {
   getPaymentsQuerySchema,
   idParamSchema
 } = require('../validators/payments');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   // PayMongo Payment Intent flow (RECOMMENDED)
@@ -14,43 +15,37 @@ module.exports = (app) => {
     '/payments/intent',
     authenticate,
     validateBody(createPaymentSchema),
-    paymentsController.createPaymentIntent
-  );
+    asyncHandler(paymentsController.createPaymentIntent));
 
   app.post(
     '/payments/confirm',
     authenticate,
     validateBody(confirmPaymentSchema),
-    paymentsController.confirmPayment
-  );
+    asyncHandler(paymentsController.confirmPayment));
 
    // GCash direct payment (alternative flow)
    app.post(
      '/payments/gcash',
      authenticate,
      validateBody(createPaymentSchema),
-     paymentsController.createGCashPayment
-   );
+     asyncHandler(paymentsController.createGCashPayment));
 
    // Legacy payment endpoint (backward compatibility)
   app.post(
     '/payments',
     authenticate,
     validateBody(createPaymentSchema),
-    paymentsController.processPayment
-  );
+    asyncHandler(paymentsController.processPayment));
 
   app.get(
     '/payments',
     authenticate,
     validateQuery(getPaymentsQuerySchema),
-    paymentsController.getUserPayments
-  );
+    asyncHandler(paymentsController.getUserPayments));
 
   app.get(
     '/payments/:id',
     authenticate,
     validateParams(idParamSchema),
-    paymentsController.getPaymentById
-  );
+    asyncHandler(paymentsController.getPaymentById));
 };

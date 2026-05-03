@@ -703,7 +703,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
             }
           }
         } catch (err) {
-          console.error('Failed to load vehicle:', err);
+          ;
           Alert.alert('Error', 'Failed to load vehicle data');
           navigation.goBack();
         } finally {
@@ -786,7 +786,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
 
       navigation.goBack();
     } catch (err: any) {
-      console.error('Failed to save vehicle:', err);
+      ;
       const errorMessage =
         err.response?.data?.error ||
         err.response?.data?.message ||

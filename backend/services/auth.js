@@ -38,18 +38,29 @@ async function getJwtSecret() {
 exports.authenticate = async (req, res, next) => {
   try {
     const token = req.headers['authorization']?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'No token provided' });
+    if (!token) {
+      const error = new Error('No token provided');
+      error.statusCode = 401;
+      return next(error);
+    }
 
     const jwtSecret = await getJwtSecret();
 
     jwt.verify(token, jwtSecret, (err, decoded) => {
-      if (err) return res.status(401).json({ error: 'Invalid token' });
+      if (err) {
+        const error = new Error('Invalid token');
+        error.statusCode = 401;
+        return next(error);
+      }
       req.user = decoded;
       next();
     });
   } catch (error) {
     console.error('Authentication error:', error.message);
-    return res.status(500).json({ error: 'Authentication system error' });
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
   }
 };
 

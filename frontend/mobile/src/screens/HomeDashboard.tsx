@@ -57,7 +57,7 @@ export const HomeDashboard: React.FC = () => {
         await dispatch(getMyBookings()).unwrap();
       }
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      ;
     }
   }, [dispatch, currentLocation, user?.id]);
 
@@ -82,13 +82,13 @@ export const HomeDashboard: React.FC = () => {
 
   const handleRefresh = useCallback(() => {
     if (refreshing) return;
-    console.log('🔄 Starting refresh, clearing search');
+    ;
     setSearchQuery(''); // Clear search query on refresh
-    console.log('🔍 Search query cleared, fetching all listings');
+    ;
     setRefreshing(true);
     const lat = currentLocation?.latitude || 14.5995;
     const lon = currentLocation?.longitude || 120.9842;
-    console.log('📍 Fetching with lat:', lat, 'lon:', lon, 'radius: 3');
+    ;
     const fetches: Promise<any>[] = [
       dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })),
     ];
@@ -96,7 +96,7 @@ export const HomeDashboard: React.FC = () => {
       fetches.push(dispatch(getMyBookings()));
     }
     Promise.allSettled(fetches).finally(() => {
-      console.log('✅ Refresh complete');
+      ;
       setRefreshing(false);
     });
   }, [dispatch, currentLocation, user?.id, refreshing]);

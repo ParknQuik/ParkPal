@@ -12,9 +12,9 @@ const api = axios.create({
 });
 
 // Log API configuration for debugging
-console.log('📡 API Configuration:');
-console.log('  Base URL:', API_BASE_URL);
-console.log('  Backend:', isLocalBackend() ? '🏠 Local' : '☁️  Deployed');
+;
+;
+;
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -26,7 +26,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request interceptor error:', error);
+    ;
     return Promise.reject(error);
   }
 );
@@ -36,18 +36,16 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response) {
-      console.error(
-        `❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} - Status: ${error.response.status}`
-      );
+      ;
       
       if (error.response.status === 401) {
         await AsyncStorage.removeItem('token');
         await AsyncStorage.removeItem('user');
       }
     } else if (error.request) {
-      console.error('❌ API Error: No response received');
+      ;
     } else {
-      console.error('❌ API Error:', error.message);
+      ;
     }
     
     return Promise.reject(error);

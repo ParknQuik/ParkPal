@@ -50,7 +50,7 @@ const getLocalBackendPhysicalDevice = (): string => {
   }
 
   // Fallback to localhost (won't work but better than crashing)
-  console.warn('⚠️  Could not detect backend IP. Set EXPO_PUBLIC_BACKEND_IP in .env.local');
+  ;
   return 'http://localhost:3001/api/v1';
 };
 export const LOCAL_BACKEND_PHYSICAL_DEVICE = getLocalBackendPhysicalDevice();

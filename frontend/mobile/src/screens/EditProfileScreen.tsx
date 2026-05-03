@@ -123,7 +123,7 @@ export const EditProfileScreen: React.FC = () => {
 
       if (!uploadResult.ok) {
         const errorText = await uploadResult.text();
-        console.error('[ProfileUpload] GCS upload failed:', errorText);
+        ;
         throw new Error(`Upload failed: ${uploadResult.status} - ${errorText}`);
       }
 
@@ -148,11 +148,11 @@ export const EditProfileScreen: React.FC = () => {
 
         Alert.alert('Success', 'Profile photo updated successfully');
       } else {
-        console.error('[ProfileUpload] No profileImageUrl in response!');
+        ;
         Alert.alert('Error', 'Failed to get profile image URL');
       }
     } catch (error: any) {
-      console.error('[ProfileUpload] Error:', error);
+      ;
       Alert.alert('Error', error.message || 'Failed to upload image');
     } finally {
       setUploading(false);

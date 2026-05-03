@@ -7,6 +7,7 @@ const {
   photoIdParamSchema,
   slotIdParamSchema
 } = require('../validators/media');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   /**
@@ -22,8 +23,7 @@ module.exports = (app) => {
     '/media/upload-url',
     authenticate,
     validateBody(generateUploadUrlSchema),
-    mediaController.generateUploadUrl
-  );
+    asyncHandler(mediaController.generateUploadUrl));
 
   /**
    * @swagger
@@ -38,8 +38,7 @@ module.exports = (app) => {
     '/media/confirm-upload',
     authenticate,
     validateBody(confirmUploadSchema),
-    mediaController.confirmUpload
-  );
+    asyncHandler(mediaController.confirmUpload));
 
   /**
    * @swagger
@@ -54,8 +53,7 @@ module.exports = (app) => {
     '/media/photos/:id',
     authenticate,
     validateParams(photoIdParamSchema),
-    mediaController.deletePhoto
-  );
+    asyncHandler(mediaController.deletePhoto));
 
   /**
    * @swagger
@@ -67,6 +65,5 @@ module.exports = (app) => {
   app.get(
     '/media/photos/slot/:slotId',
     validateParams(slotIdParamSchema),
-    mediaController.getSlotPhotos
-  );
+    asyncHandler(mediaController.getSlotPhotos));
 };

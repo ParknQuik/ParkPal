@@ -157,7 +157,7 @@ export const ExploreMap: React.FC = () => {
         ...(searchQuery ? { q: searchQuery } : {}),
       })).unwrap();
     } catch (err) {
-      console.error('Failed to fetch listings:', err);
+      ;
     }
   }, [dispatch, searchQuery]);
 
@@ -282,11 +282,11 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleDirections = () => {
-    console.log('Navigate to directions');
+    ;
   };
 
   const handleFilterPress = () => {
-    console.log('Filter pressed - to be implemented');
+    ;
     Alert.alert('Filters', 'Filter options coming soon!');
   };
 

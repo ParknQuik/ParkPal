@@ -45,13 +45,13 @@ class MapsConfigService {
       this.apiKey = newApiKey;
       return this.apiKey;
     } catch (error) {
-      console.error('Failed to fetch Google Maps API key:', error);
+      ;
 
       // Try to return cached key even if expired
       const stored = await AsyncStorage.getItem(MAPS_API_KEY_STORAGE);
       if (stored) {
         const config: MapsConfig = JSON.parse(stored);
-        console.warn('Using expired cached API key as fallback');
+        ;
         return config.apiKey;
       }
 
@@ -73,7 +73,7 @@ class MapsConfigService {
           throw error;
         }
         // Wait before retrying
-        console.log(`Retrying Google Maps API key fetch (${i + 1}/${retries})...`);
+        ;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -91,7 +91,7 @@ class MapsConfigService {
       };
       await AsyncStorage.setItem(MAPS_API_KEY_STORAGE, JSON.stringify(config));
     } catch (error) {
-      console.error('Failed to cache API key:', error);
+      ;
     }
   }
 
@@ -103,7 +103,7 @@ class MapsConfigService {
       this.apiKey = null;
       await AsyncStorage.removeItem(MAPS_API_KEY_STORAGE);
     } catch (error) {
-      console.error('Failed to clear API key cache:', error);
+      ;
     }
   }
 

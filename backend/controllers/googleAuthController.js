@@ -1,11 +1,12 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const prisma = require('../config/prisma');
 const { generateToken, hashPassword } = require('../services/auth');
 
-const GOOGLE_TOKEN_INFO_URL = 'https://www.googleapis.com/oauth2/v3/tokeninfo';
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-exports.googleAuth = async (req, res) => {
+exports.googleAuth = async (req, res, next) => {
   try {
     const { code, googleToken } = req.body;
 
@@ -26,20 +27,19 @@ exports.googleAuth = async (req, res) => {
       const { id_token, access_token } = tokenResponse.data;
       const tokenToVerify = id_token || access_token;
 
-      // Verify the token
-      const verifyResponse = await axios.get(`${GOOGLE_TOKEN_INFO_URL}?id_token=${tokenToVerify}`);
-      googleUser = verifyResponse.data;
-    } else if (googleToken) {
-      // Legacy: accept pre-exchanged token
-      try {
-        const verifyResponse = await axios.get(`${GOOGLE_TOKEN_INFO_URL}?id_token=${googleToken}`);
-        googleUser = verifyResponse.data;
-      } catch {
-        const userinfoResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${googleToken}` }
-        });
-        googleUser = userinfoResponse.data;
-      }
+      // Verify the token with audience validation
+      const ticket = await client.verifyIdToken({
+        idToken: tokenToVerify,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      googleUser = ticket.getPayload();
+     } else if (googleToken) {
+       // Legacy: accept pre-exchanged token
+       const ticket = await client.verifyIdToken({
+         idToken: googleToken,
+         audience: process.env.GOOGLE_CLIENT_ID
+       });
+       googleUser = ticket.getPayload();
     } else {
       return res.status(400).json({ error: 'Authorization code or Google token is required' });
     }
@@ -78,7 +78,7 @@ exports.googleAuth = async (req, res) => {
             email,
             googleId,
             password: await hashPassword(randomPassword),
-            role: 'driver',
+            role: 'user',
             profileImageUrl: picture
           }
         });
@@ -102,8 +102,7 @@ exports.googleAuth = async (req, res) => {
       },
       token
     });
-  } catch (error) {
-    console.error('Google auth error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };

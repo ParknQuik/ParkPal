@@ -1,10 +1,11 @@
 const prisma = require('../config/prisma');
+const logger = require('../config/logger');
 const mediaService = require('../services/mediaService');
 
 /**
  * Get current user profile
  */
-exports.getProfile = async (req, res) => {
+exports.getProfile = async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -24,16 +25,15 @@ exports.getProfile = async (req, res) => {
     }
 
     res.json(user);
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Update user profile
  */
-exports.updateProfile = async (req, res) => {
+exports.updateProfile = async (req, res, next) => {
   try {
     const { name, phone } = req.body;
     const userId = req.user.id;
@@ -62,16 +62,15 @@ exports.updateProfile = async (req, res) => {
     });
 
     res.json(updatedUser);
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Get user statistics
  */
-exports.getUserStats = async (req, res) => {
+exports.getUserStats = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -140,69 +139,15 @@ exports.getUserStats = async (req, res) => {
       totalSpent,
       ...hostStats,
     });
-  } catch (error) {
-    console.error('Get user stats error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-/**
- * Get user's payment methods
- * TODO: Implement when PayMongo integration is complete
- */
-exports.getPaymentMethods = async (req, res) => {
-  try {
-    // Stub implementation - to be completed with PayMongo integration
-    res.json({
-      paymentMethods: [],
-      message: 'Payment methods feature coming soon. PayMongo integration in progress.',
-    });
-  } catch (error) {
-    console.error('Get payment methods error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-/**
- * Add a new payment method
- * TODO: Implement when PayMongo integration is complete
- */
-exports.addPaymentMethod = async (req, res) => {
-  try {
-    // Stub implementation - to be completed with PayMongo integration
-    res.status(501).json({
-      error: 'Payment methods feature not yet implemented',
-      message: 'PayMongo integration coming soon',
-    });
-  } catch (error) {
-    console.error('Add payment method error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-/**
- * Delete a payment method
- * TODO: Implement when PayMongo integration is complete
- */
-exports.deletePaymentMethod = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Stub implementation - to be completed with PayMongo integration
-    res.status(501).json({
-      error: 'Payment methods feature not yet implemented',
-      message: 'PayMongo integration coming soon',
-    });
-  } catch (error) {
-    console.error('Delete payment method error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Get profile picture upload URL
  */
-exports.getProfilePictureUrl = async (req, res) => {
+exports.getProfilePictureUrl = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { fileName } = req.query;
@@ -214,16 +159,15 @@ exports.getProfilePictureUrl = async (req, res) => {
     const result = await mediaService.generateProfileUploadUrl(userId, fileName);
 
     res.json(result);
-  } catch (error) {
-    console.error('Get profile picture URL error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Upload profile picture (after upload completes)
  */
-exports.uploadProfilePicture = async (req, res) => {
+exports.uploadProfilePicture = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { fileName } = req.body;
@@ -250,7 +194,7 @@ exports.uploadProfilePicture = async (req, res) => {
 
     res.json(updatedUser);
   } catch (error) {
-    console.error('Upload profile picture error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Upload profile picture error:', error);
+    next(error);
   }
 };

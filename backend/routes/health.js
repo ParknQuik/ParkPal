@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const redisClient = require('../config/redis');
 const secretManager = require('../config/secretManager');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 /**
  * Enhanced health check endpoint

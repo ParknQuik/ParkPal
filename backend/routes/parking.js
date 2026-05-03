@@ -9,6 +9,7 @@ const {
   getSlotsQuerySchema,
   idParamSchema
 } = require('../validators/parking');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   /**
@@ -46,8 +47,7 @@ module.exports = (app) => {
   app.get(
     '/slots',
     validateQuery(getSlotsQuerySchema),
-    parkingController.getSlots
-  );
+    asyncHandler(parkingController.getSlots));
 
   /**
    * @swagger
@@ -75,8 +75,7 @@ module.exports = (app) => {
   app.get(
     '/slots/:id',
     validateParams(idParamSchema),
-    parkingController.getSlotById
-  );
+    asyncHandler(parkingController.getSlotById));
 
   /**
    * @swagger
@@ -139,8 +138,7 @@ module.exports = (app) => {
     }),
     authenticate,
     validateBody(createSlotSchema),
-    parkingController.listSlot
-  );
+    asyncHandler(parkingController.listSlot));
 
   /**
    * @swagger
@@ -186,8 +184,7 @@ module.exports = (app) => {
     authenticate,
     validateParams(idParamSchema),
     validateBody(updateSlotSchema),
-    parkingController.updateSlot
-  );
+    asyncHandler(parkingController.updateSlot));
 
   /**
    * @swagger
@@ -213,8 +210,7 @@ module.exports = (app) => {
     '/slots/:id',
     authenticate,
     validateParams(idParamSchema),
-    parkingController.deleteSlot
-  );
+    asyncHandler(parkingController.deleteSlot));
 
   /**
    * @swagger
@@ -260,8 +256,7 @@ module.exports = (app) => {
     '/bookings',
     authenticate,
     validateBody(createBookingSchema),
-    parkingController.reserveSlot
-  );
+    asyncHandler(parkingController.reserveSlot));
 
   /**
    * @swagger
@@ -281,7 +276,7 @@ module.exports = (app) => {
    *               items:
    *                 $ref: '#/components/schemas/Booking'
    */
-  app.get('/bookings', authenticate, parkingController.getUserBookings);
+  app.get('/bookings', authenticate, asyncHandler(parkingController.getUserBookings));
 
   // =============================================================================
   // MOBILE APP COMPATIBILITY ALIASES
@@ -315,8 +310,7 @@ module.exports = (app) => {
   app.get(
     '/parking/spots',
     validateQuery(getSlotsQuerySchema),
-    parkingController.getSlots
-  );
+    asyncHandler(parkingController.getSlots));
 
   /**
    * @swagger
@@ -340,8 +334,7 @@ module.exports = (app) => {
   app.get(
     '/parking/spots/:id',
     validateParams(idParamSchema),
-    parkingController.getSlotById
-  );
+    asyncHandler(parkingController.getSlotById));
 
   /**
    * @swagger
@@ -366,8 +359,7 @@ module.exports = (app) => {
     '/parking/spots',
     authenticate,
     validateBody(createSlotSchema),
-    parkingController.listSlot
-  );
+    asyncHandler(parkingController.listSlot));
 
   /**
    * @swagger
@@ -398,8 +390,7 @@ module.exports = (app) => {
     authenticate,
     validateParams(idParamSchema),
     validateBody(updateSlotSchema),
-    parkingController.updateSlot
-  );
+    asyncHandler(parkingController.updateSlot));
 
   /**
    * @swagger
@@ -424,6 +415,5 @@ module.exports = (app) => {
     '/parking/spots/:id',
     authenticate,
     validateParams(idParamSchema),
-    parkingController.deleteSlot
-  );
+    asyncHandler(parkingController.deleteSlot));
 };

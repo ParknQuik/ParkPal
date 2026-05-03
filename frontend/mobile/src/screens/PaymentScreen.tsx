@@ -40,6 +40,21 @@ export const PaymentScreen: React.FC = () => {
     total: (amount || 0) + Math.round((amount || 0) * 0.05),
   };
 
+  const createBookingIfNeeded = async (): Promise<number | undefined> => {
+    if (createBookingOnSuccess && !bookingId && spotId) {
+      const createResponse = await marketplaceAPI.createBookingMarketplace({
+        slotId: Number(spotId),
+        startTime: startTime!,
+        endTime: endTime!,
+        rentalMode: rentalMode as 'fixed' | 'open',
+        maxDuration: rentalMode === 'open' ? maxDuration : undefined,
+      });
+      const rawData = createResponse.data;
+      return rawData?.id || rawData?.data?.id || rawData?.data?.data?.id || rawData?.booking?.id;
+    }
+    return bookingId;
+  };
+
   const handleBack = () => {
     navigation.goBack();
   };
@@ -51,21 +66,10 @@ export const PaymentScreen: React.FC = () => {
       try {
         setLoading(true);
         
-        let finalBookingId = bookingId;
+        let finalBookingId: number | undefined = bookingId;
         
         if (createBookingOnSuccess && !bookingId && spotId) {
-          console.log('Creating booking, spotId:', spotId);
-          const createResponse = await marketplaceAPI.createBookingMarketplace({
-            slotId: Number(spotId),
-            startTime: startTime!,
-            endTime: endTime!,
-            rentalMode: rentalMode as 'fixed' | 'open',
-            maxDuration: rentalMode === 'open' ? maxDuration : undefined,
-          });
-          console.log('Create booking response:', createResponse.data);
-          const rawData = createResponse.data;
-          finalBookingId = rawData?.id || rawData?.data?.id || rawData?.data?.data?.id || rawData?.booking?.id;
-          console.log('Extracted bookingId:', finalBookingId);
+          finalBookingId = await createBookingIfNeeded();
         }
         
         if (!finalBookingId) {
@@ -90,10 +94,8 @@ export const PaymentScreen: React.FC = () => {
           } as never) }]
         );
         return;
-      } catch (err: any) {
-        console.error('Booking/confirm error:', err);
-        
-        if (err.response?.status === 409) {
+     } catch (err: any) {
+         if (err.response?.status === 409) {
           Alert.alert(
             'Slot Unavailable',
             err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',
@@ -111,17 +113,10 @@ export const PaymentScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      let finalBookingId = bookingId;
+      let finalBookingId: number | undefined = bookingId;
       
       if (createBookingOnSuccess && !bookingId && spotId) {
-        const createResponse = await marketplaceAPI.createBookingMarketplace({
-          slotId: Number(spotId),
-          startTime: startTime!,
-          endTime: endTime!,
-          rentalMode: rentalMode as 'fixed' | 'open',
-          maxDuration: rentalMode === 'open' ? maxDuration : undefined,
-        });
-        finalBookingId = createResponse.data?.id || createResponse.data?.data?.id || createResponse.data?.data?.data?.id || createResponse.data?.booking?.id;
+        finalBookingId = await createBookingIfNeeded();
       }
       
       if (!finalBookingId) {
@@ -151,10 +146,9 @@ export const PaymentScreen: React.FC = () => {
         paymentMethod: selectedPayment,
         rentalMode,
       } as never);
-    } catch (err: any) {
-      console.error('Booking/payment error:', err);
-      
-      if (err.response?.status === 409) {
+     } catch (err: any) {
+       
+       if (err.response?.status === 409) {
         Alert.alert(
           'Slot Unavailable',
           err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',

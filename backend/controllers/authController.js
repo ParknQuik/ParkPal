@@ -1,9 +1,10 @@
 const prisma = require('../config/prisma');
+const logger = require('../config/logger');
 const crypto = require('crypto');
 const { generateToken, hashPassword, comparePassword, validatePassword } = require('../services/auth');
 const { sendPasswordResetEmail } = require('../services/email');
 
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.validatedData;
 
@@ -51,11 +52,11 @@ exports.register = async (req, res) => {
 
     res.status(201).json(response);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.changePassword = async (req, res) => {
+exports.changePassword = async (req, res, next) => {
   try {
     const { oldPassword, newPassword } = req.validatedData;
     const userId = req.user.id;
@@ -98,13 +99,12 @@ exports.changePassword = async (req, res) => {
     }
 
     res.json(response);
-  } catch (error) {
-    console.error('Password change error:', error);
-    res.status(500).json({ error: 'Failed to change password' });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -133,19 +133,21 @@ exports.login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        phone: user.phone ?? null,
+        profileImageUrl: user.profileImageUrl ?? null,
       },
       token
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 /**
  * Get current user
  */
-exports.getCurrentUser = async (req, res) => {
+exports.getCurrentUser = async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -166,27 +168,27 @@ exports.getCurrentUser = async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 /**
  * Logout user
  */
-exports.logout = async (req, res) => {
+exports.logout = async (req, res, next) => {
   try {
     // If using JWT blacklist or refresh tokens, invalidate them here
     // For now, logout is handled client-side by removing the token
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 /**
  * Forgot password - Send reset token via email
  */
-exports.forgotPassword = async (req, res) => {
+exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.validatedData;
 
@@ -221,22 +223,20 @@ exports.forgotPassword = async (req, res) => {
     // Send email
     try {
       await sendPasswordResetEmail(user.email, user.name, resetToken);
-    } catch (emailError) {
-      console.error('Failed to send reset email:', emailError);
-      // Don't expose email sending failures to client
-    }
+     } catch (emailError) {
+       // Don't expose email sending failures to client
+     }
 
     res.json({ message: successMessage });
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ error: 'Failed to process password reset request' });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Reset password - Validate token and update password
  */
-exports.resetPassword = async (req, res) => {
+exports.resetPassword = async (req, res, next) => {
   try {
     const { token, newPassword } = req.validatedData;
 
@@ -285,7 +285,7 @@ exports.resetPassword = async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ error: 'Failed to reset password' });
+    logger.error('Reset password error:', error);
+    next(error);
   }
 };

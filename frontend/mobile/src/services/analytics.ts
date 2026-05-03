@@ -49,7 +49,7 @@ class AnalyticsService {
 
       return session;
     } catch (error: any) {
-      console.log('[Analytics] Zone enter failed:', error?.response?.data?.error || error?.message);
+      ;
       return null;
     }
   }
@@ -61,7 +61,7 @@ class AnalyticsService {
     try {
       await analyticsAPI.logActivity(session.sessionId, activityType, confidence, latitude, longitude);
     } catch (error: any) {
-      console.log('[Analytics] Activity log failed:', error?.message);
+      ;
     }
   }
 
@@ -71,7 +71,7 @@ class AnalyticsService {
       await AsyncStorage.removeItem(ACTIVE_SESSION_KEY);
       this.stopActivityTracking();
     } catch (error) {
-      console.log('[Analytics] Zone exit failed:', error?.message);
+      ;
     }
   }
 
@@ -117,7 +117,7 @@ class AnalyticsService {
         const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         await this.logActivity('IN_VEHICLE', 80, location.coords.latitude, location.coords.longitude);
       } catch (error) {
-        console.log('[Analytics] Location tracking error:', error?.message);
+        ;
       }
     }, 10000);
   }

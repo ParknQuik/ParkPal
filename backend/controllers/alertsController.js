@@ -1,7 +1,7 @@
 const axios = require('axios');
 const secretManager = require('../config/secretManager');
 
-exports.getAlerts = async (req, res) => {
+exports.getAlerts = async (req, res, next) => {
   try {
     const { lat, lon } = req.query;
 
@@ -48,6 +48,6 @@ exports.getAlerts = async (req, res) => {
       timestamp: new Date()
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

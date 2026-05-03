@@ -113,7 +113,7 @@ export const MyBookingsScreen: React.FC = () => {
     try {
       await dispatch(getMyBookings()).unwrap();
     } catch (err) {
-      console.error('Failed to fetch bookings:', err);
+      ;
     }
   }, [dispatch]);
 
@@ -172,7 +172,7 @@ export const MyBookingsScreen: React.FC = () => {
                 await fetchBookings();
               } catch (err: any) {
                 const errorMessage = err.response?.data?.error || 'Failed to cancel booking. Please try again.';
-                console.error('Failed to cancel booking:', errorMessage);
+                ;
                 Alert.alert('Cannot Cancel Booking', errorMessage);
               }
             },
@@ -198,7 +198,7 @@ export const MyBookingsScreen: React.FC = () => {
       const response = await marketplaceAPI.checkExtensionAvailability(bookingId, hours);
       setExtensionAvailability(response.data);
     } catch (err: any) {
-      console.error('Failed to check availability:', err);
+      ;
       Alert.alert('Error', 'Failed to check extension availability');
     } finally {
       setCheckingAvailability(false);
@@ -237,7 +237,7 @@ export const MyBookingsScreen: React.FC = () => {
       setExtendModalVisible(false);
       await fetchBookings(); // Refresh bookings list
     } catch (err: any) {
-      console.error('Failed to extend booking:', err.response?.data?.error || err.message);
+      ;
       Alert.alert('Extension Failed', err.response?.data?.error || 'Failed to extend booking. Please try again.');
     } finally {
       setExtending(false);

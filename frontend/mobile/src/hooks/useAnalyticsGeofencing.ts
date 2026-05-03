@@ -43,7 +43,7 @@ export function useAnalyticsGeofencing(zones: Zone[], enabled: boolean = true) {
       const distance = calculateDistance(latitude, longitude, zone.centerLat, zone.centerLon);
 
       if (distance <= zone.radius && lastZoneIdRef.current !== zone.id) {
-        console.log(`[Geofencing] Entered zone: ${zone.name} (${distance.toFixed(0)}m from center)`);
+        ;
 
         const session = await analyticsService.enterZone(zone.id, latitude, longitude);
 
@@ -69,7 +69,7 @@ export function useAnalyticsGeofencing(zones: Zone[], enabled: boolean = true) {
       }
 
       if (!isInAnyZone) {
-        console.log('[Geofencing] Left zone');
+        ;
         const session = await analyticsService.getActiveSession();
         if (session) {
           await analyticsService.exitZone(session.sessionId, false);
@@ -93,7 +93,7 @@ export function useAnalyticsGeofencing(zones: Zone[], enabled: boolean = true) {
     const startTracking = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('[Geofencing] Location permission denied');
+        ;
         return;
       }
 

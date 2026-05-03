@@ -1,28 +1,25 @@
 const earningsController = require('../controllers/earningsController');
 const { authenticate } = require('../services/auth');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   app.get(
     '/earnings/summary',
     authenticate,
-    earningsController.getEarningsSummary
-  );
+    asyncHandler(earningsController.getEarningsSummary));
 
   app.get(
     '/earnings/transactions',
     authenticate,
-    earningsController.getTransactions
-  );
+    asyncHandler(earningsController.getTransactions));
 
   app.get(
     '/earnings/analytics',
     authenticate,
-    earningsController.getAnalytics
-  );
+    asyncHandler(earningsController.getAnalytics));
 
   app.post(
     '/earnings/payout',
     authenticate,
-    earningsController.requestPayout
-  );
+    asyncHandler(earningsController.requestPayout));
 };
