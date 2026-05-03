@@ -328,7 +328,7 @@ const handleAction = useCallback(
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.emptyIcon}>⚠️</Text>
+          <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} style={{ marginBottom: spacing.md }} />
           <Text style={styles.emptyText}>Failed to load bookings</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchBookings}>
             <Text style={styles.retryText}>Retry</Text>
@@ -472,7 +472,7 @@ const handleAction = useCallback(
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📋</Text>
+            <MaterialCommunityIcons name="calendar-blank-outline" size={48} color={colors.textSecondary} style={{ marginBottom: spacing.md }} />
             <Text style={styles.emptyText}>No {activeTab} bookings found</Text>
           </View>
         }
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dateIcon: {
-    fontSize: 12,
+    marginTop: 1,
   },
   dateText: {
     fontSize: typography.xs.fontSize,
@@ -837,10 +837,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 60,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
+
   emptyText: {
     fontSize: typography.md.fontSize,
     fontWeight: '500',
