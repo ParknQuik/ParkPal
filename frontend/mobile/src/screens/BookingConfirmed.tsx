@@ -80,7 +80,10 @@ export const BookingConfirmed: React.FC = () => {
   };
 
   const handleScanToCheckIn = () => {
-    navigation.navigate('QRScanner' as never, { mode: 'checkin', bookingId } as never);
+    navigation.navigate('QRScanner' as never, {
+      mode: 'checkin',
+      bookingId: bookingId,
+    } as never);
   };
 
   return (
