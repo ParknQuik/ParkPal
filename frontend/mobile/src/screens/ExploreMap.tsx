@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -24,15 +24,11 @@ import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
 import { analyticsService } from '../services/analytics';
 import { ListingBottomSheet } from '../components/ListingBottomSheet';
 import { FilterModal, FilterConfig } from '../components/FilterModal';
+import { FilterChips, SortOption } from '../components/FilterChips';
+import { useSearchHistory } from '../hooks/useSearchHistory';
+import { useAutocomplete } from '../hooks/useAutocomplete';
 
 const { width, height } = Dimensions.get('window');
-
-// ---------------------------------------------------------------------------
-// Native View-based price marker — simpler, better performance than SVG.
-// Uses a View wrapper with borderRadius + Text for the price display.
-// collapsable={false} ensures Android doesn't optimize away the View.
-// tracksViewChanges is locked to false after first render for performance.
-// ---------------------------------------------------------------------------
 
 const PriceMarker = React.memo(({ listing, selected, onPress }: {
   listing: any;
@@ -91,13 +87,17 @@ export const ExploreMap: React.FC = () => {
   const dispatch = useAppDispatch();
   const mapRef = useRef<MapView>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<TextInput>(null);
   const [selectedMarker, setSelectedMarker] = useState<string | number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMovedMap, setHasMovedMap] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [activeFilters, setActiveFilters] = useState<FilterConfig>({});
+  const [activeSort, setActiveSort] = useState<SortOption>(null);
+  const [isFocused, setIsFocused] = useState(false);
   const insets = useSafeAreaInsets();
+  const { history, addToHistory, clearHistory, removeFromHistory } = useSearchHistory();
 
   const [region, setRegion] = useState(latitude && longitude ? {
     latitude,
@@ -116,9 +116,12 @@ export const ExploreMap: React.FC = () => {
   const { listings, loading } = useAppSelector((state) => state.marketplace);
   const { zoneAvailability } = useAppSelector((state) => state.analytics);
 
-  // Analytics zones overlay
+  const suggestions = useAutocomplete(searchQuery, listings);
+
+  const displayItems = searchQuery.trim() ? suggestions : history;
+
   const [analyticsZones, setAnalyticsZones] = useState<any[]>([]);
-  
+
   useEffect(() => {
     const loadZones = async () => {
       const zones = await analyticsService.getZones();
@@ -127,7 +130,6 @@ export const ExploreMap: React.FC = () => {
     loadZones();
   }, []);
 
-  // Initialize geofencing hook
   const { currentZone, sessionId } = useAnalyticsGeofencing(
     analyticsZones.map(z => ({
       id: z.id,
@@ -143,7 +145,6 @@ export const ExploreMap: React.FC = () => {
     ? listings.find((l: any) => l.id === selectedMarker)
     : null;
 
-  // Fetch zone availability when a listing is selected and has a zoneId
   useEffect(() => {
     if (selectedListing?.zoneId) {
       dispatch(fetchZoneAvailability(selectedListing.zoneId));
@@ -156,7 +157,27 @@ export const ExploreMap: React.FC = () => {
 
   const hasActiveFilters = Object.keys(activeFilters).length > 0;
 
-  // Fetch listings for a given region
+  const sortedListings = useMemo(() => {
+    if (!activeSort || !listings.length) return listings;
+
+    return [...listings].sort((a, b) => {
+      switch (activeSort) {
+        case 'cheapest':
+          return (a.pricePerHour ?? Infinity) - (b.pricePerHour ?? Infinity);
+        case 'nearest':
+          return (a.distance ?? 0) - (b.distance ?? 0);
+        case 'top_rated':
+          const aRating = a.rating ?? -1;
+          const bRating = b.rating ?? -1;
+          return bRating - aRating;
+        case 'available_now':
+          return 0;
+        default:
+          return 0;
+      }
+    });
+  }, [listings, activeSort]);
+
   const fetchListings = useCallback(async (lat: number, lon: number, filters?: FilterConfig) => {
     try {
       const params: any = {
@@ -165,7 +186,7 @@ export const ExploreMap: React.FC = () => {
         radius: 3,
         ...(searchQuery ? { q: searchQuery } : {}),
       };
-      
+
       if (filters) {
         if (filters.minPrice != null) params.minPrice = filters.minPrice;
         if (filters.maxPrice != null) params.maxPrice = filters.maxPrice;
@@ -173,7 +194,7 @@ export const ExploreMap: React.FC = () => {
         if (filters.amenities?.length) params.amenities = filters.amenities.join(',');
         if (filters.availableNow) params.status = 'available';
       }
-      
+
       await dispatch(searchListings(params)).unwrap();
     } catch (err) {
       ;
@@ -186,7 +207,6 @@ export const ExploreMap: React.FC = () => {
   };
 
   const centerOnUser = useCallback(async () => {
-    // If params were passed from ParkingDetails, use those instead
     if (latitude && longitude) {
       const newRegion = {
         latitude,
@@ -196,19 +216,16 @@ export const ExploreMap: React.FC = () => {
       };
       setRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 500);
-      
-      // Fetch listings for this location
+
       fetchListings(latitude, longitude);
-      
-      // If focusSpotId provided, select it after listings load
+
       if (focusSpotId) {
         setTimeout(() => setSelectedMarker(focusSpotId), 1000);
       }
       setLocationReady(true);
       return;
     }
-    
-    // Otherwise, use user's current location (original behavior)
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
@@ -232,16 +249,14 @@ export const ExploreMap: React.FC = () => {
     } finally {
       setLocationReady(true);
     }
-  }, [fetchListings, latitude, longitude, focusSpotId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchListings, latitude, longitude, focusSpotId]);
 
-  // Center on user every time this tab is focused
   useFocusEffect(
     useCallback(() => {
       centerOnUser();
     }, [centerOnUser])
   );
 
-  // Debounced search when searchQuery changes
   useEffect(() => {
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
@@ -254,7 +269,7 @@ export const ExploreMap: React.FC = () => {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -328,38 +343,108 @@ export const ExploreMap: React.FC = () => {
     fetchListings(region.latitude, region.longitude);
   };
 
+  const handleSortChange = (sort: SortOption) => {
+    setActiveSort(sort);
+  };
+
+  const handleSuggestionPress = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    addToHistory(suggestion);
+    setIsFocused(false);
+    fetchListings(region.latitude, region.longitude, activeFilters);
+  };
+
+  const handleSubmitEditing = () => {
+    if (searchQuery.trim()) {
+      addToHistory(searchQuery);
+    }
+    setIsFocused(false);
+  };
+
+  const handleHistoryItemRemove = (item: string) => {
+    removeFromHistory(item);
+  };
+
+  const filterChipsTop = insets.top + 64;
+  const suggestionsTop = insets.top + 60;
+  const clearFiltersTop = hasActiveFilters ? filterChipsTop + 44 : undefined;
+  const searchAreaTop = filterChipsTop + 50;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Search Bar */}
       <View style={[styles.searchBarContainer, { top: insets.top + 8 }]}>
         <View style={styles.searchBar}>
           <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
+            ref={inputRef}
             style={styles.searchInput}
             placeholder="Search parking spots..."
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            onSubmitEditing={handleSubmitEditing}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => { setSearchQuery(''); inputRef.current?.blur(); }}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="close-circle" size={20} color={colors.textTertiary} />
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity
           style={styles.filterButton}
           onPress={handleFilterPress}
           activeOpacity={0.7}
         >
-          <MaterialCommunityIcons 
-            name="tune" 
-            size={20} 
-            color={hasActiveFilters ? colors.primary : colors.textSecondary} 
+          <MaterialCommunityIcons
+            name="tune"
+            size={20}
+            color={hasActiveFilters ? colors.primary : colors.textSecondary}
           />
         </TouchableOpacity>
       </View>
 
-      {/* Clear Filters Chip */}
-      {hasActiveFilters && (
+      {isFocused && displayItems.length > 0 && (
+        <View style={[styles.suggestionsDropdown, { top: suggestionsTop }]}>
+          {displayItems.map((item, index) => (
+            <TouchableOpacity
+              key={`${item}-${index}`}
+              style={styles.suggestionItem}
+              onPress={() => handleSuggestionPress(item)}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons
+                name={!searchQuery.trim() ? "history" : "magnify"}
+                size={18}
+                color={colors.textSecondary}
+              />
+              <Text style={styles.suggestionText} numberOfLines={1}>
+                {item}
+              </Text>
+              {!searchQuery.trim() && (
+                <TouchableOpacity
+                  onPress={() => handleHistoryItemRemove(item)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <MaterialCommunityIcons name="close" size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <FilterChips activeSort={activeSort} onSortChange={handleSortChange} />
+
+      {hasActiveFilters && clearFiltersTop !== undefined && (
         <TouchableOpacity
-          style={[styles.clearFiltersChip, { top: insets.top + 64 }]}
+          style={[styles.clearFiltersChip, { top: clearFiltersTop }]}
           onPress={handleClearFilters}
           activeOpacity={0.7}
         >
@@ -368,7 +453,6 @@ export const ExploreMap: React.FC = () => {
         </TouchableOpacity>
       )}
 
-      {/* Analytics Zone Indicator */}
       {currentZone && (
         <View style={styles.zoneIndicator}>
           <View style={styles.zoneIndicatorDot} />
@@ -378,7 +462,6 @@ export const ExploreMap: React.FC = () => {
         </View>
       )}
 
-      {/* Map Background */}
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
@@ -390,7 +473,7 @@ export const ExploreMap: React.FC = () => {
           showsUserLocation
           showsMyLocationButton={false}
         >
-          {listings.map((listing: any) => (
+          {sortedListings.map((listing: any) => (
             <PriceMarker
               key={listing.id}
               listing={listing}
@@ -408,7 +491,6 @@ export const ExploreMap: React.FC = () => {
             strokeColor="rgba(16, 183, 127, 0.5)"
             strokeWidth={2}
           />
-          {/* Analytics Zone Overlays */}
           {analyticsZones.map((zone: any) => (
             <React.Fragment key={zone.id}>
               <Circle
@@ -421,7 +503,6 @@ export const ExploreMap: React.FC = () => {
                 strokeColor={currentZone?.id === zone.id ? 'rgba(16, 183, 127, 0.7)' : 'rgba(100, 116, 139, 0.4)'}
                 strokeWidth={currentZone?.id === zone.id ? 3 : 2}
               />
-              {/* Zone label */}
               <Marker
                 coordinate={{
                   latitude: zone.centroidLat,
@@ -434,12 +515,12 @@ export const ExploreMap: React.FC = () => {
           ))}
         </MapView>
 
-        {/* Search this area button */}
         {hasMovedMap && (
           <TouchableOpacity
-            style={[styles.searchAreaButton, { top: insets.top + 110 }]}
+            style={[styles.searchAreaButton, { top: searchAreaTop }]}
             onPress={async () => {
               setHasMovedMap(false);
+              if (searchQuery.trim()) addToHistory(searchQuery);
               await fetchListings(region.latitude, region.longitude, activeFilters);
             }}
             activeOpacity={0.8}
@@ -448,14 +529,12 @@ export const ExploreMap: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* Loading Overlay */}
         {loading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
 
-        {/* Empty State */}
         {!loading && listings.length === 0 && (
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="map-marker-off-outline" size={48} color={colors.textSecondary} />
@@ -463,7 +542,6 @@ export const ExploreMap: React.FC = () => {
           </View>
         )}
 
-        {/* Map Controls */}
         <View style={styles.mapControls}>
           <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7}>
             <MaterialCommunityIcons name="plus" size={24} color={colors.textSecondary} />
@@ -481,7 +559,6 @@ export const ExploreMap: React.FC = () => {
         </View>
       </View>
 
-      {/* Bottom Sheet Preview */}
       <ListingBottomSheet
         listing={selectedListing}
         zoneAvailability={selectedZoneAvail}
@@ -534,6 +611,34 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
+    color: colors.textPrimary,
+  },
+  suggestionsDropdown: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    gap: 10,
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 14,
     color: colors.textPrimary,
   },
   filterButton: {
