@@ -1,5 +1,6 @@
 const vehiclesController = require('../controllers/vehiclesController');
 const { authenticate } = require('../services/auth');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   /**
@@ -66,8 +67,8 @@ module.exports = (app) => {
    *             schema:
    *               $ref: '#/components/schemas/Vehicle'
    */
-  app.get('/vehicles', authenticate, vehiclesController.getVehicles);
-  app.post('/vehicles', authenticate, vehiclesController.createVehicle);
+  app.get('/vehicles', authenticate, asyncHandler(vehiclesController.getVehicles));
+  app.post('/vehicles', authenticate, asyncHandler(vehiclesController.createVehicle));
 
   /**
    * @swagger
@@ -144,9 +145,9 @@ module.exports = (app) => {
    *         description: Vehicle deleted
    */
 
-  app.get('/vehicles/:id', authenticate, vehiclesController.getVehicle);
-  app.put('/vehicles/:id', authenticate, vehiclesController.updateVehicle);
-  app.delete('/vehicles/:id', authenticate, vehiclesController.deleteVehicle);
+  app.get('/vehicles/:id', authenticate, asyncHandler(vehiclesController.getVehicle));
+  app.put('/vehicles/:id', authenticate, asyncHandler(vehiclesController.updateVehicle));
+  app.delete('/vehicles/:id', authenticate, asyncHandler(vehiclesController.deleteVehicle));
 
   /**
    * @swagger
@@ -170,5 +171,5 @@ module.exports = (app) => {
    *             schema:
    *               $ref: '#/components/schemas/Vehicle'
    */
-  app.post('/vehicles/:id/default', authenticate, vehiclesController.setDefaultVehicle);
+  app.post('/vehicles/:id/default', authenticate, asyncHandler(vehiclesController.setDefaultVehicle));
 };

@@ -27,6 +27,7 @@ module.exports = (authLimiter) => {
   const vehiclesRoutes = require('../vehicles');
   const notificationsRoutes = require('../notifications');
   const earningsRoutes = require('../earnings');
+  const pointsRoutes = require('../points');
 
   // Health routes (no auth required)
   healthRoutes(router);
@@ -49,6 +50,7 @@ module.exports = (authLimiter) => {
   vehiclesRoutes(router);
   notificationsRoutes(router);
   earningsRoutes(router);
+  pointsRoutes(router);
 
   return router;
 };

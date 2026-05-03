@@ -16,7 +16,7 @@ export const haptics = {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch (error) {
         // Silently fail if haptics not available
-        console.debug('Haptics not available:', error);
+        ;
       }
     }
   },
@@ -29,7 +29,7 @@ export const haptics = {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } catch (error) {
-        console.debug('Haptics not available:', error);
+        ;
       }
     }
   },
@@ -42,7 +42,7 @@ export const haptics = {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       } catch (error) {
-        console.debug('Haptics not available:', error);
+        ;
       }
     }
   },
@@ -55,7 +55,7 @@ export const haptics = {
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch (error) {
-        console.debug('Haptics not available:', error);
+        ;
       }
     }
   },
@@ -68,7 +68,7 @@ export const haptics = {
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       } catch (error) {
-        console.debug('Haptics not available:', error);
+        ;
       }
     }
   },
@@ -81,7 +81,7 @@ export const haptics = {
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } catch (error) {
-        console.debug('Haptics not available:', error);
+        ;
       }
     }
   },
@@ -94,7 +94,7 @@ export const haptics = {
       try {
         await Haptics.selectionAsync();
       } catch (error) {
-        console.debug('Haptics not available:', error);
+        ;
       }
     }
   },

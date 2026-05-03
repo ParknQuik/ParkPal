@@ -83,7 +83,7 @@ export const ReserveSpot: React.FC = () => {
           setSelectedVehicle(String(vehicleList[0].id));
         }
       } catch (err) {
-        console.error('Failed to fetch data:', err);
+        ;
       } finally {
         setLoading(false);
       }
@@ -188,7 +188,7 @@ export const ReserveSpot: React.FC = () => {
         createBookingOnSuccess: true, // Flag to create booking after payment
       });
     } catch (err: any) {
-      console.error('Booking failed:', err);
+      ;
       const errorMessage = err.response?.data?.error || err.message || 'Unable to create booking';
       
       if (err.response?.status === 409) {

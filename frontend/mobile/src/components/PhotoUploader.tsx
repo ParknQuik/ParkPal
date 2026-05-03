@@ -112,7 +112,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         setUploadProgress(0);
       }, 500);
     } catch (error: any) {
-      console.error('Upload error:', error);
+      ;
       Alert.alert('Upload Failed', error.message || 'Failed to upload photo. Please try again.');
       setUploading(false);
       setUploadProgress(0);

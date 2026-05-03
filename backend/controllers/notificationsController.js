@@ -1,10 +1,11 @@
 const prisma = require('../config/prisma');
+const logger = require('../config/logger');
 const expoPush = require('../services/expoPush');
 
 /**
  * Get all notifications for current user
  */
-exports.getNotifications = async (req, res) => {
+exports.getNotifications = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { read, limit = 20, offset = 0 } = req.query;
@@ -28,16 +29,15 @@ exports.getNotifications = async (req, res) => {
     });
 
     res.json({ notifications, total, unreadCount });
-  } catch (error) {
-    console.error('Get notifications error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Get single notification by ID
  */
-exports.getNotification = async (req, res) => {
+exports.getNotification = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -51,16 +51,15 @@ exports.getNotification = async (req, res) => {
     }
 
     res.json(notification);
-  } catch (error) {
-    console.error('Get notification error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Mark notification as read
  */
-exports.markAsRead = async (req, res) => {
+exports.markAsRead = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -80,15 +79,15 @@ exports.markAsRead = async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Mark as read error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Mark as read error:', error);
+    next(error);
   }
 };
 
 /**
  * Mark all notifications as read
  */
-exports.markAllAsRead = async (req, res) => {
+exports.markAllAsRead = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -99,15 +98,15 @@ exports.markAllAsRead = async (req, res) => {
 
     res.json({ message: 'All notifications marked as read' });
   } catch (error) {
-    console.error('Mark all as read error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Mark all as read error:', error);
+    next(error);
   }
 };
 
 /**
  * Delete a notification
  */
-exports.deleteNotification = async (req, res) => {
+exports.deleteNotification = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -124,15 +123,15 @@ exports.deleteNotification = async (req, res) => {
 
     res.json({ message: 'Notification deleted successfully' });
   } catch (error) {
-    console.error('Delete notification error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Delete notification error:', error);
+    next(error);
   }
 };
 
 /**
  * Get unread count
  */
-exports.getUnreadCount = async (req, res) => {
+exports.getUnreadCount = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -142,8 +141,8 @@ exports.getUnreadCount = async (req, res) => {
 
     res.json({ unreadCount: count });
   } catch (error) {
-    console.error('Get unread count error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get unread count error:', error);
+    next(error);
   }
 };
 
@@ -178,7 +177,7 @@ exports.createNotification = async (userId, data) => {
         );
       }
     } catch (pushError) {
-      console.error('Failed to send push notification:', pushError);
+      logger.error('Failed to send push notification:', pushError);
     }
   }
 

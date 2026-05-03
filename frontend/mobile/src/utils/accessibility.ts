@@ -12,7 +12,7 @@ export const accessibility = {
     try {
       return await AccessibilityInfo.isScreenReaderEnabled();
     } catch (error) {
-      console.debug('Failed to check screen reader status:', error);
+      ;
       return false;
     }
   },

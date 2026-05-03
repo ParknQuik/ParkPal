@@ -21,7 +21,7 @@ export const notificationService = {
   async getPushToken(): Promise<string | null> {
     // Skip push token in Expo Go (not supported in SDK 53+)
     if (IS_EXPO_GO) {
-      console.log('Skipping push token in Expo Go (use development build for push)');
+      ;
       return null;
     }
     
@@ -37,7 +37,7 @@ export const notificationService = {
       }
       
       if (finalStatus !== 'granted') {
-        console.log('Push notification permission not granted');
+        ;
         return null;
       }
       
@@ -47,19 +47,19 @@ export const notificationService = {
     } catch (error: any) {
       // Check if it's the projectId error - silently fail
       if (error?.message?.includes('projectId') || error?.code === 'VALIDATION_ERROR') {
-        console.log('Push notifications require EAS project setup');
+        ;
         return null;
       }
-      console.error('Failed to get push token:', error.message || error);
+      ;
       return null;
     }
   },
 
   async registerPushToken(pushToken: string, userId: number): Promise<void> {
     try {
-      console.log('Would register push token:', pushToken, 'for user:', userId);
+      ;
     } catch (error) {
-      console.error('Failed to register push token:', error);
+      ;
     }
   },
 

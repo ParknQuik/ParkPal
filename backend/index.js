@@ -75,7 +75,7 @@ app.use(helmet({
 
 // Configure CORS properly
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
+    origin: process.env.NODE_ENV === 'production'
     ? [
         'https://parkpal.com',
         'https://www.parkpal.com',
@@ -89,9 +89,6 @@ const corsOptions = {
         'http://localhost:5173', // Vite dev server
         'http://localhost:5174', // Vite dev server (alternate port)
         'http://localhost:19006', // Expo web
-        'http://192.168.100.233:3000',
-        'http://192.168.100.233:19006',
-        'http://192.168.100.241:5173', // Vite dev server on network
         /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:\d{4,5}$/, // Allow all local network IPs
         // Cloud Run web frontends (for development)
         'https://parkpal-web-dev-cxntrkjjmq-as.a.run.app',
@@ -102,6 +99,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Webhook route MUST be before express.json() to capture raw body
+const paymongoController = require('./controllers/paymentsController');
+app.post('/api/v1/payments/webhook', express.raw({ type: 'application/json' }), paymongoController.handleWebhook);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -206,7 +208,7 @@ if (process.env.NODE_ENV !== 'test') {
   logger.info('Auto-checkout cron job scheduled (every 30 minutes)');
 
   // Booking expiry cron jobs
-  const { checkExpiredBookings, sendExpiryReminders } = require('./services/bookingExpiry');
+  const { checkExpiredBookings, checkMissedOpenTimeBookings, sendExpiryReminders } = require('./services/bookingExpiry');
   
   // Check for expired bookings every 5 minutes
   cron.schedule('*/5 * * * *', async () => {
@@ -214,6 +216,15 @@ if (process.env.NODE_ENV !== 'test') {
       await checkExpiredBookings();
     } catch (error) {
       logger.error('[Cron] Booking expiry check failed:', error);
+    }
+  });
+
+  // Check for missed open time bookings every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await checkMissedOpenTimeBookings();
+    } catch (error) {
+      logger.error('[Cron] Missed open time bookings check failed:', error);
     }
   });
   

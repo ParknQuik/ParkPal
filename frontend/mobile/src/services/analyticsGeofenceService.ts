@@ -120,7 +120,7 @@ const GeofenceService = {
 
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      console.warn('[GeofenceService] Location permission denied — analytics disabled');
+      ;
       return;
     }
 

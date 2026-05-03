@@ -1,9 +1,10 @@
 const prisma = require('../config/prisma');
+const logger = require('../config/logger');
 
 /**
  * Get all vehicles for current user
  */
-exports.getVehicles = async (req, res) => {
+exports.getVehicles = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -16,16 +17,15 @@ exports.getVehicles = async (req, res) => {
     });
 
     res.json(vehicles);
-  } catch (error) {
-    console.error('Get vehicles error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Get single vehicle by ID
  */
-exports.getVehicle = async (req, res) => {
+exports.getVehicle = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -45,16 +45,15 @@ exports.getVehicle = async (req, res) => {
     }
 
     res.json(vehicle);
-  } catch (error) {
-    console.error('Get vehicle error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Create a new vehicle
  */
-exports.createVehicle = async (req, res) => {
+exports.createVehicle = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -80,9 +79,12 @@ exports.createVehicle = async (req, res) => {
       return res.status(400).json({ error: 'Invalid license plate format' });
     }
 
-    // Check if license plate already exists
-    const existingVehicle = await prisma.vehicle.findUnique({
-      where: { licensePlate },
+    // Check if license plate already exists for this user
+    const existingVehicle = await prisma.vehicle.findFirst({
+      where: {
+        licensePlate,
+        userId,
+      },
     });
     if (existingVehicle) {
       return res.status(400).json({ error: 'License plate already registered' });
@@ -111,21 +113,20 @@ exports.createVehicle = async (req, res) => {
       isDefault: willBeDefault,
     };
 
-    const vehicle = await prisma.vehicle.create({
-      data: vehicleData,
-    });
+     const vehicle = await prisma.vehicle.create({
+       data: vehicleData,
+     });
 
-    res.status(201).json(vehicle);
-  } catch (error) {
-    console.error('Create vehicle error:', error.message);
-    res.status(500).json({ error: error.message });
-  }
+     res.status(201).json(vehicle);
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Update a vehicle
  */
-exports.updateVehicle = async (req, res) => {
+exports.updateVehicle = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -197,15 +198,15 @@ exports.updateVehicle = async (req, res) => {
 
     res.json(vehicle);
   } catch (error) {
-    console.error('Update vehicle error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Update vehicle error:', error);
+    next(error);
   }
 };
 
 /**
  * Delete a vehicle
  */
-exports.deleteVehicle = async (req, res) => {
+exports.deleteVehicle = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -246,15 +247,15 @@ exports.deleteVehicle = async (req, res) => {
 
     res.json({ message: 'Vehicle deleted successfully' });
   } catch (error) {
-    console.error('Delete vehicle error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Delete vehicle error:', error);
+    next(error);
   }
 };
 
 /**
  * Set vehicle as default
  */
-exports.setDefaultVehicle = async (req, res) => {
+exports.setDefaultVehicle = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -288,7 +289,7 @@ exports.setDefaultVehicle = async (req, res) => {
 
     res.json(vehicle);
   } catch (error) {
-    console.error('Set default vehicle error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Set default vehicle error:', error);
+    next(error);
   }
 };

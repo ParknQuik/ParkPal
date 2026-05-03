@@ -60,7 +60,7 @@ export const EarningsScreen: React.FC = () => {
       setAnalytics(analyticsRes.data?.data || analyticsRes.data || []);
       setTransactions(transactionsRes.data?.data || transactionsRes.data || []);
     } catch (error) {
-      console.error('Failed to fetch earnings data:', error);
+      ;
       if (!isRefresh) {
         Alert.alert('Error', 'Failed to load earnings data. Please try again.');
       }
@@ -82,7 +82,7 @@ export const EarningsScreen: React.FC = () => {
         const analyticsResponse = await earningsAPI.getAnalytics(period);
         setAnalytics(analyticsResponse.data?.data || analyticsResponse.data || []);
       } catch (err) {
-        console.error('Failed to fetch analytics:', err);
+        ;
       }
     };
     fetchAnalytics();
@@ -109,7 +109,7 @@ export const EarningsScreen: React.FC = () => {
       Alert.alert('Success', 'Payout request submitted successfully.');
       fetchData(true);
     } catch (error) {
-      console.error('Payout failed:', error);
+      ;
       Alert.alert('Error', 'Payout request failed. Please try again.');
     }
   };

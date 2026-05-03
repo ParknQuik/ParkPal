@@ -137,7 +137,7 @@ export const mediaAPI = {
 
       return response.data;
     } catch (error) {
-      console.error('Listing photo upload error:', error);
+      ;
       throw error;
     }
   },
@@ -186,7 +186,7 @@ export const mediaAPI = {
 
       return photo;
     } catch (error) {
-      console.error('Photo upload error:', error);
+      ;
       throw error;
     }
   },

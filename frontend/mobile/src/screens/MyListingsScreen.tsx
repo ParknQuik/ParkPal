@@ -40,7 +40,7 @@ export const MyListingsScreen: React.FC = () => {
     try {
       await dispatch(getMyListings()).unwrap();
     } catch (err) {
-      console.error('Failed to fetch listings:', err);
+      ;
     }
   }, [dispatch]);
 
@@ -66,12 +66,12 @@ export const MyListingsScreen: React.FC = () => {
 
   const handleToggleAvailability = useCallback(async (listingId: number, currentStatus: boolean) => {
     try {
-      console.log('Toggling listing:', listingId, 'from', currentStatus, 'to', !currentStatus);
+      ;
       const response = await marketplaceAPI.toggleListingAvailability(listingId, !currentStatus);
-      console.log('Toggle response:', response.data);
+      ;
       fetchData();
     } catch (err: any) {
-      console.error('Toggle failed:', err?.response?.data || err);
+      ;
       Alert.alert('Error', err?.response?.data?.error || 'Failed to toggle availability');
     }
   }, [fetchData]);
@@ -91,7 +91,7 @@ export const MyListingsScreen: React.FC = () => {
               await marketplaceAPI.deleteListing(listingId);
               fetchData();
             } catch (err) {
-              console.error('Delete failed:', err);
+              ;
             }
           },
         },
@@ -109,7 +109,7 @@ export const MyListingsScreen: React.FC = () => {
       const data = response.data?.qrCodeData || response.data?.data?.qrCodeData;
       setQrData(data || `PARKNQ:${listing.id}:${Date.now()}`);
     } catch (err) {
-      console.error('Failed to fetch QR data:', err);
+      ;
       setQrData(`PARKNQ:${listing.id}:${Date.now()}`);
     } finally {
       setQrLoading(false);
@@ -263,18 +263,12 @@ const handleFilterPress = useCallback(async () => {
             contentContainerStyle={styles.listingsList}
             ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <MaterialIcons name="add-location" size={48} color={colors.textSecondary} />
-                <Text style={styles.emptyText}>No listings yet</Text>
-                <TouchableOpacity
-                  style={styles.addListingButton}
-                  onPress={() => navigation.navigate('ListSpot' as never)}
-                >
-                  <Text style={styles.addListingText}>Create Your First Listing</Text>
-                </TouchableOpacity>
-              </View>
-            }
+             ListEmptyComponent={
+               <View style={styles.emptyContainer}>
+                 <MaterialIcons name="add-location" size={48} color={colors.textSecondary} />
+                 <Text style={styles.emptyText}>No listings yet</Text>
+               </View>
+             }
           />
           )}
         </View>

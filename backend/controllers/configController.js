@@ -3,7 +3,7 @@ const secretManager = require('../config/secretManager');
 /**
  * Get Google Maps API key for the mobile app
  */
-async function getGoogleMapsApiKey(req, res) {
+async function getGoogleMapsApiKey(req, res, next) {
   try {
     const apiKey = await secretManager.getSecret('google-maps-api-key');
 
@@ -16,19 +16,15 @@ async function getGoogleMapsApiKey(req, res) {
     res.json({
       apiKey,
     });
-  } catch (error) {
-    console.error('Error retrieving Google Maps API key:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve Google Maps API key',
-      message: error.message,
-    });
-  }
+   } catch (error) {
+     next(error);
+   }
 }
 
 /**
  * Get app configuration (public configs only)
  */
-async function getAppConfig(req, res) {
+async function getAppConfig(req, res, next) {
   try {
     const config = {
       mapsProvider: 'google',
@@ -42,13 +38,9 @@ async function getAppConfig(req, res) {
     };
 
     res.json(config);
-  } catch (error) {
-    console.error('Error retrieving app config:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve app configuration',
-      message: error.message,
-    });
-  }
+   } catch (error) {
+     next(error);
+   }
 }
 
 module.exports = {

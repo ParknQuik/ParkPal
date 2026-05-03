@@ -1,6 +1,11 @@
 const prisma = require('../config/prisma');
 const { broadcast } = require('../services/websocket');
 const paymongoService = require('../services/paymongo');
+const crypto = require('crypto');
+
+function generateSecureToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 /**
  * Create a payment intent for a booking
@@ -8,7 +13,7 @@ const paymongoService = require('../services/paymongo');
  * Step 2: Backend creates PaymentIntent
  * Step 3: Frontend displays payment UI
  */
-exports.createPaymentIntent = async (req, res) => {
+exports.createPaymentIntent = async (req, res, next) => {
   try {
     const { bookingId, amount, paymentMethod } = req.body;
     const userId = req.user.id;
@@ -28,12 +33,26 @@ exports.createPaymentIntent = async (req, res) => {
     }
 
     if (paymentMethod === 'cash') {
+      const cashToken = generateSecureToken();
+      
+      const payment = await prisma.payment.create({
+        data: {
+          userId,
+          bookingId: parseInt(bookingId),
+          paymentMethod: 'cash',
+          amount: parseFloat(amount),
+          status: 'pending',
+          transactionId: `cash_${cashToken}`
+        }
+      });
+
       return res.json({
-        paymentIntentId: `cash_${booking.id}_${Date.now()}`,
+        paymentIntentId: `cash_${cashToken}`,
         message: 'Cash payment selected. Pay at location.',
         requiresPayment: false,
-        amount: amount,
-        bookingId: parseInt(bookingId)
+        amount: parseFloat(amount),
+        bookingId: parseInt(bookingId),
+        paymentId: payment.id
       });
     }
 
@@ -60,7 +79,6 @@ exports.createPaymentIntent = async (req, res) => {
     });
 
     if (!result.success) {
-      console.error('PayMongo payment intent creation failed:', result.error);
       return res.status(500).json({
         error: 'Failed to create payment intent',
         details: result.error.message
@@ -103,27 +121,42 @@ exports.createPaymentIntent = async (req, res) => {
         ? 'Authorization hold created - amount will be captured on checkout'
         : 'Payment intent created - proceed with payment'
     });
-  } catch (error) {
-    console.error('Create payment intent error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Confirm payment after user completes payment on frontend
  * Called by mobile app after PayMongo payment flow completes
  */
-exports.confirmPayment = async (req, res) => {
+exports.confirmPayment = async (req, res, next) => {
   try {
     const { paymentIntentId } = req.body;
     const userId = req.user.id;
 
     if (paymentIntentId.startsWith('cash_')) {
-      const bookingId = parseInt(paymentIntentId.split('_')[1]);
+      const cashToken = paymentIntentId.replace('cash_', '');
       
-      const booking = await prisma.booking.findUnique({
-        where: { id: bookingId }
+      const payment = await prisma.payment.findFirst({
+        where: {
+          transactionId: paymentIntentId,
+          status: 'pending'
+        },
+        include: { 
+          booking: {
+            include: {
+              slot: true
+            }
+          }
+        }
       });
+      
+      if (!payment) {
+        return res.status(404).json({ error: 'Payment not found or already confirmed' });
+      }
+      
+      const booking = payment.booking;
       
       if (!booking) {
         return res.status(404).json({ error: 'Booking not found' });
@@ -133,35 +166,32 @@ exports.confirmPayment = async (req, res) => {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       
-      const payment = await prisma.payment.create({
+      const updatedPayment = await prisma.payment.update({
+        where: { id: payment.id },
         data: {
-          userId: req.user.id,
-          bookingId: bookingId,
-          amount: booking.price,
-          paymentMethod: 'cash',
           status: 'pending',
-          paymentIntent: paymentIntentId,
+          paymentMethod: 'cash'
         }
       });
       
       await prisma.booking.update({
-        where: { id: bookingId },
+        where: { id: booking.id },
         data: { status: 'confirmed' }
       });
       
       await prisma.notification.create({
         data: {
-          userId: booking.hostId,
+          userId: booking.slot?.ownerId,
           title: 'Booking Confirmed - Cash Payment',
-          body: `Booking #${bookingId} confirmed. Guest will pay in cash.`,
+          body: `Booking #${booking.id} confirmed. Guest will pay in cash.`,
           type: 'booking_confirmed',
-          data: JSON.stringify({ bookingId, paymentMethod: 'cash' })
+          data: JSON.stringify({ bookingId: booking.id, paymentMethod: 'cash' })
         }
       });
-      
+
       return res.json({
         message: 'Booking confirmed. Please collect cash payment from customer.',
-        payment: payment,
+        payment: updatedPayment,
         booking: { ...booking, status: 'confirmed' }
       });
     }
@@ -194,73 +224,72 @@ exports.confirmPayment = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    // Update payment status based on PayMongo status
-    let paymentStatus = 'pending';
-    let bookingStatus = payment.booking.status;
+     // Update payment status based on PayMongo status
+     let paymentStatus = 'pending';
+     let bookingStatus = payment.booking.status;
 
-    // Check if this is a manual capture (authorization hold)
-    const isManualCapture = payment.metadata?.captureType === 'manual';
+     // Check if this is a manual capture (authorization hold)
+     const isManualCapture = payment.metadata?.captureType === 'manual';
 
-    if (status === 'succeeded') {
-      paymentStatus = 'completed';
-      bookingStatus = 'confirmed';
-    } else if (status === 'awaiting_capture') {
-      // For manual capture, payment is authorized but not yet captured
-      paymentStatus = 'authorized';
-      bookingStatus = 'confirmed';
-    } else if (status === 'processing') {
-      paymentStatus = 'processing';
-    } else if (status === 'requires_payment_method' || status === 'canceled') {
-      paymentStatus = 'failed';
-    }
+     if (status === 'succeeded') {
+       paymentStatus = 'completed';
+       bookingStatus = 'confirmed';
+     } else if (status === 'awaiting_capture') {
+       // For manual capture, payment is authorized but not yet captured
+       paymentStatus = 'authorized';
+       bookingStatus = 'confirmed';
+     } else if (status === 'processing') {
+       paymentStatus = 'processing';
+     } else if (status === 'requires_payment_method' || status === 'canceled') {
+       paymentStatus = 'failed';
+     }
 
-    // Update payment record
-    const updatedPayment = await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: paymentStatus,
-        metadata: {
-          ...payment.metadata,
-          paymongoStatus: status,
-          confirmedAt: new Date().toISOString()
-        }
-      }
-    });
+     // Update payment record
+     const updatedPayment = await prisma.payment.update({
+       where: { id: payment.id },
+       data: {
+         status: paymentStatus,
+         metadata: {
+           ...payment.metadata,
+           paymongoStatus: status,
+           confirmedAt: new Date().toISOString()
+         }
+       }
+     });
 
-    // Update booking status if payment succeeded or authorized
-    if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
-      await prisma.booking.update({
-        where: { id: payment.bookingId },
-        data: { status: bookingStatus }
-      });
+     // Update booking status if payment succeeded or authorized
+     if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
+       await prisma.booking.update({
+         where: { id: payment.bookingId },
+         data: { status: bookingStatus }
+       });
 
-      broadcast({
-        type: paymentStatus === 'authorized' ? 'payment_authorized' : 'payment_completed',
-        payment: updatedPayment,
-        bookingId: payment.bookingId
-      });
-    }
+       broadcast({
+         type: paymentStatus === 'authorized' ? 'payment_authorized' : 'payment_completed',
+         payment: updatedPayment,
+         bookingId: payment.bookingId
+       });
+     }
 
-    res.json({
-      paymentId: updatedPayment.id,
-      status: paymentStatus,
-      bookingStatus: bookingStatus,
-      message: paymentStatus === 'completed'
-        ? 'Payment successful! Booking confirmed.'
-        : paymentStatus === 'authorized'
-        ? 'Payment authorized! Amount will be captured on checkout.'
-        : `Payment ${paymentStatus}`
-    });
-  } catch (error) {
-    console.error('Confirm payment error:', error);
-    res.status(500).json({ error: error.message });
-  }
+     res.json({
+       paymentId: updatedPayment.id,
+       status: paymentStatus,
+       bookingStatus: bookingStatus,
+       message: paymentStatus === 'completed'
+         ? 'Payment successful! Booking confirmed.'
+         : paymentStatus === 'authorized'
+         ? 'Payment authorized! Amount will be captured on checkout.'
+         : `Payment ${paymentStatus}`
+     });
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Create GCash payment source (for direct GCash payments)
  */
-exports.createGCashPayment = async (req, res) => {
+exports.createGCashPayment = async (req, res, next) => {
   try {
     const { bookingId, amount } = req.body;
     const userId = req.user.id;
@@ -313,17 +342,16 @@ exports.createGCashPayment = async (req, res) => {
       checkoutUrl: sourceResult.source.attributes.redirect.checkout_url,
       message: 'Redirect user to GCash payment page'
     });
-  } catch (error) {
-    console.error('Create GCash payment error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Process legacy payment (backward compatibility)
  * TODO: Deprecated - use createPaymentIntent instead
  */
-exports.processPayment = async (req, res) => {
+exports.processPayment = async (req, res, next) => {
   try {
     const { bookingId, paymentMethod, amount } = req.body;
     const userId = req.user.id;
@@ -354,23 +382,38 @@ exports.processPayment = async (req, res) => {
     broadcast({ type: 'payment_completed', payment });
     res.status(201).json(payment);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 /**
  * Get all payments for the authenticated user
  */
-exports.getUserPayments = async (req, res) => {
+exports.getUserPayments = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
     const payments = await prisma.payment.findMany({
       where: { userId },
-      include: {
+      select: {
+        id: true,
+        amount: true,
+        paymentMethod: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
         booking: {
-          include: {
-            slot: true
+          select: {
+            id: true,
+            startTime: true,
+            endTime: true,
+            slot: {
+              select: {
+                id: true,
+                address: true,
+                price: true
+              }
+            }
           }
         }
       },
@@ -378,15 +421,15 @@ exports.getUserPayments = async (req, res) => {
     });
 
     res.json(payments);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Get a specific payment by ID
  */
-exports.getPaymentById = async (req, res) => {
+exports.getPaymentById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -407,32 +450,34 @@ exports.getPaymentById = async (req, res) => {
     }
 
     res.json(payment);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Handle PayMongo webhooks
  * Webhook events: payment.paid, payment.failed, source.chargeable
+ * Note: This endpoint uses express.raw() so req.body is a Buffer
  */
-exports.handleWebhook = async (req, res) => {
+exports.handleWebhook = async (req, res, next) => {
   try {
     const signature = req.headers['paymongo-signature'];
-    const payload = req.body;
+    const rawBody = req.body.toString('utf-8');
 
-    // Verify webhook signature
-    const isValid = paymongoService.verifyWebhookSignature(payload, signature);
+    // Verify webhook signature using RAW body (not re-serialized JSON)
+    const isValid = paymongoService.verifyWebhookSignature(rawBody, signature);
 
-    if (!isValid && process.env.NODE_ENV === 'production') {
-      console.error('Invalid webhook signature');
+    if (!isValid) {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
+    // Parse JSON payload after signature verification
+    const payload = JSON.parse(rawBody);
     const event = payload.data;
     const eventType = event.attributes.type;
 
-    console.log(`📨 PayMongo webhook received: ${eventType}`);
+
 
     switch (eventType) {
       case 'payment.paid':
@@ -448,13 +493,13 @@ exports.handleWebhook = async (req, res) => {
         break;
 
       default:
-        console.log(`Unhandled webhook event: ${eventType}`);
+
     }
 
     res.status(200).json({ received: true });
   } catch (error) {
-    console.error('Webhook handler error:', error);
-    res.status(500).json({ error: error.message });
+
+    next(error);
   }
 };
 
@@ -465,20 +510,19 @@ exports.handleWebhook = async (req, res) => {
 async function handlePaymentPaid(paymentData) {
   const paymentIntentId = paymentData.attributes.payment_intent_id;
 
-  // Find payment record
-  const payment = await prisma.payment.findFirst({
-    where: {
-      metadata: {
-        path: ['paymentIntentId'],
-        equals: paymentIntentId
-      }
-    }
-  });
+   // Find payment record
+   const payment = await prisma.payment.findFirst({
+     where: {
+       metadata: {
+         path: ['paymentIntentId'],
+         equals: paymentIntentId
+       }
+     }
+   });
 
-  if (!payment) {
-    console.error('Payment record not found for PaymentIntent:', paymentIntentId);
-    return;
-  }
+   if (!payment) {
+     return;
+   }
 
   // Update payment and booking
   await prisma.payment.update({
@@ -503,7 +547,7 @@ async function handlePaymentPaid(paymentData) {
     bookingId: payment.bookingId
   });
 
-  console.log(`✅ Payment completed: Payment #${payment.id}, Booking #${payment.bookingId}`);
+
 }
 
 /**
@@ -523,7 +567,7 @@ async function handlePaymentFailed(paymentData) {
   });
 
   if (!payment) {
-    console.error('Payment record not found for PaymentIntent:', paymentIntentId);
+
     return;
   }
 
@@ -539,7 +583,7 @@ async function handlePaymentFailed(paymentData) {
     }
   });
 
-  console.log(`❌ Payment failed: Payment #${payment.id}`);
+
 }
 
 /**
@@ -559,10 +603,9 @@ async function handleSourceChargeable(sourceData) {
     }
   });
 
-  if (!payment) {
-    console.error('Payment record not found for Source:', sourceId);
-    return;
-  }
+   if (!payment) {
+     return;
+   }
 
   // Create payment using the source
   const result = await paymongoService.createPayment({
@@ -583,13 +626,13 @@ async function handleSourceChargeable(sourceData) {
       }
     });
 
-    console.log(`🔄 GCash payment processing: Payment #${payment.id}`);
+
   } else {
     await prisma.payment.update({
       where: { id: payment.id },
       data: { status: 'failed' }
     });
 
-    console.error(`❌ Failed to charge GCash source: Payment #${payment.id}`);
+
   }
 }

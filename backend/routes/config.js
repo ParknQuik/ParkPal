@@ -1,5 +1,6 @@
 const configController = require('../controllers/configController');
 const { authenticate } = require('../services/auth');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   /**
@@ -24,8 +25,8 @@ module.exports = (app) => {
    */
   app.get(
     '/config/maps-api-key',
-    configController.getGoogleMapsApiKey
-  );
+    authenticate,
+    asyncHandler(configController.getGoogleMapsApiKey));
 
   /**
    * @swagger
@@ -59,5 +60,5 @@ module.exports = (app) => {
    *                   type: string
    *                   example: "1.0.0"
    */
-  app.get('/config/app', configController.getAppConfig);
+  app.get('/config/app', asyncHandler(configController.getAppConfig));
 };

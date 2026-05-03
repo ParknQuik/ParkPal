@@ -54,7 +54,7 @@ export const ProfileScreen: React.FC = () => {
     try {
       await dispatch(checkAuth()).unwrap();
     } catch (err) {
-      console.error('Refresh failed:', err);
+      ;
     } finally {
       setRefreshing(false);
     }
@@ -144,7 +144,7 @@ export const ProfileScreen: React.FC = () => {
 
       Alert.alert('Success', 'Profile picture updated');
     } catch (error) {
-      console.error('Upload error:', error);
+      ;
       Alert.alert('Error', 'Failed to upload photo');
     } finally {
       setUploading(false);

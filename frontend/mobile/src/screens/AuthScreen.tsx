@@ -39,9 +39,9 @@ const redirectUri = makeRedirectUri({
 });
 
 // Debug: Log the redirect URI being used
-console.log('🔍 OAuth Redirect URI (Production):', redirectUri);
+;
 if (__DEV__) {
-  console.log('⚠️  Google OAuth requires standalone build. Use email/password for dev testing.');
+  ;
 }
 
 const STITCH_COLORS = {
@@ -86,17 +86,17 @@ export const AuthScreen: React.FC = () => {
   );
 
   React.useEffect(() => {
-    console.log('🔍 OAuth Response:', response);
+    ;
 
     if (response?.type === 'success') {
       const { code } = response.params;
-      console.log('✅ Got OAuth code, sending to backend...');
+      ;
       handleGoogleSignIn(code);
     } else if (response?.type === 'error') {
-      console.error('❌ OAuth error:', response.error);
+      ;
       Alert.alert('OAuth Error', response.error?.message || 'Authentication failed');
     } else if (response?.type === 'cancel') {
-      console.log('⚠️ OAuth cancelled by user');
+      ;
     }
   }, [response]);
 

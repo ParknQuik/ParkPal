@@ -93,7 +93,7 @@ export const ListYourSpot: React.FC = () => {
             }
           }
         } catch (error) {
-          console.error('Failed to fetch listing:', error);
+          ;
           Alert.alert('Error', 'Failed to load listing data');
         } finally {
           setLoading(false);
@@ -188,21 +188,21 @@ export const ListYourSpot: React.FC = () => {
           const newListingId = result.id || result.data?.id;
           const localPhotos = photos.filter(p => p.startsWith('file://'));
           
-          console.log('[ListYourSpot] Photos to upload:', localPhotos.length, 'listingId:', newListingId);
+          ;
           
           if (localPhotos.length > 0 && newListingId) {
             const uploadedUrls: string[] = [];
             for (const photoUri of localPhotos) {
               try {
-                console.log('[ListYourSpot] Uploading photo:', photoUri);
+                ;
                 const uploadResult = await mediaAPI.uploadListingPhoto(newListingId, photoUri);
-                console.log('[ListYourSpot] Upload result:', uploadResult);
+                ;
                 // Store the original URL from the result
                 if (uploadResult.original) {
                   uploadedUrls.push(uploadResult.original);
                 }
               } catch (uploadError: any) {
-                console.error('[ListYourSpot] Failed to upload photo:', uploadError?.message || uploadError);
+                ;
               }
             }
             
@@ -210,9 +210,9 @@ export const ListYourSpot: React.FC = () => {
             if (uploadedUrls.length > 0) {
               try {
                 await marketplaceAPI.updateListing(newListingId, { photos: uploadedUrls });
-                console.log('[ListYourSpot] Listing updated with photos');
+                ;
               } catch (updateError) {
-                console.error('[ListYourSpot] Failed to update listing with photos:', updateError);
+                ;
               }
             }
           }
@@ -224,7 +224,7 @@ export const ListYourSpot: React.FC = () => {
          );
        }
      } catch (error: any) {
-       console.error('Listing error:', error);
+       ;
        Alert.alert('Error', error?.message || 'Failed to save listing. Please try again.');
      } finally {
        setLoading(false);

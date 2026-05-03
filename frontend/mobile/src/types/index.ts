@@ -100,12 +100,25 @@ export interface Payment {
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  MainTabs: undefined;
   ParkingDetail: { spotId: string };
   Reservation: { spotId: string };
   ListSpot: undefined;
+  QRScanner: undefined;
+  QRGenerator: undefined;
+  WriteReview: { spotId: string | number };
+  EditProfile: undefined;
   Payment: { bookingId: number; amount: number };
-  PaymentSuccess: { paymentId: number; bookingId: number };
+  PaymentSuccess: { paymentId: number; bookingId: number; paymentMethod: string; rentalMode?: 'fixed' | 'open'; };
   PaymentFailed: { error: string; bookingId: number };
+  PaymentMethods: undefined;
+  Earnings: undefined;
+  MyListings: undefined;
+  Notifications: undefined;
+  MyVehicles: undefined;
+  SecurityPrivacy: undefined;
+  HelpCenter: undefined;
+  AddVehicleWizard: { vehicleId?: number };
 };
 
 export type MainTabParamList = {

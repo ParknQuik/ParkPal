@@ -1,4 +1,5 @@
 const googleAuthController = require('../controllers/googleAuthController');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app, authLimiter) => {
   /**
@@ -46,5 +47,5 @@ module.exports = (app, authLimiter) => {
    *       401:
    *         description: Invalid Google token
    */
-  app.post('/auth/google', authLimiter, googleAuthController.googleAuth);
+  app.post('/auth/google', authLimiter, asyncHandler(googleAuthController.googleAuth));
 };

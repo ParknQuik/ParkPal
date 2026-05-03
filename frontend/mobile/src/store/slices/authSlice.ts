@@ -100,11 +100,11 @@ const authSlice = createSlice({
         try {
           const pushToken = await notificationService.getPushToken();
           if (pushToken) {
-            console.log('Push token:', pushToken);
+            ;
             await AsyncStorage.setItem('pushToken', pushToken);
           }
         } catch (error) {
-          console.error('Failed to register push token:', error);
+          ;
         }
       })();
     });
@@ -128,11 +128,11 @@ const authSlice = createSlice({
         try {
           const pushToken = await notificationService.getPushToken();
           if (pushToken) {
-            console.log('Push token:', pushToken);
+            ;
             await AsyncStorage.setItem('pushToken', pushToken);
           }
         } catch (error) {
-          console.error('Failed to register push token:', error);
+          ;
         }
       })();
     });

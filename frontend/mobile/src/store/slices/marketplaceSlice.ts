@@ -33,17 +33,14 @@ export const searchListings = createAsyncThunk(
     const apiParams: Record<string, any> = { ...rest };
     if (latitude !== undefined) apiParams.lat = latitude;
     if (longitude !== undefined) apiParams.lon = longitude;
-    console.log('🔄 API Request params:', apiParams);
+    ;
     const response = await marketplaceAPI.searchListings(apiParams);
-    console.log('✅ API Response:', {
-      status: response.status,
-      dataLength: response.data?.data?.length || response.data?.length || 0
-    });
+    ;
 
     // Handle v1 API response format: { data: [...], pagination: {...} }
     const listings = response.data?.data || response.data || [];
-    console.log('🔍 Search query:', apiParams.q);
-    console.log('📦 Raw listings count:', listings.length);
+    ;
+    ;
 
     // Transform API response to match mobile app interface
     const transformed = listings.map((listing: any) => ({
@@ -72,20 +69,14 @@ export const searchListings = createAsyncThunk(
       slotType: listing.slotType,
     }));
 
-    console.log('🎯 Transformed listings count:', transformed.length);
-    console.log('📦 Listings after transform:', transformed.length);
-    console.log('✅ Returning transformed listings:', transformed.length);
+    ;
+    ;
+    ;
     if (transformed.length > 0) {
-      console.log('📍 First result:', transformed[0].address);
+      ;
     }
     if (transformed.length > 0) {
-      console.log('🎯 First transformed:', {
-        id: transformed[0].id,
-        address: transformed[0].address,
-        lat: transformed[0].latitude,
-        lon: transformed[0].longitude,
-        price: transformed[0].pricePerHour,
-      });
+      ;
     }
 
     return transformed;

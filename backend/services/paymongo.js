@@ -397,30 +397,30 @@ class PayMongoService {
     }
   }
 
-  /**
-   * Verify webhook signature
-   * @param {Object} payload - Webhook payload
-   * @param {string} signature - Signature from header
-   * @returns {boolean} Is signature valid
-   */
-  verifyWebhookSignature(payload, signature) {
-    const crypto = require('crypto');
+   /**
+    * Verify webhook signature
+    * @param {string} rawBody - Raw request body as string
+    * @param {string} signature - Signature from header
+    * @returns {boolean} Is signature valid
+    */
+   verifyWebhookSignature(rawBody, signature) {
+     const crypto = require('crypto');
 
-    // PayMongo webhook verification
-    const webhookSecret = this.webhookSecret;
+     // PayMongo webhook verification
+     const webhookSecret = this.webhookSecret;
 
-    if (!webhookSecret) {
-      console.warn('⚠️  PAYMONGO_WEBHOOK_SECRET not set - webhook verification disabled');
-      return true; // Allow in development
-    }
+     if (!webhookSecret) {
+       console.error('❌ PAYMONGO_WEBHOOK_SECRET not configured - rejecting webhook');
+       throw new Error('PAYMONGO_WEBHOOK_SECRET not configured');
+     }
 
-    const computedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(JSON.stringify(payload))
-      .digest('hex');
+     const computedSignature = crypto
+       .createHmac('sha256', webhookSecret)
+       .update(rawBody)
+       .digest('hex');
 
-    return computedSignature === signature;
-  }
+     return computedSignature === signature;
+   }
 
   /**
    * Format PayMongo error for consistent error handling

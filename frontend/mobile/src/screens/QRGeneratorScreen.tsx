@@ -45,7 +45,7 @@ export const QRGeneratorScreen: React.FC = () => {
       );
       setListings(myListings);
     } catch (error) {
-      console.error('Error loading listings:', error);
+      ;
       Alert.alert('Error', 'Failed to load your listings');
     } finally {
       setLoading(false);
@@ -62,7 +62,7 @@ export const QRGeneratorScreen: React.FC = () => {
       // Fallback: generate QR data (backend should always provide this)
       return `PARKNQ:${listing.id}:${Date.now()}:fallback`;
     } catch (error) {
-      console.error('Error fetching QR data:', error);
+      ;
       // Fallback format
       return `PARKNQ:${listing.id}:${Date.now()}:error`;
     }
@@ -103,7 +103,7 @@ export const QRGeneratorScreen: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error sharing QR code:', error);
+      ;
       Alert.alert('Error', 'Failed to share QR code');
     }
   };
@@ -128,7 +128,7 @@ export const QRGeneratorScreen: React.FC = () => {
         [{ text: 'OK' }]
       );
     } catch (error) {
-      console.error('Error downloading QR code:', error);
+      ;
       Alert.alert('Error', 'Failed to save QR code');
     }
   };

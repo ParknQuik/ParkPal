@@ -37,6 +37,8 @@ async function cleanDatabase() {
   await prisma.parkingSlot.deleteMany();
   await prisma.zone.deleteMany();
   await prisma.notification.deleteMany();
+  await prisma.pointsTransaction.deleteMany();
+  await prisma.referral.deleteMany();
   await prisma.user.deleteMany();
 }
 
@@ -106,13 +108,45 @@ async function createTestSlot(ownerId, zoneId, overrides = {}) {
   });
 }
 
+async function createTestBooking(userId, slotId) {
+  return await prisma.booking.create({
+    data: {
+      userId,
+      slotId,
+      startTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      endTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      price: 500,
+      hostEarnings: 450,
+      status: 'completed',
+    },
+  });
+}
+
+async function createTestPayment(userId, bookingId) {
+  return await prisma.payment.create({
+    data: {
+      userId,
+      bookingId,
+      amount: 500,
+      status: 'completed',
+      paymentMethod: 'gcash',
+    },
+  });
+}
+
 async function setupTestDatabase() {
   await cleanDatabase();
   const users = await createTestUsers();
   const zone = await createTestZone();
   const slot = await createTestSlot(users.host.id, zone.id);
 
-  return { users, zone, slot };
+  // Create multiple bookings and payments for earnings testing
+  const booking1 = await createTestBooking(users.driver.id, slot.id);
+  const booking2 = await createTestBooking(users.driver.id, slot.id);
+  const payment1 = await createTestPayment(users.driver.id, booking1.id);
+  const payment2 = await createTestPayment(users.driver.id, booking2.id);
+
+  return { users, zone, slot, bookings: [booking1, booking2], payments: [payment1, payment2] };
 }
 
 async function teardownTestDatabase() {
@@ -127,6 +161,8 @@ module.exports = {
   createTestUsers,
   createTestZone,
   createTestSlot,
+  createTestBooking,
+  createTestPayment,
   setupTestDatabase,
   teardownTestDatabase,
 };

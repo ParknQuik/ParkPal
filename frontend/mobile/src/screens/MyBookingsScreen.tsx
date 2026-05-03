@@ -113,7 +113,7 @@ export const MyBookingsScreen: React.FC = () => {
     try {
       await dispatch(getMyBookings()).unwrap();
     } catch (err) {
-      console.error('Failed to fetch bookings:', err);
+      ;
     }
   }, [dispatch]);
 
@@ -172,7 +172,7 @@ export const MyBookingsScreen: React.FC = () => {
                 await fetchBookings();
               } catch (err: any) {
                 const errorMessage = err.response?.data?.error || 'Failed to cancel booking. Please try again.';
-                console.error('Failed to cancel booking:', errorMessage);
+                ;
                 Alert.alert('Cannot Cancel Booking', errorMessage);
               }
             },
@@ -198,7 +198,7 @@ export const MyBookingsScreen: React.FC = () => {
       const response = await marketplaceAPI.checkExtensionAvailability(bookingId, hours);
       setExtensionAvailability(response.data);
     } catch (err: any) {
-      console.error('Failed to check availability:', err);
+      ;
       Alert.alert('Error', 'Failed to check extension availability');
     } finally {
       setCheckingAvailability(false);
@@ -237,7 +237,7 @@ export const MyBookingsScreen: React.FC = () => {
       setExtendModalVisible(false);
       await fetchBookings(); // Refresh bookings list
     } catch (err: any) {
-      console.error('Failed to extend booking:', err.response?.data?.error || err.message);
+      ;
       Alert.alert('Extension Failed', err.response?.data?.error || 'Failed to extend booking. Please try again.');
     } finally {
       setExtending(false);
@@ -268,27 +268,34 @@ export const MyBookingsScreen: React.FC = () => {
     [navigation],
   );
 
-  const filteredBookings = bookings.filter((booking) => {
-    const now = new Date();
-    const startTime = new Date(booking.startTime);
-    const endTime = new Date(booking.endTime);
-    
-    if (activeTab === 'upcoming') {
-      // Upcoming: status is pending/confirmed/active AND startTime hasn't passed
-      return (booking.status === 'confirmed' || booking.status === 'active' || booking.status === 'pending')
-        && startTime > now;
-    }
-    if (activeTab === 'completed') {
-      // Completed: status is completed OR (startTime has passed AND status was confirmed/active)
-      return booking.status === 'completed' || 
-        (booking.status === 'confirmed' && startTime <= now) ||
-        (booking.status === 'active' && endTime <= now);
-    }
-    if (activeTab === 'cancelled') {
-      return booking.status === 'cancelled' || booking.status === 'expired';
-    }
-    return true;
-  });
+   const filteredBookings = bookings.filter((booking) => {
+     const now = new Date();
+     const startTime = new Date(booking.startTime);
+     const endTime = new Date(booking.endTime);
+     const hasSession = booking.sessionId != null;
+     
+      if (activeTab === 'upcoming') {
+        // Upcoming: pending bookings with startTime > now
+        //          confirmed bookings with startTime > now (future confirmed)
+        //          confirmed bookings with startTime <= now AND no session yet (not scanned)
+        //          active bookings with endTime > now (currently parked, not ended yet)
+        return (booking.status === 'pending' && startTime > now) ||
+               (booking.status === 'confirmed' && startTime > now) ||
+               (booking.status === 'confirmed' && startTime <= now && !hasSession) ||
+               (booking.status === 'active' && endTime > now);
+      }
+     if (activeTab === 'completed') {
+       // Completed: status is completed
+       //          OR (status is active AND endTime has passed - session ended)
+       return booking.status === 'completed' ||
+              (booking.status === 'active' && endTime <= now);
+     }
+     if (activeTab === 'cancelled') {
+       return booking.status === 'cancelled' || booking.status === 'expired';
+     }
+     return true;
+   });
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

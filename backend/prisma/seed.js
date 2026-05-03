@@ -14,7 +14,11 @@ async function main() {
   await prisma.activityEvent.deleteMany();
   await prisma.parkingSession.deleteMany();
   await prisma.sensorEvent.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.vehicle.deleteMany();
+  await prisma.photo.deleteMany();
   await prisma.parkingSlot.deleteMany();
+  await prisma.zoneMetrics.deleteMany();
   await prisma.zone.deleteMany();
   await prisma.user.deleteMany();
 

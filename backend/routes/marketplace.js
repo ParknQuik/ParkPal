@@ -13,6 +13,7 @@ const {
   idParamSchema,
   hostEarningsQuerySchema
 } = require('../validators/marketplace');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   /**
@@ -78,8 +79,7 @@ module.exports = (app) => {
     '/marketplace/listings',
     authenticate,
     validateBody(createListingSchema),
-marketplaceController.createListing
-   );
+asyncHandler(marketplaceController.createListing));
 
   /**
    * Get signed URL for uploading a listing photo
@@ -87,8 +87,7 @@ marketplaceController.createListing
   app.get(
     '/marketplace/listings/:id/photos/upload-url',
     authenticate,
-    marketplaceController.getListingPhotoUploadUrl
-  );
+    asyncHandler(marketplaceController.getListingPhotoUploadUrl));
 
   /**
    * Confirm listing photo upload
@@ -96,8 +95,7 @@ marketplaceController.createListing
   app.post(
     '/marketplace/listings/:id/photos/confirm',
     authenticate,
-    marketplaceController.confirmListingPhotoUpload
-  );
+    asyncHandler(marketplaceController.confirmListingPhotoUpload));
 
   /**
    * @swagger
@@ -155,13 +153,13 @@ marketplaceController.createListing
    *       200:
    *         description: List of matching parking slots
    */
-  app.get(
-    '/marketplace/search',
-    validateQuery(searchListingsSchema),
-    paginate({ defaultLimit: 20, maxLimit: 100 }),
-    validateSort(['price', 'createdAt', 'averageRating'], 'createdAt', 'desc'),
-    marketplaceController.searchListings
-  );
+app.get(
+  '/marketplace/search',
+  authenticate,
+  validateQuery(searchListingsSchema),
+  paginate({ defaultLimit: 20, maxLimit: 100 }),
+  validateSort(['price', 'createdAt', 'averageRating'], 'createdAt', 'desc'),
+  asyncHandler(marketplaceController.searchListings));
 
   /**
    * @swagger
@@ -205,8 +203,7 @@ marketplaceController.createListing
     '/marketplace/bookings',
     authenticate,
     validateBody(createBookingSchema),
-    marketplaceController.createBooking
-  );
+    asyncHandler(marketplaceController.createBooking));
 
   /**
    * @swagger
@@ -235,8 +232,7 @@ marketplaceController.createListing
     '/marketplace/bookings/:id',
     authenticate,
     validateParams(idParamSchema),
-    marketplaceController.getBookingById
-  );
+    asyncHandler(marketplaceController.getBookingById));
 
   /**
    * @swagger
@@ -267,16 +263,14 @@ marketplaceController.createListing
     '/marketplace/bookings/:id/cancel',
     authenticate,
     validateParams(idParamSchema),
-    marketplaceController.cancelBooking
-  );
+    asyncHandler(marketplaceController.cancelBooking));
 
   // Confirm booking without payment (cash payments)
   app.post(
     '/marketplace/bookings/:id/confirm',
     authenticate,
     validateParams(idParamSchema),
-    marketplaceController.confirmBooking
-  );
+    asyncHandler(marketplaceController.confirmBooking));
 
   /**
    * @swagger
@@ -315,8 +309,7 @@ marketplaceController.createListing
     '/marketplace/bookings/:id/extension-availability',
     authenticate,
     validateParams(idParamSchema),
-    marketplaceController.checkExtensionAvailability
-  );
+    asyncHandler(marketplaceController.checkExtensionAvailability));
 
   /**
    * @swagger
@@ -367,8 +360,7 @@ marketplaceController.createListing
     '/marketplace/bookings/:id/extend',
     authenticate,
     validateParams(idParamSchema),
-    marketplaceController.extendBooking
-  );
+    asyncHandler(marketplaceController.extendBooking));
 
   /**
    * @swagger
@@ -408,8 +400,7 @@ marketplaceController.createListing
     '/marketplace/qr/checkin',
     authenticate,
     validateBody(qrCheckinSchema),
-    marketplaceController.qrCheckIn
-  );
+    asyncHandler(marketplaceController.qrCheckIn));
 
   /**
    * @swagger
@@ -445,8 +436,7 @@ marketplaceController.createListing
     '/marketplace/qr/checkout',
     authenticate,
     validateBody(qrCheckoutSchema),
-    marketplaceController.qrCheckOut
-  );
+    asyncHandler(marketplaceController.qrCheckOut));
 
   /**
    * @swagger
@@ -494,8 +484,7 @@ marketplaceController.createListing
     '/marketplace/reviews',
     authenticate,
     validateBody(reviewSchema),
-    marketplaceController.createReview
-  );
+    asyncHandler(marketplaceController.createReview));
 
   /**
    * @swagger
@@ -526,8 +515,7 @@ marketplaceController.createListing
     '/marketplace/host/earnings',
     authenticate,
     validateQuery(hostEarningsQuerySchema),
-    marketplaceController.getHostEarnings
-  );
+    asyncHandler(marketplaceController.getHostEarnings));
 
   /**
    * @swagger
@@ -551,8 +539,7 @@ marketplaceController.createListing
   app.get(
     '/marketplace/listings/:id',
     validateParams(idParamSchema),
-    marketplaceController.getListingById
-  );
+    asyncHandler(marketplaceController.getListingById));
 
   /**
    * @swagger
@@ -569,8 +556,7 @@ marketplaceController.createListing
   app.get(
     '/marketplace/host/listings',
     authenticate,
-    marketplaceController.getHostListings
-  );
+    asyncHandler(marketplaceController.getHostListings));
 
   /**
    * @swagger
@@ -587,8 +573,7 @@ marketplaceController.createListing
   app.get(
     '/marketplace/bookings',
     authenticate,
-    marketplaceController.getUserBookings
-  );
+    asyncHandler(marketplaceController.getUserBookings));
 
   /**
    * @swagger
@@ -605,8 +590,7 @@ marketplaceController.createListing
   app.get(
     '/marketplace/bookings/upcoming',
     authenticate,
-    marketplaceController.getUpcomingBookings
-  );
+    asyncHandler(marketplaceController.getUpcomingBookings));
 
   /**
    * @swagger
@@ -628,8 +612,7 @@ marketplaceController.createListing
   app.get(
     '/marketplace/listings/:id/reviews',
     validateParams(idParamSchema),
-    marketplaceController.getListingReviews
-  );
+    asyncHandler(marketplaceController.getListingReviews));
 
   /**
    * @swagger
@@ -681,8 +664,7 @@ marketplaceController.createListing
     authenticate,
     validateParams(idParamSchema),
     validateBody(updateListingSchema),
-    marketplaceController.updateListing
-  );
+    asyncHandler(marketplaceController.updateListing));
 
   /**
    * @swagger
@@ -711,31 +693,12 @@ marketplaceController.createListing
     '/marketplace/listings/:id/toggle',
     authenticate,
     validateParams(idParamSchema),
-    marketplaceController.toggleListingAvailability
-  );
+    asyncHandler(marketplaceController.toggleListingAvailability));
   // Delete a listing
   app.delete(
     '/marketplace/listings/:id',
     authenticate,
     validateParams(idParamSchema),
-    marketplaceController.deleteListing
-  );
+    asyncHandler(marketplaceController.deleteListing));
 
-  // Manual trigger for booking expiry check (for testing/development)
-  app.post(
-    '/marketplace/bookings/check-expired',
-    async (req, res) => {
-      try {
-        const { checkExpiredBookings } = require('../services/bookingExpiry');
-        const result = await checkExpiredBookings();
-        res.json({
-          message: 'Booking expiry check completed',
-          processed: result.processed
-        });
-      } catch (error) {
-        console.error('Manual expiry check error:', error);
-        res.status(500).json({ error: error.message });
-      }
-    }
-  );
 };

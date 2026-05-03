@@ -44,7 +44,7 @@ const logger = require('../config/logger');
  *       403:
  *         description: Not authorized to upload photos for this slot
  */
-exports.generateUploadUrl = async (req, res) => {
+exports.generateUploadUrl = async (req, res, next) => {
   try {
     const { slotId, fileName } = req.body;
     const userId = req.user.id;
@@ -68,7 +68,7 @@ exports.generateUploadUrl = async (req, res) => {
     res.json(uploadData);
   } catch (error) {
     logger.error('Error generating upload URL:', error);
-    res.status(500).json({ error: 'Failed to generate upload URL' });
+    next(error);
   }
 };
 
@@ -121,7 +121,7 @@ exports.generateUploadUrl = async (req, res) => {
  *       403:
  *         description: Not authorized
  */
-exports.confirmUpload = async (req, res) => {
+exports.confirmUpload = async (req, res, next) => {
   try {
     const { slotId, fileName } = req.body;
     const userId = req.user.id;
@@ -168,7 +168,7 @@ exports.confirmUpload = async (req, res) => {
     res.status(201).json(photo);
   } catch (error) {
     logger.error('Error confirming upload:', error);
-    res.status(500).json({ error: 'Failed to process uploaded photo' });
+    next(error);
   }
 };
 
@@ -195,7 +195,7 @@ exports.confirmUpload = async (req, res) => {
  *       404:
  *         description: Photo not found
  */
-exports.deletePhoto = async (req, res) => {
+exports.deletePhoto = async (req, res, next) => {
   try {
     const photoId = parseInt(req.params.id);
     const userId = req.user.id;
@@ -227,7 +227,7 @@ exports.deletePhoto = async (req, res) => {
     res.json({ message: 'Photo deleted successfully' });
   } catch (error) {
     logger.error('Error deleting photo:', error);
-    res.status(500).json({ error: 'Failed to delete photo' });
+    next(error);
   }
 };
 
@@ -269,7 +269,7 @@ exports.deletePhoto = async (req, res) => {
  *                   position:
  *                     type: integer
  */
-exports.getSlotPhotos = async (req, res) => {
+exports.getSlotPhotos = async (req, res, next) => {
   try {
     const slotId = parseInt(req.params.slotId);
 
@@ -281,6 +281,6 @@ exports.getSlotPhotos = async (req, res) => {
     res.json(photos);
   } catch (error) {
     logger.error('Error fetching photos:', error);
-    res.status(500).json({ error: 'Failed to fetch photos' });
+    next(error);
   }
 };

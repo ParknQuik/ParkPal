@@ -2,6 +2,7 @@ const authController = require('../controllers/authController');
 const { authenticate } = require('../services/auth');
 const { validateBody } = require('../middleware/validation');
 const { registerSchema, loginSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validators/auth');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app, authLimiter) => {
   /**
@@ -54,7 +55,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/auth/register', authLimiter, validateBody(registerSchema), authController.register);
+  app.post('/auth/register', authLimiter, validateBody(registerSchema), asyncHandler(authController.register));
 
   /**
    * @swagger
@@ -99,7 +100,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/auth/login', authLimiter, validateBody(loginSchema), authController.login);
+  app.post('/auth/login', authLimiter, validateBody(loginSchema), asyncHandler(authController.login));
 
   /**
    * @swagger
@@ -135,7 +136,7 @@ module.exports = (app, authLimiter) => {
    *       401:
    *         description: Incorrect current password or unauthorized
    */
-  app.put('/auth/password', authenticate, authLimiter, validateBody(changePasswordSchema), authController.changePassword);
+  app.put('/auth/password', authenticate, authLimiter, validateBody(changePasswordSchema), asyncHandler(authController.changePassword));
 
   /**
    * @swagger
@@ -155,7 +156,7 @@ module.exports = (app, authLimiter) => {
    *       401:
    *         description: Unauthorized
    */
-  app.get('/auth/me', authenticate, authController.getCurrentUser);
+  app.get('/auth/me', authenticate, asyncHandler(authController.getCurrentUser));
 
   /**
    * @swagger
@@ -169,7 +170,7 @@ module.exports = (app, authLimiter) => {
    *       200:
    *         description: Logged out successfully
    */
-  app.post('/auth/logout', authenticate, authController.logout);
+  app.post('/auth/logout', authenticate, asyncHandler(authController.logout));
 
   /**
    * @swagger
@@ -203,7 +204,7 @@ module.exports = (app, authLimiter) => {
    *       400:
    *         description: Invalid email format
    */
-  app.post('/auth/forgot-password', authLimiter, validateBody(forgotPasswordSchema), authController.forgotPassword);
+  app.post('/auth/forgot-password', authLimiter, validateBody(forgotPasswordSchema), asyncHandler(authController.forgotPassword));
 
   /**
    * @swagger
@@ -234,5 +235,5 @@ module.exports = (app, authLimiter) => {
    *       400:
    *         description: Invalid or expired token
    */
-  app.post('/auth/reset-password', authLimiter, validateBody(resetPasswordSchema), authController.resetPassword);
+  app.post('/auth/reset-password', authLimiter, validateBody(resetPasswordSchema), asyncHandler(authController.resetPassword));
 };
