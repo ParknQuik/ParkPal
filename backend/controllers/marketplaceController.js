@@ -4,18 +4,14 @@ const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../
 const cache = require('../services/cache');
 const mediaService = require('../services/mediaService');
 const paymongoService = require('../services/paymongo');
+const logger = require('../config/logger');
 
 // Safe JSON parse that returns a fallback on invalid JSON
 function safeJsonParse(str, fallback = []) {
-  if (!str) return fallback;
   try {
     const parsed = JSON.parse(str);
     return Array.isArray(parsed) ? parsed : fallback;
   } catch {
-    // Handle comma-separated strings like "covered, security, cctv"
-    if (typeof str === 'string' && str.includes(' ')) {
-      return str.split(',').map(s => s.trim()).filter(Boolean);
-    }
     return fallback;
   }
 }
@@ -68,7 +64,7 @@ function safeJsonParse(str, fallback = []) {
  *       201:
  *         description: Listing created successfully
  */
-exports.createListing = async (req, res) => {
+exports.createListing = async (req, res, next) => {
   try {
     const {
       title,
@@ -130,21 +126,33 @@ exports.createListing = async (req, res) => {
 
     broadcast({ type: 'listing_created', listing: updatedSlot });
     res.status(201).json(updatedSlot);
-  } catch (error) {
-    console.error('Create listing error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
  * Get signed URL for uploading a listing photo
  */
-exports.getListingPhotoUploadUrl = async (req, res) => {
+exports.getListingPhotoUploadUrl = async (req, res, next) => {
   try {
     const { listingId, fileName } = req.query;
     
     if (!listingId || !fileName) {
       return res.status(400).json({ error: 'listingId and fileName are required' });
+    }
+
+    // Verify slot exists and user owns it
+    const slot = await prisma.parkingSlot.findUnique({
+      where: { id: parseInt(listingId) },
+    });
+
+    if (!slot) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (slot.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only upload photos to your own listings' });
     }
 
     const result = await mediaService.generateListingPhotoUploadUrl(
@@ -154,20 +162,32 @@ exports.getListingPhotoUploadUrl = async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Get listing photo upload URL error:', error);
-    res.status(500).json({ error: error.message });
-  }
+     next(error);
+   }
 };
 
 /**
  * Confirm listing photo upload and process it
  */
-exports.confirmListingPhotoUpload = async (req, res) => {
+exports.confirmListingPhotoUpload = async (req, res, next) => {
   try {
     const { listingId, fileName } = req.body;
     
     if (!listingId || !fileName) {
       return res.status(400).json({ error: 'listingId and fileName are required' });
+    }
+
+    // Verify slot exists and user owns it
+    const slot = await prisma.parkingSlot.findUnique({
+      where: { id: parseInt(listingId) },
+    });
+
+    if (!slot) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (slot.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only upload photos to your own listings' });
     }
 
     const result = await mediaService.processListingPhoto(
@@ -177,15 +197,14 @@ exports.confirmListingPhotoUpload = async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Confirm listing photo upload error:', error);
-    res.status(500).json({ error: error.message });
-  }
+     next(error);
+   }
 };
 
 /**
  * Update a parking slot listing
  */
-exports.updateListing = async (req, res) => {
+exports.updateListing = async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
@@ -234,10 +253,9 @@ exports.updateListing = async (req, res) => {
     });
 
     res.json(updatedListing);
-  } catch (error) {
-    console.error('Update listing error:', error);
-    res.status(500).json({ error: error.message });
-  }
+   } catch (error) {
+     next(error);
+   }
 };
 
 /**
@@ -286,7 +304,7 @@ exports.updateListing = async (req, res) => {
  *       200:
  *         description: List of matching parking slots
  */
-exports.searchListings = async (req, res) => {
+exports.searchListings = async (req, res, next) => {
   try {
     const {
       lat,
@@ -300,7 +318,7 @@ exports.searchListings = async (req, res) => {
       q,
     } = req.query;
 
-    console.log('Search params:', { q, lat, lon, radius, status });
+
 
     // Get pagination and sort info
     const { skip, take } = req.pagination || { skip: 0, take: 20 };
@@ -325,15 +343,20 @@ exports.searchListings = async (req, res) => {
     // Try to get from cache first (5 minute TTL)
     const cachedResult = await cache.get(cacheKey);
     if (cachedResult) {
-      console.log(`Cache HIT for listings: ${cacheKey}`);
+
       return res.json(cachedResult);
     }
 
-    console.log(`Cache MISS for listings: ${cacheKey}`);
 
-    const where = {};
 
-    // Filter by status
+     const where = {};
+
+     // Exclude current user's own listings if authenticated
+     if (req.user) {
+       where.ownerId = { not: req.user.id };
+     }
+
+     // Filter by status
     if (status) {
       where.status = status;
     } else {
@@ -348,7 +371,7 @@ exports.searchListings = async (req, res) => {
       ];
     }
 
-    console.log('Where clause:', JSON.stringify(where));
+
 
     // Filter by slot type
     if (slotType) {
@@ -368,7 +391,7 @@ exports.searchListings = async (req, res) => {
       const userLon = parseFloat(lon);
       const radiusKm = parseFloat(radius);
 
-      console.log('📊 User search params - lat:', userLat, 'lon:', userLon, 'radius:', radiusKm, 'km');
+
 
       // Calculate approximate lat/lon bounds (much faster than filtering all records)
       // Use 2x radius to capture edge cases, then filter precisely in post-processing
@@ -380,12 +403,12 @@ exports.searchListings = async (req, res) => {
       // Skip Prisma lat/lon bounds - filter by distance in post-processing instead
       // This ensures accurate distance-based filtering
 
-      console.log('🔍 Prisma lat bounds:', (userLat - latDelta).toFixed(6), 'to', (userLat + latDelta).toFixed(6));
-      console.log('🔍 Prisma lon bounds:', (userLon - lonDelta).toFixed(6), 'to', (userLon + lonDelta).toFixed(6));
+
+
     }
 
-    console.log('🔍 Full where clause:', JSON.stringify(where));
-    console.log('🔍 Query params - take:', take, 'skip:', skip, 'radius:', radius);
+
+
 
     // Query with pagination - MUCH more efficient
     const [slots, totalCount] = await prisma.$transaction([
@@ -431,9 +454,8 @@ exports.searchListings = async (req, res) => {
       prisma.parkingSlot.count({ where }),
     ]);
 
-    console.log('🔍 Prisma query executed, found slots:', slots.length);
+
     if (slots.length > 0) {
-      console.log('📍 First slot:', slots[0].address, 'lat:', slots[0].lat, 'lon:', slots[0].lon);
     }
 
     // Auto-expand radius fallback configuration
@@ -449,7 +471,6 @@ exports.searchListings = async (req, res) => {
     const performDistanceFilter = (slotsToFilter, radiusValue) => {
       const userLat = parseFloat(lat);
       const userLon = parseFloat(lon);
-      console.log('📍 Location filter: user at', userLat, userLon, 'radius', radiusValue, 'km');
 
       return slotsToFilter
         .map((slot) => ({
@@ -463,20 +484,16 @@ exports.searchListings = async (req, res) => {
 
     if (lat && lon && currentRadius) {
       processedSlots = performDistanceFilter(slots, currentRadius);
-      console.log('📍 After distance filter:', processedSlots.length, 'slots from', slots.length);
       if (processedSlots.length > 0) {
-        console.log('📍 Closest slot:', processedSlots[0].address, 'distance:', processedSlots[0].distance?.toFixed(2), 'km');
       }
     }
 
     // Auto-expand radius fallback: if no results, expand radius and re-query
     if (lat && lon && requestedRadius && processedSlots.length === 0) {
-      console.log('🔄 No results found with requested radius:', requestedRadius, 'km, starting radius expansion...');
 
       for (const fallbackRadius of RADIUS_FALLBACK_STEPS) {
         if (fallbackRadius <= requestedRadius) continue;
 
-        console.log('🔄 Attempting fallback radius:', fallbackRadius, 'km');
 
         // Calculate new bounds for larger radius
         const userLat = parseFloat(lat);
@@ -504,7 +521,6 @@ exports.searchListings = async (req, res) => {
         // Check expanded cache first
         const cachedExpanded = await cache.get(expandedCacheKey);
         if (cachedExpanded) {
-          console.log(`Cache HIT for expanded listings: ${expandedCacheKey}`);
           processedSlots = cachedExpanded.data;
           expandedRadius = fallbackRadius;
           radiusExpanded = true;
@@ -555,14 +571,11 @@ exports.searchListings = async (req, res) => {
           prisma.parkingSlot.count({ where }),
         ]);
 
-        console.log('🔄 Expanded query found slots:', expandedSlots.length);
 
         // Filter with expanded radius
         processedSlots = performDistanceFilter(expandedSlots, fallbackRadius);
-        console.log('🔄 After expanded distance filter:', processedSlots.length, 'slots from', expandedSlots.length);
 
         if (processedSlots.length > 0) {
-          console.log('🔄 Found', processedSlots.length, 'results with expanded radius:', fallbackRadius, 'km');
           expandedRadius = fallbackRadius;
           radiusExpanded = true;
 
@@ -613,8 +626,8 @@ exports.searchListings = async (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Search listings error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Search listings error:', error);
+    next(error);
   }
 };
 
@@ -649,10 +662,9 @@ exports.searchListings = async (req, res) => {
  *       201:
  *         description: Booking created successfully
  */
-exports.createBooking = async (req, res) => {
+exports.createBooking = async (req, res, next) => {
   try {
     const { slotId, startTime, endTime, rentalMode = 'fixed', maxDuration } = req.body;
-    console.log('Create booking request:', { slotId, startTime, endTime, rentalMode, maxDuration });
     const userId = req.user.id;
 
     // Parse time inputs
@@ -732,6 +744,10 @@ exports.createBooking = async (req, res) => {
       return res.status(404).json({ error: 'Parking slot not found' });
     }
 
+    if (slot.ownerId === req.user.id) {
+      return res.status(400).json({ error: 'Cannot book your own parking slot' });
+    }
+
     if (slot.status !== 'available') {
       return res.status(400).json({ error: 'Slot is not available' });
     }
@@ -779,65 +795,99 @@ exports.createBooking = async (req, res) => {
     const platformFee = totalPrice * platformFeeRate;
     const hostEarnings = totalPrice - platformFee;
 
-    // Create booking
-    const booking = await prisma.booking.create({
-      data: {
-        slotId: parseInt(slotId),
-        userId,
-        startTime: start,
-        endTime: end, // null for open mode
-        rentalMode,
-        maxDuration: rentalMode === 'open' ? maxDuration : null,
-        authAmount: authAmount,
-        price: totalPrice,
-        platformFee,
-        hostEarnings,
-        status: 'pending',
-      },
-      include: {
-        slot: {
-          include: {
-            owner: {
-              select: { id: true, name: true, email: true },
+    // Create booking within transaction to prevent TOCTOU race conditions
+    const result = await prisma.$transaction(async (tx) => {
+      // Re-check for conflicting bookings within transaction
+      const conflictingBookings = rentalMode === 'fixed' && endTime
+        ? await tx.booking.findMany({
+            where: {
+              slotId: parseInt(slotId),
+              status: { in: ['confirmed', 'pending', 'active'] },
+              OR: [
+                {
+                  startTime: { lte: start },
+                  endTime: { gt: start }
+                },
+                {
+                  startTime: { lt: end },
+                  endTime: { gte: end }
+                },
+                {
+                  startTime: { gte: start },
+                  endTime: { lte: end }
+                }
+              ]
+            }
+          })
+        : [];
+
+      if (conflictingBookings.length > 0) {
+        throw new Error('CONFLICT');
+      }
+
+      // Create booking
+      const booking = await tx.booking.create({
+        data: {
+          slotId: parseInt(slotId),
+          userId,
+          startTime: start,
+          endTime: end, // null for open mode
+          rentalMode,
+          maxDuration: rentalMode === 'open' ? maxDuration : null,
+          authAmount: authAmount,
+          price: totalPrice,
+          platformFee,
+          hostEarnings,
+          status: 'pending',
+        },
+        include: {
+          slot: {
+            include: {
+              owner: {
+                select: { id: true, name: true, email: true },
+              },
             },
           },
+          user: {
+            select: { id: true, name: true, email: true },
+          },
         },
-        user: {
-          select: { id: true, name: true, email: true },
+      });
+
+      // Update slot status
+      await tx.parkingSlot.update({
+        where: { id: parseInt(slotId) },
+        data: { status: 'reserved' },
+      });
+
+      // Create notification for user booking confirmation
+      const userNotification = await tx.notification.create({
+        data: {
+          userId: booking.userId,
+          title: 'Booking Confirmed! 🎉',
+          body: rentalMode === 'open' 
+            ? `Your parking at ${booking.slot?.address || 'the parking spot'} is confirmed. Pre-auth hold: ₱${authAmount}. You'll be charged based on actual usage.`
+            : `Your parking booking at ${booking.slot?.address || 'the parking spot'} is confirmed for ${new Date(booking.startTime).toLocaleDateString()}.`,
+          type: 'booking_confirmation',
+          data: JSON.stringify({ bookingId: booking.id }),
         },
-      },
+      });
+
+      // Create notification for host new booking
+      await tx.notification.create({
+        data: {
+          userId: booking.slot.ownerId,
+          title: 'New Booking! 💰',
+          body: `You have a new booking from ${booking.user?.name || 'a driver'} for ${booking.slot?.address || 'your parking spot'}.`,
+          type: 'new_booking',
+          data: JSON.stringify({ bookingId: booking.id }),
+        },
+      });
+
+      return booking;
     });
 
-    // Update slot status
-    await prisma.parkingSlot.update({
-      where: { id: parseInt(slotId) },
-      data: { status: 'reserved' },
-    });
-
-    // Create notification for user booking confirmation
-    const userNotification = await prisma.notification.create({
-      data: {
-        userId: booking.userId,
-        title: 'Booking Confirmed! 🎉',
-        body: rentalMode === 'open' 
-          ? `Your parking at ${booking.slot?.address || 'the parking spot'} is confirmed. Pre-auth hold: ₱${authAmount}. You'll be charged based on actual usage.`
-          : `Your parking booking at ${booking.slot?.address || 'the parking spot'} is confirmed for ${new Date(booking.startTime).toLocaleDateString()}.`,
-        type: 'booking_confirmation',
-        data: JSON.stringify({ bookingId: booking.id }),
-      },
-    });
-
-    // Create notification for host new booking
-    await prisma.notification.create({
-      data: {
-        userId: booking.slot.ownerId,
-        title: 'New Booking! 💰',
-        body: `You have a new booking from ${booking.user?.name || 'a driver'} for ${booking.slot?.address || 'your parking spot'}.`,
-        type: 'new_booking',
-        data: JSON.stringify({ bookingId: booking.id }),
-      },
-    });
-
+    const booking = result;
     broadcast({ type: 'booking_created', booking });
     res.status(201).json({
       message: rentalMode === 'open' 
@@ -848,8 +898,13 @@ exports.createBooking = async (req, res) => {
       estimatedAmount: rentalMode === 'open' ? authAmount : totalPrice,
     });
   } catch (error) {
-    console.error('Create booking error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Create booking error:', error);
+    if (error.message === 'CONFLICT') {
+      return res.status(409).json({ 
+        error: 'Slot is already booked for this time period' 
+      });
+    }
+    next(error);
   }
 };
 
@@ -869,20 +924,35 @@ exports.createBooking = async (req, res) => {
  *             type: object
  *             required:
  *               - qrData
+ *               - userLat
+ *               - userLon
  *             properties:
  *               qrData:
  *                 type: string
  *               bookingId:
  *                 type: integer
  *                 description: Optional for pre-booked slots
+ *               userLat:
+ *                 type: number
+ *                 description: User's current latitude
+ *               userLon:
+ *                 type: number
+ *                 description: User's current longitude
  *     responses:
  *       200:
  *         description: Check-in successful
  */
-exports.qrCheckIn = async (req, res) => {
+exports.qrCheckIn = async (req, res, next) => {
   try {
-    const { qrData, bookingId } = req.body;
+    const { qrData, bookingId, userLat, userLon } = req.body;
     const userId = req.user.id;
+
+    // Validate location parameters
+    if (userLat === undefined || userLon === undefined) {
+      return res.status(400).json({ 
+        error: 'Location required: userLat and userLon must be provided' 
+      });
+    }
 
     // Validate QR code
     const qrValidation = await validateQRCode(qrData);
@@ -900,6 +970,16 @@ exports.qrCheckIn = async (req, res) => {
 
     if (!slot) {
       return res.status(404).json({ error: 'Parking slot not found' });
+    }
+
+    // Verify user is within reasonable distance of the slot (100 meters)
+    const distanceKm = calculateDistance(userLat, userLon, slot.lat, slot.lon);
+    const maxDistanceKm = 0.1; // 100 meters
+    if (distanceKm > maxDistanceKm) {
+      return res.status(403).json({ 
+        error: `You must be within ${maxDistanceKm * 1000} meters of the parking slot to check in`,
+        distance: `${(distanceKm * 1000).toFixed(1)} meters away`
+      });
     }
 
     // If booking ID provided, verify booking
@@ -976,8 +1056,8 @@ exports.qrCheckIn = async (req, res) => {
     broadcast({ type: 'qr_checkin', session });
     res.json({ message: 'Check-in successful', session });
   } catch (error) {
-    console.error('QR check-in error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('QR check-in error:', error);
+    next(error);
   }
 };
 
@@ -1004,7 +1084,7 @@ exports.qrCheckIn = async (req, res) => {
  *       200:
  *         description: Check-out successful
  */
-exports.qrCheckOut = async (req, res) => {
+exports.qrCheckOut = async (req, res, next) => {
   try {
     const { sessionId } = req.body;
     const userId = req.user.id;
@@ -1049,7 +1129,6 @@ exports.qrCheckOut = async (req, res) => {
         // Capture only the actual amount (up to authorized max)
         const captureAmount = Math.min(actualAmount, maxAmount);
         
-        console.log(`💳 Capturing payment for Booking #${session.bookingId}: ₱${captureAmount.toFixed(2)} (actual: ₱${actualAmount.toFixed(2)}, max: ₱${maxAmount.toFixed(2)})`);
         
         captureResult = await paymongoService.capturePaymentIntent(
           session.booking.authId,
@@ -1057,7 +1136,7 @@ exports.qrCheckOut = async (req, res) => {
         );
         
         if (!captureResult.success) {
-          console.error('Payment capture error:', captureResult.error);
+          logger.error('Payment capture error:', captureResult.error);
           return res.status(500).json({ 
             error: 'Failed to process payment',
             details: captureResult.error.message 
@@ -1094,7 +1173,6 @@ exports.qrCheckOut = async (req, res) => {
         // If actual amount exceeds authorized max, log overstay charge needed
         if (actualAmount > maxAmount) {
           const overstayAmount = actualAmount - maxAmount;
-          console.log(`⚠️  Overstay detected: Booking ${session.bookingId}, Extra charge needed: ₱${overstayAmount.toFixed(2)}`);
           
           // TODO: Create additional charge or add to user balance
           // For now, we'll create a notification for the user
@@ -1113,7 +1191,7 @@ exports.qrCheckOut = async (req, res) => {
           });
         }
       } catch (paymentError) {
-        console.error('Payment capture error:', paymentError);
+        logger.error('Payment capture error:', paymentError);
         return res.status(500).json({ error: 'Failed to process payment' });
       }
     }
@@ -1208,8 +1286,8 @@ exports.qrCheckOut = async (req, res) => {
       durationMinutes,
     });
   } catch (error) {
-    console.error('QR check-out error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('QR check-out error:', error);
+    next(error);
   }
 };
 
@@ -1245,7 +1323,7 @@ exports.qrCheckOut = async (req, res) => {
  *       201:
  *         description: Review created successfully
  */
-exports.createReview = async (req, res) => {
+exports.createReview = async (req, res, next) => {
   try {
     const { slotId, bookingId, rating, comment } = req.body;
     const userId = req.user.id;
@@ -1318,8 +1396,8 @@ exports.createReview = async (req, res) => {
 
     res.status(201).json(review);
   } catch (error) {
-    console.error('Create review error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Create review error:', error);
+    next(error);
   }
 };
 
@@ -1346,7 +1424,7 @@ exports.createReview = async (req, res) => {
  *       200:
  *         description: Host earnings data
  */
-exports.getHostEarnings = async (req, res) => {
+exports.getHostEarnings = async (req, res, next) => {
   try {
     const hostId = req.user.id;
     const { startDate, endDate } = req.query;
@@ -1415,15 +1493,15 @@ exports.getHostEarnings = async (req, res) => {
       payouts,
     });
   } catch (error) {
-    console.error('Get host earnings error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get host earnings error:', error);
+    next(error);
   }
 };
 
 /**
  * Get a single listing by ID
  */
-exports.getListingById = async (req, res) => {
+exports.getListingById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -1457,15 +1535,15 @@ exports.getListingById = async (req, res) => {
       qrCodeData, // Add QR code data string for mobile app
     });
   } catch (error) {
-    console.error('Get listing by ID error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get listing by ID error:', error);
+    next(error);
   }
 };
 
 /**
  * Get host's own listings
  */
-exports.getHostListings = async (req, res) => {
+exports.getHostListings = async (req, res, next) => {
   try {
     const hostId = req.user.id;
 
@@ -1483,8 +1561,8 @@ exports.getHostListings = async (req, res) => {
     res.json(
       listings.map((l) => ({
         ...l,
-        amenities: l.amenities || [],
-        photos: l.photos || [],
+        amenities: safeJsonParse(l.amenities),
+        photos: safeJsonParse(l.photos),
         availability: l.isActive, // Map isActive to availability for frontend
         pricePerHour: l.price, // Map price to pricePerHour for frontend
         rating: l.averageRating || 0, // Map averageRating to rating for frontend
@@ -1492,15 +1570,15 @@ exports.getHostListings = async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error('Get host listings error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get host listings error:', error);
+    next(error);
   }
 };
 
 /**
  * Get user's marketplace bookings
  */
-exports.getUserBookings = async (req, res) => {
+exports.getUserBookings = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -1519,15 +1597,15 @@ exports.getUserBookings = async (req, res) => {
 
     res.json(bookings);
   } catch (error) {
-    console.error('Get user bookings error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get user bookings error:', error);
+    next(error);
   }
 };
 
 /**
  * Get reviews for a specific listing
  */
-exports.getListingReviews = async (req, res) => {
+exports.getListingReviews = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -1541,15 +1619,15 @@ exports.getListingReviews = async (req, res) => {
 
     res.json(reviews);
   } catch (error) {
-    console.error('Get listing reviews error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get listing reviews error:', error);
+    next(error);
   }
 };
 
 /**
  * Get a single booking by ID
  */
-exports.getBookingById = async (req, res) => {
+exports.getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -1589,15 +1667,15 @@ exports.getBookingById = async (req, res) => {
 
     res.json(booking);
   } catch (error) {
-    console.error('Get booking error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get booking error:', error);
+    next(error);
   }
 };
 
 /**
  * Cancel a booking
  */
-exports.cancelBooking = async (req, res) => {
+exports.cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -1699,8 +1777,8 @@ exports.cancelBooking = async (req, res) => {
       booking: updatedBooking,
     });
   } catch (error) {
-    console.error('Cancel booking error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Cancel booking error:', error);
+    next(error);
   }
 };
 
@@ -1708,7 +1786,7 @@ exports.cancelBooking = async (req, res) => {
  * Confirm booking without payment (for cash payments)
  * POST /marketplace/bookings/:id/confirm
  */
-exports.confirmBooking = async (req, res) => {
+exports.confirmBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -1770,15 +1848,15 @@ exports.confirmBooking = async (req, res) => {
       booking: updatedBooking,
     });
   } catch (error) {
-    console.error('Confirm booking error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Confirm booking error:', error);
+    next(error);
   }
 };
 
 /**
  * Get reviews for a specific listing
  */
-exports.toggleListingAvailability = async (req, res) => {
+exports.toggleListingAvailability = async (req, res, next) => {
   try {
     const listingId = parseInt(req.params.id);
     const userId = req.user.id;
@@ -1812,8 +1890,8 @@ exports.toggleListingAvailability = async (req, res) => {
       listing: updatedListing,
     });
   } catch (error) {
-    console.error('Toggle listing availability error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Toggle listing availability error:', error);
+    next(error);
   }
 };
 
@@ -1830,7 +1908,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const dist = R * c;
-  console.log('📏 Distance from', lat1, lon1, 'to', lat2, lon2, '=', dist.toFixed(2), 'km');
   return dist;
 }
 
@@ -1838,7 +1915,7 @@ function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
 
-exports.deleteListing = async (req, res) => {
+exports.deleteListing = async (req, res, next) => {
   try {
     const listingId = parseInt(req.params.id);
     const userId = req.user.id;
@@ -1867,15 +1944,15 @@ exports.deleteListing = async (req, res) => {
 
     res.json({ message: 'Listing deleted successfully' });
   } catch (error) {
-    console.error('Delete listing error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Delete listing error:', error);
+    next(error);
   }
 };
 
 /**
  * Get upcoming bookings (for reservation reminders)
  */
-exports.getUpcomingBookings = async (req, res) => {
+exports.getUpcomingBookings = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const now = new Date();
@@ -1928,8 +2005,8 @@ exports.getUpcomingBookings = async (req, res) => {
 
     res.json({ bookings });
   } catch (error) {
-    console.error('Get upcoming bookings error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Get upcoming bookings error:', error);
+    next(error);
   }
 };
 
@@ -1937,7 +2014,7 @@ exports.getUpcomingBookings = async (req, res) => {
  * Check if booking can be extended
  * GET /marketplace/bookings/:id/extension-availability
  */
-exports.checkExtensionAvailability = async (req, res) => {
+exports.checkExtensionAvailability = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { hours } = req.query; // Requested extension hours
@@ -2035,8 +2112,8 @@ exports.checkExtensionAvailability = async (req, res) => {
       } : null,
     });
   } catch (error) {
-    console.error('Check extension availability error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Check extension availability error:', error);
+    next(error);
   }
 };
 
@@ -2044,7 +2121,7 @@ exports.checkExtensionAvailability = async (req, res) => {
  * Extend booking
  * POST /marketplace/bookings/:id/extend
  */
-exports.extendBooking = async (req, res) => {
+exports.extendBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { hours, paymentIntentId } = req.body;
@@ -2116,83 +2193,85 @@ exports.extendBooking = async (req, res) => {
     // Calculate new end time
     const newEndTime = new Date(currentEndTime.getTime() + (extensionHours * 60 * 60 * 1000));
 
-    // Double-check availability (race condition protection)
-    const conflictingBookings = await prisma.booking.findMany({
-      where: {
-        slotId: booking.slotId,
-        id: { not: parseInt(id) },
-        status: { in: ['confirmed', 'active', 'pending'] },
-        OR: [
-          {
-            startTime: { lte: newEndTime },
-            endTime: { gte: currentEndTime },
-          },
-        ],
-      },
-    });
-
-    if (conflictingBookings.length > 0) {
-      return res.status(409).json({ 
-        error: 'Slot is no longer available for the requested extension time',
-        code: 'SLOT_CONFLICT'
-      });
-    }
-
     // Calculate costs
     const extensionCost = booking.slot.price * extensionHours;
     const serviceFee = 10;
     const tax = extensionCost * 0.05;
     const totalCost = extensionCost + serviceFee + tax;
 
-    // Update booking with extension
-    const updatedBooking = await prisma.booking.update({
-      where: { id: parseInt(id) },
-      data: {
-        originalEndTime: booking.originalEndTime || booking.endTime, // Store original if first extension
-        endTime: newEndTime,
-        extensionCount: { increment: 1 },
-        totalExtensionHrs: { increment: extensionHours },
-        lastExtendedAt: now,
-        price: { increment: totalCost }, // Add extension cost to total price
-      },
-    });
+    // Update booking with extension in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Double-check availability (race condition protection) within transaction
+      const conflictingBookings = await tx.booking.findMany({
+        where: {
+          slotId: booking.slotId,
+          id: { not: parseInt(id) },
+          status: { in: ['confirmed', 'active', 'pending'] },
+          OR: [
+            {
+              startTime: { lte: newEndTime },
+              endTime: { gte: currentEndTime },
+            },
+          ],
+        },
+      });
 
-    // Create payment record for extension
-    await prisma.payment.create({
-      data: {
-        userId,
-        bookingId: parseInt(id),
-        amount: totalCost,
-        paymentMethod: 'extension',
-        status: 'completed',
-        paymentIntent: paymentIntentId,
-        paymentDetails: JSON.stringify({
-          type: 'extension',
-          hours: extensionHours,
-          originalEndTime: currentEndTime,
-          newEndTime,
-        }),
-      },
-    });
+      if (conflictingBookings.length > 0) {
+        throw new Error('SLOT_CONFLICT');
+      }
 
-    // Create notification
-    await prisma.notification.create({
-      data: {
-        userId: booking.slot.ownerId,
-        title: 'Booking Extended',
-        body: `A booking at ${booking.slot.address} has been extended by ${extensionHours} hour(s).`,
-        type: 'booking_extended',
-        data: JSON.stringify({ 
-          bookingId: booking.id,
-          extensionHours,
-          newEndTime,
-        }),
-      },
+      // Update booking with extension
+      const updatedBooking = await tx.booking.update({
+        where: { id: parseInt(id) },
+        data: {
+          originalEndTime: booking.originalEndTime || booking.endTime, // Store original if first extension
+          endTime: newEndTime,
+          extensionCount: { increment: 1 },
+          totalExtensionHrs: { increment: extensionHours },
+          lastExtendedAt: now,
+          price: { increment: totalCost }, // Add extension cost to total price
+        },
+      });
+
+      // Create payment record for extension
+      await tx.payment.create({
+        data: {
+          userId,
+          bookingId: parseInt(id),
+          amount: totalCost,
+          paymentMethod: 'extension',
+          status: 'completed',
+          paymentIntent: paymentIntentId,
+          paymentDetails: JSON.stringify({
+            type: 'extension',
+            hours: extensionHours,
+            originalEndTime: currentEndTime,
+            newEndTime,
+          }),
+        },
+      });
+
+      // Create notification
+      await tx.notification.create({
+        data: {
+          userId: booking.slot.ownerId,
+          title: 'Booking Extended',
+          body: `A booking at ${booking.slot.address} has been extended by ${extensionHours} hour(s).`,
+          type: 'booking_extended',
+          data: JSON.stringify({ 
+            bookingId: booking.id,
+            extensionHours,
+            newEndTime,
+          }),
+        },
+      });
+
+      return updatedBooking;
     });
 
     res.json({
       message: 'Booking extended successfully',
-      booking: updatedBooking,
+      booking: result,
       extension: {
         hours: extensionHours,
         cost: totalCost,
@@ -2200,7 +2279,13 @@ exports.extendBooking = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Extend booking error:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Extend booking error:', error);
+    if (error.message === 'SLOT_CONFLICT') {
+      return res.status(409).json({ 
+        error: 'Slot is no longer available for the requested extension time',
+        code: 'SLOT_CONFLICT'
+      });
+    }
+    next(error);
   }
 };
