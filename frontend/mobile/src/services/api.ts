@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, isLocalBackend } from '../config/api.config';
+import { PointsBalance, PointsHistoryResponse, ReferralStats } from '../types';
 
 // Create axios instance
 const api = axios.create({
@@ -323,6 +324,23 @@ export const notificationsAPI = {
   markAllAsRead: () => api.patch('/notifications/read-all'),
   
   deleteNotification: (id: number) => api.delete(`/notifications/${id}`),
+};
+
+// Points & Referral endpoints
+export const pointsAPI = {
+  getBalance: () => api.get<PointsBalance>('/points/balance'),
+  earnPoints: (bookingId: string, amount: number) =>
+    api.post('/points/earn', { bookingId, amount }),
+  redeemPoints: (amount: number, bookingId?: string) =>
+    api.post('/points/redeem', { amount, bookingId }),
+  getHistory: (page: number, limit: number) =>
+    api.get<PointsHistoryResponse>('/points/history', { params: { page, limit } }),
+  generateReferralCode: () => api.post<{ code: string }>('/referrals/generate'),
+  validateReferralCode: (referralCode: string) =>
+    api.post<{ valid: boolean; message?: string }>('/referrals/validate', { referralCode }),
+  getReferralStats: () => api.get<ReferralStats>('/referrals/stats'),
+  processReferralReward: (referredUserId: string) =>
+    api.post('/referrals/process', { referredUserId }),
 };
 
 // Analytics endpoints (Phase 6A — Service 1)

@@ -6,6 +6,7 @@ import locationReducer from './slices/locationSlice';
 import marketplaceReducer from './slices/marketplaceSlice';
 import vehiclesReducer from './slices/vehiclesSlice';
 import analyticsReducer from './slices/analyticsSlice';
+import pointsReducer from './slices/pointsSlice';
 import { RootState } from '../types';
 
 export const store = configureStore({
@@ -16,6 +17,7 @@ export const store = configureStore({
     marketplace: marketplaceReducer,
     vehicles: vehiclesReducer,
     analytics: analyticsReducer,
+    points: pointsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

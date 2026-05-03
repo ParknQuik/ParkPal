@@ -19,6 +19,8 @@ import { MyVehiclesScreen } from '../screens/MyVehiclesScreen';
 import { SecurityPrivacyScreen } from '../screens/SecurityPrivacyScreen';
 import { HelpCenterScreen } from '../screens/HelpCenterScreen';
 import { AddVehicleWizardScreen } from '../screens/AddVehicleWizardScreen';
+import { PointsHistoryScreen } from '../screens/PointsHistoryScreen';
+import { ReferralScreen } from '../screens/ReferralScreen';
 import { RootStackParamList } from '../types';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -169,6 +171,16 @@ export const MainStack: React.FC = () => {
       <Stack.Screen
         name="HelpCenter"
         component={HelpCenterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PointsHistory"
+        component={PointsHistoryScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Referral"
+        component={ReferralScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

@@ -112,7 +112,7 @@ export const HomeDashboard: React.FC = () => {
           sortBy: filters.sortBy,
         })
       );
-    } else if (!query.trim()) {
+    } else if (!query.trim() && currentLocation) {
       dispatch(
         searchListings({
           latitude: currentLocation.latitude,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '700',
   },
-  greetingTitle: {
+greetingTitle: {
     ...typography.h5,
     color: colors.textPrimary,
     fontWeight: '700',
@@ -456,11 +456,6 @@ const styles = StyleSheet.create({
     ...typography.h2,
     color: colors.white,
     fontWeight: '700',
-  },
-  greetingSubtitle: {
-    ...typography.body,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: spacing.xs,
   },
   content: {
     flex: 1,

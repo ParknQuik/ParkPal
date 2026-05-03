@@ -17,6 +17,10 @@ export const Input: React.FC<InputProps> = ({
   error,
   icon,
   style,
+  keyboardType,
+  autoCapitalize,
+  autoComplete,
+  rightElement,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -37,10 +41,13 @@ export const Input: React.FC<InputProps> = ({
           placeholder={placeholder}
           placeholderTextColor={colors.textTertiary}
           secureTextEntry={secureTextEntry}
-          autoCapitalize="none"
+          keyboardType={keyboardType as any}
+          autoCapitalize={autoCapitalize as any}
+          autoComplete={autoComplete as any}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         />
+        {rightElement}
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>

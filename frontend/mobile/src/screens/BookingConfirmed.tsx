@@ -13,8 +13,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-
-import { marketplaceAPI } from '../services/api';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types';
 import { colors } from '../theme';
 
 const PRIMARY = '#10b77f';
@@ -23,7 +23,7 @@ const ACCENT = '#ffeb3b';
 const BACKGROUND = '#f6f6f8';
 
 export const BookingConfirmed: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute();
   const { paymentId, bookingId, amount, spotName, spotAddress, startTime, endTime, paymentMethod, rentalMode } = route.params as any;
   const scaleAnim = new Animated.Value(0);
@@ -80,10 +80,7 @@ export const BookingConfirmed: React.FC = () => {
   };
 
   const handleScanToCheckIn = () => {
-    navigation.navigate('QRScanner' as never, {
-      mode: 'checkin',
-      bookingId: bookingId,
-    } as never);
+    navigation.navigate('QRScanner' as never, { mode: 'checkin', bookingId } as never);
   };
 
   return (

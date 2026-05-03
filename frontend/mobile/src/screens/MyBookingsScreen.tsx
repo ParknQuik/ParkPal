@@ -94,7 +94,7 @@ const formatBookingDate = (startTime: string, endTime: string | null, rentalMode
 };
 
 export const MyBookingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
   const [refreshing, setRefreshing] = useState(false);
@@ -127,34 +127,32 @@ export const MyBookingsScreen: React.FC = () => {
     setRefreshing(false);
   }, [fetchBookings]);
 
-   const handleAction = useCallback(
-     (booking: any) => {
-
-       // Always go to ParkingDetail for viewing - user can rate from there if needed
-       if (booking.status === 'pending') {
-         navigation.navigate('Payment' as never, { 
-           bookingId: booking.id, 
-           amount: booking.totalAmount,
-           spotName: booking.spot?.title || booking.spot?.address || 'Parking Spot',
-           spotAddress: booking.spot?.address || '',
-           startTime: booking.startTime,
-           endTime: booking.endTime,
-         } as never);
-       } else {
-         navigation.navigate('ParkingDetail' as never, { 
-  spotId: booking.slotId, 
-  fromBooking: true,
-  bookingId: booking.id,
-  bookingStatus: booking.status,
-  startTime: booking.startTime,
-  endTime: booking.endTime,
-  totalAmount: booking.totalAmount,
-  rentalMode: booking.rentalMode,
-} as never);
-       }
-     },
-     [navigation],
-   );
+const handleAction = useCallback(
+      (booking: any) => {
+        if (booking.status === 'pending') {
+          (navigation.navigate as any)('Payment', { 
+            bookingId: booking.id, 
+            amount: booking.totalAmount,
+            spotName: booking.spot?.title || booking.spot?.address || 'Parking Spot',
+            spotAddress: booking.spot?.address || '',
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+          });
+        } else {
+          (navigation.navigate as any)('ParkingDetail', { 
+            spotId: booking.slotId, 
+            fromBooking: true,
+            bookingId: booking.id,
+            bookingStatus: booking.status,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            totalAmount: booking.totalAmount,
+            rentalMode: booking.rentalMode,
+          });
+        }
+      },
+      [navigation],
+    );
 
   const handleCancelBooking = useCallback(
     (bookingId: string) => {
@@ -260,10 +258,10 @@ export const MyBookingsScreen: React.FC = () => {
   const handleScanQR = useCallback(
     (booking: any) => {
       const mode = booking.status === 'active' ? 'checkout' : 'checkin';
-      navigation.navigate('QRScanner' as never, {
+      navigation.navigate('QRScanner', {
         mode,
         bookingId: booking.id,
-      } as never);
+      });
     },
     [navigation],
   );
@@ -430,7 +428,7 @@ export const MyBookingsScreen: React.FC = () => {
                     {booking.status === 'completed' && (
                       <TouchableOpacity
                         style={styles.rateButton}
-                        onPress={() => navigation.navigate('WriteReview' as never, { spotId: booking.slotId } as never)}
+                        onPress={() => (navigation.navigate as any)('WriteReview', { spotId: booking.slotId })}
                       >
                         <MaterialCommunityIcons name="star-outline" size={18} color={colors.accent} />
                         <Text style={styles.rateButtonText}>Rate</Text>

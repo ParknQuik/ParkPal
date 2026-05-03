@@ -195,6 +195,18 @@ export const ProfileScreen: React.FC = () => {
           label: 'Security & Privacy',
           onPress: () => navigation.navigate('SecurityPrivacy' as never),
         },
+        {
+          icon: 'star-circle-outline' as const,
+          iconColor: colors.accentYellow,
+          label: 'Points History',
+          onPress: () => navigation.navigate('PointsHistory' as never),
+        },
+        {
+          icon: 'account-multiple-outline' as const,
+          iconColor: colors.info,
+          label: 'Referrals',
+          onPress: () => navigation.navigate('Referral' as never),
+        },
       ],
     },
     {
