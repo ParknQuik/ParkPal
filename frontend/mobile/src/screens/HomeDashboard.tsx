@@ -194,7 +194,7 @@ export const HomeDashboard: React.FC = () => {
               <Text style={styles.greetingSubtitle}>Find your perfect parking spot</Text>
             </View>
           </View>
-          <Text style={styles.parkPalTitle}>ParkPal</Text>
+          <Text style={styles.parkPalTitle}>ParknQuik</Text>
         </View>
 
         <View style={styles.searchContainer}>
