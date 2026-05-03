@@ -7,47 +7,48 @@ import {
   Text,
   StyleSheet,
 } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { PointsTransaction } from '../types';
 import { colors, spacing, borderRadius } from '../theme';
 
-// Icons for different transaction types
 const getTransactionIcon = (type: string) => {
-  switch (type) {
-    case 'earn':
+  const upperType = type.toUpperCase();
+  switch (upperType) {
+    case 'EARNED':
       return {
-        name: 'arrow-down',
+        name: 'arrow-down-bold',
         color: colors.success,
-        bgColor: 'rgba(16, 183, 127, 0.1)',
       };
-    case 'redeem':
+    case 'REDEEMED':
       return {
-        name: 'arrow-up',
+        name: 'arrow-up-bold',
         color: colors.error,
-        bgColor: 'rgba(239, 68, 68, 0.1)',
       };
-    case 'referral':
+    case 'REFERRAL_BONUS':
+    case 'REFERRAL_REWARD':
       return {
         name: 'gift',
         color: colors.accent,
-        bgColor: 'rgba(250, 204, 21, 0.1)',
       };
-    case 'bonus':
+    case 'EXPIRED':
+      return {
+        name: 'clock-outline',
+        color: colors.warning,
+      };
+    case 'ADJUSTMENT':
+      return {
+        name: 'tune',
+        color: colors.textSecondary,
+      };
+    case 'BONUS':
       return {
         name: 'star',
         color: colors.accentYellow,
-        bgColor: 'rgba(250, 204, 21, 0.15)',
-      };
-    case 'expire':
-      return {
-        name: 'clock',
-        color: colors.warning,
-        bgColor: 'rgba(245, 158, 11, 0.1)',
       };
     default:
       return {
-        name: 'adjust',
+        name: 'help-circle',
         color: colors.textSecondary,
-        bgColor: 'rgba(148, 163, 184, 0.1)',
       };
   }
 };
@@ -62,8 +63,9 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
   showBalance = false,
 }) => {
   const icon = getTransactionIcon(transaction.type);
-  const isEarn = transaction.type === 'earn' || transaction.type === 'referral' || transaction.type === 'bonus';
-  const isExpire = transaction.type === 'expire';
+  const upperType = transaction.type.toUpperCase();
+  const isEarn = ['EARNED', 'REFERRAL_BONUS', 'REFERRAL_REWARD', 'BONUS'].includes(upperType);
+  const isExpire = upperType === 'EXPIRED';
   const amountColor = isEarn ? colors.success : isExpire ? colors.warning : colors.error;
   const amountPrefix = isEarn ? '+' : isExpire ? '-' : '-';
 
@@ -98,15 +100,12 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.leftContent}>
-        <View 
-          style={[
-            styles.iconWrapper,
-            { backgroundColor: icon.bgColor },
-          ]}
-        >
-          <Text style={[styles.icon, { color: icon.color }]}>
-            {getIconSvg(transaction.type)}
-          </Text>
+        <View style={styles.iconWrapper}>
+          <MaterialCommunityIcons
+            name={icon.name as any}
+            size={20}
+            color={icon.color}
+          />
         </View>
         
         <View style={styles.textContent}>
@@ -139,57 +138,18 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
   );
 };
 
-const getIconSvg = (type: string) => {
-  switch (type) {
-    case 'earn':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 4V20M12 4L8 8M12 4L16 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      );
-    case 'redeem':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 20V4M12 20L16 16M12 20L8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      );
-    case 'referral':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20.84 4.61C21.11 4.34 20.84 4.34 20.57 4.61C20.3 4.88 12 12 12 12C12 12 3.7 4.88 3.46 4.61C3.22 4.34 2.95 4.61 3.19 4.88L10.92 12L3.19 19.12C2.95 19.39 3.22 19.66 3.46 19.39C3.7 19.12 12 12 12 12C12 12 20.3 19.12 20.54 19.39C20.78 19.66 21.05 19.39 20.81 19.12L13.08 12L20.84 4.61Z" fill="currentColor"/>
-        </svg>
-      );
-    case 'bonus':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
-        </svg>
-      );
-    case 'expire':
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      );
-    default:
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 12H20M12 4V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      );
-  }
-};
-
 const formatType = (type: string) => {
+  const upperType = type.toUpperCase();
   const typeMap: Record<string, string> = {
-    earn: 'Earned',
-    redeem: 'Redeemed',
-    referral: 'Referral Bonus',
-    bonus: 'Bonus',
-    expire: 'Expired',
-    adjustment: 'Adjustment',
+    EARNED: 'Earned',
+    REDEEMED: 'Redeemed',
+    REFERRAL_BONUS: 'Referral Bonus',
+    REFERRAL_REWARD: 'Referral Reward',
+    EXPIRED: 'Expired',
+    ADJUSTMENT: 'Adjustment',
+    BONUS: 'Bonus',
   };
-  return typeMap[type] || type;
+  return typeMap[upperType] || type;
 };
 
 const styles = StyleSheet.create({
@@ -215,9 +175,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
-  },
-  icon: {
-    color: colors.primary,
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
   },
   textContent: {
     flex: 1,

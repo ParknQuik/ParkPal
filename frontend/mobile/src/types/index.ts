@@ -328,7 +328,7 @@ export interface VehiclesState {
 }
 
 // Points & Rewards types
-export type PointsTransactionType = 'earn' | 'redeem' | 'expire' | 'bonus' | 'referral' | 'adjustment';
+export type PointsTransactionType = 'earn' | 'redeem' | 'expire' | 'bonus' | 'referral' | 'adjustment' | 'EARNED' | 'REDEEMED' | 'REFERRAL_BONUS' | 'REFERRAL_REWARD' | 'EXPIRED' | 'ADJUSTMENT';
 export type PointsTransactionStatus = 'pending' | 'completed' | 'cancelled';
 export type PointsTransactionSource = 'booking' | 'referral' | 'manual' | 'promotion' | 'adjustment';
 

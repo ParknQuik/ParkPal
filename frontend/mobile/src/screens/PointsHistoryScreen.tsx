@@ -24,31 +24,41 @@ export const PointsHistoryScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { transactions, loading } = useAppSelector((state) => state.points);
+      const pointsState = useAppSelector((state) => state.points) ?? {
+        transactions: [],
+        loading: false,
+        balance: null,
+        referralStats: null,
+        referralCode: null,
+        error: null
+      };
+      const { transactions, loading } = pointsState;
 
-  const fetchHistoryData = useCallback(async () => {
-    try {
-      await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
-    } catch (error) {
-      ;
-    }
-  }, [dispatch]);
+   const fetchHistoryData = useCallback(async () => {
+     try {
+       const result = await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
+       console.log('Points history response:', result);
+     } catch (error) {
+       console.error('Error fetching points history:', error);
+     }
+   }, [dispatch]);
 
   useEffect(() => {
     fetchHistoryData();
   }, [fetchHistoryData]);
 
-  const handleRefresh = useCallback(async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
-    } catch (error) {
-      ;
-    } finally {
-      setRefreshing(false);
-    }
-  }, [dispatch, refreshing]);
+   const handleRefresh = useCallback(async () => {
+     if (refreshing) return;
+     setRefreshing(true);
+     try {
+       const result = await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
+       console.log('Points history refresh response:', result);
+     } catch (error) {
+       console.error('Error refreshing points history:', error);
+     } finally {
+       setRefreshing(false);
+     }
+   }, [dispatch, refreshing]);
 
   const handleBack = () => {
     navigation.goBack();
