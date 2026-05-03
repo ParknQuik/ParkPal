@@ -23,6 +23,9 @@ export const Chip: React.FC<ChipProps> = ({
       ]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityLabel={`${label}${selected ? ', selected' : ''}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
     >
       <Text
         style={[

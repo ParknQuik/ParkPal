@@ -27,8 +27,14 @@ import { FilterModal, FilterConfig } from '../components/FilterModal';
 import { FilterChips, SortOption } from '../components/FilterChips';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { useAutocomplete } from '../hooks/useAutocomplete';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { clusterMarkers, ClusteredMarker } from '../utils/clusterMarkers';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
+
+const CACHE_KEY = 'parkpal_cached_listings';
 
 const getOccupancyColor = (percentage: number): string => {
   if (percentage >= 80) return '#ef4444';
@@ -56,6 +62,9 @@ const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: 
       anchor={{ x: 0.5, y: 0.5 }}
     >
       <View
+        accessible
+        accessibilityLabel={`${listing.title || listing.address}: ${price} per hour`}
+        accessibilityRole="button"
         collapsable={false}
         style={{
           backgroundColor: bg,
@@ -102,6 +111,44 @@ const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: 
   );
 });
 
+const ClusterMarker = React.memo(({ cluster, onPress }: {
+  cluster: ClusteredMarker;
+  onPress: () => void;
+}) => (
+  <Marker
+    coordinate={{ latitude: cluster.latitude, longitude: cluster.longitude }}
+    onPress={onPress}
+    tracksViewChanges={false}
+    anchor={{ x: 0.5, y: 0.5 }}
+  >
+    <View
+      accessible
+      accessibilityLabel={`${cluster.count} parking spots clustered. Tap to zoom in.`}
+      accessibilityRole="button"
+      collapsable={false}
+      style={{
+        backgroundColor: '#10b77f',
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        borderRadius: 20,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
+      }}
+    >
+      <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
+        {cluster.count}
+      </Text>
+    </View>
+  </Marker>
+));
+
 export const ExploreMap: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -111,6 +158,7 @@ export const ExploreMap: React.FC = () => {
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const regionChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<string | number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,8 +171,10 @@ export const ExploreMap: React.FC = () => {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [zoneIndicatorVisible, setZoneIndicatorVisible] = useState(true);
   const [zoneOccupancyMap, setZoneOccupancyMap] = useState<Record<string, number>>({});
+  const [cachedListings, setCachedListings] = useState<any[]>([]);
   const insets = useSafeAreaInsets();
   const { history, addToHistory, clearHistory, removeFromHistory } = useSearchHistory();
+  const { isConnected } = useNetworkStatus();
 
   const [region, setRegion] = useState(latitude && longitude ? {
     latitude,
@@ -212,7 +262,7 @@ export const ExploreMap: React.FC = () => {
   }, [currentZone]);
 
   const selectedListing = selectedMarker !== null
-    ? listings.find((l: any) => l.id === selectedMarker)
+    ? (isConnected ? listings : cachedListings).find((l: any) => l.id === selectedMarker)
     : null;
 
   useEffect(() => {
@@ -234,10 +284,12 @@ export const ExploreMap: React.FC = () => {
     return getOccupancyColor(occupancy);
   }, [zoneOccupancyMap]);
 
-  const sortedListings = useMemo(() => {
-    if (!activeSort || !listings.length) return listings;
+  const displayListings = isConnected ? listings : cachedListings;
 
-    return [...listings].sort((a, b) => {
+  const sortedListings = useMemo(() => {
+    if (!activeSort || !displayListings.length) return displayListings;
+
+    return [...displayListings].sort((a, b) => {
       switch (activeSort) {
         case 'cheapest':
           return (a.pricePerHour ?? Infinity) - (b.pricePerHour ?? Infinity);
@@ -253,7 +305,18 @@ export const ExploreMap: React.FC = () => {
           return 0;
       }
     });
-  }, [listings, activeSort]);
+  }, [displayListings, activeSort]);
+
+  const regionKey = useMemo(() => {
+    const lat = Math.round(region.latitude * 1000);
+    const lon = Math.round(region.longitude * 1000);
+    const delta = Math.round(region.latitudeDelta * 1000);
+    return `${lat}-${lon}-${delta}`;
+  }, [region.latitude, region.longitude, region.latitudeDelta, region.longitudeDelta]);
+
+  const clustered = useMemo(() => {
+    return clusterMarkers(sortedListings, region);
+  }, [sortedListings, regionKey]);
 
   const fetchListings = useCallback(async (lat: number, lon: number, filters?: FilterConfig) => {
     try {
@@ -272,13 +335,47 @@ export const ExploreMap: React.FC = () => {
         if (filters.availableNow) params.status = 'available';
       }
 
-      await dispatch(searchListings(params)).unwrap();
+      const result = await dispatch(searchListings(params)).unwrap();
+
+      if (result?.length) {
+        try {
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
+            listings: result,
+            timestamp: Date.now(),
+            lat,
+            lon,
+          }));
+        } catch (e) {
+          ;
+        }
+      }
     } catch (err) {
       ;
     }
   }, [dispatch, searchQuery]);
 
+  useEffect(() => {
+    if (!isConnected) {
+      const loadCached = async () => {
+        try {
+          const stored = await AsyncStorage.getItem(CACHE_KEY);
+          if (stored) {
+            const { listings: cached } = JSON.parse(stored);
+            setCachedListings(cached);
+          }
+        } catch (e) {
+          ;
+        }
+      };
+      loadCached();
+    }
+  }, [isConnected]);
+
   const handleApplyFilters = (filters: FilterConfig) => {
+    if (!isConnected) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
     setActiveFilters(filters);
     fetchListings(region.latitude, region.longitude, filters);
   };
@@ -294,7 +391,9 @@ export const ExploreMap: React.FC = () => {
       setRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 500);
 
-      fetchListings(latitude, longitude);
+      if (isConnected) {
+        fetchListings(latitude, longitude);
+      }
 
       if (focusSpotId) {
         setTimeout(() => setSelectedMarker(focusSpotId), 1000);
@@ -317,16 +416,22 @@ export const ExploreMap: React.FC = () => {
         };
         setRegion(newRegion);
         mapRef.current?.animateToRegion(newRegion, 500);
-        fetchListings(location.coords.latitude, location.coords.longitude);
+        if (isConnected) {
+          fetchListings(location.coords.latitude, location.coords.longitude);
+        }
       } else {
-        fetchListings(region.latitude, region.longitude);
+        if (isConnected) {
+          fetchListings(region.latitude, region.longitude);
+        }
       }
     } catch {
-      fetchListings(region.latitude, region.longitude);
+      if (isConnected) {
+        fetchListings(region.latitude, region.longitude);
+      }
     } finally {
       setLocationReady(true);
     }
-  }, [fetchListings, latitude, longitude, focusSpotId]);
+  }, [fetchListings, latitude, longitude, focusSpotId, isConnected]);
 
   useFocusEffect(
     useCallback(() => {
@@ -335,6 +440,7 @@ export const ExploreMap: React.FC = () => {
   );
 
   useEffect(() => {
+    if (!isConnected) return;
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
     }
@@ -346,13 +452,17 @@ export const ExploreMap: React.FC = () => {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchQuery]);
+  }, [searchQuery, isConnected]);
 
   const handleRefresh = useCallback(async () => {
+    if (!isConnected) {
+      setRefreshing(false);
+      return;
+    }
     setRefreshing(true);
     await fetchListings(region.latitude, region.longitude, activeFilters);
     setRefreshing(false);
-  }, [fetchListings]);
+  }, [fetchListings, isConnected]);
 
   const handleRecenter = useCallback(() => {
     centerOnUser();
@@ -378,10 +488,13 @@ export const ExploreMap: React.FC = () => {
     setRegion(newRegion);
   };
 
-  const handleMarkerPress = (markerId: string | number) => {
+  const handleMarkerPress = useCallback((markerId: string | number) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
     setSelectedMarker(markerId);
     resetZoneIndicatorTimer();
-    const listing = listings.find((l: any) => l.id === markerId);
+    const listing = (isConnected ? listings : cachedListings).find((l: any) => l.id === markerId);
     if (listing) {
       mapRef.current?.animateToRegion({
         latitude: listing.latitude,
@@ -390,7 +503,7 @@ export const ExploreMap: React.FC = () => {
         longitudeDelta: 0.01,
       }, 500);
     }
-  };
+  }, [listings, cachedListings, isConnected, resetZoneIndicatorTimer]);
 
   const handleViewDetails = () => {
     if (selectedListing) {
@@ -413,10 +526,15 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleFilterPress = () => {
+    if (!isConnected) return;
     setFilterModalVisible(true);
   };
 
   const handleClearFilters = () => {
+    if (!isConnected) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
     setActiveFilters({});
     fetchListings(region.latitude, region.longitude);
   };
@@ -426,6 +544,7 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleSuggestionPress = (suggestion: string) => {
+    if (!isConnected) return;
     setSearchQuery(suggestion);
     addToHistory(suggestion);
     setIsFocused(false);
@@ -443,20 +562,34 @@ export const ExploreMap: React.FC = () => {
     removeFromHistory(item);
   };
 
-  const handleRegionChangeComplete = (r: any) => {
+  const handleRegionChangeComplete = useCallback((r: any) => {
     setRegion(r);
-    setHasMovedMap(true);
-    resetZoneIndicatorTimer();
+    if (regionChangeDebounceRef.current) clearTimeout(regionChangeDebounceRef.current);
+    regionChangeDebounceRef.current = setTimeout(() => {
+      setHasMovedMap(true);
+      resetZoneIndicatorTimer();
+    }, 500);
+  }, [resetZoneIndicatorTimer]);
+
+  const handleSearchAreaPress = async () => {
+    if (!isConnected) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch {}
+    setHasMovedMap(false);
+    if (searchQuery.trim()) addToHistory(searchQuery);
+    await fetchListings(region.latitude, region.longitude, activeFilters);
   };
 
   const filterChipsTop = insets.top + 64;
   const suggestionsTop = insets.top + 60;
   const clearFiltersTop = hasActiveFilters ? filterChipsTop + 44 : undefined;
   const searchAreaTop = filterChipsTop + 50;
+  const offlineBannerTop = insets.top + 16;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={[styles.searchBarContainer, { top: insets.top + 8 }]}>
+      <View style={[styles.searchBarContainer, { top: insets.top + 8 }]} shouldRasterizeIOS>
         <View style={styles.searchBar}>
           <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
@@ -470,28 +603,42 @@ export const ExploreMap: React.FC = () => {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             onSubmitEditing={handleSubmitEditing}
+            accessibilityLabel="Search parking spots"
+            accessibilityRole="search"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity
               onPress={() => { setSearchQuery(''); inputRef.current?.blur(); }}
               activeOpacity={0.7}
+              accessibilityLabel="Clear search"
+              accessibilityRole="button"
             >
               <MaterialCommunityIcons name="close-circle" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity
-          style={styles.filterButton}
+          style={[styles.filterButton, !isConnected && styles.filterButtonDisabled]}
           onPress={handleFilterPress}
           activeOpacity={0.7}
+          disabled={!isConnected}
+          accessibilityLabel={hasActiveFilters ? "Filter parking spots, filters active" : "Filter parking spots"}
+          accessibilityRole="button"
         >
           <MaterialCommunityIcons
             name="tune"
             size={20}
-            color={hasActiveFilters ? colors.primary : colors.textSecondary}
+            color={hasActiveFilters && isConnected ? colors.primary : (isConnected ? colors.textSecondary : colors.textTertiary)}
           />
         </TouchableOpacity>
       </View>
+
+      {!isConnected && (
+        <View style={[styles.offlineBanner, { top: offlineBannerTop }]} accessibilityLabel="Offline mode: showing cached results" accessible>
+          <MaterialCommunityIcons name="wifi-off" size={16} color={colors.white} />
+          <Text style={styles.offlineBannerText}>Offline — showing cached results</Text>
+        </View>
+      )}
 
       {isFocused && displayItems.length > 0 && (
         <View style={[styles.suggestionsDropdown, { top: suggestionsTop }]}>
@@ -501,6 +648,8 @@ export const ExploreMap: React.FC = () => {
               style={styles.suggestionItem}
               onPress={() => handleSuggestionPress(item)}
               activeOpacity={0.7}
+              accessibilityLabel={`Search for ${item}`}
+              accessibilityRole="button"
             >
               <MaterialCommunityIcons
                 name={!searchQuery.trim() ? "history" : "magnify"}
@@ -515,6 +664,8 @@ export const ExploreMap: React.FC = () => {
                   onPress={() => handleHistoryItemRemove(item)}
                   activeOpacity={0.7}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel={`Remove ${item} from search history`}
+                  accessibilityRole="button"
                 >
                   <MaterialCommunityIcons name="close" size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
@@ -531,6 +682,8 @@ export const ExploreMap: React.FC = () => {
           style={[styles.clearFiltersChip, { top: clearFiltersTop }]}
           onPress={handleClearFilters}
           activeOpacity={0.7}
+          accessibilityLabel="Clear all filters"
+          accessibilityRole="button"
         >
           <MaterialCommunityIcons name="close" size={14} color={colors.error} />
           <Text style={styles.clearFiltersText}>Clear Filters</Text>
@@ -539,9 +692,11 @@ export const ExploreMap: React.FC = () => {
 
       {currentZone && zoneIndicatorVisible && (
         <TouchableOpacity
-          style={[styles.zoneIndicator, { top: insets.top + 16 }]}
+          style={[styles.zoneIndicator, { top: isConnected ? insets.top + 16 : offlineBannerTop + 44 }]}
           onPress={() => { setZoneIndicatorVisible(false); if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); }}
           activeOpacity={0.7}
+          accessibilityLabel={`Currently in ${currentZone.name}, ${zoneOccupancyMap[currentZone.id] ?? 'unknown'}% occupancy`}
+          accessibilityRole="button"
         >
           <MaterialCommunityIcons name="map-marker-radius" size={14} color={colors.white} />
           <Text style={styles.zoneIndicatorText}>{currentZone.name}</Text>
@@ -553,7 +708,7 @@ export const ExploreMap: React.FC = () => {
         </TouchableOpacity>
       )}
 
-      <View style={styles.mapContainer}>
+      <View style={styles.mapContainer} removeClippedSubviews>
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
@@ -564,15 +719,39 @@ export const ExploreMap: React.FC = () => {
           showsUserLocation
           showsMyLocationButton={false}
         >
-          {sortedListings.map((listing: any) => (
-            <PriceMarker
-              key={listing.id}
-              listing={listing}
-              selected={selectedMarker === listing.id}
-              onPress={handleMarkerPress}
-              occupancyColor={getListingOccupancyColor(listing)}
-            />
-          ))}
+          {clustered.map((cm: ClusteredMarker) => {
+            if (cm.isCluster) {
+              return (
+                <ClusterMarker
+                  key={cm.id}
+                  cluster={cm}
+                  onPress={() => {
+                    const newRegion = {
+                      ...region,
+                      latitudeDelta: region.latitudeDelta * 0.5,
+                      longitudeDelta: region.longitudeDelta * 0.5,
+                    };
+                    mapRef.current?.animateToRegion({
+                      latitude: cm.latitude,
+                      longitude: cm.longitude,
+                      latitudeDelta: newRegion.latitudeDelta,
+                      longitudeDelta: newRegion.longitudeDelta,
+                    }, 400);
+                  }}
+                />
+              );
+            }
+            const listing = cm.listings[0];
+            return (
+              <PriceMarker
+                key={listing.id}
+                listing={listing}
+                selected={selectedMarker === listing.id}
+                onPress={handleMarkerPress}
+                occupancyColor={getListingOccupancyColor(listing)}
+              />
+            );
+          })}
           <Circle
             center={{
               latitude: region.latitude,
@@ -632,42 +811,58 @@ export const ExploreMap: React.FC = () => {
 
         {hasMovedMap && (
           <TouchableOpacity
-            style={[styles.searchAreaButton, { top: searchAreaTop }]}
-            onPress={async () => {
-              setHasMovedMap(false);
-              if (searchQuery.trim()) addToHistory(searchQuery);
-              await fetchListings(region.latitude, region.longitude, activeFilters);
-            }}
+            style={[styles.searchAreaButton, !isConnected && styles.searchAreaButtonDisabled, { top: searchAreaTop }]}
+            onPress={handleSearchAreaPress}
             activeOpacity={0.8}
+            disabled={!isConnected}
+            accessibilityLabel="Search this area for parking spots"
+            accessibilityRole="button"
           >
-            <Text style={styles.searchAreaText}>Search this area</Text>
+            <Text style={styles.searchAreaText}>
+              {isConnected ? 'Search this area' : 'Search unavailable offline'}
+            </Text>
           </TouchableOpacity>
         )}
 
-        {loading && (
+        {!isConnected && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={colors.textSecondary} />
+          </View>
+        )}
+
+        {loading && isConnected && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
 
-        {!loading && listings.length === 0 && (
-          <View style={styles.emptyState}>
+        {!loading && !isConnected && displayListings.length === 0 && (
+          <View style={styles.emptyState} accessibilityLabel="No cached data available" accessible>
+            <MaterialCommunityIcons name="wifi-off" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyStateText}>No cached data available</Text>
+          </View>
+        )}
+
+        {!loading && isConnected && listings.length === 0 && (
+          <View style={styles.emptyState} accessibilityLabel="No parking spots found in this area" accessible>
             <MaterialCommunityIcons name="map-marker-off-outline" size={48} color={colors.textSecondary} />
             <Text style={styles.emptyStateText}>No parking spots found</Text>
           </View>
         )}
 
         <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7} accessibilityLabel="Zoom in" accessibilityRole="button">
             <MaterialCommunityIcons name="plus" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.controlButton, styles.controlBorder]} onPress={handleZoomOut} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.controlButton, styles.controlBorder]} onPress={handleZoomOut} activeOpacity={0.7} accessibilityLabel="Zoom out" accessibilityRole="button">
             <MaterialCommunityIcons name="minus" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.controlButton, styles.myLocationButton]}
             onPress={handleRecenter}
             activeOpacity={0.7}
+            accessibilityLabel="Recenter map"
+            accessibilityRole="button"
           >
             <MaterialCommunityIcons name="crosshairs-gps" size={20} color={colors.white} />
           </TouchableOpacity>
@@ -675,6 +870,8 @@ export const ExploreMap: React.FC = () => {
             style={[styles.controlButton, showZoneOverlays && { backgroundColor: colors.primary + '15' }]}
             onPress={() => setShowZoneOverlays(!showZoneOverlays)}
             activeOpacity={0.7}
+            accessibilityLabel={showZoneOverlays ? "Hide zone overlays" : "Show zone overlays"}
+            accessibilityRole="button"
           >
             <MaterialCommunityIcons name="layers" size={20} color={showZoneOverlays ? colors.primary : colors.textSecondary} />
           </TouchableOpacity>
@@ -683,6 +880,8 @@ export const ExploreMap: React.FC = () => {
               style={[styles.controlButton, showHeatmap && { backgroundColor: colors.primary + '15' }]}
               onPress={() => setShowHeatmap(!showHeatmap)}
               activeOpacity={0.7}
+              accessibilityLabel={showHeatmap ? "Hide heatmap" : "Show heatmap"}
+              accessibilityRole="button"
             >
               <MaterialCommunityIcons name="gradient-vertical" size={20} color={showHeatmap ? colors.primary : colors.textSecondary} />
             </TouchableOpacity>
@@ -695,7 +894,12 @@ export const ExploreMap: React.FC = () => {
         zoneAvailability={selectedZoneAvail}
         onViewDetails={handleViewDetails}
         onDirections={handleDirections}
-        onQuickBook={() => navigation.navigate('ParkingDetail', { spotId: selectedListing?.id, quickBook: true })}
+        onQuickBook={() => {
+          try {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch {}
+          navigation.navigate('ParkingDetail', { spotId: selectedListing?.id, quickBook: true });
+        }}
         onClose={() => setSelectedMarker(null)}
       />
 
@@ -785,6 +989,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  filterButtonDisabled: {
+    opacity: 0.5,
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6b7280',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 8,
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 101,
+    borderRadius: 8,
+  },
+  offlineBannerText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   clearFiltersChip: {
     position: 'absolute',
     left: 16,
@@ -821,6 +1047,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+  },
+  searchAreaButtonDisabled: {
+    backgroundColor: '#6b7280',
+    opacity: 0.7,
   },
   searchAreaText: {
     color: 'white',
@@ -926,5 +1156,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-export default ExploreMap;

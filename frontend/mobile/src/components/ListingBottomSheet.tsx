@@ -13,6 +13,7 @@ import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/botto
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import * as Haptics from 'expo-haptics';
 
 interface ListingBottomSheetProps {
   listing: any | null;
@@ -68,6 +69,9 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
         onClose();
       } else {
         setSnapIndex(index);
+        try {
+          Haptics.selectionAsync();
+        } catch {}
       }
     },
     [onClose]
@@ -99,7 +103,7 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
     return styles.availBadgeOpen;
   };
 
-  const renderCollapsedContent = () => (
+  const collapsedContent = useMemo(() => (
     <View style={styles.collapsedContainer}>
       <View style={styles.collapsedHeader}>
         <View style={styles.collapsedTextContainer}>
@@ -118,18 +122,19 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             </View>
           </View>
         </View>
-        <View style={styles.collapsedPrice}>
+        <View style={styles.collapsedPrice} accessible accessibilityLabel={`${pricePerHour} per hour`}>
           <Text style={styles.collapsedPriceText}>{pricePerHour}</Text>
           <Text style={styles.collapsedPriceUnit}>/hr</Text>
         </View>
       </View>
     </View>
-  );
+  ), [title, rating, reviewCount, distance, pricePerHour]);
 
-  const renderExpandedContent = () => (
+  const expandedContent = useMemo(() => (
     <ScrollView
       style={styles.expandedScrollView}
       showsVerticalScrollIndicator={false}
+      removeClippedSubviews
       contentContainerStyle={[
         styles.expandedContent,
         { paddingBottom: insets.bottom + 16 },
@@ -140,6 +145,9 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
         style={styles.expandedImage}
         contentFit="cover"
         transition={200}
+        accessible
+        accessibilityLabel={`Photo of ${title}`}
+        accessibilityRole="image"
       />
 
       <View style={styles.expandedBody}>
@@ -181,7 +189,7 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
               contentContainerStyle={styles.amenitiesScroll}
             >
               {amenities.map((amenity: string, idx: number) => (
-                <View key={`${amenity}-${idx}`} style={styles.amenityChip}>
+                <View key={`${amenity}-${idx}`} style={styles.amenityChip} accessible accessibilityLabel={amenity}>
                   <MaterialCommunityIcons
                     name={getAmenityIcon(amenity) as any}
                     size={16}
@@ -241,6 +249,8 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             style={styles.bookNowButton}
             onPress={onQuickBook}
             activeOpacity={0.8}
+            accessibilityLabel="Book this parking spot now"
+            accessibilityRole="button"
           >
             <MaterialCommunityIcons name="calendar-check" size={20} color={colors.white} />
             <Text style={styles.bookNowText}>Book Now</Text>
@@ -249,6 +259,8 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             style={styles.directionsButtonExpanded}
             onPress={onDirections}
             activeOpacity={0.7}
+            accessibilityLabel="Get directions to this spot"
+            accessibilityRole="button"
           >
             <MaterialCommunityIcons name="navigation" size={20} color={colors.primary} />
           </TouchableOpacity>
@@ -256,13 +268,15 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             style={styles.detailsButtonExpanded}
             onPress={onViewDetails}
             activeOpacity={0.7}
+            accessibilityLabel="View full details for this spot"
+            accessibilityRole="button"
           >
             <Text style={styles.detailsTextExpanded}>Details</Text>
           </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
-  );
+  ), [photoUri, title, distance, rating, reviewCount, pricePerHour, amenities, zoneAvailability, occupancyPercentage, availableSlots, totalSlots, circlingTime, insets.bottom, onQuickBook, onDirections, onViewDetails]);
 
   return (
     <BottomSheet
@@ -284,8 +298,8 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
       onChange={handleSheetChanges}
     >
       <BottomSheetView style={styles.sheetContent}>
-        {snapIndex === 0 && renderCollapsedContent()}
-        {snapIndex === 1 && renderExpandedContent()}
+        {snapIndex === 0 && collapsedContent}
+        {snapIndex === 1 && expandedContent}
       </BottomSheetView>
     </BottomSheet>
   );

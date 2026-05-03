@@ -124,15 +124,15 @@ export const FilterModal: React.FC<FilterModalProps> = ({
         >
           <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
             <View style={styles.header}>
-              <Text style={styles.title}>Filters</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+              <Text style={styles.title} accessibilityRole="header">Filters</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7} accessibilityLabel="Close filter modal" accessibilityRole="button">
                 <MaterialCommunityIcons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
               {/* Price Range */}
-              <View style={styles.section}>
+              <View style={styles.section} accessible accessibilityLabel="Price range filter">
                 <Text style={styles.sectionTitle}>Price Range</Text>
                 <Text style={styles.sectionSubtitle}>per hour (₱)</Text>
                 <View style={styles.priceRow}>
@@ -146,6 +146,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       placeholderTextColor={colors.textTertiary}
                       keyboardType="numeric"
                       returnKeyType="done"
+                      accessibilityLabel="Minimum price per hour"
                     />
                   </View>
                   <Text style={styles.priceSeparator}>—</Text>
@@ -159,13 +160,14 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       placeholderTextColor={colors.textTertiary}
                       keyboardType="numeric"
                       returnKeyType="done"
+                      accessibilityLabel="Maximum price per hour"
                     />
                   </View>
                 </View>
               </View>
 
               {/* Slot Type */}
-              <View style={styles.section}>
+              <View style={styles.section} accessible accessibilityLabel="Slot type filter">
                 <Text style={styles.sectionTitle}>Slot Type</Text>
                 <View style={styles.chipRow}>
                   {SLOT_TYPE_OPTIONS.map((option) => (
@@ -180,7 +182,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               </View>
 
               {/* Amenities */}
-              <View style={styles.section}>
+              <View style={styles.section} accessible accessibilityLabel="Amenities filter">
                 <Text style={styles.sectionTitle}>Amenities</Text>
                 <View style={styles.chipGrid}>
                   {AMENITY_OPTIONS.map((option) => (
@@ -195,11 +197,14 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               </View>
 
               {/* Availability */}
-              <View style={styles.section}>
+              <View style={styles.section} accessible accessibilityLabel="Availability filter">
                 <TouchableOpacity
                   style={styles.toggleRow}
                   onPress={() => setAvailableNow(!availableNow)}
                   activeOpacity={0.7}
+                  accessibilityLabel={availableNow ? "Show all availability" : "Show available now only"}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: availableNow }}
                 >
                   <View style={styles.toggleTextContainer}>
                     <MaterialCommunityIcons name="clock-check-outline" size={20} color={colors.primary} />
@@ -219,6 +224,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                   style={styles.clearButton}
                   onPress={handleClearAll}
                   activeOpacity={0.7}
+                  accessibilityLabel="Clear all filters"
+                  accessibilityRole="button"
                 >
                   <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
                   <Text style={styles.clearButtonText}>Clear All</Text>
@@ -228,6 +235,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                 style={styles.applyButton}
                 onPress={handleApply}
                 activeOpacity={0.8}
+                accessibilityLabel="Apply filters"
+                accessibilityRole="button"
               >
                 <Text style={styles.applyButtonText}>Apply Filters</Text>
               </TouchableOpacity>

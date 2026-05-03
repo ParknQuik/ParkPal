@@ -34,6 +34,9 @@ export const FilterChips: React.FC<FilterChipsProps> = ({ activeSort, onSortChan
           style={[styles.chip, activeSort === chip.id && styles.chipActive]}
           onPress={() => handlePress(chip.id)}
           activeOpacity={0.7}
+          accessibilityLabel={`${chip.label}${activeSort === chip.id ? ', active' : ''}`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeSort === chip.id }}
         >
           <MaterialCommunityIcons
             name={chip.icon as any}
