@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { typography, spacing, borderRadius, shadows } from '../../theme';
-import { useTheme } from '../../context/ThemeContext';
+import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 
 export interface CarColor {
   name: string;
@@ -21,8 +20,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   onSelect,
   columns = 5,
 }) => {
-  const { colors } = useTheme();
-
   const getColorSize = () => {
     const totalColors = colorOptions.length;
     if (totalColors <= 10) return 48;
@@ -32,62 +29,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const swatchSize = getColorSize();
   const swatchSpacing = spacing.sm;
-
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      marginVertical: spacing.sm,
-    },
-    scrollContent: {
-      paddingHorizontal: spacing.xs,
-    },
-    colorGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingVertical: spacing.xs,
-    },
-    colorSwatch: {
-      borderWidth: 2,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      ...shadows.sm,
-    },
-    whiteSwatch: {
-      borderWidth: 2,
-      borderColor: colors.border,
-    },
-    colorSwatchSelected: {
-      borderColor: colors.primary,
-      borderWidth: 3,
-      transform: [{ scale: 1.1 }],
-    },
-    whiteSwatchSelected: {
-      borderColor: colors.primary,
-      borderWidth: 3,
-    },
-    checkmarkContainer: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    checkmark: {
-      color: colors.white,
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    selectedColorText: {
-      ...typography.body,
-      color: colors.primary,
-      fontWeight: '600',
-      textAlign: 'center',
-      marginTop: spacing.sm,
-    },
-  }), [colors]);
 
   const renderColorSwatch = (color: CarColor, index: number) => {
     const isSelected = selectedColor?.hex === color.hex;
@@ -140,5 +81,61 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    marginVertical: spacing.sm,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xs,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  colorSwatch: {
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
+  },
+  whiteSwatch: {
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  colorSwatchSelected: {
+    borderColor: colors.primary,
+    borderWidth: 3,
+    transform: [{ scale: 1.1 }],
+  },
+  whiteSwatchSelected: {
+    borderColor: colors.primary,
+    borderWidth: 3,
+  },
+  checkmarkContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  selectedColorText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+});
 
 export default ColorPicker;

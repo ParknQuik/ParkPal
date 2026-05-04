@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
@@ -23,8 +22,7 @@ import { EmptyState } from '../components/EmptyState';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { typography, spacing, borderRadius } from '../theme';
-import { useTheme } from '../context/ThemeContext';
+import { colors, typography, spacing, borderRadius } from '../theme';
 import type { RootStackParamList } from '../types';
 
 export const MyVehiclesScreen: React.FC = () => {
@@ -33,123 +31,6 @@ export const MyVehiclesScreen: React.FC = () => {
   const { vehicles, loading, error } = useAppSelector((state) => state.vehicles);
 
   const [refreshing, setRefreshing] = useState(false);
-  const { colors } = useTheme();
-
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      ...typography.h3,
-      color: colors.text,
-    },
-    addButton: {
-      width: 40,
-      height: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    addButtonText: {
-      fontSize: 32,
-      color: colors.primary,
-      fontWeight: 'bold',
-    },
-    errorBanner: {
-      backgroundColor: colors.error + '20',
-      padding: spacing.md,
-      marginHorizontal: spacing.lg,
-      marginTop: spacing.md,
-      borderRadius: borderRadius.md,
-    },
-    errorText: {
-      color: colors.error,
-      ...typography.body,
-    },
-    content: {
-      flex: 1,
-    },
-    emptyContainer: {
-      padding: spacing.xl,
-      alignItems: 'center',
-    },
-    addFirstButton: {
-      marginTop: spacing.xl,
-      width: '100%',
-    },
-    vehiclesList: {
-      padding: spacing.lg,
-    },
-    vehicleCard: {
-      marginBottom: spacing.lg,
-    },
-    vehicleHeader: {
-      marginBottom: spacing.md,
-    },
-    vehicleTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      marginBottom: spacing.sm,
-    },
-    vehicleName: {
-      ...typography.h4,
-      color: colors.text,
-      flex: 1,
-    },
-    defaultBadge: {
-      backgroundColor: colors.primary + '20',
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: borderRadius.sm,
-    },
-    defaultBadgeText: {
-      ...typography.caption,
-      color: colors.primary,
-      fontWeight: '600',
-    },
-    vehicleActions: {
-      flexDirection: 'row',
-      gap: spacing.md,
-    },
-    actionButton: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-    },
-    actionButtonText: {
-      ...typography.body,
-      color: colors.primary,
-    },
-    setDefaultText: {
-      ...typography.body,
-      color: colors.success,
-    },
-    deleteText: {
-      color: colors.error,
-    },
-    vehicleDetails: {
-      gap: spacing.xs,
-    },
-    vehicleDetail: {
-      ...typography.body,
-      color: colors.textSecondary,
-    },
-  }), [colors]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -316,4 +197,122 @@ export const MyVehiclesScreen: React.FC = () => {
   );
 };
 
-
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: colors.text,
+  },
+  headerTitle: {
+    ...typography.h3,
+    color: colors.text,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    fontSize: 32,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  errorBanner: {
+    backgroundColor: colors.error + '20',
+    padding: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  errorText: {
+    color: colors.error,
+    ...typography.body,
+  },
+  content: {
+    flex: 1,
+  },
+  emptyContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  addFirstButton: {
+    marginTop: spacing.xl,
+    width: '100%',
+  },
+  vehiclesList: {
+    padding: spacing.lg,
+  },
+  vehicleCard: {
+    marginBottom: spacing.lg,
+  },
+  vehicleHeader: {
+    marginBottom: spacing.md,
+  },
+  vehicleTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  vehicleName: {
+    ...typography.h4,
+    color: colors.text,
+    flex: 1,
+  },
+  defaultBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  defaultBadgeText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  vehicleActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  actionButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  actionButtonText: {
+    ...typography.body,
+    color: colors.primary,
+  },
+  setDefaultText: {
+    ...typography.body,
+    color: colors.success,
+  },
+  deleteText: {
+    color: colors.error,
+  },
+  vehicleDetails: {
+    gap: spacing.xs,
+  },
+  vehicleDetail: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+});

@@ -103,8 +103,8 @@ export type RootStackParamList = {
   MainTabs: undefined;
   ParkingDetail: { spotId: string };
   Reservation: { spotId: string };
-  ListSpot: { listingId?: number; mode?: 'edit' } | undefined;
-  QRScanner: { mode?: 'checkin' | 'checkout'; bookingId?: string } | undefined;
+  ListSpot: undefined;
+  QRScanner: undefined;
   QRGenerator: undefined;
   WriteReview: { spotId: string | number };
   EditProfile: undefined;
@@ -119,8 +119,6 @@ export type RootStackParamList = {
   SecurityPrivacy: undefined;
   HelpCenter: undefined;
   AddVehicleWizard: { vehicleId?: number };
-  PointsHistory: undefined;
-  Referral: undefined;
 };
 
 export type MainTabParamList = {

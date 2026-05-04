@@ -9,8 +9,7 @@ import {
   SafeAreaView,
   TextInput,
 } from 'react-native';
-import { typography, spacing, borderRadius } from '../../theme';
-import { useTheme } from '../../context/ThemeContext';
+import { colors, typography, spacing, borderRadius } from '../../theme';
 
 export interface CarMake {
   id: string;
@@ -49,7 +48,6 @@ export const MakeModelSelector: React.FC<MakeModelSelectorProps> = ({
   onMakeChange,
   onModelChange,
 }) => {
-  const { colors } = useTheme();
   const [makeModalVisible, setMakeModalVisible] = useState(false);
   const [modelModalVisible, setModelModalVisible] = useState(false);
   const [makeSearchQuery, setMakeSearchQuery] = useState('');
@@ -94,107 +92,6 @@ export const MakeModelSelector: React.FC<MakeModelSelectorProps> = ({
     onModelChange(model);
     setModelModalVisible(false);
   };
-
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      width: '100%',
-    },
-    selectorButton: {
-      backgroundColor: colors.surface,
-      borderWidth: 2,
-      borderColor: colors.border,
-      borderRadius: borderRadius.xl,
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.lg,
-      marginBottom: spacing.md,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    selectorButtonFilled: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primary + '10',
-    },
-    selectorButtonDisabled: {
-      opacity: 0.5,
-    },
-    selectorLabel: {
-      ...typography.body,
-      color: colors.textSecondary,
-      fontWeight: '500',
-    },
-    selectorLabelFilled: {
-      color: colors.primary,
-      fontWeight: '600',
-    },
-    selectorLabelDisabled: {
-      color: colors.textTertiary,
-    },
-    modalContainer: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    cancelText: {
-      ...typography.body,
-      color: colors.primary,
-      fontWeight: '600',
-    },
-    modalTitle: {
-      ...typography.h5,
-      color: colors.text,
-    },
-    searchContainer: {
-      padding: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    searchInput: {
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: borderRadius.lg,
-      padding: spacing.md,
-      ...typography.body,
-      color: colors.text,
-    },
-    pickerItem: {
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    pickerItemSelected: {
-      backgroundColor: colors.primary + '15',
-    },
-    pickerItemText: {
-      ...typography.body,
-      color: colors.text,
-    },
-    pickerItemTextSelected: {
-      color: colors.primary,
-      fontWeight: '600',
-    },
-    emptyContainer: {
-      padding: spacing.xxl,
-      alignItems: 'center',
-    },
-    emptyText: {
-      ...typography.body,
-      color: colors.textTertiary,
-    },
-  }), [colors]);
 
   const renderMakeItem = ({ item }: { item: CarMake }) => (
     <TouchableOpacity
@@ -343,5 +240,106 @@ export const MakeModelSelector: React.FC<MakeModelSelectorProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
+  selectorButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectorButtonFilled: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '10',
+  },
+  selectorButtonDisabled: {
+    opacity: 0.5,
+  },
+  selectorLabel: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  selectorLabelFilled: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  selectorLabelDisabled: {
+    color: colors.textTertiary,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  cancelText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  modalTitle: {
+    ...typography.h5,
+    color: colors.text,
+  },
+  searchContainer: {
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  searchInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...typography.body,
+    color: colors.text,
+  },
+  pickerItem: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  pickerItemSelected: {
+    backgroundColor: colors.primary + '15',
+  },
+  pickerItemText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  pickerItemTextSelected: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    padding: spacing.xxl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.textTertiary,
+  },
+});
 
 export default MakeModelSelector;

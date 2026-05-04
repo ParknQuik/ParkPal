@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
-import { typography, spacing, borderRadius } from '../../theme';
-import { useTheme } from '../../context/ThemeContext';
+import { colors, typography, spacing, borderRadius } from '../../theme';
 
 export interface CarColor {
   name: string;
@@ -15,8 +14,6 @@ interface CarPreviewProps {
 }
 
 export const CarPreview: React.FC<CarPreviewProps> = ({ color, size = 'medium' }) => {
-  const { colors } = useTheme();
-
   const sizeConfig = {
     small: { width: 120, height: 60, scale: 0.6 },
     medium: { width: 180, height: 90, scale: 0.9 },
@@ -24,22 +21,6 @@ export const CarPreview: React.FC<CarPreviewProps> = ({ color, size = 'medium' }
   };
 
   const { width, height, scale } = sizeConfig[size];
-
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    colorLabel: {
-      ...typography.body,
-      color: colors.textSecondary,
-      marginTop: spacing.sm,
-      fontWeight: '500',
-    },
-    colorLabelSmall: {
-      ...typography.caption,
-    },
-  }), [colors]);
 
   return (
     <View style={styles.container}>
@@ -107,5 +88,21 @@ export const CarPreview: React.FC<CarPreviewProps> = ({ color, size = 'medium' }
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorLabel: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    fontWeight: '500',
+  },
+  colorLabelSmall: {
+    ...typography.caption,
+  },
+});
 
 export default CarPreview;

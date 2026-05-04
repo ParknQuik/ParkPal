@@ -265,33 +265,34 @@ export const MyBookingsScreen: React.FC = () => {
     [navigation],
   );
 
-  const filteredBookings = bookings.filter((booking) => {
-    const now = new Date();
-    const startTime = new Date(booking.startTime);
-    const endTime = new Date(booking.endTime);
-    const hasSession = booking.sessionId != null;
+   const filteredBookings = bookings.filter((booking) => {
+     const now = new Date();
+     const startTime = new Date(booking.startTime);
+     const endTime = new Date(booking.endTime);
+     const hasSession = booking.sessionId != null;
+     
+      if (activeTab === 'upcoming') {
+        // Upcoming: pending bookings with startTime > now
+        //          confirmed bookings with startTime > now (future confirmed)
+        //          confirmed bookings with startTime <= now AND no session yet (not scanned)
+        //          active bookings with endTime > now (currently parked, not ended yet)
+        return (booking.status === 'pending' && startTime > now) ||
+               (booking.status === 'confirmed' && startTime > now) ||
+               (booking.status === 'confirmed' && startTime <= now && !hasSession) ||
+               (booking.status === 'active' && endTime > now);
+      }
+     if (activeTab === 'completed') {
+       // Completed: status is completed
+       //          OR (status is active AND endTime has passed - session ended)
+       return booking.status === 'completed' ||
+              (booking.status === 'active' && endTime <= now);
+     }
+     if (activeTab === 'cancelled') {
+       return booking.status === 'cancelled' || booking.status === 'expired';
+     }
+     return true;
+   });
 
-    if (activeTab === 'upcoming') {
-      // Upcoming: pending bookings with startTime > now
-      //          confirmed bookings with startTime > now (future confirmed)
-      //          confirmed bookings with startTime <= now AND no session yet (not scanned)
-      //          active bookings with endTime > now (currently parked, not ended yet)
-      return (booking.status === 'pending' && startTime > now) ||
-             (booking.status === 'confirmed' && startTime > now) ||
-             (booking.status === 'confirmed' && startTime <= now && !hasSession) ||
-             (booking.status === 'active' && endTime > now);
-    }
-    if (activeTab === 'completed') {
-      // Completed: status is completed
-      //          OR (status is active AND endTime has passed - session ended)
-      return booking.status === 'completed' ||
-             (booking.status === 'active' && endTime <= now);
-    }
-    if (activeTab === 'cancelled') {
-      return booking.status === 'cancelled' || booking.status === 'expired';
-    }
-    return true;
-  });
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {

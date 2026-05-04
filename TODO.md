@@ -147,7 +147,7 @@
 ### Remaining Tasks
 
 #### Phase 2 - Mobile App Integration
-- [ ] Mobile app frontend development (React Native) - Points & Referral system now implemented
+- [ ] Mobile app frontend development (React Native)
 - [ ] QR code scanner for parking spot access
 - [ ] Real-time parking spot availability updates
 - [ ] In-app payment flow integration

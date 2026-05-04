@@ -65,9 +65,9 @@ export const PaymentScreen: React.FC = () => {
     if (selectedPayment === 'cash') {
       try {
         setLoading(true);
-
+        
         let finalBookingId: number | undefined = bookingId;
-
+        
         if (createBookingOnSuccess && !bookingId && spotId) {
           finalBookingId = await createBookingIfNeeded();
         }
@@ -114,7 +114,7 @@ export const PaymentScreen: React.FC = () => {
     setLoading(true);
     try {
       let finalBookingId: number | undefined = bookingId;
-
+      
       if (createBookingOnSuccess && !bookingId && spotId) {
         finalBookingId = await createBookingIfNeeded();
       }
@@ -147,7 +147,7 @@ export const PaymentScreen: React.FC = () => {
         rentalMode,
       } as never);
      } catch (err: any) {
-
+       
        if (err.response?.status === 409) {
         Alert.alert(
           'Slot Unavailable',

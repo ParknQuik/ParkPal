@@ -19,18 +19,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings } from '../store/slices/marketplaceSlice';
 import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
-import { useTheme } from '../context/ThemeContext';
+import { colors } from '../theme/colors';
 import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
 import { analyticsService } from '../services/analytics';
-import { ListingBottomSheet } from '../components/ListingBottomSheet';
-import { FilterModal, FilterConfig } from '../components/FilterModal';
-import { FilterChips, SortOption } from '../components/FilterChips';
-import { useSearchHistory } from '../hooks/useSearchHistory';
-import { useAutocomplete } from '../hooks/useAutocomplete';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { clusterMarkers, ClusteredMarker } from '../utils/clusterMarkers';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -209,12 +200,9 @@ export const ExploreMap: React.FC = () => {
   const { listings, loading } = useAppSelector((state) => state.marketplace);
   const { zoneAvailability } = useAppSelector((state) => state.analytics);
 
-  const suggestions = useAutocomplete(searchQuery, listings);
-
-  const displayItems = searchQuery.trim() ? suggestions : history;
-
+  // Analytics zones overlay
   const [analyticsZones, setAnalyticsZones] = useState<any[]>([]);
-
+  
   useEffect(() => {
     const loadZones = async () => {
       const zones = await analyticsService.getZones();
@@ -223,26 +211,7 @@ export const ExploreMap: React.FC = () => {
     loadZones();
   }, []);
 
-  useEffect(() => {
-    const loadZoneMetrics = async () => {
-      const metrics: Record<string, number> = {};
-      for (const zone of analyticsZones) {
-        try {
-          const result = await analyticsService.getZoneAvailability(zone.id);
-          if (result?.occupancyPercentage != null) {
-            metrics[zone.id] = result.occupancyPercentage;
-          }
-        } catch (e) {
-          ;
-        }
-      }
-      setZoneOccupancyMap(metrics);
-    };
-    if (analyticsZones.length > 0) {
-      loadZoneMetrics();
-    }
-  }, [analyticsZones]);
-
+  // Initialize geofencing hook
   const { currentZone, sessionId } = useAnalyticsGeofencing(
     analyticsZones.map(z => ({
       id: z.id,
@@ -253,29 +222,6 @@ export const ExploreMap: React.FC = () => {
     })),
     true
   );
-
-  useEffect(() => {
-    if (currentZone) {
-      setZoneIndicatorVisible(true);
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      dismissTimerRef.current = setTimeout(() => {
-        setZoneIndicatorVisible(false);
-      }, 5000);
-    }
-    return () => {
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-    };
-  }, [currentZone]);
-
-  const resetZoneIndicatorTimer = useCallback(() => {
-    if (currentZone) {
-      setZoneIndicatorVisible(true);
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      dismissTimerRef.current = setTimeout(() => {
-        setZoneIndicatorVisible(false);
-      }, 5000);
-    }
-  }, [currentZone]);
 
   const selectedListing = selectedMarker !== null
     ? (isConnected ? listings : cachedListings).find((l: any) => l.id === selectedMarker)
@@ -528,35 +474,12 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleDirections = () => {
-    if (!selectedListing) return;
-    const lat = selectedListing.latitude;
-    const lng = selectedListing.longitude;
-    const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
-    const latLng = `${lat},${lng}`;
-    const label = selectedListing.title || selectedListing.address;
-    const url = Platform.select({
-      ios: `${scheme}${label}@${latLng}`,
-      android: `${scheme}${latLng}(${label})`,
-    });
-    if (url) Linking.openURL(url);
+    ;
   };
 
   const handleFilterPress = () => {
-    if (!isConnected) return;
-    setFilterModalVisible(true);
-  };
-
-  const handleClearFilters = () => {
-    if (!isConnected) return;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-    setActiveFilters({});
-    fetchListings(region.latitude, region.longitude);
-  };
-
-  const handleSortChange = (sort: SortOption) => {
-    setActiveSort(sort);
+    ;
+    Alert.alert('Filters', 'Filter options coming soon!');
   };
 
   const handleSuggestionPress = (suggestion: string) => {
@@ -893,82 +816,18 @@ export const ExploreMap: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {!isConnected && (
-        <View style={[styles.offlineBanner, { top: offlineBannerTop }]} accessibilityLabel="Offline mode: showing cached results" accessible>
-          <MaterialCommunityIcons name="wifi-off" size={16} color={colors.white} />
-          <Text style={styles.offlineBannerText}>Offline — showing cached results</Text>
+      {/* Analytics Zone Indicator */}
+      {currentZone && (
+        <View style={styles.zoneIndicator}>
+          <View style={styles.zoneIndicatorDot} />
+          <Text style={styles.zoneIndicatorText}>
+            In {currentZone.name}
+          </Text>
         </View>
       )}
 
-      {isFocused && displayItems.length > 0 && (
-        <View style={[styles.suggestionsDropdown, { top: suggestionsTop }]}>
-          {displayItems.map((item, index) => (
-            <TouchableOpacity
-              key={`${item}-${index}`}
-              style={styles.suggestionItem}
-              onPress={() => handleSuggestionPress(item)}
-              activeOpacity={0.7}
-              accessibilityLabel={`Search for ${item}`}
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons
-                name={!searchQuery.trim() ? "history" : "magnify"}
-                size={18}
-                color={colors.textSecondary}
-              />
-              <Text style={styles.suggestionText} numberOfLines={1}>
-                {item}
-              </Text>
-              {!searchQuery.trim() && (
-                <TouchableOpacity
-                  onPress={() => handleHistoryItemRemove(item)}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityLabel={`Remove ${item} from search history`}
-                  accessibilityRole="button"
-                >
-                  <MaterialCommunityIcons name="close" size={16} color={colors.textTertiary} />
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      <FilterChips activeSort={activeSort} onSortChange={handleSortChange} />
-
-      {hasActiveFilters && clearFiltersTop !== undefined && (
-        <TouchableOpacity
-          style={[styles.clearFiltersChip, { top: clearFiltersTop }]}
-          onPress={handleClearFilters}
-          activeOpacity={0.7}
-          accessibilityLabel="Clear all filters"
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name="close" size={14} color={colors.error} />
-          <Text style={styles.clearFiltersText}>Clear Filters</Text>
-        </TouchableOpacity>
-      )}
-
-      {currentZone && zoneIndicatorVisible && (
-        <TouchableOpacity
-          style={[styles.zoneIndicator, { top: isConnected ? insets.top + 16 : offlineBannerTop + 44 }]}
-          onPress={() => { setZoneIndicatorVisible(false); if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); }}
-          activeOpacity={0.7}
-          accessibilityLabel={`Currently in ${currentZone.name}, ${zoneOccupancyMap[currentZone.id] ?? 'unknown'}% occupancy`}
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name="map-marker-radius" size={14} color={colors.white} />
-          <Text style={styles.zoneIndicatorText}>{currentZone.name}</Text>
-          {zoneOccupancyMap[currentZone.id] != null && (
-            <View style={styles.zoneOccBadge}>
-              <Text style={styles.zoneOccText}>{zoneOccupancyMap[currentZone.id]}%</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      )}
-
-      <View style={styles.mapContainer} removeClippedSubviews>
+      {/* Map Background */}
+      <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
@@ -1023,51 +882,30 @@ export const ExploreMap: React.FC = () => {
             strokeColor="rgba(16, 183, 127, 0.5)"
             strokeWidth={2}
           />
-          {showZoneOverlays && analyticsZones.map((zone: any) => {
-            const occupancy = zoneOccupancyMap[zone.id] ?? 50;
-            const isActive = currentZone?.id === zone.id;
-            return (
-              <React.Fragment key={zone.id}>
-                <Circle
-                  center={{
-                    latitude: zone.centroidLat,
-                    longitude: zone.centroidLon,
-                  }}
-                  radius={300}
-                  fillColor={isActive ? 'rgba(16, 183, 127, 0.2)' : 'rgba(100, 116, 139, 0.1)'}
-                  strokeColor={isActive ? 'rgba(16, 183, 127, 0.7)' : 'rgba(100, 116, 139, 0.4)'}
-                  strokeWidth={isActive ? 3 : 2}
-                />
-                <Marker
-                  coordinate={{
-                    latitude: zone.centroidLat,
-                    longitude: zone.centroidLon,
-                  }}
-                  title={zone.name}
-                  description={isActive ? `Active session: ${sessionId}` : 'Tap for availability'}
-                />
-              </React.Fragment>
-            );
-          })}
-          {showHeatmap && showZoneOverlays && analyticsZones.map((zone: any) => {
-            const occupancy = zoneOccupancyMap[zone.id] ?? 50;
-            const fillOpacity = 0.15 + (occupancy / 100) * 0.25;
-            const fillColor = occupancy >= 80
-              ? `rgba(239, 68, 68, ${fillOpacity})`
-              : occupancy >= 50
-                ? `rgba(245, 158, 11, ${fillOpacity})`
-                : `rgba(16, 183, 127, ${fillOpacity})`;
-            return (
+          {/* Analytics Zone Overlays */}
+          {analyticsZones.map((zone: any) => (
+            <React.Fragment key={zone.id}>
               <Circle
-                key={`heatmap-${zone.id}`}
-                center={{ latitude: zone.centroidLat, longitude: zone.centroidLon }}
-                radius={500}
-                fillColor={fillColor}
-                strokeColor="transparent"
-                strokeWidth={0}
+                center={{
+                  latitude: zone.centroidLat,
+                  longitude: zone.centroidLon,
+                }}
+                radius={300}
+                fillColor={currentZone?.id === zone.id ? 'rgba(16, 183, 127, 0.2)' : 'rgba(100, 116, 139, 0.1)'}
+                strokeColor={currentZone?.id === zone.id ? 'rgba(16, 183, 127, 0.7)' : 'rgba(100, 116, 139, 0.4)'}
+                strokeWidth={currentZone?.id === zone.id ? 3 : 2}
               />
-            );
-          })}
+              {/* Zone label */}
+              <Marker
+                coordinate={{
+                  latitude: zone.centroidLat,
+                  longitude: zone.centroidLon,
+                }}
+                title={zone.name}
+                description={currentZone?.id === zone.id ? `Active session: ${sessionId}` : 'Tap for availability'}
+              />
+            </React.Fragment>
+          ))}
         </MapView>
 
         {hasMovedMap && (
@@ -1173,3 +1011,331 @@ export const ExploreMap: React.FC = () => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  searchBarContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    right: 16,
+    zIndex: 10,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  filterButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchAreaButton: {
+    position: 'absolute',
+    top: 190,
+    alignSelf: 'center',
+    backgroundColor: '#10b77f',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  searchAreaText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  filterIcon: {
+    fontSize: 20,
+  },
+  mapContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    position: 'absolute',
+    top: height * 0.35,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    backgroundColor: colors.white,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  mapControls: {
+    position: 'absolute',
+    right: 16,
+    bottom: height * 0.45,
+    gap: 8,
+  },
+  controlButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  controlBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  controlIcon: {
+    fontSize: 24,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  myLocationButton: {
+    marginTop: 8,
+    backgroundColor: colors.primary,
+  },
+  myLocationIcon: {
+    fontSize: 20,
+  },
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 70,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  dragHandle: {
+    width: 48,
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  spotPreview: {
+    flexDirection: 'row',
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  spotImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 12,
+  },
+  spotInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  spotHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  spotHeaderText: {
+    flex: 1,
+  },
+  spotName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  spotDistance: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  favoriteIcon: {
+    fontSize: 22,
+  },
+  favoriteActive: {
+    color: colors.error,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  rating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  starIcon: {
+    fontSize: 14,
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginLeft: 4,
+  },
+  reviewsText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginLeft: 4,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  directionsButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  directionsIcon: {
+    fontSize: 16,
+  },
+  directionsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  viewDetailsButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary + '15',
+    borderRadius: 8,
+    paddingVertical: 10,
+  },
+  viewDetailsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  shareButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 8,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareIcon: {
+    fontSize: 18,
+  },
+  zoneAvailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 8,
+  },
+  availBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  availBadgeOpen: {
+    backgroundColor: '#dcfce7',
+  },
+  availBadgeMid: {
+    backgroundColor: '#fef9c3',
+  },
+  availBadgeFull: {
+    backgroundColor: '#fee2e2',
+  },
+  availBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  circlingText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  zoneIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 183, 127, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 100,
+  },
+  zoneIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+    marginRight: 8,
+  },
+  zoneIndicatorText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+});
+
+export default ExploreMap;
