@@ -52,7 +52,7 @@ module.exports = {
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
 
     // Expose environment variables to the app via expo-constants
     extra: {

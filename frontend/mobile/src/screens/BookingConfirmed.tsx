@@ -13,17 +13,12 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-
-import { marketplaceAPI } from '../services/api';
-import { colors } from '../theme';
-
-const PRIMARY = '#10b77f';
-const SECONDARY = colors.secondary;
-const ACCENT = '#ffeb3b';
-const BACKGROUND = '#f6f6f8';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 export const BookingConfirmed: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute();
   const { paymentId, bookingId, amount, spotName, spotAddress, startTime, endTime, paymentMethod, rentalMode } = route.params as any;
   const scaleAnim = new Animated.Value(0);
@@ -72,7 +67,7 @@ export const BookingConfirmed: React.FC = () => {
   };
 
   const handleViewBooking = () => {
-    navigation.navigate('MainTabs' as never);
+    navigation.navigate('MainTabs', { screen: 'MyBookings' } as never);
   };
 
   const handleDownloadReceipt = () => {
@@ -108,7 +103,7 @@ export const BookingConfirmed: React.FC = () => {
           ]}
         >
           <View style={styles.successCircle}>
-            <Text style={styles.successCheck}>✓</Text>
+            <MaterialCommunityIcons name="check" size={48} color={colors.white} />
           </View>
         </Animated.View>
 
@@ -133,7 +128,7 @@ export const BookingConfirmed: React.FC = () => {
               <Text style={styles.detailLabel}>Location</Text>
               <Text style={styles.locationName}>{displayData.locationName}</Text>
               <View style={styles.addressRow}>
-                <Text style={styles.addressIcon}>📍</Text>
+                <MaterialCommunityIcons name="map-marker-outline" size={16} color={colors.textSecondary} style={{ marginRight: 6, marginTop: 2 }} />
                 <Text style={styles.addressText}>{displayData.locationAddress}</Text>
               </View>
             </View>
@@ -150,7 +145,7 @@ export const BookingConfirmed: React.FC = () => {
                   <Text style={styles.timeValue}>{displayData.checkInTime}</Text>
                 </View>
                 <View style={styles.dateArrow}>
-                  <Text style={styles.dateArrowText}>→</Text>
+                  <MaterialCommunityIcons name="arrow-right" size={16} color={colors.textSecondary} />
                 </View>
                 <View style={styles.dateBlock}>
                   <Text style={styles.dateLabel}>To</Text>

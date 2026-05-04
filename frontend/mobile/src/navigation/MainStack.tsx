@@ -171,6 +171,16 @@ export const MainStack: React.FC = () => {
         component={HelpCenterScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="PointsHistory"
+        component={PointsHistoryScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Referral"
+        component={ReferralScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -8,14 +8,14 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
+  Linking,
+  Platform,
 } from 'react-native';
-import { Image } from 'expo-image';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
-import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings } from '../store/slices/marketplaceSlice';
 import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
@@ -25,25 +25,40 @@ import { analyticsService } from '../services/analytics';
 
 const { width, height } = Dimensions.get('window');
 
-// ---------------------------------------------------------------------------
-// SVG-based price marker — Android-safe, no View/Text clipping issues.
-//
-// Strategy (Option C): Build the entire marker as an inline SVG string with
-// explicit width/height. react-native-svg renders it at exact pixel dimensions,
-// so Android knows the canvas size before the first paint and never clips.
-// tracksViewChanges is locked to false immediately after mount so the JS bridge
-// is only crossed once per marker.
-// ---------------------------------------------------------------------------
+const CACHE_KEY = 'parkpal_cached_listings';
 
-const PriceMarker = React.memo(({ listing, selected, onPress }: {
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', elementType: 'labels.text.stroke', stylers: [{ color: '#1d2c4d' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#838383' }] },
+  { featureType: 'road', stylers: [{ visibility: 'simplified' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', stylers: [{ color: '#0f1a14' }] },
+];
+
+const getOccupancyColor = (percentage: number): string => {
+  if (percentage >= 80) return '#ef4444';
+  if (percentage >= 50) return '#f59e0b';
+  return '#10b77f';
+};
+
+const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: {
   listing: any;
   selected: boolean;
   onPress: (id: any) => void;
+  occupancyColor: string | null;
 }) => {
   const [tracksChanges, setTracksChanges] = React.useState(true);
-  const price = listing.pricePerHour != null ? `P${listing.pricePerHour}` : 'P—';
+  const price = listing.pricePerHour != null ? `₱${listing.pricePerHour}` : '₱—';
   const bg = selected ? '#10b77f' : '#ffffff';
   const textColor = selected ? '#ffffff' : '#10b77f';
+  const borderColor = selected ? '#059669' : '#10b77f';
 
   return (
     <Marker
@@ -53,44 +68,120 @@ const PriceMarker = React.memo(({ listing, selected, onPress }: {
       anchor={{ x: 0.5, y: 0.5 }}
     >
       <View
+        accessible
+        accessibilityLabel={`${listing.title || listing.address}: ${price} per hour`}
+        accessibilityRole="button"
         collapsable={false}
-        style={{ width: 80, height: 36 }}
+        style={{
+          backgroundColor: bg,
+          borderWidth: 2,
+          borderColor,
+          borderRadius: 10,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 3,
+          elevation: 3,
+        }}
         onLayout={() => setTracksChanges(false)}
       >
-        <Svg width={80} height={36}>
-          <Rect
-            x={2} y={2} width={76} height={32}
-            rx={8} ry={8}
-            fill={bg}
-            stroke="#10b77f"
-            strokeWidth={2}
+        <Text
+          style={{
+            color: textColor,
+            fontSize: 13,
+            fontWeight: 'bold',
+            textAlign: 'center',
+          }}
+        >
+          {price}
+        </Text>
+        {occupancyColor && (
+          <View
+            style={{
+              position: 'absolute',
+              top: -3,
+              right: -3,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: occupancyColor,
+              borderWidth: 1,
+              borderColor: '#fff',
+            }}
           />
-          <SvgText
-            x={40} y={22}
-            textAnchor="middle"
-            fontSize={13}
-            fontWeight="bold"
-            fill={textColor}
-          >
-            {price}
-          </SvgText>
-        </Svg>
+        )}
       </View>
     </Marker>
   );
 });
+
+const ClusterMarker = React.memo(({ cluster, onPress }: {
+  cluster: ClusteredMarker;
+  onPress: () => void;
+}) => (
+  <Marker
+    coordinate={{ latitude: cluster.latitude, longitude: cluster.longitude }}
+    onPress={onPress}
+    tracksViewChanges={false}
+    anchor={{ x: 0.5, y: 0.5 }}
+  >
+    <View
+      accessible
+      accessibilityLabel={`${cluster.count} parking spots clustered. Tap to zoom in.`}
+      accessibilityRole="button"
+      collapsable={false}
+      style={{
+        backgroundColor: '#10b77f',
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        borderRadius: 20,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
+      }}
+    >
+      <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
+        {cluster.count}
+      </Text>
+    </View>
+  </Marker>
+));
 
 export const ExploreMap: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { latitude, longitude, focusSpotId } = route.params || {};
   const dispatch = useAppDispatch();
+  const { colors, isDark } = useTheme();
   const mapRef = useRef<MapView>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<TextInput>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const regionChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<string | number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMovedMap, setHasMovedMap] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterConfig>({});
+  const [activeSort, setActiveSort] = useState<SortOption>(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const [showZoneOverlays, setShowZoneOverlays] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [zoneIndicatorVisible, setZoneIndicatorVisible] = useState(true);
+  const [zoneOccupancyMap, setZoneOccupancyMap] = useState<Record<string, number>>({});
+  const [cachedListings, setCachedListings] = useState<any[]>([]);
+  const insets = useSafeAreaInsets();
+  const { history, addToHistory, clearHistory, removeFromHistory } = useSearchHistory();
+  const { isConnected } = useNetworkStatus();
 
   const [region, setRegion] = useState(latitude && longitude ? {
     latitude,
@@ -133,10 +224,9 @@ export const ExploreMap: React.FC = () => {
   );
 
   const selectedListing = selectedMarker !== null
-    ? listings.find((l: any) => l.id === selectedMarker)
+    ? (isConnected ? listings : cachedListings).find((l: any) => l.id === selectedMarker)
     : null;
 
-  // Fetch zone availability when a listing is selected and has a zoneId
   useEffect(() => {
     if (selectedListing?.zoneId) {
       dispatch(fetchZoneAvailability(selectedListing.zoneId));
@@ -147,22 +237,112 @@ export const ExploreMap: React.FC = () => {
     ? zoneAvailability[selectedListing.zoneId]
     : null;
 
-  // Fetch listings for a given region
-  const fetchListings = useCallback(async (lat: number, lon: number) => {
+  const hasActiveFilters = Object.keys(activeFilters).length > 0;
+
+  const getListingOccupancyColor = useCallback((listing: any): string | null => {
+    if (!listing.zoneId) return null;
+    const occupancy = zoneOccupancyMap[listing.zoneId];
+    if (occupancy == null) return null;
+    return getOccupancyColor(occupancy);
+  }, [zoneOccupancyMap]);
+
+  const displayListings = isConnected ? listings : cachedListings;
+
+  const sortedListings = useMemo(() => {
+    if (!activeSort || !displayListings.length) return displayListings;
+
+    return [...displayListings].sort((a, b) => {
+      switch (activeSort) {
+        case 'cheapest':
+          return (a.pricePerHour ?? Infinity) - (b.pricePerHour ?? Infinity);
+        case 'nearest':
+          return (a.distance ?? 0) - (b.distance ?? 0);
+        case 'top_rated':
+          const aRating = a.rating ?? -1;
+          const bRating = b.rating ?? -1;
+          return bRating - aRating;
+        case 'available_now':
+          return 0;
+        default:
+          return 0;
+      }
+    });
+  }, [displayListings, activeSort]);
+
+  const regionKey = useMemo(() => {
+    const lat = Math.round(region.latitude * 1000);
+    const lon = Math.round(region.longitude * 1000);
+    const delta = Math.round(region.latitudeDelta * 1000);
+    return `${lat}-${lon}-${delta}`;
+  }, [region.latitude, region.longitude, region.latitudeDelta, region.longitudeDelta]);
+
+  const clustered = useMemo(() => {
+    return clusterMarkers(sortedListings, region);
+  }, [sortedListings, regionKey]);
+
+  const fetchListings = useCallback(async (lat: number, lon: number, filters?: FilterConfig) => {
     try {
-      await dispatch(searchListings({
+      const params: any = {
         latitude: lat,
         longitude: lon,
         radius: 3,
         ...(searchQuery ? { q: searchQuery } : {}),
-      })).unwrap();
+      };
+
+      if (filters) {
+        if (filters.minPrice != null) params.minPrice = filters.minPrice;
+        if (filters.maxPrice != null) params.maxPrice = filters.maxPrice;
+        if (filters.slotTypes?.length) params.slotType = filters.slotTypes.join(',');
+        if (filters.amenities?.length) params.amenities = filters.amenities.join(',');
+        if (filters.availableNow) params.status = 'available';
+      }
+
+      const result = await dispatch(searchListings(params)).unwrap();
+
+      if (result?.length) {
+        try {
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
+            listings: result,
+            timestamp: Date.now(),
+            lat,
+            lon,
+          }));
+        } catch (e) {
+          ;
+        }
+      }
     } catch (err) {
       ;
     }
   }, [dispatch, searchQuery]);
 
+  useEffect(() => {
+    if (!isConnected) {
+      const loadCached = async () => {
+        try {
+          const stored = await AsyncStorage.getItem(CACHE_KEY);
+          if (stored) {
+            const { listings: cached } = JSON.parse(stored);
+            setCachedListings(cached);
+          }
+        } catch (e) {
+          ;
+        }
+      };
+      loadCached();
+    }
+  }, [isConnected]);
+
+  const handleApplyFilters = (filters: FilterConfig) => {
+    if (!isConnected) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setActiveFilters(filters);
+    fetchListings(region.latitude, region.longitude, filters);
+  };
+
   const centerOnUser = useCallback(async () => {
-    // If params were passed from ParkingDetails, use those instead
     if (latitude && longitude) {
       const newRegion = {
         latitude,
@@ -172,19 +352,18 @@ export const ExploreMap: React.FC = () => {
       };
       setRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 500);
-      
-      // Fetch listings for this location
-      fetchListings(latitude, longitude);
-      
-      // If focusSpotId provided, select it after listings load
+
+      if (isConnected) {
+        fetchListings(latitude, longitude);
+      }
+
       if (focusSpotId) {
         setTimeout(() => setSelectedMarker(focusSpotId), 1000);
       }
       setLocationReady(true);
       return;
     }
-    
-    // Otherwise, use user's current location (original behavior)
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
@@ -199,44 +378,53 @@ export const ExploreMap: React.FC = () => {
         };
         setRegion(newRegion);
         mapRef.current?.animateToRegion(newRegion, 500);
-        fetchListings(location.coords.latitude, location.coords.longitude);
+        if (isConnected) {
+          fetchListings(location.coords.latitude, location.coords.longitude);
+        }
       } else {
-        fetchListings(region.latitude, region.longitude);
+        if (isConnected) {
+          fetchListings(region.latitude, region.longitude);
+        }
       }
     } catch {
-      fetchListings(region.latitude, region.longitude);
+      if (isConnected) {
+        fetchListings(region.latitude, region.longitude);
+      }
     } finally {
       setLocationReady(true);
     }
-  }, [fetchListings, latitude, longitude, focusSpotId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchListings, latitude, longitude, focusSpotId, isConnected]);
 
-  // Center on user every time this tab is focused
   useFocusEffect(
     useCallback(() => {
       centerOnUser();
     }, [centerOnUser])
   );
 
-  // Debounced search when searchQuery changes
   useEffect(() => {
+    if (!isConnected) return;
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
     }
     searchDebounceRef.current = setTimeout(() => {
-      fetchListings(region.latitude, region.longitude);
+      fetchListings(region.latitude, region.longitude, activeFilters);
     }, 400);
     return () => {
       if (searchDebounceRef.current) {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchQuery]);
+  }, [searchQuery, isConnected]);
 
   const handleRefresh = useCallback(async () => {
+    if (!isConnected) {
+      setRefreshing(false);
+      return;
+    }
     setRefreshing(true);
-    await fetchListings(region.latitude, region.longitude);
+    await fetchListings(region.latitude, region.longitude, activeFilters);
     setRefreshing(false);
-  }, [fetchListings]);
+  }, [fetchListings, isConnected]);
 
   const handleRecenter = useCallback(() => {
     centerOnUser();
@@ -262,9 +450,13 @@ export const ExploreMap: React.FC = () => {
     setRegion(newRegion);
   };
 
-  const handleMarkerPress = (markerId: string | number) => {
+  const handleMarkerPress = useCallback((markerId: string | number) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
     setSelectedMarker(markerId);
-    const listing = listings.find((l: any) => l.id === markerId);
+    resetZoneIndicatorTimer();
+    const listing = (isConnected ? listings : cachedListings).find((l: any) => l.id === markerId);
     if (listing) {
       mapRef.current?.animateToRegion({
         latitude: listing.latitude,
@@ -273,7 +465,7 @@ export const ExploreMap: React.FC = () => {
         longitudeDelta: 0.01,
       }, 500);
     }
-  };
+  }, [listings, cachedListings, isConnected, resetZoneIndicatorTimer]);
 
   const handleViewDetails = () => {
     if (selectedListing) {
@@ -290,27 +482,337 @@ export const ExploreMap: React.FC = () => {
     Alert.alert('Filters', 'Filter options coming soon!');
   };
 
+  const handleSuggestionPress = (suggestion: string) => {
+    if (!isConnected) return;
+    setSearchQuery(suggestion);
+    addToHistory(suggestion);
+    setIsFocused(false);
+    fetchListings(region.latitude, region.longitude, activeFilters);
+  };
+
+  const handleSubmitEditing = () => {
+    if (searchQuery.trim()) {
+      addToHistory(searchQuery);
+    }
+    setIsFocused(false);
+  };
+
+  const handleHistoryItemRemove = (item: string) => {
+    removeFromHistory(item);
+  };
+
+  const handleRegionChangeComplete = useCallback((r: any) => {
+    setRegion(r);
+    if (regionChangeDebounceRef.current) clearTimeout(regionChangeDebounceRef.current);
+    regionChangeDebounceRef.current = setTimeout(() => {
+      setHasMovedMap(true);
+      resetZoneIndicatorTimer();
+    }, 500);
+  }, [resetZoneIndicatorTimer]);
+
+  const handleSearchAreaPress = async () => {
+    if (!isConnected) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch {}
+    setHasMovedMap(false);
+    if (searchQuery.trim()) addToHistory(searchQuery);
+    await fetchListings(region.latitude, region.longitude, activeFilters);
+  };
+
+  const filterChipsTop = insets.top + 64;
+  const suggestionsTop = insets.top + 60;
+  const clearFiltersTop = hasActiveFilters ? filterChipsTop + 44 : undefined;
+  const searchAreaTop = filterChipsTop + 50;
+  const offlineBannerTop = insets.top + 16;
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    searchBarContainer: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      zIndex: 10,
+      flexDirection: 'row',
+      gap: 8,
+    },
+    searchBar: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 48,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    suggestionsDropdown: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+      zIndex: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      maxHeight: 200,
+    },
+    suggestionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      gap: 10,
+    },
+    suggestionText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    filterButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: colors.white,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    filterButtonDisabled: {
+      opacity: 0.5,
+    },
+    offlineBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#6b7280',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      gap: 8,
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      zIndex: 101,
+      borderRadius: 8,
+    },
+    offlineBannerText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    clearFiltersChip: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      gap: 6,
+      zIndex: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    clearFiltersText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.error,
+    },
+    searchAreaButton: {
+      position: 'absolute',
+      alignSelf: 'center',
+      backgroundColor: colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    searchAreaButtonDisabled: {
+      backgroundColor: '#6b7280',
+      opacity: 0.7,
+    },
+    searchAreaText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    filterIcon: {
+      fontSize: 20,
+    },
+    mapContainer: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    map: {
+      width: '100%',
+      height: '100%',
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(255,255,255,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyState: {
+      position: 'absolute',
+      top: height * 0.35,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+    emptyStateText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      backgroundColor: colors.white,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    mapControls: {
+      position: 'absolute',
+      right: 16,
+      bottom: height * 0.45,
+      gap: 8,
+    },
+    controlButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: colors.white,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    controlBorder: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    controlIcon: {
+      fontSize: 24,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    myLocationButton: {
+      marginTop: 8,
+      backgroundColor: colors.primary,
+    },
+    zoneIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(16, 183, 127, 0.9)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      position: 'absolute',
+      left: 16,
+      zIndex: 100,
+      gap: 6,
+    },
+    zoneOccBadge: {
+      backgroundColor: 'rgba(255, 255, 255, 0.25)',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    zoneOccText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    zoneIndicatorText: {
+      color: '#fff',
+      fontSize: 13,
+      fontWeight: '600',
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Search Bar */}
-      <View style={styles.searchBarContainer}>
+      <View style={[styles.searchBarContainer, { top: insets.top + 8 }]} shouldRasterizeIOS>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
+            ref={inputRef}
             style={styles.searchInput}
             placeholder="Search parking spots..."
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            onSubmitEditing={handleSubmitEditing}
+            accessibilityLabel="Search parking spots"
+            accessibilityRole="search"
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => { setSearchQuery(''); inputRef.current?.blur(); }}
+              activeOpacity={0.7}
+              accessibilityLabel="Clear search"
+              accessibilityRole="button"
+            >
+              <MaterialCommunityIcons name="close-circle" size={20} color={colors.textTertiary} />
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity
-          style={styles.filterButton}
+          style={[styles.filterButton, !isConnected && styles.filterButtonDisabled]}
           onPress={handleFilterPress}
           activeOpacity={0.7}
+          disabled={!isConnected}
+          accessibilityLabel={hasActiveFilters ? "Filter parking spots, filters active" : "Filter parking spots"}
+          accessibilityRole="button"
         >
-          <Text style={styles.filterIcon}>⚙️</Text>
+          <MaterialCommunityIcons
+            name="tune"
+            size={20}
+            color={hasActiveFilters && isConnected ? colors.primary : (isConnected ? colors.textSecondary : colors.textTertiary)}
+          />
         </TouchableOpacity>
       </View>
 
@@ -332,18 +834,44 @@ export const ExploreMap: React.FC = () => {
           style={styles.map}
           region={region}
           onMapReady={() => { setMapReady(true); centerOnUser(); }}
-          onRegionChangeComplete={(r) => { setRegion(r); setHasMovedMap(true); }}
+          onRegionChangeComplete={handleRegionChangeComplete}
           showsUserLocation
           showsMyLocationButton={false}
+          customMapStyle={isDark ? DARK_MAP_STYLE : []}
         >
-          {listings.map((listing: any) => (
-            <PriceMarker
-              key={listing.id}
-              listing={listing}
-              selected={selectedMarker === listing.id}
-              onPress={handleMarkerPress}
-            />
-          ))}
+          {clustered.map((cm: ClusteredMarker) => {
+            if (cm.isCluster) {
+              return (
+                <ClusterMarker
+                  key={cm.id}
+                  cluster={cm}
+                  onPress={() => {
+                    const newRegion = {
+                      ...region,
+                      latitudeDelta: region.latitudeDelta * 0.5,
+                      longitudeDelta: region.longitudeDelta * 0.5,
+                    };
+                    mapRef.current?.animateToRegion({
+                      latitude: cm.latitude,
+                      longitude: cm.longitude,
+                      latitudeDelta: newRegion.latitudeDelta,
+                      longitudeDelta: newRegion.longitudeDelta,
+                    }, 400);
+                  }}
+                />
+              );
+            }
+            const listing = cm.listings[0];
+            return (
+              <PriceMarker
+                key={listing.id}
+                listing={listing}
+                selected={selectedMarker === listing.id}
+                onPress={handleMarkerPress}
+                occupancyColor={getListingOccupancyColor(listing)}
+              />
+            );
+          })}
           <Circle
             center={{
               latitude: region.latitude,
@@ -380,123 +908,106 @@ export const ExploreMap: React.FC = () => {
           ))}
         </MapView>
 
-        {/* Search this area button */}
         {hasMovedMap && (
           <TouchableOpacity
-            style={styles.searchAreaButton}
-            onPress={async () => {
-              setHasMovedMap(false);
-              await fetchListings(region.latitude, region.longitude);
-            }}
+            style={[styles.searchAreaButton, !isConnected && styles.searchAreaButtonDisabled, { top: searchAreaTop }]}
+            onPress={handleSearchAreaPress}
             activeOpacity={0.8}
+            disabled={!isConnected}
+            accessibilityLabel="Search this area for parking spots"
+            accessibilityRole="button"
           >
-            <Text style={styles.searchAreaText}>Search this area</Text>
+            <Text style={styles.searchAreaText}>
+              {isConnected ? 'Search this area' : 'Search unavailable offline'}
+            </Text>
           </TouchableOpacity>
         )}
 
-        {/* Loading Overlay */}
-        {loading && (
+        {!isConnected && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={colors.textSecondary} />
+          </View>
+        )}
+
+        {loading && isConnected && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
 
-        {/* Empty State */}
-        {!loading && listings.length === 0 && (
-          <View style={styles.emptyState}>
+        {!loading && !isConnected && displayListings.length === 0 && (
+          <View style={styles.emptyState} accessibilityLabel="No cached data available" accessible>
+            <MaterialCommunityIcons name="wifi-off" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyStateText}>No cached data available</Text>
+          </View>
+        )}
+
+        {!loading && isConnected && listings.length === 0 && (
+          <View style={styles.emptyState} accessibilityLabel="No parking spots found in this area" accessible>
+            <MaterialCommunityIcons name="map-marker-off-outline" size={48} color={colors.textSecondary} />
             <Text style={styles.emptyStateText}>No parking spots found</Text>
           </View>
         )}
 
-        {/* Map Controls */}
         <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7}>
-            <Text style={styles.controlIcon}>+</Text>
+          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7} accessibilityLabel="Zoom in" accessibilityRole="button">
+            <MaterialCommunityIcons name="plus" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.controlButton, styles.controlBorder]} onPress={handleZoomOut} activeOpacity={0.7}>
-            <Text style={styles.controlIcon}>−</Text>
+          <TouchableOpacity style={[styles.controlButton, styles.controlBorder]} onPress={handleZoomOut} activeOpacity={0.7} accessibilityLabel="Zoom out" accessibilityRole="button">
+            <MaterialCommunityIcons name="minus" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.controlButton, styles.myLocationButton]}
             onPress={handleRecenter}
             activeOpacity={0.7}
+            accessibilityLabel="Recenter map"
+            accessibilityRole="button"
           >
-            <Text style={styles.myLocationIcon}>📍</Text>
+            <MaterialCommunityIcons name="crosshairs-gps" size={20} color={colors.white} />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.controlButton, showZoneOverlays && { backgroundColor: colors.primary + '15' }]}
+            onPress={() => setShowZoneOverlays(!showZoneOverlays)}
+            activeOpacity={0.7}
+            accessibilityLabel={showZoneOverlays ? "Hide zone overlays" : "Show zone overlays"}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name="layers" size={20} color={showZoneOverlays ? colors.primary : colors.textSecondary} />
+          </TouchableOpacity>
+          {showZoneOverlays && (
+            <TouchableOpacity
+              style={[styles.controlButton, showHeatmap && { backgroundColor: colors.primary + '15' }]}
+              onPress={() => setShowHeatmap(!showHeatmap)}
+              activeOpacity={0.7}
+              accessibilityLabel={showHeatmap ? "Hide heatmap" : "Show heatmap"}
+              accessibilityRole="button"
+            >
+              <MaterialCommunityIcons name="gradient-vertical" size={20} color={showHeatmap ? colors.primary : colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Bottom Sheet Preview */}
-      {selectedListing ? (
-        <TouchableOpacity
-          style={styles.bottomSheet}
-          activeOpacity={0.9}
-          onPress={handleViewDetails}
-        >
-          <View style={styles.dragHandle} />
-          <View style={styles.spotPreview}>
-            <Image
-              source={{ uri: selectedListing.photos?.[0] || 'https://via.placeholder.com/96' }}
-              style={styles.spotImage}
-              contentFit="cover"
-              transition={200}
-            />
-            <View style={styles.spotInfo}>
-              <View style={styles.spotHeader}>
-                <View style={styles.spotHeaderText}>
-                  <Text style={styles.spotName} numberOfLines={1}>{selectedListing.title || selectedListing.address}</Text>
-                  <Text style={styles.spotDistance}>
-                    {selectedListing.distance ? `📍 ${selectedListing.distance.toFixed(1)} km away` : '📍 Nearby'}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.ratingRow}>
-                <View style={styles.rating}>
-                  <Text style={styles.starIcon}>⭐</Text>
-                  <Text style={styles.ratingText}>{selectedListing.rating?.toFixed(1) || 'N/A'}</Text>
-                </View>
-                <Text style={styles.reviewsText}>({selectedListing.reviewCount || 0} reviews)</Text>
-              </View>
-              {selectedZoneAvail && (
-                <View style={styles.zoneAvailRow}>
-                  <View style={[
-                    styles.availBadge,
-                    selectedZoneAvail.occupancyPercentage >= 80
-                      ? styles.availBadgeFull
-                      : selectedZoneAvail.occupancyPercentage >= 50
-                        ? styles.availBadgeMid
-                        : styles.availBadgeOpen,
-                  ]}>
-                    <Text style={styles.availBadgeText}>
-                      {selectedZoneAvail.available}/{selectedZoneAvail.totalSlots} open
-                    </Text>
-                  </View>
-                  <Text style={styles.circlingText}>
-                    ~{Math.ceil(selectedZoneAvail.estimatedCirclingTime / 60)} min to park
-                  </Text>
-                </View>
-              )}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.directionsButton}
-                  onPress={handleDirections}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.directionsIcon}>🧭</Text>
-                  <Text style={styles.directionsText}>Directions</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.viewDetailsButton}
-                  onPress={handleViewDetails}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.viewDetailsText}>View Details</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      ) : null}
+      <ListingBottomSheet
+        listing={selectedListing}
+        zoneAvailability={selectedZoneAvail}
+        onViewDetails={handleViewDetails}
+        onDirections={handleDirections}
+        onQuickBook={() => {
+          try {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch {}
+          navigation.navigate('ParkingDetail', { spotId: selectedListing?.id, quickBook: true });
+        }}
+        onClose={() => setSelectedMarker(null)}
+      />
+
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={handleApplyFilters}
+        initialFilters={activeFilters}
+      />
     </SafeAreaView>
   );
 };

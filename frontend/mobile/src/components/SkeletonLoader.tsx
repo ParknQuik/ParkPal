@@ -3,9 +3,10 @@
 // Design: Google Stitch - Green theme rebrand
 // Changes: Uses theme colors (border color already from theme)
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { colors, spacing, borderRadius } from '../theme';
+import { spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -20,6 +21,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   borderRadius: customBorderRadius = borderRadius.md,
   style,
 }) => {
+  const { colors } = useTheme();
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -42,6 +44,30 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     return () => animation.stop();
   }, [opacity]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    skeleton: {
+      backgroundColor: colors.border,
+    },
+    cardContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.lg,
+      overflow: 'hidden',
+    },
+    cardContent: {
+      padding: spacing.lg,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    listItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+  }), [colors]);
+
   return (
     <Animated.View
       style={[
@@ -59,63 +85,120 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 };
 
 // Pre-built skeleton layouts for common use cases
-export const SkeletonParkingCard: React.FC = () => (
-  <View style={styles.cardContainer}>
-    <SkeletonLoader width="100%" height={200} borderRadius={borderRadius.lg} />
-    <View style={styles.cardContent}>
-      <SkeletonLoader width="70%" height={24} style={{ marginBottom: spacing.sm }} />
-      <SkeletonLoader width="50%" height={16} style={{ marginBottom: spacing.md }} />
+export const SkeletonParkingCard: React.FC = () => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => StyleSheet.create({
+    skeleton: {
+      backgroundColor: colors.border,
+    },
+    cardContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.lg,
+      overflow: 'hidden',
+    },
+    cardContent: {
+      padding: spacing.lg,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    listItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+  }), [colors]);
+
+  return (
+    <View style={styles.cardContainer}>
+      <SkeletonLoader width="100%" height={200} borderRadius={borderRadius.lg} />
+      <View style={styles.cardContent}>
+        <SkeletonLoader width="70%" height={24} style={{ marginBottom: spacing.sm }} />
+        <SkeletonLoader width="50%" height={16} style={{ marginBottom: spacing.md }} />
+        <View style={styles.row}>
+          <SkeletonLoader width={80} height={16} style={{ marginRight: spacing.md }} />
+          <SkeletonLoader width={100} height={16} />
+        </View>
+      </View>
+    </View>
+  );
+};
+
+export const SkeletonBookingCard: React.FC = () => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => StyleSheet.create({
+    skeleton: {
+      backgroundColor: colors.border,
+    },
+    cardContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.lg,
+      overflow: 'hidden',
+    },
+    cardContent: {
+      padding: spacing.lg,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    listItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+  }), [colors]);
+
+  return (
+    <View style={styles.cardContainer}>
       <View style={styles.row}>
-        <SkeletonLoader width={80} height={16} style={{ marginRight: spacing.md }} />
-        <SkeletonLoader width={100} height={16} />
+        <SkeletonLoader width={80} height={80} borderRadius={borderRadius.lg} />
+        <View style={{ flex: 1, marginLeft: spacing.md }}>
+          <SkeletonLoader width="80%" height={20} style={{ marginBottom: spacing.sm }} />
+          <SkeletonLoader width="60%" height={16} style={{ marginBottom: spacing.sm }} />
+          <SkeletonLoader width="40%" height={16} />
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
-export const SkeletonBookingCard: React.FC = () => (
-  <View style={styles.cardContainer}>
-    <View style={styles.row}>
-      <SkeletonLoader width={80} height={80} borderRadius={borderRadius.lg} />
+export const SkeletonListItem: React.FC = () => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => StyleSheet.create({
+    skeleton: {
+      backgroundColor: colors.border,
+    },
+    cardContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.lg,
+      overflow: 'hidden',
+    },
+    cardContent: {
+      padding: spacing.lg,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    listItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+  }), [colors]);
+
+  return (
+    <View style={styles.listItem}>
+      <SkeletonLoader width={60} height={60} borderRadius={borderRadius.full} />
       <View style={{ flex: 1, marginLeft: spacing.md }}>
-        <SkeletonLoader width="80%" height={20} style={{ marginBottom: spacing.sm }} />
-        <SkeletonLoader width="60%" height={16} style={{ marginBottom: spacing.sm }} />
-        <SkeletonLoader width="40%" height={16} />
+        <SkeletonLoader width="70%" height={18} style={{ marginBottom: spacing.sm }} />
+        <SkeletonLoader width="50%" height={14} />
       </View>
     </View>
-  </View>
-);
-
-export const SkeletonListItem: React.FC = () => (
-  <View style={styles.listItem}>
-    <SkeletonLoader width={60} height={60} borderRadius={borderRadius.full} />
-    <View style={{ flex: 1, marginLeft: spacing.md }}>
-      <SkeletonLoader width="70%" height={18} style={{ marginBottom: spacing.sm }} />
-      <SkeletonLoader width="50%" height={14} />
-    </View>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: colors.border,
-  },
-  cardContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  cardContent: {
-    padding: spacing.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-});
+  );
+};

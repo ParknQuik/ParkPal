@@ -44,7 +44,7 @@ export interface ParkingSpot {
 }
 
 // Booking types
-export type BookingStatus = 'upcoming' | 'active' | 'completed' | 'cancelled';
+export type BookingStatus = 'upcoming' | 'active' | 'completed' | 'cancelled' | 'expired';
 
 export interface Booking {
   id: string;
@@ -186,6 +186,10 @@ export interface InputProps {
   error?: string;
   icon?: string;
   style?: any;
+  keyboardType?: string;
+  autoCapitalize?: string;
+  autoComplete?: string;
+  rightElement?: React.ReactNode;
 }
 
 export interface CardProps {
@@ -246,7 +250,7 @@ export interface MarketplaceBooking {
   endTime: string;
   totalAmount: number;
   platformFee: number;
-  status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled' | 'expired';
   rentalMode: 'fixed' | 'hourly';
   qrCode?: string;
   sessionId?: number;
@@ -309,7 +313,7 @@ export interface Vehicle {
   year: number;
   color: string;
   licensePlate: string;
-  imageUrl: string | null;
+  imageUrl?: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
@@ -317,6 +321,60 @@ export interface Vehicle {
 
 export interface VehiclesState {
   vehicles: Vehicle[];
+  loading: boolean;
+  error: string | null;
+}
+
+// Points & Rewards types
+export type PointsTransactionType = 'earn' | 'redeem' | 'expire' | 'bonus' | 'referral' | 'adjustment' | 'EARNED' | 'REDEEMED' | 'REFERRAL_BONUS' | 'REFERRAL_REWARD' | 'EXPIRED' | 'ADJUSTMENT';
+export type PointsTransactionStatus = 'pending' | 'completed' | 'cancelled';
+export type PointsTransactionSource = 'booking' | 'referral' | 'manual' | 'promotion' | 'adjustment';
+
+export interface PointsTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  balanceAfter: number;
+  type: PointsTransactionType;
+  source: PointsTransactionSource;
+  referenceId?: string;
+  referenceType?: string;
+  description: string;
+  expiresAt: string;
+  isExpired: boolean;
+  status: PointsTransactionStatus;
+  createdAt: string;
+}
+
+export interface PointsBalance {
+  balance: number;
+}
+
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PointsHistoryResponse {
+  transactions: PointsTransaction[];
+  pagination: Pagination;
+}
+
+export interface ReferralStats {
+  totalReferrals: number;
+  pendingReferrals: number;
+  activeReferrals: number;
+  completedReferrals: number;
+  totalPointsEarned: number;
+}
+
+export interface PointsState {
+  balance: PointsBalance | null;
+  transactions: PointsTransaction[];
+  referralStats: ReferralStats | null;
+  referralCode: string | null;
   loading: boolean;
   error: string | null;
 }
@@ -377,4 +435,6 @@ export interface RootState {
   marketplace: MarketplaceState;
   vehicles: VehiclesState;
   analytics: AnalyticsState;
+  points: PointsState;
+  settings: { themeMode: 'system' | 'light' | 'dark' };
 }

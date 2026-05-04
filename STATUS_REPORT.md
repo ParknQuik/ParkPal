@@ -130,7 +130,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **Test Status:**
 - Backend: 277/288 passing (96.2% pass rate) ✅
 - Mobile: 45/45 passing (100%) ✅
-- Web: 54/85 passing (63.5%)
+- Web: 54/85 passing (63.5%) - needs attention
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
 **Infrastructure:**

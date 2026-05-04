@@ -20,12 +20,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUserProfile, setUser } from '../store/slices/authSlice';
 import { userAPI } from '../services/api';
 import { Card } from '../components/Card';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const { colors } = useTheme();
 
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -141,7 +143,6 @@ export const EditProfileScreen: React.FC = () => {
       if (newImageUrl) {
         setProfileImage(newImageUrl);
 
-
         // Also persist to AsyncStorage
         const updatedUser = { ...user!, profileImageUrl: newImageUrl };
         AsyncStorage.setItem('user', JSON.stringify(updatedUser));
@@ -184,6 +185,122 @@ export const EditProfileScreen: React.FC = () => {
     }
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.xl,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      padding: spacing.sm,
+    },
+    backText: {
+      ...typography.body,
+      color: colors.primary,
+      fontSize: 24,
+    },
+    title: {
+      ...typography.h5,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    placeholder: {
+      width: 50,
+    },
+    content: {
+      flex: 1,
+      padding: spacing.xl,
+    },
+    card: {
+      marginBottom: spacing.xl,
+    },
+    formGroup: {
+      marginBottom: spacing.lg,
+    },
+    label: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '600',
+      marginBottom: spacing.sm,
+    },
+    input: {
+      ...typography.body,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg,
+      color: colors.textPrimary,
+    },
+    inputDisabled: {
+      backgroundColor: colors.background,
+      color: colors.textSecondary,
+    },
+    helperText: {
+      ...typography.small,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.md,
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      ...typography.body,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    photoSection: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+      paddingVertical: spacing.md,
+    },
+    profileImageContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      overflow: 'hidden',
+      marginBottom: spacing.sm,
+    },
+    profileImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    profileImagePlaceholder: {
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    profileImagePlaceholderText: {
+      fontSize: 40,
+    },
+    uploadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    changePhotoText: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -202,8 +319,8 @@ export const EditProfileScreen: React.FC = () => {
           <View style={styles.photoSection}>
             <View style={styles.profileImageContainer}>
               {profileImage ? (
-                <Image 
-                  source={{ uri: profileImage + '?t=' + Date.now() }} 
+                <Image
+                  source={{ uri: profileImage + '?t=' + Date.now() }}
                   style={styles.profileImage} />
               ) : (
                 <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
@@ -271,119 +388,3 @@ export const EditProfileScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.sm,
-  },
-  backText: {
-    ...typography.body,
-    color: colors.primary,
-    fontSize: 24,
-  },
-  title: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  placeholder: {
-    width: 50,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.xl,
-  },
-  card: {
-    marginBottom: spacing.xl,
-  },
-  formGroup: {
-    marginBottom: spacing.lg,
-  },
-  label: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  input: {
-    ...typography.body,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    color: colors.textPrimary,
-  },
-  inputDisabled: {
-    backgroundColor: colors.background,
-    color: colors.textSecondary,
-  },
-  helperText: {
-    ...typography.small,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  photoSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingVertical: spacing.md,
-  },
-  profileImageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  profileImagePlaceholder: {
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImagePlaceholderText: {
-    fontSize: 40,
-  },
-  uploadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  changePhotoText: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-});

@@ -1,19 +1,7 @@
+export { Vehicle } from '../../types';
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { vehiclesAPI } from '../../services/api';
-
-export interface Vehicle {
-  id: number;
-  userId: number;
-  make: string;
-  model: string;
-  year: number;
-  color: string;
-  licensePlate: string;
-  imageUrl: string | null;
-  isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Vehicle } from '../../types';
 
 interface VehiclesState {
   vehicles: Vehicle[];
@@ -66,7 +54,15 @@ export const createVehicle = createAsyncThunk(
 
 export const updateVehicle = createAsyncThunk(
   'vehicles/updateVehicle',
-  async ({ id, data }: { id: number; data: Partial<Vehicle> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: {
+    make?: string;
+    model?: string;
+    year?: number;
+    color?: string;
+    licensePlate?: string;
+    imageUrl?: string;
+    isDefault?: boolean;
+  } }, { rejectWithValue }) => {
     try {
       const response = await vehiclesAPI.updateVehicle(id, data);
       return response.data as Vehicle;

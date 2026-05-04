@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme as NavigationDarkTheme, DefaultTheme } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { checkAuth } from '../store/slices/authSlice';
 import { loadAnalyticsOptIn, setAnalyticsOptIn } from '../store/slices/analyticsSlice';
@@ -10,6 +10,7 @@ import { AuthStack } from './AuthStack';
 import { MainStack } from './MainStack';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Zone } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 // Deep linking configuration for OAuth callbacks
 const linking = {
@@ -28,7 +29,32 @@ export const AppNavigator: React.FC = () => {
   const dispatch = useAppDispatch();
   const { isAuthenticated, loading, user } = useAppSelector((state) => state.auth);
   const { optedIn } = useAppSelector((state) => state.analytics);
+  const { colors, isDark } = useTheme();
   const [showOptIn, setShowOptIn] = useState(false);
+
+  const navTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.textPrimary,
+      border: colors.border,
+      primary: colors.primary,
+    },
+  };
+
+  const darkNavTheme = {
+    ...NavigationDarkTheme,
+    colors: {
+      ...NavigationDarkTheme.colors,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.textPrimary,
+      border: colors.border,
+      primary: colors.primary,
+    },
+  };
 
   useEffect(() => {
     dispatch(checkAuth());
@@ -99,7 +125,7 @@ export const AppNavigator: React.FC = () => {
   }
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} theme={isDark ? darkNavTheme : navTheme}>
       {isAuthenticated ? <MainStack /> : <AuthStack />}
       <AnalyticsOptInModal
         visible={showOptIn}

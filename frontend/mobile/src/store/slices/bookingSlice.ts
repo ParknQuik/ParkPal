@@ -121,7 +121,7 @@ const bookingSlice = createSlice({
     builder.addCase(fetchBookings.fulfilled, (state, action) => {
       state.loading = false;
       state.bookings = action.payload;
-      const active = action.payload.find(b => b.status === 'active');
+      const active = action.payload.find((b: Booking) => b.status === 'active');
       state.activeBooking = active || null;
     });
     builder.addCase(fetchBookings.rejected, (state, action) => {

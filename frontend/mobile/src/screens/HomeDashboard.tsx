@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  StatusBar,
   FlatList,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -18,7 +18,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings, getMyBookings } from '../store/slices/marketplaceSlice';
 import { getCurrentLocation } from '../store/slices/locationSlice';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { haptics } from '../utils/haptics';
 import { accessibility } from '../utils/accessibility';
 import { useDebouncedCallback } from '../utils/performance';
@@ -35,6 +37,7 @@ export const HomeDashboard: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
+  const { colors } = useTheme();
 
   const { user } = useAppSelector((state) => state.auth);
   const { currentLocation } = useAppSelector((state) => state.location);
@@ -112,7 +115,7 @@ export const HomeDashboard: React.FC = () => {
           sortBy: filters.sortBy,
         })
       );
-    } else if (!query.trim()) {
+    } else if (!query.trim() && currentLocation) {
       dispatch(
         searchListings({
           latitude: currentLocation.latitude,
@@ -163,11 +166,395 @@ export const HomeDashboard: React.FC = () => {
     navigation.navigate('Explore' as never);
   }, [navigation]);
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    greetingHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.lg,
+    },
+    greetingLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    headerAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    headerAvatarText: {
+      ...typography.h5,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    greetingTitle: {
+      ...typography.h5,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    greetingSubtitle: {
+      ...typography.small,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    parkPalTitle: {
+      ...typography.h4,
+      color: colors.primary,
+      fontWeight: '800',
+    },
+    header: {
+      paddingTop: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xxl + spacing.xl,
+      borderBottomLeftRadius: 40,
+      borderBottomRightRadius: 40,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.xxl,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    avatarContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      borderWidth: 2,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
+      overflow: 'hidden',
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    avatar: {
+      width: '100%',
+      height: '100%',
+    },
+    appTitle: {
+      ...typography.h5,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    appSubtitle: {
+      ...typography.small,
+      color: 'rgba(255, 255, 255, 0.8)',
+    },
+    notificationButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    notificationIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 20,
+      color: colors.white,
+    },
+    greetingContainer: {
+      marginTop: spacing.sm,
+    },
+    greeting: {
+      ...typography.h2,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingBottom: 80,
+    },
+    searchContainer: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.xl,
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.sm,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 5,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    searchIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 20,
+      color: colors.primary,
+      marginLeft: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...typography.body,
+      color: colors.textPrimary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    filterButton: {
+      backgroundColor: colors.primary,
+      padding: spacing.sm + 2,
+      borderRadius: borderRadius.lg,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    filterIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 18,
+      color: colors.white,
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      paddingHorizontal: spacing.xl,
+      gap: spacing.md,
+      marginBottom: spacing.xl,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+      alignItems: 'center',
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    statIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    statIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 20,
+    },
+    statLabel: {
+      ...typography.tiny,
+      color: colors.textSecondary,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    statValue: {
+      ...typography.h5,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      marginTop: spacing.xs,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      ...typography.h5,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    seeAll: {
+      ...typography.bodySmall,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    parkingList: {
+      paddingHorizontal: spacing.xl,
+    },
+    parkingCard: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.md,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    parkingImage: {
+      width: 96,
+      height: 96,
+      borderRadius: borderRadius.lg,
+    },
+    parkingImagePlaceholder: {
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    parkingInfo: {
+      flex: 1,
+      marginLeft: spacing.md,
+      justifyContent: 'space-between',
+    },
+    parkingTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    parkingName: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      flex: 1,
+    },
+    ratingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    starIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 16,
+      color: colors.accent,
+    },
+    ratingText: {
+      ...typography.small,
+      color: colors.textSecondary,
+      fontWeight: '600',
+    },
+    parkingMiddleRow: {
+      marginTop: spacing.xs,
+    },
+    distanceText: {
+      ...typography.small,
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    distanceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    parkingBottomRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-end',
+    },
+    priceText: {
+      ...typography.h6,
+      color: colors.primary,
+      fontWeight: '700',
+    },
+    priceUnit: {
+      ...typography.small,
+      color: colors.textSecondary,
+      fontWeight: '400',
+    },
+    availabilityBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+    },
+    availableBadge: {
+      backgroundColor: 'rgba(16, 183, 127, 0.1)',
+    },
+    limitedBadge: {
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    },
+    availabilityText: {
+      ...typography.tiny,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    availableText: {
+      color: colors.primary,
+    },
+    limitedText: {
+      color: colors.secondary,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxl * 2,
+    },
+    loadingText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginTop: spacing.md,
+    },
+    errorContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxl * 2,
+    },
+    errorIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 48,
+      color: colors.error,
+      marginBottom: spacing.md,
+    },
+    errorText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    retryButton: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.lg,
+    },
+    retryText: {
+      ...typography.bodySmall,
+      color: colors.white,
+      fontWeight: '600',
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxl * 2,
+    },
+    emptyIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 48,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    emptyText: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#059669" />
-      
-      <ScrollView 
+      <StatusBar style={useStatusBarStyle()} backgroundColor={colors.primary} />
+
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.contentContainer}
@@ -178,9 +565,9 @@ export const HomeDashboard: React.FC = () => {
         <View style={styles.greetingHeader}>
           <View style={styles.greetingLeft}>
             {user?.profileImageUrl ? (
-              <Image 
-                source={{ uri: user.profileImageUrl + '?t=' + Date.now() }} 
-                style={styles.headerAvatar} 
+              <Image
+                source={{ uri: user.profileImageUrl + '?t=' + Date.now() }}
+                style={styles.headerAvatar}
                 contentFit="cover"
                 cachePolicy="none"
               />
@@ -194,7 +581,7 @@ export const HomeDashboard: React.FC = () => {
               <Text style={styles.greetingSubtitle}>Find your perfect parking spot</Text>
             </View>
           </View>
-          <Text style={styles.parkPalTitle}>ParkPal</Text>
+          <Text style={styles.parkPalTitle}>ParknQuik</Text>
         </View>
 
         <View style={styles.searchContainer}>
@@ -209,7 +596,7 @@ export const HomeDashboard: React.FC = () => {
               {...accessibility.textInput('Search parking')}
             />
             <TouchableOpacity style={styles.filterButton}>
-              <MaterialCommunityIcons name="tune" size={20} color={colors.textSecondary} />
+              <MaterialCommunityIcons name="tune" size={20} color={colors.white} />
             </TouchableOpacity>
           </View>
         </View>
@@ -307,8 +694,8 @@ export const HomeDashboard: React.FC = () => {
                   </Text>
                   <View style={[
                     styles.availabilityBadge,
-                    parking.availability 
-                      ? styles.availableBadge 
+                    parking.availability
+                      ? styles.availableBadge
                       : styles.limitedBadge
                   ]}>
                     <Text style={[
@@ -346,392 +733,3 @@ export const HomeDashboard: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  greetingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  greetingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  headerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  headerAvatarText: {
-    ...typography.h5,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  greetingTitle: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  greetingSubtitle: {
-    ...typography.small,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  parkPalTitle: {
-    ...typography.h4,
-    color: colors.primary,
-    fontWeight: '800',
-  },
-  header: {
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl + spacing.xl,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-  },
-  appTitle: {
-    ...typography.h5,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  appSubtitle: {
-    ...typography.small,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  notificationIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 20,
-    color: colors.white,
-  },
-  greetingContainer: {
-    marginTop: spacing.sm,
-  },
-  greeting: {
-    ...typography.h2,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  greetingSubtitle: {
-    ...typography.body,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: spacing.xs,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 80,
-  },
-  searchContainer: {
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.xl,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.sm,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  searchIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 20,
-    color: colors.primary,
-    marginLeft: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.body,
-    color: colors.textPrimary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  filterButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.sm + 2,
-    borderRadius: borderRadius.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  filterIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 18,
-    color: colors.white,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.xl,
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    alignItems: 'center',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  statIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 20,
-  },
-  statLabel: {
-    ...typography.tiny,
-    color: colors.textSecondary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginTop: spacing.xs,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  seeAll: {
-    ...typography.bodySmall,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  parkingList: {
-    paddingHorizontal: spacing.xl,
-  },
-  parkingCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.md,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  parkingImage: {
-    width: 96,
-    height: 96,
-    borderRadius: borderRadius.lg,
-  },
-  parkingImagePlaceholder: {
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  parkingInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-    justifyContent: 'space-between',
-  },
-  parkingTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  parkingName: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    flex: 1,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  starIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 16,
-    color: colors.accent,
-  },
-  ratingText: {
-    ...typography.small,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  parkingMiddleRow: {
-    marginTop: spacing.xs,
-  },
-  distanceText: {
-    ...typography.small,
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  distanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  parkingBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  priceText: {
-    ...typography.h6,
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  priceUnit: {
-    ...typography.small,
-    color: colors.textSecondary,
-    fontWeight: '400',
-  },
-  availabilityBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  availableBadge: {
-    backgroundColor: 'rgba(16, 183, 127, 0.1)',
-  },
-  limitedBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-  },
-  availabilityText: {
-    ...typography.tiny,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  availableText: {
-    color: colors.primary,
-  },
-  limitedText: {
-    color: colors.secondary,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl * 2,
-  },
-  loadingText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl * 2,
-  },
-  errorIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 48,
-    color: colors.error,
-    marginBottom: spacing.md,
-  },
-  errorText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  retryButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-  },
-  retryText: {
-    ...typography.bodySmall,
-    color: colors.white,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 48,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-});

@@ -8,9 +8,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface PaymentMethod {
   id: string;
@@ -23,6 +25,7 @@ interface PaymentMethod {
 
 export const PaymentMethodsScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { colors } = useTheme();
 
   const [selectedMethod, setSelectedMethod] = useState<string>('cash');
 
@@ -87,6 +90,185 @@ export const PaymentMethodsScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.white,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backIcon: {
+      fontSize: 32,
+      color: colors.textPrimary,
+      fontWeight: '300',
+    },
+    headerTitle: {
+      ...typography.h5,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    headerRight: {
+      width: 40,
+    },
+    content: {
+      padding: spacing.lg,
+    },
+    infoBanner: {
+      flexDirection: 'row',
+      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+      marginBottom: spacing.lg,
+      padding: spacing.lg,
+    },
+    infoTextContainer: {
+      flex: 1,
+    },
+    infoTitle: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '700',
+      marginBottom: spacing.xs,
+    },
+    infoDescription: {
+      ...typography.small,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    methodCard: {
+      marginBottom: spacing.lg,
+      padding: spacing.lg,
+    },
+    methodHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    methodHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    methodIcon: {
+      fontSize: 32,
+      marginRight: spacing.md,
+    },
+    methodTitleContainer: {
+      flex: 1,
+    },
+    methodName: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    defaultBadge: {
+      ...typography.small,
+      color: colors.primary,
+      fontWeight: '600',
+      marginTop: spacing.xs,
+    },
+    radioButton: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    radioButtonSelected: {
+      borderColor: colors.primary,
+    },
+    radioButtonInner: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: colors.primary,
+    },
+    methodDescription: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+      lineHeight: 22,
+    },
+    instructionsContainer: {
+      backgroundColor: colors.surface,
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    instructionsTitle: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      marginBottom: spacing.md,
+    },
+    instructionItem: {
+      flexDirection: 'row',
+      marginBottom: spacing.sm,
+    },
+    instructionNumber: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '700',
+      marginRight: spacing.sm,
+      width: 20,
+    },
+    instructionText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      flex: 1,
+      lineHeight: 22,
+    },
+    helpCard: {
+      flexDirection: 'row',
+      padding: spacing.lg,
+      marginTop: spacing.md,
+      marginBottom: spacing.xl,
+    },
+    helpTextContainer: {
+      flex: 1,
+    },
+    helpTitle: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      marginBottom: spacing.xs,
+    },
+    helpDescription: {
+      ...typography.small,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: spacing.md,
+    },
+    helpButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      borderRadius: borderRadius.md,
+      alignSelf: 'flex-start',
+    },
+    helpButtonText: {
+      ...typography.body,
+      color: colors.white,
+      fontWeight: '600',
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -102,7 +284,7 @@ export const PaymentMethodsScreen: React.FC = () => {
         <View style={styles.content}>
           {/* Info Banner */}
           <Card style={styles.infoBanner}>
-            <Text style={styles.infoIcon}>ℹ️</Text>
+            <MaterialCommunityIcons name="information-outline" size={18} color={colors.info} />
             <View style={styles.infoTextContainer}>
               <Text style={styles.infoTitle}>Manual Payment System</Text>
               <Text style={styles.infoDescription}>
@@ -160,7 +342,7 @@ export const PaymentMethodsScreen: React.FC = () => {
 
           {/* Help Section */}
           <Card style={styles.helpCard}>
-            <Text style={styles.helpIcon}>💡</Text>
+            <MaterialCommunityIcons name="lightbulb-outline" size={18} color={colors.warning} />
             <View style={styles.helpTextContainer}>
               <Text style={styles.helpTitle}>Need Help?</Text>
               <Text style={styles.helpDescription}>
@@ -177,190 +359,3 @@ export const PaymentMethodsScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.white,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 32,
-    color: colors.textPrimary,
-    fontWeight: '300',
-  },
-  headerTitle: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  headerRight: {
-    width: 40,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-  },
-  infoIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
-  },
-  infoTextContainer: {
-    flex: 1,
-  },
-  infoTitle: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  infoDescription: {
-    ...typography.small,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  methodCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-  },
-  methodHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  methodHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  methodIcon: {
-    fontSize: 32,
-    marginRight: spacing.md,
-  },
-  methodTitleContainer: {
-    flex: 1,
-  },
-  methodName: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  defaultBadge: {
-    ...typography.small,
-    color: colors.primary,
-    fontWeight: '600',
-    marginTop: spacing.xs,
-  },
-  radioButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioButtonSelected: {
-    borderColor: colors.primary,
-  },
-  radioButtonInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.primary,
-  },
-  methodDescription: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    lineHeight: 22,
-  },
-  instructionsContainer: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  instructionsTitle: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: spacing.md,
-  },
-  instructionItem: {
-    flexDirection: 'row',
-    marginBottom: spacing.sm,
-  },
-  instructionNumber: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '700',
-    marginRight: spacing.sm,
-    width: 20,
-  },
-  instructionText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    flex: 1,
-    lineHeight: 22,
-  },
-  helpCard: {
-    flexDirection: 'row',
-    padding: spacing.lg,
-    marginTop: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  helpIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
-  },
-  helpTextContainer: {
-    flex: 1,
-  },
-  helpTitle: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  helpDescription: {
-    ...typography.small,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  helpButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    alignSelf: 'flex-start',
-  },
-  helpButtonText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '600',
-  },
-});

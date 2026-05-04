@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface ConfirmDialogProps {
   visible: boolean;
@@ -32,6 +33,68 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
   destructive = false,
 }) => {
+  const { colors } = useTheme();
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.xl,
+    },
+    dialog: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.xxl,
+      width: '100%',
+      maxWidth: 400,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    title: {
+      ...typography.h4,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    message: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.xxl,
+      textAlign: 'center',
+      lineHeight: 24,
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    button: {
+      flex: 1,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cancelButton: {
+      backgroundColor: colors.border,
+    },
+    cancelText: {
+      ...typography.bodySmall,
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    confirmText: {
+      ...typography.bodySmall,
+      color: colors.white,
+      fontWeight: '600',
+    },
+  }), [colors]);
+
   const defaultConfirmColor = destructive ? colors.error : colors.primary;
   const buttonColor = confirmColor || defaultConfirmColor;
 
@@ -75,63 +138,3 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  dialog: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xxl,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  title: {
-    ...typography.h4,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  message: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xxl,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.border,
-  },
-  cancelText: {
-    ...typography.bodySmall,
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  confirmText: {
-    ...typography.bodySmall,
-    color: colors.white,
-    fontWeight: '600',
-  },
-});

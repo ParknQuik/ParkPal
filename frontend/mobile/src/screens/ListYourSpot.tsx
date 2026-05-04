@@ -13,12 +13,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppDispatch } from '../store';
 import { createListing } from '../store/slices/marketplaceSlice';
 import { mediaAPI } from '../services/mediaApi';
 import { marketplaceAPI } from '../services/api';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const AMENITIES = [
   { key: 'covered', label: 'Covered' },
@@ -33,7 +36,8 @@ export const ListYourSpot: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const dispatch = useAppDispatch();
-  
+  const { colors } = useTheme();
+
   // Get params from navigation (passed when editing)
   const listingId = route.params?.listingId;
   const isEditMode = !!listingId;
@@ -67,24 +71,24 @@ export const ListYourSpot: React.FC = () => {
             setLat(listing.lat || listing.latitude || 14.5995);
             setLon(listing.lon || listing.longitude || 120.9822);
             setSlotType(listing.slotType || 'roadside_qr');
-            
+
             // Parse amenities
             if (listing.amenities) {
               try {
-                const parsed = typeof listing.amenities === 'string' 
-                  ? JSON.parse(listing.amenities) 
+                const parsed = typeof listing.amenities === 'string'
+                  ? JSON.parse(listing.amenities)
                   : listing.amenities;
                 setSelectedAmenities(parsed || []);
               } catch (e) {
                 // Ignore parse errors
               }
             }
-            
+
             // Parse photos
             if (listing.photos) {
               try {
-                const parsed = typeof listing.photos === 'string' 
-                  ? JSON.parse(listing.photos) 
+                const parsed = typeof listing.photos === 'string'
+                  ? JSON.parse(listing.photos)
                   : listing.photos;
                 setPhotos(parsed || []);
               } catch (e) {
@@ -99,7 +103,7 @@ export const ListYourSpot: React.FC = () => {
           setLoading(false);
         }
       };
-      
+
       fetchListing();
     }
   }, [isEditMode, listingId]);
@@ -114,7 +118,7 @@ export const ListYourSpot: React.FC = () => {
 
   const handleAddMorePhotos = useCallback(async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (!permissionResult.granted) {
       Alert.alert('Permission Required', 'Please allow access to your photos.');
       return;
@@ -183,7 +187,7 @@ export const ListYourSpot: React.FC = () => {
         } else {
          // Create new listing via Redux
          result = await dispatch(createListing(listingData)).unwrap();
-         
+
 // Upload local photos if any (only file:// URIs, not existing GCS URLs)
           const newListingId = result.id || result.data?.id;
           const localPhotos = photos.filter(p => p.startsWith('file://'));
@@ -205,7 +209,7 @@ export const ListYourSpot: React.FC = () => {
                 ;
               }
             }
-            
+
             // Update listing with photo URLs if any uploaded
             if (uploadedUrls.length > 0) {
               try {
@@ -216,7 +220,7 @@ export const ListYourSpot: React.FC = () => {
               }
             }
           }
-         
+
          Alert.alert(
            'Success! 🎉',
            'Your parking spot has been listed.',
@@ -235,10 +239,228 @@ export const ListYourSpot: React.FC = () => {
     navigation.goBack();
   }, [navigation]);
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    headerGradient: {
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xl,
+      paddingHorizontal: spacing.lg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      ...typography.h4,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    headerPlaceholder: {
+      width: 40,
+    },
+    progressSection: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.white,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    progressText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    progressBar: {
+      height: 4,
+      backgroundColor: colors.border,
+      borderRadius: 2,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: colors.primary,
+      borderRadius: 2,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+      paddingBottom: 100,
+    },
+    section: {
+      marginBottom: spacing.xl,
+    },
+    sectionTitle: {
+      ...typography.h6,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      marginBottom: spacing.md,
+    },
+    photoSection: {
+      backgroundColor: colors.white,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+    },
+    photosGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    photoThumbnail: {
+      width: 100,
+      height: 100,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surface,
+    },
+    addPhotoButton: {
+      width: 100,
+      height: 100,
+      borderRadius: borderRadius.md,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderStyle: 'dashed',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(16, 183, 127, 0.05)',
+    },
+    addPhotoIcon: {
+      fontSize: 32,
+      color: colors.primary,
+      fontWeight: '300',
+    },
+    photoCount: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginTop: spacing.md,
+      textAlign: 'center',
+    },
+    inputGroup: {
+      marginBottom: spacing.md,
+    },
+    inputLabel: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    textInput: {
+      backgroundColor: colors.white,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      ...typography.body,
+      color: colors.textPrimary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    textArea: {
+      minHeight: 100,
+      paddingTop: spacing.md,
+    },
+    amenitiesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    amenityPill: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.xl,
+      backgroundColor: colors.white,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    amenityPillSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    amenityText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    amenityTextSelected: {
+      color: colors.white,
+    },
+    inputRow: {
+      flexDirection: 'row',
+    },
+    slotTypeContainer: {
+      gap: spacing.sm,
+    },
+    slotTypeOption: {
+      backgroundColor: colors.white,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    slotTypeOptionSelected: {
+      borderColor: colors.primary,
+      backgroundColor: `${colors.primary}10`,
+    },
+    slotTypeLabel: {
+      ...typography.body,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    slotTypeLabelSelected: {
+      color: colors.primary,
+    },
+    slotTypeDesc: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    bottomBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+      backgroundColor: colors.white,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    continueButton: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+    },
+    continueButtonDisabled: {
+      opacity: 0.6,
+    },
+    continueButtonText: {
+      ...typography.body,
+      color: colors.white,
+      fontWeight: '700',
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" />
-      
+      <StatusBar barStyle={`${useStatusBarStyle()}-content`} />
+
       <LinearGradient
         colors={['#6366f1', '#8b5cf6']}
         style={styles.headerGradient}
@@ -247,7 +469,7 @@ export const ListYourSpot: React.FC = () => {
       >
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{isEditMode ? 'Edit Listing' : 'List Your Spot'}</Text>
           <View style={styles.headerPlaceholder} />
@@ -291,7 +513,7 @@ export const ListYourSpot: React.FC = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Spot Details</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Spot Name</Text>
             <TextInput
@@ -348,7 +570,7 @@ export const ListYourSpot: React.FC = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Location</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Address *</Text>
             <TextInput
@@ -389,7 +611,7 @@ export const ListYourSpot: React.FC = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pricing</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Price per Hour (PHP) *</Text>
             <TextInput
@@ -427,8 +649,8 @@ export const ListYourSpot: React.FC = () => {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity 
-          style={[styles.continueButton, loading && styles.continueButtonDisabled]} 
+        <TouchableOpacity
+          style={[styles.continueButton, loading && styles.continueButtonDisabled]}
           onPress={handleContinue}
           disabled={loading}
         >
@@ -440,226 +662,3 @@ export const ListYourSpot: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f6f6',
-  },
-  headerGradient: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    ...typography.h4,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  headerPlaceholder: {
-    width: 40,
-  },
-  progressSection: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  progressText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: colors.border,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    ...typography.h6,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: spacing.md,
-  },
-  photoSection: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-  },
-  photosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  photoThumbnail: {
-    width: 100,
-    height: 100,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-  },
-  addPhotoButton: {
-    width: 100,
-    height: 100,
-    borderRadius: borderRadius.md,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 183, 127, 0.05)',
-  },
-  addPhotoIcon: {
-    fontSize: 32,
-    color: colors.primary,
-    fontWeight: '300',
-  },
-  photoCount: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  inputGroup: {
-    marginBottom: spacing.md,
-  },
-  inputLabel: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  textInput: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    ...typography.body,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: spacing.md,
-  },
-  amenitiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  amenityPill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  amenityPillSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  amenityText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  amenityTextSelected: {
-    color: colors.white,
-  },
-  inputRow: {
-    flexDirection: 'row',
-  },
-  slotTypeContainer: {
-    gap: spacing.sm,
-  },
-  slotTypeOption: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  slotTypeOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}10`,
-  },
-  slotTypeLabel: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  slotTypeLabelSelected: {
-    color: colors.primary,
-  },
-  slotTypeDesc: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  continueButton: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  continueButtonDisabled: {
-    opacity: 0.6,
-  },
-  continueButtonText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '700',
-  },
-});

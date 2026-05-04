@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { mediaAPI, Photo } from '../services/mediaApi';
-import { colors, spacing, borderRadius, typography } from '../theme';
+import { spacing, borderRadius, typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface PhotoUploaderProps {
   slotId: number;
@@ -28,6 +29,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   maxPhotos = 5,
   editable = true,
 }) => {
+  const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -141,6 +143,107 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     );
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      marginVertical: spacing.md,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    title: {
+      fontSize: typography.sizes.lg,
+      fontWeight: typography.weights.semibold,
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+    },
+    scrollContent: {
+      paddingVertical: spacing.xs,
+    },
+    photoContainer: {
+      marginRight: spacing.md,
+      position: 'relative',
+    },
+    photo: {
+      width: 120,
+      height: 120,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.border,
+    },
+    primaryBadge: {
+      position: 'absolute',
+      bottom: 8,
+      left: 8,
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.sm,
+    },
+    primaryBadgeText: {
+      color: colors.white,
+      fontSize: typography.sizes.xs,
+      fontWeight: typography.weights.semibold,
+    },
+    deleteButton: {
+      position: 'absolute',
+      top: -8,
+      right: -8,
+      backgroundColor: colors.white,
+      borderRadius: 14,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 3,
+      elevation: 3,
+    },
+    addButton: {
+      width: 120,
+      height: 120,
+      borderRadius: borderRadius.md,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    addButtonText: {
+      marginTop: spacing.xs,
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+    },
+    uploadingContainer: {
+      alignItems: 'center',
+    },
+    uploadingText: {
+      marginTop: spacing.sm,
+      fontSize: typography.sizes.sm,
+      color: colors.primary,
+      fontWeight: typography.weights.medium,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    emptyStateText: {
+      marginTop: spacing.md,
+      fontSize: typography.sizes.md,
+      fontWeight: typography.weights.medium,
+      color: colors.textSecondary,
+    },
+    emptyStateSubtext: {
+      marginTop: spacing.xs,
+      fontSize: typography.sizes.sm,
+      color: colors.textTertiary,
+      textAlign: 'center',
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -211,104 +314,3 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: spacing.md,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  title: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-  },
-  scrollContent: {
-    paddingVertical: spacing.xs,
-  },
-  photoContainer: {
-    marginRight: spacing.md,
-    position: 'relative',
-  },
-  photo: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.border,
-  },
-  primaryBadge: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  primaryBadgeText: {
-    color: colors.white,
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.semibold,
-  },
-  deleteButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  addButton: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  addButtonText: {
-    marginTop: spacing.xs,
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-  },
-  uploadingContainer: {
-    alignItems: 'center',
-  },
-  uploadingText: {
-    marginTop: spacing.sm,
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyStateText: {
-    marginTop: spacing.md,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.textSecondary,
-  },
-  emptyStateSubtext: {
-    marginTop: spacing.xs,
-    fontSize: typography.sizes.sm,
-    color: colors.textTertiary,
-    textAlign: 'center',
-  },
-});

@@ -108,7 +108,7 @@ export const MyVehiclesScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Vehicles</Text>
         <TouchableOpacity onPress={handleAddVehicle} style={styles.addButton}>
@@ -131,7 +131,7 @@ export const MyVehiclesScreen: React.FC = () => {
         {vehicles.length === 0 ? (
           <View style={styles.emptyContainer}>
             <EmptyState
-              icon="🚗"
+              icon="car-outline"
               title="No vehicles yet"
               message="Add your vehicle information to make booking parking spots easier."
             />

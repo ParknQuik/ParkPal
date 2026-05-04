@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { authAPI } from '../services/api';
-import { colors, typography, spacing, borderRadius } from '../theme';
-
-const CUSTOM_COLORS = {
-  primary: '#10b77f',
-  accentOrange: colors.secondary,
-  background: '#f6f8f7',
-};
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export const ForgotPasswordScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -30,6 +25,154 @@ export const ForgotPasswordScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const { colors } = useTheme();
+
+  const CUSTOM_COLORS = useMemo(() => ({
+    primary: '#10b77f',
+    accentOrange: colors.secondary,
+    background: '#f6f8f7',
+  }), [colors.secondary]);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: CUSTOM_COLORS.background,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xl,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    iconButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      ...typography.h5,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    headerIconContainer: {
+      alignSelf: 'center',
+      marginTop: spacing.lg,
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xxl,
+    },
+    title: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: spacing.xxl,
+      paddingHorizontal: spacing.md,
+    },
+    form: {
+      marginBottom: spacing.xl,
+    },
+    submitButton: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+      borderRadius: borderRadius.xl,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: spacing.md,
+    },
+    submitButtonText: {
+      ...typography.button,
+      color: colors.white,
+      fontWeight: '600',
+      fontSize: 16,
+    },
+    loginLink: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    loginLinkText: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+    loginLinkHighlight: {
+      color: CUSTOM_COLORS.primary,
+      fontWeight: '600',
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    successContainer: {
+      alignItems: 'center',
+    },
+    iconCircle: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: `${CUSTOM_COLORS.primary}15`,
+      justifyContent: 'center',
+      alignItems: 'center',
+      alignSelf: 'center',
+      marginBottom: spacing.xl,
+    },
+    successTitle: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+    },
+    successBody: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: spacing.md,
+    },
+    emailHighlight: {
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    backButton: {
+      width: '100%',
+      marginBottom: spacing.lg,
+    },
+    tryAgainLink: {
+      paddingVertical: spacing.md,
+    },
+    tryAgainText: {
+      ...typography.body,
+      color: CUSTOM_COLORS.primary,
+      fontWeight: '600',
+    },
+  }), [colors]);
 
   const validateEmail = (value: string) => {
     if (!value.trim()) return 'Email is required';
@@ -189,146 +332,5 @@ export const ForgotPasswordScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: CUSTOM_COLORS.background,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    ...typography.h5,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  headerIconContainer: {
-    alignSelf: 'center',
-    marginTop: spacing.lg,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxl,
-  },
-  title: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xxl,
-    paddingHorizontal: spacing.md,
-  },
-  form: {
-    marginBottom: spacing.xl,
-  },
-  submitButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.md,
-  },
-  submitButtonText: {
-    ...typography.button,
-    color: colors.white,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  loginLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  loginLinkText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  loginLinkHighlight: {
-    color: CUSTOM_COLORS.primary,
-    fontWeight: '600',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  successContainer: {
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: `${CUSTOM_COLORS.primary}15`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: spacing.xl,
-  },
-  successTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  successBody: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.md,
-  },
-  emailHighlight: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  backButton: {
-    width: '100%',
-    marginBottom: spacing.lg,
-  },
-  tryAgainLink: {
-    paddingVertical: spacing.md,
-  },
-  tryAgainText: {
-    ...typography.body,
-    color: CUSTOM_COLORS.primary,
-    fontWeight: '600',
-  },
-});
 
 export default ForgotPasswordScreen;

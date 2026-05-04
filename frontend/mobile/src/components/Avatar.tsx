@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { AvatarProps } from '../types';
-import { colors, typography, borderRadius } from '../theme';
+import { typography, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { getInitials } from '../utils/helpers';
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -10,6 +11,8 @@ export const Avatar: React.FC<AvatarProps> = ({
   size = 40,
   style,
 }) => {
+  const { colors } = useTheme();
+
   const containerStyle = {
     width: size,
     height: size,
@@ -19,6 +22,22 @@ export const Avatar: React.FC<AvatarProps> = ({
   const textStyle = {
     fontSize: size / 2.5,
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    image: {
+      backgroundColor: colors.border,
+    },
+    placeholder: {
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    initials: {
+      ...typography.body,
+      color: colors.white,
+      fontWeight: '600',
+    },
+  }), [colors]);
 
   if (uri) {
     return (
@@ -36,19 +55,3 @@ export const Avatar: React.FC<AvatarProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  image: {
-    backgroundColor: colors.border,
-  },
-  placeholder: {
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  initials: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '600',
-  },
-});

@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { store } from './src/store';
+import { store, persistor } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { notificationService } from './src/services/notifications';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ThemeProvider } from './src/context/ThemeContext';
+import { loadThemeMode } from './src/store/slices/settingsSlice';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -34,6 +37,9 @@ export default function App() {
         }
         
         console.log('Storage cleaned (auth preserved)');
+
+        // Load persisted theme preference
+        await store.dispatch(loadThemeMode());
         
         // Setup push notifications
         if (Device.isDevice) {
@@ -88,12 +94,16 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
-        <SafeAreaProvider>
-          <ErrorBoundary>
-            <AppNavigator />
-          </ErrorBoundary>
-          <StatusBar style="auto" />
-        </SafeAreaProvider>
+        <PersistGate loading={null} persistor={persistor}>
+          <ThemeProvider>
+            <SafeAreaProvider>
+              <ErrorBoundary>
+                <AppNavigator />
+              </ErrorBoundary>
+              <StatusBar style="auto" />
+            </SafeAreaProvider>
+          </ThemeProvider>
+        </PersistGate>
       </Provider>
     </GestureHandlerRootView>
   );

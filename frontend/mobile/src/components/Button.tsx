@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ButtonProps } from '../types';
-import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { typography, spacing, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { haptics } from '../utils/haptics';
 
 export const Button: React.FC<ButtonProps> = ({
@@ -27,6 +28,8 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   style,
 }) => {
+  const { colors } = useTheme();
+
   const handlePress = async () => {
     if (!disabled && !loading) {
       await haptics.medium();

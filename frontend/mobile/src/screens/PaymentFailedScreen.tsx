@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-
-import { colors } from '../theme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const orderData = {
   image: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
@@ -29,6 +29,7 @@ export const PaymentFailedScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { error, bookingId } = route.params as { error: string; bookingId: number };
+  const { colors } = useTheme();
 
   const handleBack = () => {
     navigation.goBack();
@@ -42,13 +43,200 @@ export const PaymentFailedScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.white,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    errorIconContainer: {
+      alignItems: 'center',
+      marginTop: 32,
+      marginBottom: 24,
+    },
+    errorIconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.error,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    errorIconText: {
+      fontSize: 40,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    errorHeading: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    errorMessage: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 32,
+      paddingHorizontal: 32,
+    },
+    orderCard: {
+      backgroundColor: colors.white,
+      borderRadius: 16,
+      padding: 16,
+      marginHorizontal: 16,
+      marginBottom: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    orderImage: {
+      width: '100%',
+      height: 140,
+      borderRadius: 12,
+      marginBottom: 16,
+    },
+    orderInfo: {
+      marginBottom: 16,
+    },
+    orderName: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    locationText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    datesContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 12,
+    },
+    dateBlock: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    dateLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    dateValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    timeValue: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    dateArrow: {
+      paddingHorizontal: 8,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 12,
+    },
+    priceRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    priceLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    priceValue: {
+      fontSize: 14,
+      color: colors.textPrimary,
+      fontWeight: '500',
+    },
+    totalLabel: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    totalValue: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    footer: {
+      backgroundColor: colors.white,
+      paddingHorizontal: 16,
+      paddingVertical: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    tryAgainButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    tryAgainButtonText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.white,
+    },
+    differentPaymentButton: {
+      backgroundColor: 'transparent',
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    differentPaymentButtonText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-            <Text style={styles.headerButtonText}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Payment Failed</Text>
           <View style={styles.headerButton} />
@@ -79,7 +267,7 @@ export const PaymentFailedScreen: React.FC = () => {
           <View style={styles.orderInfo}>
             <Text style={styles.orderName}>{orderData.name}</Text>
             <View style={styles.locationRow}>
-              <Text style={styles.locationIcon}>📍</Text>
+              <MaterialCommunityIcons name="map-marker-outline" size={16} color={colors.textSecondary} style={{ marginRight: 6, marginTop: 2 }} />
               <Text style={styles.locationText}>{orderData.address}</Text>
             </View>
           </View>
@@ -91,7 +279,7 @@ export const PaymentFailedScreen: React.FC = () => {
               <Text style={styles.timeValue}>{orderData.checkInTime}</Text>
             </View>
             <View style={styles.dateArrow}>
-              <Text style={styles.dateArrowText}>→</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color={colors.textSecondary} />
             </View>
             <View style={styles.dateBlock}>
               <Text style={styles.dateLabel}>To</Text>
@@ -142,204 +330,3 @@ export const PaymentFailedScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerButtonText: {
-    fontSize: 24,
-    color: '#1e293b',
-    fontWeight: '500',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-  errorIconContainer: {
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 24,
-  },
-  errorIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorIconText: {
-    fontSize: 40,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  errorHeading: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 32,
-  },
-  orderCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  orderImage: {
-    width: '100%',
-    height: 140,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  orderInfo: {
-    marginBottom: 16,
-  },
-  orderName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  locationIcon: {
-    fontSize: 14,
-    marginRight: 6,
-    marginTop: 2,
-  },
-  locationText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#64748b',
-    lineHeight: 20,
-  },
-  datesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: 12,
-  },
-  dateBlock: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  dateLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  dateValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 2,
-  },
-  timeValue: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  dateArrow: {
-    paddingHorizontal: 8,
-  },
-  dateArrowText: {
-    fontSize: 18,
-    color: '#cbd5e1',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e2e8f0',
-    marginVertical: 12,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  priceLabel: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  priceValue: {
-    fontSize: 14,
-    color: '#1e293b',
-    fontWeight: '500',
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  footer: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-  },
-  tryAgainButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  tryAgainButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  differentPaymentButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  differentPaymentButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-});

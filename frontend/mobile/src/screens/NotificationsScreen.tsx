@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { notificationsAPI, Notification } from '../services/api';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { typography, spacing, borderRadius } from '../theme';
 
 const NOTIFICATION_ICONS: Record<string, string> = {
   booking_confirmed: '\u2705',
@@ -45,6 +46,7 @@ function getRelativeTime(dateString: string): string {
 }
 
 export const NotificationsScreen: React.FC = () => {
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -127,6 +129,150 @@ export const NotificationsScreen: React.FC = () => {
       },
     ]);
   }, []);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.xxxl,
+      paddingBottom: spacing.md,
+      backgroundColor: colors.white,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    headerTitle: {
+      fontSize: typography.sizes.lg,
+      fontWeight: '600' as const,
+      color: colors.textPrimary,
+    },
+    badge: {
+      backgroundColor: colors.error,
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    badgeText: {
+      color: colors.white,
+      fontSize: 11,
+      fontWeight: '700' as const,
+    },
+    markAllButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    list: {
+      padding: spacing.md,
+      paddingBottom: spacing.xxxl,
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.white,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    cardUnread: {
+      backgroundColor: colors.surfaceSecondary,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
+    iconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.sm,
+      position: 'relative',
+    },
+    icon: {
+      fontSize: 22,
+    },
+    unreadDot: {
+      position: 'absolute',
+      top: 2,
+      right: 2,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.primary,
+    },
+    textContainer: {
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    title: {
+      fontSize: typography.sizes.md,
+      color: colors.textSecondary,
+      marginBottom: 2,
+    },
+    titleUnread: {
+      color: colors.textPrimary,
+      fontWeight: '700' as const,
+    },
+    body: {
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 18,
+    },
+    timestamp: {
+      fontSize: typography.sizes.xs,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    deleteButton: {
+      padding: 4,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: 80,
+    },
+    emptyTitle: {
+      fontSize: typography.sizes.lg,
+      fontWeight: '600' as const,
+      color: colors.textPrimary,
+      marginTop: spacing.md,
+    },
+    emptySubtitle: {
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+  }), [colors]);
 
   const renderItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity
@@ -223,147 +369,3 @@ export const NotificationsScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xxxl,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  headerTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-  },
-  badge: {
-    backgroundColor: colors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: '700' as const,
-  },
-  markAllButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  list: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxxl,
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  cardUnread: {
-    backgroundColor: '#f0fdf4',
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-    position: 'relative',
-  },
-  icon: {
-    fontSize: 22,
-  },
-  unreadDot: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-  },
-  textContainer: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  title: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  titleUnread: {
-    color: colors.textPrimary,
-    fontWeight: '700' as const,
-  },
-  body: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  timestamp: {
-    fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 80,
-  },
-  emptyTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-  },
-  emptySubtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-});

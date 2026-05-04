@@ -15,18 +15,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI, vehiclesAPI } from '../services/api';
-import { colors } from '../theme';
-
-const COLORS = {
-  primary: '#10b77f',
-  secondary: colors.secondary,
-  background: '#f6f8f7',
-  white: '#ffffff',
-  textPrimary: '#1e293b',
-  textSecondary: '#64748b',
-  border: '#e2e8f0',
-};
+import { useTheme } from '../context/ThemeContext';
 
 const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-US', {
@@ -51,6 +42,7 @@ export const ReserveSpot: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { spotId } = (route.params || {}) as { spotId?: string };
+  const { colors } = useTheme();
 
   const [spot, setSpot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -144,18 +136,18 @@ export const ReserveSpot: React.FC = () => {
     }
   };
 
-  const hours = rentalMode === 'fixed' 
+  const hours = rentalMode === 'fixed'
     ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)))
     : MAX_DURATION_HOURS; // Show max price estimate for open mode
-  
+
   const pricePerHour = spot?.price || spot?.pricePerHour || 0;
   const parkingFee = hours * pricePerHour;
   const serviceFee = 25;
   const tax = parkingFee * 0.05;
   const total = parkingFee + serviceFee + tax;
 
-  const priceLabel = rentalMode === 'open' 
-    ? `Estimated max (${MAX_DURATION_HOURS}hrs)` 
+  const priceLabel = rentalMode === 'open'
+    ? `Estimated max (${MAX_DURATION_HOURS}hrs)`
     : 'Total';
 
   const handleProceedToPayment = async () => {
@@ -190,10 +182,10 @@ export const ReserveSpot: React.FC = () => {
     } catch (err: any) {
       ;
       const errorMessage = err.response?.data?.error || err.message || 'Unable to create booking';
-      
+
       if (err.response?.status === 409) {
         Alert.alert(
-          'Slot Unavailable', 
+          'Slot Unavailable',
           err.response?.data?.error || 'This slot is already booked for the selected time. Please choose a different time.',
           [{ text: 'OK' }]
         );
@@ -207,6 +199,359 @@ export const ReserveSpot: React.FC = () => {
     }
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    placeholder: {
+      width: 40,
+    },
+    content: {
+      flex: 1,
+      padding: 16,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    spotCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 24,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    spotInfo: {
+      flexDirection: 'row',
+      gap: 16,
+    },
+    spotDetails: {
+      flex: 2,
+    },
+    spotLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.primary,
+      letterSpacing: 1,
+      marginBottom: 4,
+    },
+    spotName: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    spotLocation: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 12,
+    },
+    viewMapButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: `${colors.primary}15`,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 8,
+      alignSelf: 'flex-start',
+    },
+    viewMapText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    spotImage: {
+      width: 100,
+      height: 100,
+      borderRadius: 12,
+      backgroundColor: colors.border,
+    },
+    spotImagePlaceholder: {
+      width: 100,
+      height: 100,
+      borderRadius: 12,
+      backgroundColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    section: {
+      marginBottom: 24,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 12,
+    },
+    rentalModeContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 20,
+    },
+    rentalModeOption: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+    },
+    rentalModeOptionActive: {
+      borderColor: colors.primary,
+      backgroundColor: `${colors.primary}10`,
+    },
+    rentalModeIcon: {
+      marginBottom: 8,
+    },
+    rentalModeText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    rentalModeTextActive: {
+      color: colors.primary,
+    },
+    rentalModeDescription: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    dateTimeGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    inputGroup: {
+      width: '48%',
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginBottom: 6,
+      paddingLeft: 4,
+    },
+    inputContainer: {
+      position: 'relative',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    inputText: {
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    vehicleList: {
+      gap: 10,
+      marginBottom: 12,
+    },
+    vehicleItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 14,
+    },
+    vehicleItemSelected: {
+      borderColor: colors.primary,
+      backgroundColor: `${colors.primary}08`,
+    },
+    vehicleIconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    vehicleInfo: {
+      flex: 1,
+    },
+    vehicleName: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    vehiclePlate: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      paddingVertical: 16,
+    },
+    addVehicleButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 12,
+      paddingVertical: 14,
+      borderStyle: 'dashed',
+    },
+    addVehicleIcon: {
+      fontSize: 18,
+      color: colors.primary,
+      marginRight: 8,
+      fontWeight: '600',
+    },
+    addVehicleText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    priceBreakdown: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    priceRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    priceLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    priceValue: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textPrimary,
+    },
+    totalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 12,
+      marginTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    totalLabel: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    totalValue: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    bottomSpacer: {
+      height: 20,
+    },
+    footer: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    confirmButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 18,
+      borderRadius: 12,
+      alignItems: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    confirmButtonDisabled: {
+      opacity: 0.7,
+    },
+    confirmButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.white,
+    },
+    termsText: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 12,
+    },
+    preAuthContainer: {
+      backgroundColor: `${colors.warning}20`,
+      padding: 12,
+      borderRadius: 8,
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: colors.warning,
+    },
+    preAuthLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.warning,
+      marginBottom: 4,
+    },
+    preAuthText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    preAuthNote: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+  }), [colors]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -215,13 +560,13 @@ export const ReserveSpot: React.FC = () => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Reserve Spot</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading spot details...</Text>
         </View>
       </SafeAreaView>
@@ -243,7 +588,7 @@ export const ReserveSpot: React.FC = () => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Reserve Spot</Text>
         <View style={styles.placeholder} />
@@ -260,7 +605,7 @@ export const ReserveSpot: React.FC = () => {
                   spotAddress}
               </Text>
               <TouchableOpacity style={styles.viewMapButton}>
-                <Text style={styles.viewMapIcon}>🗺️</Text>
+                <MaterialCommunityIcons name="map-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
                 <Text style={styles.viewMapText}>View Map</Text>
               </TouchableOpacity>
             </View>
@@ -268,7 +613,7 @@ export const ReserveSpot: React.FC = () => {
               <Image source={{ uri: spotImage }} style={styles.spotImage} />
             ) : (
               <View style={styles.spotImagePlaceholder}>
-                <Text style={styles.spotImagePlaceholderText}>🅿️</Text>
+                <MaterialCommunityIcons name="parking" size={40} color={colors.textTertiary} />
               </View>
             )}
           </View>
@@ -285,7 +630,7 @@ export const ReserveSpot: React.FC = () => {
               onPress={() => setRentalMode('fixed')}
             >
               <View style={styles.rentalModeIcon}>
-                <Text style={styles.rentalModeEmoji}>⏱️</Text>
+                <MaterialCommunityIcons name="timer-outline" size={32} color={colors.textPrimary} />
               </View>
               <Text style={[
                 styles.rentalModeText,
@@ -304,7 +649,7 @@ export const ReserveSpot: React.FC = () => {
               onPress={() => setRentalMode('open')}
             >
               <View style={styles.rentalModeIcon}>
-                <Text style={styles.rentalModeEmoji}>🔓</Text>
+                <MaterialCommunityIcons name="lock-open-outline" size={32} color={colors.textPrimary} />
               </View>
               <Text style={[
                 styles.rentalModeText,
@@ -327,7 +672,7 @@ export const ReserveSpot: React.FC = () => {
                 onPress={() => openPicker('startDate')}
               >
                 <Text style={styles.inputText}>{formatDate(startDate)}</Text>
-                <Text style={styles.inputIcon}>📅</Text>
+                <MaterialCommunityIcons name="calendar-outline" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <View style={styles.inputGroup}>
@@ -341,7 +686,7 @@ export const ReserveSpot: React.FC = () => {
                 }}
               >
                 <Text style={styles.inputText}>{formatTime(startDate)}</Text>
-                <Text style={styles.inputIcon}>🕐</Text>
+                <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
             {rentalMode === 'fixed' && (
@@ -353,7 +698,7 @@ export const ReserveSpot: React.FC = () => {
                     onPress={() => openPicker('endDate')}
                   >
                     <Text style={styles.inputText}>{formatDate(endDate)}</Text>
-                    <Text style={styles.inputIcon}>📅</Text>
+                    <MaterialCommunityIcons name="calendar-outline" size={16} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.inputGroup}>
@@ -367,7 +712,7 @@ export const ReserveSpot: React.FC = () => {
                     }}
                   >
                     <Text style={styles.inputText}>{formatTime(endDate)}</Text>
-                    <Text style={styles.inputIcon}>🕐</Text>
+                    <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
               </>
@@ -404,7 +749,7 @@ export const ReserveSpot: React.FC = () => {
                 onPress={() => setSelectedVehicle(String(vehicle.id))}
               >
                 <View style={styles.vehicleIconContainer}>
-                  <Text style={styles.vehicleIcon}>🚗</Text>
+                  <MaterialCommunityIcons name="car-outline" size={22} color={colors.primary} />
                 </View>
                 <View style={styles.vehicleInfo}>
                   <Text style={styles.vehicleName}>
@@ -415,7 +760,7 @@ export const ReserveSpot: React.FC = () => {
                   </Text>
                 </View>
                 {selectedVehicle === String(vehicle.id) && (
-                  <Text style={styles.checkIcon}>✓</Text>
+                  <MaterialCommunityIcons name="check" size={18} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -472,7 +817,7 @@ export const ReserveSpot: React.FC = () => {
           disabled={isBooking}
         >
           {isBooking ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <Text style={styles.confirmButtonText}>
               Confirm & Pay ₱{total.toFixed(2)}
@@ -480,388 +825,10 @@ export const ReserveSpot: React.FC = () => {
           )}
         </TouchableOpacity>
         <Text style={styles.termsText}>
-          By clicking "Confirm & Pay", you agree to ParkPal's Terms of Service
+          By clicking "Confirm & Pay", you agree to ParknQuik's Terms of Service
           and Cancellation Policy.
         </Text>
       </View>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: COLORS.textPrimary,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  spotCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  spotInfo: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  spotDetails: {
-    flex: 2,
-  },
-  spotLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.primary,
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  spotName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  spotLocation: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 12,
-  },
-  viewMapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: `${COLORS.primary}15`,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  viewMapIcon: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  viewMapText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  spotImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-    backgroundColor: COLORS.border,
-  },
-  spotImagePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-    backgroundColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  spotImagePlaceholderText: {
-    fontSize: 32,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-  },
-  rentalModeContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  rentalModeOption: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  rentalModeOptionActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: `${COLORS.primary}10`,
-  },
-  rentalModeIcon: {
-    marginBottom: 8,
-  },
-  rentalModeEmoji: {
-    fontSize: 32,
-  },
-  rentalModeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  rentalModeTextActive: {
-    color: COLORS.primary,
-  },
-  rentalModeDescription: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  dateTimeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  inputGroup: {
-    width: '48%',
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.textSecondary,
-    marginBottom: 6,
-    paddingLeft: 4,
-  },
-  inputContainer: {
-    position: 'relative',
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  inputText: {
-    fontSize: 14,
-    color: COLORS.textPrimary,
-  },
-  inputIcon: {
-    fontSize: 16,
-  },
-  vehicleList: {
-    gap: 10,
-    marginBottom: 12,
-  },
-  vehicleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 14,
-  },
-  vehicleItemSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: `${COLORS.primary}08`,
-  },
-  vehicleIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  vehicleIcon: {
-    fontSize: 22,
-  },
-  vehicleInfo: {
-    flex: 1,
-  },
-  vehicleName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  vehiclePlate: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  checkIcon: {
-    fontSize: 18,
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    paddingVertical: 16,
-  },
-  addVehicleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    borderStyle: 'dashed',
-  },
-  addVehicleIcon: {
-    fontSize: 18,
-    color: COLORS.primary,
-    marginRight: 8,
-    fontWeight: '600',
-  },
-  addVehicleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  priceBreakdown: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  priceLabel: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  priceValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.textPrimary,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  totalValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  bottomSpacer: {
-    height: 20,
-  },
-  footer: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  confirmButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  confirmButtonDisabled: {
-    opacity: 0.7,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  termsText: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  preAuthContainer: {
-    backgroundColor: '#fef3c7',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-  },
-  preAuthLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#92400e',
-    marginBottom: 4,
-  },
-  preAuthText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#92400e',
-  },
-  preAuthNote: {
-    fontSize: 12,
-    color: '#92400e',
-    marginTop: 4,
-  },
-});

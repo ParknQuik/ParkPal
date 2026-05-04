@@ -15,7 +15,9 @@ import {
 import { CameraView, Camera } from 'expo-camera';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { marketplaceAPI } from '../services/api';
-import { colors, typography, spacing } from '../theme';
+import { typography, spacing } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCAN_AREA_SIZE = SCREEN_WIDTH * 0.7;
@@ -48,6 +50,7 @@ export const QRScannerScreen: React.FC = () => {
   const scanAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const navigation = useNavigation();
   const route = useRoute<RouteProp<QRScannerParams, 'QRScanner'>>();
+  const { colors } = useTheme();
 
   const scanMode: ScanMode = route.params?.mode || 'generic';
   const bookingId = route.params?.bookingId;
@@ -278,6 +281,297 @@ export const QRScannerScreen: React.FC = () => {
     }
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#000',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    safeArea: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    headerButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerButtonText: {
+      fontSize: 20,
+      color: '#fff',
+      fontWeight: '600',
+    },
+    headerTitle: {
+      ...typography.h3,
+      color: '#fff',
+      fontSize: 18,
+      fontWeight: '600',
+    },
+    viewfinderContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    viewfinder: {
+      width: SCAN_AREA_SIZE,
+      height: SCAN_AREA_SIZE,
+      position: 'relative',
+    },
+    corner: {
+      position: 'absolute',
+      width: 30,
+      height: 30,
+      borderColor: colors.secondary,
+    },
+    cornerTL: {
+      top: 0,
+      left: 0,
+      borderTopWidth: 4,
+      borderLeftWidth: 4,
+    },
+    cornerTR: {
+      top: 0,
+      right: 0,
+      borderTopWidth: 4,
+      borderRightWidth: 4,
+    },
+    cornerBL: {
+      bottom: 0,
+      left: 0,
+      borderBottomWidth: 4,
+      borderLeftWidth: 4,
+    },
+    cornerBR: {
+      bottom: 0,
+      right: 0,
+      borderBottomWidth: 4,
+      borderRightWidth: 4,
+    },
+    scanLine: {
+      position: 'absolute',
+      left: 10,
+      right: 10,
+      height: 2,
+      backgroundColor: colors.secondary,
+      shadowColor: colors.secondary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 4,
+    },
+    loadingContainer: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    },
+    resultContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+    },
+    resultCard: {
+      width: '100%',
+      borderRadius: 20,
+      padding: spacing.xl,
+      alignItems: 'center',
+    },
+    resultSuccess: {
+      backgroundColor: 'rgba(16, 183, 127, 0.95)',
+    },
+    resultError: {
+      backgroundColor: 'rgba(239, 68, 68, 0.95)',
+    },
+    resultIcon: {
+      fontSize: 48,
+      color: '#fff',
+      fontWeight: '700',
+      marginBottom: spacing.md,
+    },
+    resultTitle: {
+      ...typography.h3,
+      color: '#fff',
+      fontSize: 22,
+      fontWeight: '700',
+      marginBottom: spacing.sm,
+      textAlign: 'center',
+    },
+    resultTitleSuccess: {
+      color: '#fff',
+    },
+    resultTitleError: {
+      color: '#fff',
+    },
+    resultMessage: {
+      ...typography.body,
+      color: 'rgba(255, 255, 255, 0.9)',
+      fontSize: 14,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: spacing.xl,
+    },
+    resultActions: {
+      width: '100%',
+      gap: spacing.sm,
+    },
+    resultButton: {
+      paddingVertical: spacing.md,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    resultButtonPrimary: {
+      backgroundColor: colors.surface,
+    },
+    resultButtonPrimaryText: {
+      ...typography.button,
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    resultButtonSecondary: {
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.4)',
+    },
+    resultButtonSecondaryText: {
+      ...typography.button,
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#fff',
+    },
+    instructionsContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    instructionsText: {
+      ...typography.body,
+      color: '#fff',
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    bottomControls: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.lg,
+    },
+    controlButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 60,
+    },
+    controlIcon: {
+      fontSize: 24,
+      marginBottom: 4,
+    },
+    controlLabel: {
+      color: '#fff',
+      fontSize: 12,
+    },
+    mainScanButton: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 4,
+      borderColor: '#fff',
+    },
+    scanButtonInner: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scanButtonIcon: {
+      fontSize: 32,
+    },
+    permissionText: {
+      ...typography.body,
+      color: '#fff',
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+      marginTop: spacing.lg,
+    },
+    permissionSubtext: {
+      ...typography.body,
+      color: 'rgba(255,255,255,0.6)',
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+      fontSize: 13,
+    },
+    permissionButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      borderRadius: 25,
+    },
+    permissionButtonText: {
+      ...typography.button,
+      color: '#fff',
+    },
+    manualEntryContainer: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.lg,
+      alignItems: 'center',
+    },
+    manualEntryToggle: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      borderRadius: 8,
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    manualEntryToggleText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    manualEntryForm: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.md,
+      width: '100%',
+      gap: spacing.sm,
+    },
+    manualEntryInput: {
+      flex: 1,
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+      borderRadius: 8,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      color: '#fff',
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    manualEntrySubmit: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderRadius: 8,
+    },
+    manualEntrySubmitText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '700',
+    },
+  }), [colors]);
+
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
@@ -303,7 +597,7 @@ export const QRScannerScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor="#000" />
 
       <CameraView
         style={StyleSheet.absoluteFill}
@@ -513,294 +807,3 @@ export const QRScannerScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerButtonText: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    ...typography.h3,
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  viewfinderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  viewfinder: {
-    width: SCAN_AREA_SIZE,
-    height: SCAN_AREA_SIZE,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
-    borderColor: colors.secondary,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-  },
-  scanLine: {
-    position: 'absolute',
-    left: 10,
-    right: 10,
-    height: 2,
-    backgroundColor: colors.secondary,
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  resultContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  resultCard: {
-    width: '100%',
-    borderRadius: 20,
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  resultSuccess: {
-    backgroundColor: 'rgba(16, 183, 127, 0.95)',
-  },
-  resultError: {
-    backgroundColor: 'rgba(239, 68, 68, 0.95)',
-  },
-  resultIcon: {
-    fontSize: 48,
-    color: '#fff',
-    fontWeight: '700',
-    marginBottom: spacing.md,
-  },
-  resultTitle: {
-    ...typography.h3,
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  resultTitleSuccess: {
-    color: '#fff',
-  },
-  resultTitleError: {
-    color: '#fff',
-  },
-  resultMessage: {
-    ...typography.body,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-  resultActions: {
-    width: '100%',
-    gap: spacing.sm,
-  },
-  resultButton: {
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  resultButtonPrimary: {
-    backgroundColor: '#fff',
-  },
-  resultButtonPrimaryText: {
-    ...typography.button,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  resultButtonSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  resultButtonSecondaryText: {
-    ...typography.button,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  instructionsContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  instructionsText: {
-    ...typography.body,
-    color: '#fff',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  bottomControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  controlButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 60,
-  },
-  controlIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  controlLabel: {
-    color: '#fff',
-    fontSize: 12,
-  },
-  mainScanButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#10b77f',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 4,
-    borderColor: '#fff',
-  },
-  scanButtonInner: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scanButtonIcon: {
-    fontSize: 32,
-  },
-  permissionText: {
-    ...typography.body,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  permissionSubtext: {
-    ...typography.body,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    fontSize: 13,
-  },
-  permissionButton: {
-    backgroundColor: '#10b77f',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: 25,
-  },
-  permissionButtonText: {
-    ...typography.button,
-    color: '#fff',
-  },
-  manualEntryContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
-    alignItems: 'center',
-  },
-  manualEntryToggle: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  manualEntryToggleText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  manualEntryForm: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    width: '100%',
-    gap: spacing.sm,
-  },
-  manualEntryInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 8,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: '#fff',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  manualEntrySubmit: {
-    backgroundColor: '#10b77f',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
-  },
-  manualEntrySubmitText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
