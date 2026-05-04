@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -20,7 +21,8 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { EmptyState } from '../components/EmptyState';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export const QRGeneratorScreen: React.FC = () => {
   const [listings, setListings] = useState<any[]>([]);
@@ -30,6 +32,7 @@ export const QRGeneratorScreen: React.FC = () => {
   const qrRef = useRef<View>(null);
   const navigation = useNavigation();
   const { user } = useAppSelector((state) => state.auth);
+  const { colors } = useTheme();
 
   useEffect(() => {
     loadMyListings();
@@ -133,6 +136,153 @@ export const QRGeneratorScreen: React.FC = () => {
     }
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      ...typography.h4,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    content: {
+      flex: 1,
+      padding: spacing.xl,
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      textAlign: 'center',
+    },
+    listingsContainer: {
+      marginBottom: spacing.xl,
+    },
+    listingCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.white,
+      padding: spacing.lg,
+      borderRadius: borderRadius.lg,
+      borderWidth: 2,
+      borderColor: colors.border,
+      marginBottom: spacing.md,
+    },
+    selectedCard: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '10',
+    },
+    listingInfo: {
+      flex: 1,
+    },
+    listingTitle: {
+      ...typography.h6,
+      color: colors.textPrimary,
+      fontWeight: '600',
+      marginBottom: spacing.xs,
+    },
+    listingAddress: {
+      ...typography.small,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    listingPrice: {
+      ...typography.bodySmall,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    checkmark: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: spacing.md,
+    },
+    qrCard: {
+      padding: spacing.xl,
+      alignItems: 'center',
+    },
+    qrTitle: {
+      ...typography.h5,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      marginBottom: spacing.xs,
+      textAlign: 'center',
+    },
+    qrSubtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      textAlign: 'center',
+    },
+    qrContainer: {
+      backgroundColor: colors.white,
+      padding: spacing.xl,
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.xl,
+    },
+    qrWrapper: {
+      alignItems: 'center',
+    },
+    qrLabel: {
+      ...typography.h6,
+      color: colors.textPrimary,
+      fontWeight: '600',
+      marginTop: spacing.lg,
+    },
+    qrInfo: {
+      ...typography.small,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      width: '100%',
+      marginBottom: spacing.xl,
+    },
+    button: {
+      flex: 1,
+    },
+    infoBox: {
+      backgroundColor: colors.info + '10',
+      padding: spacing.lg,
+      borderRadius: borderRadius.md,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.info,
+      width: '100%',
+    },
+    infoTitle: {
+      ...typography.bodySmall,
+      color: colors.textPrimary,
+      fontWeight: '600',
+      marginBottom: spacing.sm,
+    },
+    infoText: {
+      ...typography.small,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+  }), [colors]);
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -144,7 +294,7 @@ export const QRGeneratorScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Generate QR Code</Text>
         <View style={styles.backButton} />
@@ -183,7 +333,7 @@ export const QRGeneratorScreen: React.FC = () => {
                   </View>
                   {selectedListing?.id === listing.id && (
                     <View style={styles.checkmark}>
-                      <Text style={styles.checkmarkText}>✓</Text>
+                      <MaterialCommunityIcons name="check" size={16} color={colors.primary} />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -219,7 +369,10 @@ export const QRGeneratorScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.infoBox}>
-                  <Text style={styles.infoTitle}>💡 How it works:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+                    <MaterialCommunityIcons name="lightbulb-outline" size={18} color={colors.warning} />
+                    <Text style={[styles.infoTitle, { marginBottom: 0, marginLeft: spacing.xs }]}>How it works:</Text>
+                  </View>
                   <Text style={styles.infoText}>
                     1. Print and display this QR code at your parking spot{'\n'}
                     2. Users scan the code when they arrive{'\n'}
@@ -235,159 +388,3 @@ export const QRGeneratorScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 28,
-    color: colors.textPrimary,
-  },
-  title: {
-    ...typography.h4,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  content: {
-    flex: 1,
-    padding: spacing.xl,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-  },
-  listingsContainer: {
-    marginBottom: spacing.xl,
-  },
-  listingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  selectedCard: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
-  },
-  listingInfo: {
-    flex: 1,
-  },
-  listingTitle: {
-    ...typography.h6,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  listingAddress: {
-    ...typography.small,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  listingPrice: {
-    ...typography.bodySmall,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  checkmark: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: spacing.md,
-  },
-  checkmarkText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  qrCard: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  qrTitle: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  qrSubtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-    textAlign: 'center',
-  },
-  qrContainer: {
-    backgroundColor: colors.white,
-    padding: spacing.xl,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.xl,
-  },
-  qrWrapper: {
-    alignItems: 'center',
-  },
-  qrLabel: {
-    ...typography.h6,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    marginTop: spacing.lg,
-  },
-  qrInfo: {
-    ...typography.small,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    width: '100%',
-    marginBottom: spacing.xl,
-  },
-  button: {
-    flex: 1,
-  },
-  infoBox: {
-    backgroundColor: colors.info + '10',
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.info,
-    width: '100%',
-  },
-  infoTitle: {
-    ...typography.bodySmall,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  infoText: {
-    ...typography.small,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-});

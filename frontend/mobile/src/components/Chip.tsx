@@ -3,10 +3,11 @@
 // Design: Google Stitch - Green theme rebrand
 // Changes: Green theme colors (primary color already updated via theme)
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { ChipProps } from '../types';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export const Chip: React.FC<ChipProps> = ({
   label,
@@ -14,6 +15,32 @@ export const Chip: React.FC<ChipProps> = ({
   onPress,
   style,
 }) => {
+  const { colors } = useTheme();
+
+  const styles = useMemo(() => StyleSheet.create({
+    chip: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: spacing.sm,
+    },
+    selected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    label: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    selectedText: {
+      color: colors.white,
+    },
+  }), [colors]);
+
   return (
     <TouchableOpacity
       style={[
@@ -38,27 +65,3 @@ export const Chip: React.FC<ChipProps> = ({
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-  },
-  selected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  label: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  selectedText: {
-    color: colors.white,
-  },
-});

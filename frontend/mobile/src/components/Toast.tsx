@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { haptics } from '../utils/haptics';
 
 interface ToastProps {
@@ -23,8 +24,69 @@ export const Toast: React.FC<ToastProps> = ({
   duration = 3000,
   action,
 }) => {
+  const { colors } = useTheme();
   const opacity = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(100)).current;
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      bottom: 100,
+      left: spacing.xl,
+      right: spacing.xl,
+      padding: spacing.lg,
+      borderRadius: borderRadius.lg,
+      shadowColor: colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 56,
+    },
+    content: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    icon: {
+      fontSize: 20,
+      color: colors.white,
+      marginRight: spacing.md,
+      fontWeight: '700',
+    },
+    message: {
+      ...typography.bodySmall,
+      color: colors.white,
+      flex: 1,
+      fontWeight: '500',
+    },
+    actionButton: {
+      marginLeft: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.md,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    actionText: {
+      ...typography.small,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    closeButton: {
+      marginLeft: spacing.sm,
+      padding: spacing.xs,
+    },
+    closeText: {
+      fontSize: 16,
+      color: colors.white,
+      fontWeight: '700',
+    },
+  }), [colors]);
 
   useEffect(() => {
     if (visible) {
@@ -162,63 +224,3 @@ export const Toast: React.FC<ToastProps> = ({
     </Animated.View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    bottom: 100,
-    left: spacing.xl,
-    right: spacing.xl,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 56,
-  },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  icon: {
-    fontSize: 20,
-    color: colors.white,
-    marginRight: spacing.md,
-    fontWeight: '700',
-  },
-  message: {
-    ...typography.bodySmall,
-    color: colors.white,
-    flex: 1,
-    fontWeight: '500',
-  },
-  actionButton: {
-    marginLeft: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  actionText: {
-    ...typography.small,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  closeButton: {
-    marginLeft: spacing.sm,
-    padding: spacing.xs,
-  },
-  closeText: {
-    fontSize: 16,
-    color: colors.white,
-    fontWeight: '700',
-  },
-});

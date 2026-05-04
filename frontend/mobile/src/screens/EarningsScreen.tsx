@@ -11,11 +11,14 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { haptics } from '../utils/haptics';
 import { earningsAPI } from '../services/api';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 interface EarningsSummary {
   totalEarned: number;
@@ -39,6 +42,7 @@ interface Transaction {
 
 export const EarningsScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { colors } = useTheme();
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -127,14 +131,249 @@ export const EarningsScreen: React.FC = () => {
     });
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      ...typography.h2,
+      color: colors.textPrimary,
+    },
+    placeholder: {
+      width: 40,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.lg,
+    },
+    totalCardContainer: {
+      marginBottom: spacing.lg,
+    },
+    totalCard: {
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+    },
+    totalLabel: {
+      ...typography.body,
+      color: colors.white,
+      opacity: 0.9,
+      marginBottom: spacing.xs,
+    },
+    totalAmount: {
+      ...typography.h1,
+      color: colors.white,
+      fontSize: 36,
+      fontWeight: '700',
+      marginBottom: spacing.sm,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.md,
+      alignSelf: 'flex-start',
+    },
+    badgeIcon: {
+      fontSize: 14,
+      color: colors.white,
+      marginRight: spacing.xs,
+    },
+    badgeText: {
+      ...typography.caption,
+      color: colors.white,
+      fontWeight: '600',
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    summaryCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+    },
+    cardLabel: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    cardValue: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    chartSection: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    periodToggle: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+      padding: spacing.xs,
+      marginBottom: spacing.md,
+    },
+    periodButton: {
+      flex: 1,
+      minHeight: 44,
+      paddingVertical: spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: borderRadius.sm,
+    },
+    periodButtonActive: {
+      backgroundColor: colors.surface,
+    },
+    periodText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    periodTextActive: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    sectionTitle: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+    },
+    chartContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-end',
+      height: 150,
+    },
+    barWrapper: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    barContainer: {
+      width: 24,
+      height: 120,
+      justifyContent: 'flex-end',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
+      overflow: 'hidden',
+    },
+    bar: {
+      width: '100%',
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.sm,
+      minHeight: 20,
+    },
+    barLabel: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    transactionsSection: {
+      marginBottom: spacing.lg,
+    },
+    transactionItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    transactionInfo: {
+      flex: 1,
+    },
+    transactionDate: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    transactionDesc: {
+      ...typography.body,
+      color: colors.textPrimary,
+    },
+    txStatus: {
+      ...typography.caption,
+      fontWeight: '600',
+      marginTop: spacing.xs,
+      textTransform: 'capitalize',
+    },
+    transactionAmount: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    footer: {
+      padding: spacing.md,
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    withdrawButton: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    withdrawButtonText: {
+      ...typography.body,
+      color: colors.white,
+      fontWeight: '600',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyState: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+    },
+    emptyText: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+  }), [colors]);
+
   if (loading) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
         <SafeAreaView edges={['top']} style={styles.safeArea}>
           <View style={styles.header}>
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Text style={styles.backIcon}>←</Text>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.title}>Earnings</Text>
             <View style={styles.placeholder} />
@@ -149,18 +388,18 @@ export const EarningsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.title}>Earnings</Text>
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView 
-          style={styles.scrollView} 
+        <ScrollView
+          style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
@@ -219,11 +458,11 @@ export const EarningsScreen: React.FC = () => {
                 {analytics.map((item) => (
                   <View key={item.label} style={styles.barWrapper}>
                     <View style={styles.barContainer}>
-                      <View 
+                      <View
                         style={[
-                          styles.bar, 
+                          styles.bar,
                           { height: `${(item.amount / maxAmount) * 100}%` }
-                        ]} 
+                        ]}
                       />
                     </View>
                     <Text style={styles.barLabel}>{item.label}</Text>
@@ -270,242 +509,3 @@ export const EarningsScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: colors.textPrimary,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  totalCardContainer: {
-    marginBottom: spacing.lg,
-  },
-  totalCard: {
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-  },
-  totalLabel: {
-    ...typography.body,
-    color: colors.white,
-    opacity: 0.9,
-    marginBottom: spacing.xs,
-  },
-  totalAmount: {
-    ...typography.h1,
-    color: colors.white,
-    fontSize: 36,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-    alignSelf: 'flex-start',
-  },
-  badgeIcon: {
-    fontSize: 14,
-    color: colors.white,
-    marginRight: spacing.xs,
-  },
-  badgeText: {
-    ...typography.caption,
-    color: colors.white,
-    fontWeight: '600',
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-  },
-  cardLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  cardValue: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  chartSection: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  periodToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    padding: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  periodButton: {
-    flex: 1,
-    minHeight: 44,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.sm,
-  },
-  periodButtonActive: {
-    backgroundColor: colors.white,
-  },
-  periodText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  periodTextActive: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  chartContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 150,
-  },
-  barWrapper: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  barContainer: {
-    width: 24,
-    height: 120,
-    justifyContent: 'flex-end',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-  },
-  bar: {
-    width: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.sm,
-    minHeight: 20,
-  },
-  barLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  transactionsSection: {
-    marginBottom: spacing.lg,
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionDate: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  transactionDesc: {
-    ...typography.body,
-    color: colors.textPrimary,
-  },
-  txStatus: {
-    ...typography.caption,
-    fontWeight: '600',
-    marginTop: spacing.xs,
-    textTransform: 'capitalize',
-  },
-  transactionAmount: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  footer: {
-    padding: spacing.md,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  withdrawButton: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  withdrawButtonText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-});

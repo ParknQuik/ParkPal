@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,14 +14,11 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI } from '../services/api';
-import { colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
-
-const PRIMARY = '#10b77f';
-const ACCENT = '#ffeb3b';
-const BACKGROUND = '#f6f6f8';
 
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&h=400&fit=crop';
 
@@ -33,6 +30,205 @@ export const WriteReview: React.FC = () => {
   const [reviewText, setReviewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  const { colors } = useTheme();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    spotCard: {
+      backgroundColor: colors.surface,
+      margin: 16,
+      borderRadius: 16,
+      overflow: 'hidden',
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    spotImage: {
+      width: '100%',
+      height: 140,
+    },
+    spotContent: {
+      padding: 16,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      marginBottom: 8,
+    },
+    pastBookingBadge: {
+      backgroundColor: colors.secondary + '20',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    pastBookingText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.secondary,
+    },
+    spotName: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    section: {
+      paddingHorizontal: 16,
+      marginBottom: 20,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: 12,
+    },
+    starsContainer: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    starButton: {
+      padding: 4,
+    },
+    starIcon: {
+      fontSize: 40,
+      color: colors.border,
+    },
+    starFilled: {
+      color: colors.accent,
+    },
+    promptBox: {
+      backgroundColor: colors.primary + '15',
+      marginHorizontal: 16,
+      marginBottom: 20,
+      padding: 16,
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary,
+    },
+    promptText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.primary,
+    },
+    textArea: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 15,
+      color: colors.textPrimary,
+      minHeight: 140,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    photoUpload: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 24,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: colors.border,
+    },
+    photoIconContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    photoIcon: {
+      fontSize: 28,
+    },
+    photoUploadText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    photosGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    photoContainer: {
+      position: 'relative',
+    },
+    photoThumbnail: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+    },
+    removePhotoButton: {
+      position: 'absolute',
+      top: -8,
+      right: -8,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.error,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    removePhotoText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    photoCount: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 8,
+    },
+    bottomSpacer: {
+      height: 20,
+    },
+    footer: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    submitButtonDisabled: {
+      opacity: 0.6,
+    },
+    submitButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.white,
+    },
+  }), [colors]);
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -108,7 +304,7 @@ export const WriteReview: React.FC = () => {
             style={styles.headerButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.headerButtonText}>←</Text>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Write a Review</Text>
           <View style={styles.headerButton} />
@@ -148,7 +344,7 @@ export const WriteReview: React.FC = () => {
           <TextInput
             style={styles.textArea}
             placeholder="Share details of your experience..."
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={colors.textSecondary}
             multiline
             numberOfLines={6}
             textAlignVertical="top"
@@ -191,7 +387,7 @@ export const WriteReview: React.FC = () => {
       <View style={styles.footer}>
         <TouchableOpacity style={[styles.submitButton, submitting && styles.submitButtonDisabled]} onPress={handleSubmit} disabled={submitting}>
           {submitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.submitButtonText}>Submit Review</Text>
           )}
@@ -200,232 +396,3 @@ export const WriteReview: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BACKGROUND,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerButtonText: {
-    fontSize: 24,
-    color: '#1e293b',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-  spotCard: {
-    backgroundColor: '#ffffff',
-    margin: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  spotImage: {
-    width: '100%',
-    height: 140,
-  },
-  spotContent: {
-    padding: 16,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  pastBookingBadge: {
-    backgroundColor: colors.secondary + '20',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  pastBookingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.secondary,
-  },
-  spotName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  datesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  datesLabel: {
-    fontSize: 13,
-    color: '#64748b',
-    marginRight: 4,
-  },
-  datesText: {
-    fontSize: 13,
-    color: '#1e293b',
-    fontWeight: '500',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationIcon: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  locationText: {
-    fontSize: 13,
-    color: '#64748b',
-  },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 12,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  starButton: {
-    padding: 4,
-  },
-  starIcon: {
-    fontSize: 40,
-    color: '#e2e8f0',
-  },
-  starFilled: {
-    color: ACCENT,
-  },
-  promptBox: {
-    backgroundColor: PRIMARY + '15',
-    marginHorizontal: 16,
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: PRIMARY,
-  },
-  promptText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: PRIMARY,
-  },
-  textArea: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 15,
-    color: '#1e293b',
-    minHeight: 140,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  photoUpload: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#e2e8f0',
-  },
-  photoIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: BACKGROUND,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  photoIcon: {
-    fontSize: 28,
-  },
-  photoUploadText: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  photosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  photoContainer: {
-    position: 'relative',
-  },
-  photoThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  removePhotoButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#ef4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removePhotoText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  photoCount: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 8,
-  },
-  bottomSpacer: {
-    height: 20,
-  },
-  footer: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-  },
-  submitButton: {
-    backgroundColor: PRIMARY,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-});

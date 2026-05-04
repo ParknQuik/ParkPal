@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface TabItem {
   name: string;
@@ -22,8 +23,44 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'Home' }) => {
+  const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      backgroundColor: colors.white,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingBottom: spacing.sm,
+      paddingTop: spacing.sm,
+      height: 60,
+    },
+    tab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xs,
+    },
+    icon: {
+      fontSize: 22,
+      opacity: 0.5,
+    },
+    activeIcon: {
+      opacity: 1,
+    },
+    label: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    activeLabel: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+  }), [colors]);
 
   const getCurrentTab = () => {
     const routeName = route.name;
@@ -38,7 +75,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'Home' }) => {
 
   const handleTabPress = async (tab: TabItem) => {
     if (currentTab === tab.name) return;
-    
+
     switch (tab.name) {
       case 'Home':
         navigation.navigate('Home');
@@ -78,40 +115,5 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab = 'Home' }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingBottom: spacing.sm,
-    paddingTop: spacing.sm,
-    height: 60,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xs,
-  },
-  icon: {
-    fontSize: 22,
-    opacity: 0.5,
-  },
-  activeIcon: {
-    opacity: 1,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  activeLabel: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-});
 
 export default BottomNav;

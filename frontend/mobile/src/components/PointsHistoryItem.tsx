@@ -9,9 +9,15 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { PointsTransaction } from '../types';
-import { colors, spacing, borderRadius } from '../theme';
+import { spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
-const getTransactionIcon = (type: string) => {
+interface TransactionIconConfig {
+  name: string;
+  color: string;
+}
+
+const getTransactionIcon = (type: string, colors: ReturnType<typeof import('../context/ThemeContext').useTheme>['colors']): TransactionIconConfig => {
   const upperType = type.toUpperCase();
   switch (upperType) {
     case 'EARNED':
@@ -62,7 +68,73 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
   transaction,
   showBalance = false,
 }) => {
-  const icon = getTransactionIcon(transaction.type);
+  const { colors } = useTheme();
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    leftContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    iconWrapper: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.lg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+      backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    },
+    textContent: {
+      flex: 1,
+    },
+    typeText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    descriptionText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    dateText: {
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+    referenceText: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      fontFamily: 'monospace',
+      marginTop: 2,
+    },
+    rightContent: {
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+    },
+    amountText: {
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    balanceAfterText: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+  }), [colors]);
+
+  const icon = getTransactionIcon(transaction.type, colors);
   const upperType = transaction.type.toUpperCase();
   const isEarn = ['EARNED', 'REFERRAL_BONUS', 'REFERRAL_REWARD', 'BONUS'].includes(upperType);
   const isExpire = upperType === 'EXPIRED';
@@ -73,7 +145,7 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
     const date = new Date(dateString);
     const now = new Date();
     const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffInDays === 0) {
       return 'Today';
     } else if (diffInDays === 1) {
@@ -107,7 +179,7 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
             color={icon.color}
           />
         </View>
-        
+
         <View style={styles.textContent}>
           <Text style={styles.typeText}>{formatType(transaction.type)}</Text>
           <Text style={styles.descriptionText} numberOfLines={1}>
@@ -123,7 +195,7 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
           )}
         </View>
       </View>
-      
+
       <View style={styles.rightContent}>
         <Text style={[styles.amountText, { color: amountColor }]}>
           {amountPrefix}{Math.abs(transaction.amount).toLocaleString()}
@@ -151,67 +223,3 @@ const formatType = (type: string) => {
   };
   return typeMap[upperType] || type;
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  leftContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-    backgroundColor: 'rgba(148, 163, 184, 0.1)',
-  },
-  textContent: {
-    flex: 1,
-  },
-  typeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  descriptionText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  dateText: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
-  referenceText: {
-    fontSize: 11,
-    color: colors.textTertiary,
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  rightContent: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  amountText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  balanceAfterText: {
-    fontSize: 11,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-});

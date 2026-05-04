@@ -16,7 +16,8 @@ import { RootState } from '../types';
 import { generateReferralCode, fetchReferralStats } from '../store/slices/pointsSlice';
 import { Button } from './Button';
 import { Card } from './Card';
-import { colors, spacing, borderRadius } from '../theme';
+import { spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { useAppDispatch } from '../store';
 
 // Share icon SVG
@@ -38,11 +39,138 @@ const linkIcon = `
 `;
 
 export const ReferralCodeDisplay: React.FC = () => {
+  const { colors } = useTheme();
   const dispatch = useAppDispatch();
   const referralCode = useSelector((state: RootState) => state.points.referralCode);
   const referralStats = useSelector((state: RootState) => state.points.referralStats);
   const loading = useSelector((state: RootState) => state.points.loading);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      marginHorizontal: spacing.md,
+      marginVertical: spacing.sm,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    emptyIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: borderRadius.xl,
+      backgroundColor: 'rgba(16, 183, 127, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    emptyDescription: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.xl,
+      lineHeight: 20,
+      paddingHorizontal: spacing.lg,
+    },
+    generateButton: {
+      width: '100%',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    headerIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: borderRadius.lg,
+      backgroundColor: 'rgba(16, 183, 127, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    headerText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    codeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    codeWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    codeText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.primary,
+      letterSpacing: 2,
+      marginLeft: spacing.sm,
+      fontFamily: 'monospace',
+    },
+    copyButton: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    copyButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    statItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    statValue: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    statValueAccent: {
+      color: colors.success,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    statDivider: {
+      width: 1,
+      height: '80%',
+      backgroundColor: colors.border,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    shareButton: {
+      flex: 1,
+    },
+    detailsButton: {
+      flex: 1,
+    },
+  }), [colors]);
 
   const handleGenerateCode = async () => {
     setIsGenerating(true);
@@ -156,129 +284,3 @@ export const ReferralCodeDisplay: React.FC = () => {
     </Card>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.sm,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.xl,
-    backgroundColor: 'rgba(16, 183, 127, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-    lineHeight: 20,
-    paddingHorizontal: spacing.lg,
-  },
-  generateButton: {
-    width: '100%',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  headerIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(16, 183, 127, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  codeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  codeWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  codeText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
-    letterSpacing: 2,
-    marginLeft: spacing.sm,
-    fontFamily: 'monospace',
-  },
-  copyButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  copyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  statValueAccent: {
-    color: colors.success,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  statDivider: {
-    width: 1,
-    height: '80%',
-    backgroundColor: colors.border,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  shareButton: {
-    flex: 1,
-  },
-  detailsButton: {
-    flex: 1,
-  },
-});

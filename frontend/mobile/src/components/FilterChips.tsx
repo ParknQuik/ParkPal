@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 
 export type SortOption = 'cheapest' | 'nearest' | 'top_rated' | 'available_now' | null;
 
@@ -18,9 +18,42 @@ const CHIPS = [
 ];
 
 export const FilterChips: React.FC<FilterChipsProps> = ({ activeSort, onSortChange }) => {
+  const { colors } = useTheme();
+  
   const handlePress = (id: SortOption) => {
     onSortChange(activeSort === id ? null : id);
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      gap: 8,
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: colors.background,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    chipLabelActive: {
+      color: colors.white,
+    },
+  }), [colors]);
 
   return (
     <ScrollView
@@ -51,34 +84,3 @@ export const FilterChips: React.FC<FilterChipsProps> = ({ activeSort, onSortChan
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  chipLabelActive: {
-    color: colors.white,
-  },
-});

@@ -1,9 +1,9 @@
 # ParkPal Project Status Report
 
-**Last Updated:** May 3, 2026
+**Last Updated:** May 4, 2026
 **Current Branch:** `feature/explore-page-revamp`
-**Production Readiness:** 89/100 (Explore Page Revamp Phase 1 complete: MaterialCommunityIcons, functional filter modal, directions via Linking API, safe area positioning fixes)
-**Phase:** Phase 6A: Mobile Analytics Integration — complete, tested, additional fixes applied; Explore Page Revamp Phase 1 complete
+**Production Readiness:** 95/100 (Explore Page Revamp all 5 phases complete + network detection bugfix + Dark/Light Mode migration complete)
+**Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme())
 
 ---
 
@@ -11,6 +11,9 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+ | May 4, 2026 | Kilo Code | Dark/Light Mode Phase 2 in progress: Fixed NotificationsScreen.tsx (useTheme import, moved styles inside component with useMemo), migrated ReferralScreen.tsx and PointsHistoryScreen.tsx to use useTheme() hook with dynamic styles, StatusBar fixes applied to MyBookingsScreen, QRScannerScreen, EarningsScreen, ListYourSpot, MyListingsScreen, PointsHistoryScreen, ReferralScreen | 93/100 |
+| May 4, 2026 | Kilo Code | Dark/Light Mode COMPLETE: Migrated all remaining components (Chip, PhotoUploader, YearSelector, MakeModelSelector, ColorPicker, CarPreview, SkeletonLoader, Avatar, BottomSheet) to useTheme() hook. Verified all 27 screens and 28 components now use useTheme() with useMemo for dynamic styles. No remaining direct `colors` imports from theme in any screen or component. | 95/100 |
+ | May 4, 2026 | Kilo Code | Explore Page Revamp Phase 5 complete (marker clustering, offline fallback, LoadingSkeleton, haptics, a11y, perf), fixed network detection false-positives (useNetworkStatus hook: Google HEAD→generate_204 GET) | 93/100 |
 | May 2, 2026 | Kilo Code | Fixed H12 (error handler), H14 (host cannot book own slot) | 75/100 |
 | May 2, 2026 | Kilo Code | M4/M5/M13 fixed: activity tracking circuit breaker, stopTracking cleanup, analyticsSlice import fix | 75/100 |
 | May 2, 2026 | Kilo Code | Fixed H5 (TOCTOU race condition with prisma.$transaction), H8 (getUserPayments select clause), H10 (earnings mock data → real DB queries), H15 (getZones isActive param) | 75/100 |
@@ -122,6 +125,16 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - 📄 **Files Modified:** `ExploreMap.tsx` (icons, directions, positioning, filter integration, active filter indicator, clear filters chip)
 - ⏳ **Phase 2+ Pending:** Draggable bottom sheet, listing preview, quick book button, search history, autocomplete, filter chips, sorting, zone analytics, occupancy markers, heatmap, marker clustering, offline fallback, skeletons, accessibility
 
+**May 4, 2026 - Explore Page Revamp Complete (All 5 Phases) + Network Fix:**
+- ✅ Phase 1: MaterialCommunityIcons, functional filter modal, directions, safe area fixes
+- ✅ Phase 2: @gorhom/bottom-sheet (18%/55% snap points), listing detail preview, View+Text price markers, occupancy progress bar
+- ✅ Phase 3: useSearchHistory hook (AsyncStorage, 10 items), useAutocomplete hook, FilterChips component, client-side sorting
+- ✅ Phase 4: Toggleable zone overlays (OFF default), occupancy dot badges on markers, heatmap layer, zone indicator pill
+- ✅ Phase 5: Grid-based marker clustering (15+ threshold), offline fallback with cached listings, LoadingSkeleton with Reanimated shimmer, haptic feedback (6 interactions), full accessibility labels, debounced region change, memoized computations, removeClippedSubviews
+- ✅ Bugfix: useNetworkStatus hook — replaced unreliable HEAD request to google.com/favicon.ico (blocked by Google) with GET to google.com/generate_204 (standard Android connectivity check). Increased timeout 5s→8s, interval 10s→15s. This fixes the "No cached data available" false-positive that blocked the entire Explore page when online.
+- 📄 **Files Created:** `FilterModal.tsx`, `ListingBottomSheet.tsx`, `FilterChips.tsx`, `LoadingSkeleton.tsx`, `useSearchHistory.ts`, `useAutocomplete.ts`, `useNetworkStatus.ts`, `clusterMarkers.ts`
+- 📄 **Files Modified:** `ExploreMap.tsx` (~1000 lines across all phases), `Chip.tsx` (a11y props)
+
 **May 2, 2026 - Auto-release Feature for Open-time Bookings:**
 - ✅ Implemented backend logic to automatically release parking slots after grace period for open-time bookings
 - ✅ Added 8 new test cases covering auto-release scenarios (grace period expiration, manual release, edge cases)
@@ -137,6 +150,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ **Existing Mobile Components**: `analyticsGeofenceService.ts`, `AnalyticsOptInModal.tsx`, `analyticsSlice.ts`, AppNavigator wiring
 - ✅ **Full Pipeline Tested**: zone enter → activity log (IN_VEHICLE, STILL) → parking detection → zone exit → session completed
 - ✅ **5 Analytics Zones Seeded**: SM MOA, Ayala Center, BGC, UP Diliman, Manila Ocean Park
+- ✅ **May 4, 2026:** Explore Page Revamp all 5 phases shipped (102h scope complete)
 
 **April 2026 - Booking System Overhaul:**
 - ✅ Rental Modes: Fixed duration + Open time (pay-on-exit)
@@ -166,7 +180,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **Test Status:**
 - Backend: 277/288 passing (96.2% pass rate) ✅
 - Mobile: 45/45 passing (100%) ✅
-- Web: 54/85 passing (63.5%)
+- Web: 54/85 passing (63.5%) - needs attention
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
 **Infrastructure:**

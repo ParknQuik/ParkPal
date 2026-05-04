@@ -21,8 +21,10 @@ import { login, signup, setUser, setToken } from '../store/slices/authSlice';
 import { authAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../components/Button';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { validateEmail, validatePassword } from '../utils/helpers';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
 
@@ -46,7 +48,7 @@ if (__DEV__) {
 
 const STITCH_COLORS = {
   primary: '#10b77f',
-  accentOrange: colors.secondary,
+  accentOrange: '#f59e0b',
   accentYellow: '#facc15',
   backgroundLight: '#f6f8f7',
   backgroundDark: '#10221c',
@@ -70,6 +72,7 @@ export const AuthScreen: React.FC = () => {
 
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
+  const { colors } = useTheme();
   const authLoading = useAppSelector((state) => state.auth.loading);
   const authError = useAppSelector((state) => state.auth.error);
 
@@ -199,9 +202,299 @@ export const AuthScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: STITCH_COLORS.backgroundLight,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: `${STITCH_COLORS.primary}10`,
+    },
+    backButton: {
+      width: 48,
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      ...typography.h6,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      flex: 1,
+      textAlign: 'center',
+      marginRight: 48,
+    },
+    headerSpacer: {
+      width: 48,
+    },
+    imageSection: {
+      width: '100%',
+      minHeight: 200,
+      backgroundColor: `${STITCH_COLORS.primary}33`,
+    },
+    imageOverlay: {
+      flex: 1,
+      minHeight: 200,
+      justifyContent: 'flex-end',
+      padding: spacing.lg,
+    },
+    imageGradient: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    orangeOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    },
+    badgeContainer: {
+      position: 'relative',
+      zIndex: 10,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: STITCH_COLORS.accentYellow,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 999,
+      alignSelf: 'flex-start',
+      marginBottom: spacing.sm,
+    },
+    badgeIcon: {
+      fontSize: 12,
+      marginRight: spacing.xs,
+    },
+    badgeText: {
+      ...typography.small,
+      fontWeight: '700',
+      color: STITCH_COLORS.backgroundDark,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    imageTitle: {
+      ...typography.h2,
+      fontWeight: '700',
+      color: colors.white,
+      position: 'relative',
+      zIndex: 10,
+    },
+    formSection: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xxl,
+      paddingBottom: spacing.xxxl,
+    },
+    formTitle: {
+      ...typography.h3,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    formDescription: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.xl,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: `${STITCH_COLORS.primary}15`,
+      borderRadius: borderRadius.lg,
+      padding: spacing.xs,
+      marginBottom: spacing.xl,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+      borderRadius: borderRadius.md,
+    },
+    activeTab: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    tabText: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    activeTabText: {
+      color: STITCH_COLORS.primary,
+    },
+    inputGroup: {
+      marginBottom: spacing.lg,
+    },
+    inputLabel: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+      color: colors.textPrimary,
+      marginBottom: spacing.sm,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: `${STITCH_COLORS.primary}30`,
+      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.md,
+    },
+    inputError: {
+      borderColor: colors.error,
+      borderWidth: 2,
+    },
+    input: {
+      flex: 1,
+      ...typography.body,
+      color: colors.textPrimary,
+      paddingVertical: spacing.md,
+    },
+    eyeButton: {
+      padding: spacing.xs,
+    },
+    errorText: {
+      ...typography.small,
+      color: colors.error,
+      marginTop: spacing.xs,
+    },
+    rememberRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    checkboxContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: `${STITCH_COLORS.primary}50`,
+      marginRight: spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: STITCH_COLORS.primary,
+      borderColor: STITCH_COLORS.primary,
+    },
+    checkboxLabel: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+    },
+    forgotPassword: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+      color: STITCH_COLORS.accentOrange,
+    },
+    continueButton: {
+      marginBottom: spacing.xl,
+    },
+    gradientButton: {
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      borderRadius: borderRadius.xl,
+      alignItems: 'center',
+      shadowColor: STITCH_COLORS.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    continueButtonText: {
+      ...typography.button,
+      fontWeight: '700',
+      color: colors.white,
+    },
+    divider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: `${STITCH_COLORS.primary}15`,
+    },
+    dividerText: {
+      ...typography.small,
+      color: colors.textTertiary,
+      marginHorizontal: spacing.lg,
+    },
+    socialButtons: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    socialButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: `${STITCH_COLORS.primary}20`,
+    },
+    socialIcon: {
+      fontSize: 18,
+      marginRight: spacing.sm,
+    },
+    socialButtonText: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    socialButtonDisabled: {
+      opacity: 0.5,
+      backgroundColor: colors.surfaceSecondary,
+    },
+    socialButtonTextDisabled: {
+      color: colors.textTertiary,
+    },
+    bottomBar: {
+      height: 8,
+    },
+    gradientButtonDisabled: {
+      opacity: 0.7,
+    },
+    authErrorContainer: {
+      backgroundColor: `${colors.error}10`,
+      borderColor: colors.error,
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    authErrorText: {
+      ...typography.bodySmall,
+      color: colors.error,
+      textAlign: 'center',
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
@@ -212,7 +505,7 @@ export const AuthScreen: React.FC = () => {
         >
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backIcon}>←</Text>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Welcome Back</Text>
             <View style={styles.headerSpacer} />
@@ -296,7 +589,7 @@ export const AuthScreen: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <View style={[styles.inputContainer, errors.email && styles.inputError]}>
-                <Text style={styles.inputIcon}>✉️</Text>
+                <MaterialCommunityIcons name="email-outline" size={20} color={colors.textSecondary} />
                 <TextInput
                   style={styles.input}
                   value={email}
@@ -313,7 +606,7 @@ export const AuthScreen: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Password</Text>
               <View style={[styles.inputContainer, errors.password && styles.inputError]}>
-                <Text style={styles.inputIcon}>🔒</Text>
+                <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />
                 <TextInput
                   style={styles.input}
                   value={password}
@@ -326,7 +619,7 @@ export const AuthScreen: React.FC = () => {
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                  <MaterialCommunityIcons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
@@ -336,7 +629,7 @@ export const AuthScreen: React.FC = () => {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Confirm Password</Text>
                 <View style={[styles.inputContainer, errors.confirmPassword && styles.inputError]}>
-                  <Text style={styles.inputIcon}>🔒</Text>
+                  <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />
                   <TextInput
                     style={styles.input}
                     value={confirmPassword}
@@ -359,7 +652,7 @@ export const AuthScreen: React.FC = () => {
                 onPress={() => setRememberMe(!rememberMe)}
               >
                 <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                  {rememberMe && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Remember me</Text>
               </TouchableOpacity>
@@ -409,7 +702,7 @@ export const AuthScreen: React.FC = () => {
                   {googleLoading ? 'Signing in...' : 'Google'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.socialButton, styles.socialButtonDisabled]}
                 disabled={true}
               >
@@ -429,309 +722,3 @@ export const AuthScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: STITCH_COLORS.backgroundLight,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: `${STITCH_COLORS.primary}10`,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: STITCH_COLORS.primary,
-  },
-  headerTitle: {
-    ...typography.h6,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    flex: 1,
-    textAlign: 'center',
-    marginRight: 48,
-  },
-  headerSpacer: {
-    width: 48,
-  },
-  imageSection: {
-    width: '100%',
-    minHeight: 200,
-    backgroundColor: `${STITCH_COLORS.primary}33`,
-  },
-  imageOverlay: {
-    flex: 1,
-    minHeight: 200,
-    justifyContent: 'flex-end',
-    padding: spacing.lg,
-  },
-  imageGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  orangeOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-  },
-  badgeContainer: {
-    position: 'relative',
-    zIndex: 10,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: STITCH_COLORS.accentYellow,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    alignSelf: 'flex-start',
-    marginBottom: spacing.sm,
-  },
-  badgeIcon: {
-    fontSize: 12,
-    marginRight: spacing.xs,
-  },
-  badgeText: {
-    ...typography.small,
-    fontWeight: '700',
-    color: STITCH_COLORS.backgroundDark,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  imageTitle: {
-    ...typography.h2,
-    fontWeight: '700',
-    color: colors.white,
-    position: 'relative',
-    zIndex: 10,
-  },
-  formSection: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xxxl,
-  },
-  formTitle: {
-    ...typography.h3,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  formDescription: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: `${STITCH_COLORS.primary}15`,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xs,
-    marginBottom: spacing.xl,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    borderRadius: borderRadius.md,
-  },
-  activeTab: {
-    backgroundColor: colors.white,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  tabText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  activeTabText: {
-    color: STITCH_COLORS.primary,
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
-  inputLabel: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: `${STITCH_COLORS.primary}30`,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-  },
-  inputError: {
-    borderColor: colors.error,
-    borderWidth: 2,
-  },
-  inputIcon: {
-    fontSize: 18,
-    marginRight: spacing.sm,
-  },
-  input: {
-    flex: 1,
-    ...typography.body,
-    color: colors.textPrimary,
-    paddingVertical: spacing.md,
-  },
-  eyeButton: {
-    padding: spacing.xs,
-  },
-  eyeIcon: {
-    fontSize: 18,
-  },
-  errorText: {
-    ...typography.small,
-    color: colors.error,
-    marginTop: spacing.xs,
-  },
-  rememberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: `${STITCH_COLORS.primary}50`,
-    marginRight: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: STITCH_COLORS.primary,
-    borderColor: STITCH_COLORS.primary,
-  },
-  checkmark: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  checkboxLabel: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-  },
-  forgotPassword: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-    color: STITCH_COLORS.accentOrange,
-  },
-  continueButton: {
-    marginBottom: spacing.xl,
-  },
-  gradientButton: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
-    shadowColor: STITCH_COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueButtonText: {
-    ...typography.button,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: `${STITCH_COLORS.primary}15`,
-  },
-  dividerText: {
-    ...typography.small,
-    color: colors.textTertiary,
-    marginHorizontal: spacing.lg,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: `${STITCH_COLORS.primary}20`,
-  },
-  socialIcon: {
-    fontSize: 18,
-    marginRight: spacing.sm,
-  },
-  socialButtonText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  socialButtonDisabled: {
-    opacity: 0.5,
-    backgroundColor: '#e2e8f0',
-  },
-  socialButtonTextDisabled: {
-    color: '#94a3b8',
-  },
-  bottomBar: {
-    height: 8,
-  },
-  gradientButtonDisabled: {
-    opacity: 0.7,
-  },
-  authErrorContainer: {
-    backgroundColor: '#fef2f2',
-    borderColor: colors.error,
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  authErrorText: {
-    ...typography.bodySmall,
-    color: colors.error,
-    textAlign: 'center',
-  },
-});

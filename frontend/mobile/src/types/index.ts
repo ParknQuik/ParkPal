@@ -438,4 +438,5 @@ export interface RootState {
   vehicles: VehiclesState;
   analytics: AnalyticsState;
   points: PointsState;
+  settings: { themeMode: 'system' | 'light' | 'dark' };
 }

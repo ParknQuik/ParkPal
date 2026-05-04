@@ -18,13 +18,17 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppSelector, useAppDispatch } from '../store';
 import { logout, checkAuth, updateUserProfile } from '../store/slices/authSlice';
+import { setThemeMode } from '../store/slices/settingsSlice';
 import { userAPI } from '../services/api';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const themeMode = useAppSelector((state) => state.settings.themeMode);
+  const { colors } = useTheme();
   const [refreshing, setRefreshing] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
 
@@ -228,6 +232,208 @@ export const ProfileScreen: React.FC = () => {
     },
   ];
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    profileInfo: {
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      paddingTop: spacing.xl,
+    },
+    avatarCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    avatarContainer: {
+      position: 'relative',
+      marginBottom: spacing.md,
+    },
+    editButton: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      backgroundColor: colors.primary,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.white,
+    },
+    uploadOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 40,
+    },
+    avatarText: {
+      ...typography.h2,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    userName: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    userEmail: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    membershipCard: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+      marginTop: spacing.lg,
+      width: '100%',
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    membershipLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    membershipIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.accentOrange,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    membershipLabel: {
+      ...typography.small,
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      fontWeight: '500',
+    },
+    membershipValue: {
+      ...typography.h5,
+      color: colors.accentOrange,
+      fontWeight: '700',
+    },
+    perksButton: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.lg,
+    },
+    perksButtonText: {
+      ...typography.bodySmall,
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: 100,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      ...typography.small,
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      fontWeight: '700',
+      marginBottom: spacing.md,
+    },
+    menuContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      overflow: 'hidden',
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    menuItemLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    menuIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.lg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    menuLabel: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    themeToggle: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+      padding: 3,
+      gap: 2,
+    },
+    themeOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: borderRadius.sm,
+    },
+    themeOptionActive: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    themeOptionText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.textTertiary,
+    },
+    themeOptionTextActive: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -245,8 +451,8 @@ export const ProfileScreen: React.FC = () => {
               </View>
             )}
             {user?.profileImageUrl ? (
-              <Image 
-                source={{ uri: user!.profileImageUrl + '?t=' + Date.now() }} 
+              <Image
+                source={{ uri: user!.profileImageUrl + '?t=' + Date.now() }}
                 style={styles.avatarImage}
                 cachePolicy="none"
               />
@@ -276,7 +482,7 @@ export const ProfileScreen: React.FC = () => {
                 <Text style={styles.membershipValue}>{user?.totalBookings || 0} total</Text>
               </View>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.perksButton}
               onPress={() => navigation.navigate('Earnings' as never)}
             >
@@ -321,180 +527,43 @@ export const ProfileScreen: React.FC = () => {
               </View>
             </View>
           ))}
+
+          {/* Appearance */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Appearance</Text>
+            <View style={styles.menuContainer}>
+              <View style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <View style={[styles.menuIconContainer, { backgroundColor: `${colors.info}15` }]}>
+                    <MaterialCommunityIcons name="theme-light-dark" size={22} color={colors.info} />
+                  </View>
+                  <Text style={styles.menuLabel}>Theme</Text>
+                </View>
+                <View style={styles.themeToggle}>
+                  {(['system', 'light', 'dark'] as const).map((mode) => (
+                    <TouchableOpacity
+                      key={mode}
+                      style={[styles.themeOption, themeMode === mode && styles.themeOptionActive]}
+                      onPress={() => dispatch(setThemeMode(mode))}
+                    >
+                      <MaterialCommunityIcons
+                        name={mode === 'system' ? 'circle-half-full' : mode === 'light' ? 'weather-sunny' : 'weather-night'}
+                        size={16}
+                        color={themeMode === mode ? colors.primary : colors.textTertiary}
+                      />
+                      <Text style={[styles.themeOptionText, themeMode === mode && styles.themeOptionTextActive]}>
+                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  profileInfo: {
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    paddingTop: spacing.xl,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: spacing.md,
-  },
-  editButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: colors.primary,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  uploadOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 40,
-  },
-  avatarText: {
-    ...typography.h2,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  userName: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  userEmail: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  membershipCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    marginTop: spacing.lg,
-    width: '100%',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  membershipLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  membershipIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.accentOrange,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  membershipLabel: {
-    ...typography.small,
-    color: colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '500',
-  },
-  membershipValue: {
-    ...typography.h5,
-    color: colors.accentOrange,
-    fontWeight: '700',
-  },
-  perksButton: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-  },
-  perksButtonText: {
-    ...typography.bodySmall,
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    ...typography.small,
-    color: colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '700',
-    marginBottom: spacing.md,
-  },
-  menuContainer: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  menuIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  menuLabel: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-});
 
 export default ProfileScreen;

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface LoadingSpinnerProps {
   size?: 'small' | 'large';
@@ -14,11 +14,14 @@ interface LoadingSpinnerProps {
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'large',
-  color = colors.primary,
+  color,
 }) => {
+  const { colors } = useTheme();
+  const spinnerColor = color ?? colors.primary;
+
   return (
     <View style={styles.container}>
-      <ActivityIndicator size={size} color={color} />
+      <ActivityIndicator size={size} color={spinnerColor} />
     </View>
   );
 };

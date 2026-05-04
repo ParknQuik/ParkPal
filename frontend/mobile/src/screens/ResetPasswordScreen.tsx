@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { authAPI } from '../services/api';
-import { colors, typography, spacing } from '../theme';
+import { typography, spacing } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 type ResetPasswordRouteParams = {
   ResetPassword: {
@@ -34,6 +35,82 @@ export const ResetPasswordScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<{ newPassword?: string; confirmPassword?: string }>({});
+
+  const { colors } = useTheme();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    backArrow: {
+      marginBottom: spacing.xl,
+      alignSelf: 'flex-start',
+      padding: spacing.xs,
+    },
+    iconCircle: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: colors.primaryLight || `${colors.primary}15`,
+      justifyContent: 'center',
+      alignItems: 'center',
+      alignSelf: 'center',
+      marginBottom: spacing.xl,
+    },
+    title: {
+      ...typography.h3,
+      color: colors.text,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginBottom: spacing.md,
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: spacing.xxl,
+    },
+    form: {
+      marginBottom: spacing.xl,
+    },
+    submitButton: {
+      marginTop: spacing.md,
+    },
+    successContainer: {
+      flex: 1,
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xxl,
+      alignItems: 'center',
+    },
+    successTitle: {
+      ...typography.h3,
+      color: colors.text,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+    },
+    successBody: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: spacing.xxl,
+    },
+    backButton: {
+      width: '100%',
+    },
+  }), [colors]);
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -94,7 +171,6 @@ export const ResetPasswordScreen: React.FC = () => {
             title="Back to Login"
             variant="gradient"
             onPress={() => {
-              // Navigate back to Auth screen (root of AuthStack)
               navigation.navigate('Auth' as never);
             }}
             style={styles.backButton}
@@ -208,77 +284,4 @@ export const ResetPasswordScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  backArrow: {
-    marginBottom: spacing.xl,
-    alignSelf: 'flex-start',
-    padding: spacing.xs,
-  },
-  iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.primaryLight || `${colors.primary}15`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: spacing.xl,
-  },
-  title: {
-    ...typography.h3,
-    color: colors.text,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xxl,
-  },
-  form: {
-    marginBottom: spacing.xl,
-  },
-  submitButton: {
-    marginTop: spacing.md,
-  },
-  // Success / Error states
-  successContainer: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
-    alignItems: 'center',
-  },
-  successTitle: {
-    ...typography.h3,
-    color: colors.text,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  successBody: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xxl,
-  },
-  backButton: {
-    width: '100%',
-  },
-});
+export default ResetPasswordScreen;

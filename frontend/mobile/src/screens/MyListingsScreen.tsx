@@ -19,13 +19,16 @@ import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { getMyListings } from '../store/slices/marketplaceSlice';
 import { marketplaceAPI } from '../services/api';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { haptics } from '../utils/haptics';
 import { accessibility } from '../utils/accessibility';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const MyListingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
+  const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [qrData, setQrData] = useState<string>('');
@@ -120,13 +123,380 @@ const handleFilterPress = useCallback(async () => {
     await haptics.light();
   }, []);
 
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.lg,
+      backgroundColor: colors.background,
+    },
+    headerTitle: {
+      ...typography.h2,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    newListingButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: borderRadius.xl,
+    },
+    addIcon: {
+      fontFamily: 'MaterialSymbolsOutlined',
+      fontSize: 20,
+      color: colors.white,
+    },
+    newListingText: {
+      ...typography.bodySmall,
+      color: colors.white,
+      fontWeight: '600',
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: 100,
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginBottom: spacing.xl,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: 'rgba(16, 183, 127, 0.05)',
+      borderWidth: 1,
+      borderColor: 'rgba(16, 183, 127, 0.2)',
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+    },
+    statLabel: {
+      ...typography.tiny,
+      color: colors.textSecondary,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+    },
+    statValue: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    statFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      gap: spacing.xs,
+    },
+    trendText: {
+      ...typography.tiny,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    viewsText: {
+      ...typography.tiny,
+      color: colors.secondary,
+      fontWeight: '600',
+    },
+    section: {
+      marginBottom: spacing.xl,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      ...typography.h5,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    filterButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    filterText: {
+      ...typography.bodySmall,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    listingsList: {
+      gap: spacing.md,
+    },
+    listingCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    listingImage: {
+      width: '100%',
+      height: 180,
+    },
+    listingContent: {
+      padding: spacing.md,
+    },
+    listingHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing.sm,
+    },
+    statusBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs - 2,
+      borderRadius: borderRadius.full,
+    },
+    activeBadge: {
+      backgroundColor: 'rgba(16, 183, 127, 0.1)',
+    },
+    inactiveBadge: {
+      backgroundColor: colors.border,
+    },
+    statusText: {
+      ...typography.tiny,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    activeStatusText: {
+      color: colors.primary,
+    },
+    inactiveStatusText: {
+      color: colors.textSecondary,
+    },
+    listingName: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '700',
+      marginTop: spacing.xs,
+    },
+    listingPrice: {
+      ...typography.h5,
+      color: colors.primary,
+      fontWeight: '700',
+      textAlign: 'right',
+    },
+    inactivePrice: {
+      color: colors.textSecondary,
+      textDecorationLine: 'line-through',
+    },
+    priceUnit: {
+      ...typography.small,
+      color: colors.textSecondary,
+      fontWeight: '400',
+    },
+    listingLocation: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+      gap: spacing.xs,
+    },
+    locationText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      flex: 1,
+    },
+    listingActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    actionButton: {
+      flex: 1,
+      minHeight: 44,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    editButton: {
+      backgroundColor: colors.primary,
+    },
+    activateButton: {
+      backgroundColor: colors.border,
+    },
+    actionButtonText: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+    },
+    editButtonText: {
+      color: colors.white,
+    },
+    activateButtonText: {
+      color: colors.textPrimary,
+    },
+    moreButton: {
+      minWidth: 44,
+      minHeight: 44,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    qrButton: {
+      minWidth: 44,
+      minHeight: 44,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    qrButtonText: {
+      color: colors.white,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 24,
+      width: '85%',
+      alignItems: 'center',
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    modalSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 8,
+    },
+    modalInstructions: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 16,
+      lineHeight: 18,
+    },
+    qrContainer: {
+      padding: 16,
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      marginVertical: 8,
+    },
+    modalErrorText: {
+      color: colors.error,
+      marginVertical: 40,
+      fontSize: 14,
+    },
+    closeModalButton: {
+      marginTop: 16,
+      backgroundColor: colors.border,
+      paddingHorizontal: 32,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    closeModalText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxl * 2,
+    },
+    loadingText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginTop: spacing.md,
+    },
+    errorContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxl * 2,
+    },
+    errorText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    retryButton: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.lg,
+    },
+    retryText: {
+      ...typography.bodySmall,
+      color: colors.white,
+      fontWeight: '600',
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xxl * 2,
+    },
+    emptyText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginTop: spacing.md,
+      marginBottom: spacing.md,
+    },
+    addListingButton: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm + 2,
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.lg,
+    },
+    addListingText: {
+      ...typography.bodySmall,
+      color: colors.white,
+      fontWeight: '600',
+    },
+    fab: {
+      position: 'absolute',
+      right: spacing.lg,
+      bottom: spacing.lg,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 4,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      
+      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
 
 
-      <ScrollView 
+
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.contentContainer}
@@ -323,370 +693,3 @@ const handleFilterPress = useCallback(async () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.background,
-  },
-  headerTitle: {
-    ...typography.h2,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  newListingButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.xl,
-  },
-  addIcon: {
-    fontFamily: 'MaterialSymbolsOutlined',
-    fontSize: 20,
-    color: colors.white,
-  },
-  newListingText: {
-    ...typography.bodySmall,
-    color: colors.white,
-    fontWeight: '600',
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 100,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(16, 183, 127, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 183, 127, 0.2)',
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-  },
-  statLabel: {
-    ...typography.tiny,
-    color: colors.textSecondary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  statValue: {
-    ...typography.h3,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  statFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    gap: spacing.xs,
-  },
-  trendText: {
-    ...typography.tiny,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  viewsText: {
-    ...typography.tiny,
-    color: colors.secondary,
-    fontWeight: '600',
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  filterText: {
-    ...typography.bodySmall,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  listingsList: {
-    gap: spacing.md,
-  },
-  listingCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  listingImage: {
-    width: '100%',
-    height: 180,
-  },
-  listingContent: {
-    padding: spacing.md,
-  },
-  listingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs - 2,
-    borderRadius: borderRadius.full,
-  },
-  activeBadge: {
-    backgroundColor: 'rgba(16, 183, 127, 0.1)',
-  },
-  inactiveBadge: {
-    backgroundColor: '#f1f5f9',
-  },
-  statusText: {
-    ...typography.tiny,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  activeStatusText: {
-    color: colors.primary,
-  },
-  inactiveStatusText: {
-    color: colors.textSecondary,
-  },
-  listingName: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginTop: spacing.xs,
-  },
-  listingPrice: {
-    ...typography.h5,
-    color: colors.primary,
-    fontWeight: '700',
-    textAlign: 'right',
-  },
-  inactivePrice: {
-    color: colors.textSecondary,
-    textDecorationLine: 'line-through',
-  },
-  priceUnit: {
-    ...typography.small,
-    color: colors.textSecondary,
-    fontWeight: '400',
-  },
-  listingLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    gap: spacing.xs,
-  },
-  locationText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  listingActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-    minHeight: 44,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editButton: {
-    backgroundColor: colors.primary,
-  },
-  activateButton: {
-    backgroundColor: '#e2e8f0',
-  },
-  actionButtonText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-  editButtonText: {
-    color: colors.white,
-  },
-  activateButtonText: {
-    color: colors.textPrimary,
-  },
-  moreButton: {
-    minWidth: 44,
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  qrButton: {
-    minWidth: 44,
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  qrButtonText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
-    width: '85%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  modalInstructions: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  qrContainer: {
-    padding: 16,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginVertical: 8,
-  },
-  modalErrorText: {
-    color: colors.error,
-    marginVertical: 40,
-    fontSize: 14,
-  },
-  closeModalButton: {
-    marginTop: 16,
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  closeModalText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl * 2,
-  },
-  loadingText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl * 2,
-  },
-  errorText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  retryButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-  },
-  retryText: {
-    ...typography.bodySmall,
-    color: colors.white,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl * 2,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
-  },
-  addListingButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-  },
-  addListingText: {
-    ...typography.bodySmall,
-    color: colors.white,
-    fontWeight: '600',
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.lg,
-    bottom: spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-});

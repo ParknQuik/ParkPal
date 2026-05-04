@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RefreshControl, ScrollView, ScrollViewProps } from 'react-native';
-import { colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import { haptics } from '../utils/haptics';
 
 interface RefreshableScrollViewProps extends ScrollViewProps {
@@ -18,6 +18,7 @@ export const RefreshableScrollView: React.FC<RefreshableScrollViewProps> = ({
   ...scrollViewProps
 }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const { colors } = useTheme();
 
   const handleRefresh = async () => {
     setRefreshing(true);

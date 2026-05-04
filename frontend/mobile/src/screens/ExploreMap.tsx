@@ -19,7 +19,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings } from '../store/slices/marketplaceSlice';
 import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
 import { analyticsService } from '../services/analytics';
 import { ListingBottomSheet } from '../components/ListingBottomSheet';
@@ -35,6 +35,21 @@ import * as Haptics from 'expo-haptics';
 const { width, height } = Dimensions.get('window');
 
 const CACHE_KEY = 'parkpal_cached_listings';
+
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', elementType: 'labels.text.stroke', stylers: [{ color: '#1d2c4d' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#838383' }] },
+  { featureType: 'road', stylers: [{ visibility: 'simplified' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+  { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', stylers: [{ color: '#0f1a14' }] },
+];
 
 const getOccupancyColor = (percentage: number): string => {
   if (percentage >= 80) return '#ef4444';
@@ -154,6 +169,7 @@ export const ExploreMap: React.FC = () => {
   const route = useRoute<any>();
   const { latitude, longitude, focusSpotId } = route.params || {};
   const dispatch = useAppDispatch();
+  const { colors, isDark } = useTheme();
   const mapRef = useRef<MapView>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
@@ -587,6 +603,250 @@ export const ExploreMap: React.FC = () => {
   const searchAreaTop = filterChipsTop + 50;
   const offlineBannerTop = insets.top + 16;
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    searchBarContainer: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      zIndex: 10,
+      flexDirection: 'row',
+      gap: 8,
+    },
+    searchBar: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 48,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    searchIcon: {
+      marginRight: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.textPrimary,
+    },
+    suggestionsDropdown: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+      zIndex: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      maxHeight: 200,
+    },
+    suggestionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      gap: 10,
+    },
+    suggestionText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textPrimary,
+    },
+    filterButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: colors.white,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    filterButtonDisabled: {
+      opacity: 0.5,
+    },
+    offlineBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#6b7280',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      gap: 8,
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      zIndex: 101,
+      borderRadius: 8,
+    },
+    offlineBannerText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    clearFiltersChip: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.white,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      gap: 6,
+      zIndex: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    clearFiltersText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.error,
+    },
+    searchAreaButton: {
+      position: 'absolute',
+      alignSelf: 'center',
+      backgroundColor: colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    searchAreaButtonDisabled: {
+      backgroundColor: '#6b7280',
+      opacity: 0.7,
+    },
+    searchAreaText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    filterIcon: {
+      fontSize: 20,
+    },
+    mapContainer: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    map: {
+      width: '100%',
+      height: '100%',
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(255,255,255,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyState: {
+      position: 'absolute',
+      top: height * 0.35,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+    emptyStateText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      backgroundColor: colors.white,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    mapControls: {
+      position: 'absolute',
+      right: 16,
+      bottom: height * 0.45,
+      gap: 8,
+    },
+    controlButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: colors.white,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    controlBorder: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    controlIcon: {
+      fontSize: 24,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    myLocationButton: {
+      marginTop: 8,
+      backgroundColor: colors.primary,
+    },
+    zoneIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(16, 183, 127, 0.9)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      position: 'absolute',
+      left: 16,
+      zIndex: 100,
+      gap: 6,
+    },
+    zoneOccBadge: {
+      backgroundColor: 'rgba(255, 255, 255, 0.25)',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    zoneOccText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    zoneIndicatorText: {
+      color: '#fff',
+      fontSize: 13,
+      fontWeight: '600',
+    },
+  }), [colors]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={[styles.searchBarContainer, { top: insets.top + 8 }]} shouldRasterizeIOS>
@@ -718,6 +978,7 @@ export const ExploreMap: React.FC = () => {
           onRegionChangeComplete={handleRegionChangeComplete}
           showsUserLocation
           showsMyLocationButton={false}
+          customMapStyle={isDark ? DARK_MAP_STYLE : []}
         >
           {clustered.map((cm: ClusteredMarker) => {
             if (cm.isCluster) {
@@ -912,247 +1173,3 @@ export const ExploreMap: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  searchBarContainer: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 10,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  suggestionsDropdown: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    maxHeight: 200,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    gap: 10,
-  },
-  suggestionText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-  filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  filterButtonDisabled: {
-    opacity: 0.5,
-  },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6b7280',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 8,
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 101,
-    borderRadius: 8,
-  },
-  offlineBannerText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  clearFiltersChip: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  clearFiltersText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.error,
-  },
-  searchAreaButton: {
-    position: 'absolute',
-    alignSelf: 'center',
-    backgroundColor: '#10b77f',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  searchAreaButtonDisabled: {
-    backgroundColor: '#6b7280',
-    opacity: 0.7,
-  },
-  searchAreaText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  filterIcon: {
-    fontSize: 20,
-  },
-  mapContainer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    position: 'absolute',
-    top: height * 0.35,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  mapControls: {
-    position: 'absolute',
-    right: 16,
-    bottom: height * 0.45,
-    gap: 8,
-  },
-  controlButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  controlBorder: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  controlIcon: {
-    fontSize: 24,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  myLocationButton: {
-    marginTop: 8,
-    backgroundColor: colors.primary,
-  },
-  zoneIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 183, 127, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    position: 'absolute',
-    left: 16,
-    zIndex: 100,
-    gap: 6,
-  },
-  zoneOccBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  zoneOccText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  zoneIndicatorText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});

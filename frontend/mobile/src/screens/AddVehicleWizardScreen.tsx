@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
   getVehicles,
@@ -23,7 +24,8 @@ import {
   Vehicle,
 } from '../store/slices/vehiclesSlice';
 import { vehiclesAPI } from '../services/api';
-import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { typography, spacing, borderRadius, shadows } from '../theme';
 import { Chip } from '../components/Chip';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -212,8 +214,374 @@ const COUNTRY_FORMATS: CountryFormat[] = [
   },
 ];
 
+// Styles factory function
+const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      ...typography.h4,
+      color: colors.text,
+    },
+    progressContainer: {
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    stepIndicatorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stepIndicatorItem: {
+      alignItems: 'center',
+    },
+    stepDot: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.background,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stepDotActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '20',
+    },
+    stepDotCompleted: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    stepNumber: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    stepLine: {
+      width: 40,
+      height: 2,
+      backgroundColor: colors.border,
+      marginHorizontal: spacing.xs,
+    },
+    stepLineActive: {
+      backgroundColor: colors.primary,
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxxl,
+    },
+    keyboardAvoidingView: {
+      flex: 1,
+    },
+    stepContent: {
+      flex: 1,
+    },
+    stepTitle: {
+      ...typography.h4,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    stepDescription: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+    },
+    selectorButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: borderRadius.xl,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      ...shadows.sm,
+    },
+    selectorButtonFilled: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '10',
+    },
+    selectorButtonDisabled: {
+      opacity: 0.5,
+    },
+    selectorLabel: {
+      ...typography.body,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    selectorLabelFilled: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    selectorLabelDisabled: {
+      color: colors.textTertiary,
+    },
+    inputGroup: {
+      marginBottom: spacing.lg,
+    },
+    label: {
+      ...typography.bodySmall,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+      ...typography.body,
+      color: colors.text,
+    },
+    helperText: {
+      ...typography.caption,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+    },
+    validationHint: {
+      ...typography.bodySmall,
+      color: colors.error,
+      marginTop: spacing.md,
+      textAlign: 'center',
+    },
+    errorText: {
+      ...typography.bodySmall,
+      color: colors.error,
+      marginTop: spacing.sm,
+    },
+    pickerItem: {
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    pickerItemSelected: {
+      backgroundColor: colors.primary + '15',
+    },
+    pickerItemText: {
+      ...typography.body,
+      color: colors.text,
+    },
+    pickerItemTextSelected: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    pickerItemSubtext: {
+      ...typography.caption,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    cancelText: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    modalTitle: {
+      ...typography.h5,
+      color: colors.text,
+    },
+    previewCard: {
+      marginBottom: spacing.lg,
+      padding: spacing.lg,
+      alignItems: 'center',
+    },
+    carPreviewContainer: {
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    carBody: {
+      width: 200,
+      height: 80,
+      borderRadius: 20,
+      position: 'relative',
+      borderWidth: 2,
+      borderColor: colors.borderDark,
+      overflow: 'hidden',
+    },
+    carWindow: {
+      position: 'absolute',
+      top: 10,
+      left: 20,
+      right: 20,
+      height: 30,
+      backgroundColor: colors.surfaceDark,
+      borderRadius: 10,
+      opacity: 0.8,
+    },
+    carRoof: {
+      position: 'absolute',
+      top: 5,
+      left: 30,
+      right: 30,
+      height: 15,
+      backgroundColor: colors.surfaceDark,
+      borderRadius: 8,
+      opacity: 0.8,
+    },
+    carWheel: {
+      position: 'absolute',
+      bottom: -10,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: colors.borderDark,
+      borderWidth: 3,
+      borderColor: colors.textTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    wheelInner: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: colors.textTertiary,
+    },
+    carPreviewLabel: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginTop: spacing.md,
+      fontWeight: '500',
+    },
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.md,
+      justifyContent: 'center',
+      marginBottom: spacing.md,
+    },
+    colorSwatch: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...shadows.sm,
+    },
+    whiteSwatch: {
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    colorSwatchSelected: {
+      borderColor: colors.primary,
+      borderWidth: 3,
+      transform: [{ scale: 1.1 }],
+    },
+    whiteSwatchSelected: {
+      borderColor: colors.primary,
+      borderWidth: 3,
+    },
+    swatchCheckmark: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    selectedColorText: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+    },
+    checkboxContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: spacing.lg,
+    },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: borderRadius.sm,
+      marginRight: spacing.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 2,
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkboxTextContainer: {
+      flex: 1,
+    },
+    checkboxLabel: {
+      ...typography.body,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    checkboxHelper: {
+      ...typography.caption,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+    },
+    actionContainer: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    actionButton: {
+      width: '100%',
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+
 // Car preview component
-const CarPreview: React.FC<{ color: CarColor }> = ({ color }) => {
+const CarPreview: React.FC<{ color: CarColor; styles: ReturnType<typeof createStyles> }> = ({ color, styles }) => {
   return (
     <View style={styles.carPreviewContainer}>
       <View style={[styles.carBody, { backgroundColor: color.hex }]}>
@@ -233,7 +601,7 @@ const CarPreview: React.FC<{ color: CarColor }> = ({ color }) => {
 };
 
 // Step indicator component
-const StepIndicator: React.FC<{ currentStep: WizardStep }> = ({ currentStep }) => {
+const StepIndicator: React.FC<{ currentStep: WizardStep; styles: ReturnType<typeof createStyles> }> = ({ currentStep, styles }) => {
   return (
     <View style={styles.stepIndicatorContainer}>
       {[1, 2, 3].map((step) => (
@@ -245,7 +613,7 @@ const StepIndicator: React.FC<{ currentStep: WizardStep }> = ({ currentStep }) =
               currentStep > step && styles.stepDotCompleted,
             ]}
           >
-            {currentStep > step ? <Text style={styles.stepCheckmark}>✓</Text> : null}
+            {currentStep > step ? <MaterialCommunityIcons name="check" size={16} color={colors.white} /> : null}
             {currentStep === step && <Text style={styles.stepNumber}>{step}</Text>}
           </View>
           {step < 3 && (
@@ -270,7 +638,8 @@ const Step1Selection: React.FC<{
   setMake: (make: string) => void;
   model: string;
   setModel: (model: string) => void;
-}> = ({ year, setYear, make, setMake, model, setModel }) => {
+  styles: ReturnType<typeof createStyles>;
+}> = ({ year, setYear, make, setMake, model, setModel, styles }) => {
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMakePicker, setShowMakePicker] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
@@ -463,7 +832,8 @@ const Step1Selection: React.FC<{
 const Step2Color: React.FC<{
   selectedColor: CarColor | null;
   setSelectedColor: (color: CarColor | null) => void;
-}> = ({ selectedColor, setSelectedColor }) => {
+  styles: ReturnType<typeof createStyles>;
+}> = ({ selectedColor, setSelectedColor, styles }) => {
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Choose Color</Text>
@@ -473,7 +843,7 @@ const Step2Color: React.FC<{
 
       {/* Car Preview */}
       <Card style={styles.previewCard}>
-        <CarPreview color={selectedColor || CAR_COLORS[0]} />
+        <CarPreview color={selectedColor || CAR_COLORS[0]} styles={styles} />
       </Card>
 
       {/* Color Grid */}
@@ -492,7 +862,7 @@ const Step2Color: React.FC<{
           >
             {selectedColor?.hex === color.hex && (
               <View style={styles.swatchCheckmark}>
-                <Text style={styles.swatchCheckmarkText}>✓</Text>
+                <MaterialCommunityIcons name="check" size={16} color={colors.white} />
               </View>
             )}
           </TouchableOpacity>
@@ -514,6 +884,8 @@ const Step3Details: React.FC<{
   setCountryFormat: (format: CountryFormat) => void;
   isDefault: boolean;
   setIsDefault: (value: boolean) => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useTheme>['colors'];
 }> = ({
   licensePlate,
   setLicensePlate,
@@ -521,6 +893,8 @@ const Step3Details: React.FC<{
   setCountryFormat,
   isDefault,
   setIsDefault,
+  styles,
+  colors,
 }) => {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
@@ -588,7 +962,7 @@ const Step3Details: React.FC<{
         onPress={() => setIsDefault(!isDefault)}
       >
         <View style={[styles.checkbox, isDefault && styles.checkboxChecked]}>
-          {isDefault && <Text style={styles.checkmark}>✓</Text>}
+          {isDefault && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
         </View>
         <View style={styles.checkboxTextContainer}>
           <Text style={styles.checkboxLabel}>Set as default vehicle</Text>
@@ -656,6 +1030,9 @@ export const AddVehicleWizardScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const dispatch = useAppDispatch();
+  const { colors } = useTheme();
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const vehicleId = route.params?.vehicleId;
 
@@ -822,6 +1199,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
             setMake={setMake}
             model={model}
             setModel={setModel}
+            styles={styles}
           />
         );
       case 2:
@@ -829,6 +1207,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
           <Step2Color
             selectedColor={selectedColor}
             setSelectedColor={setSelectedColor}
+            styles={styles}
           />
         );
       case 3:
@@ -840,6 +1219,8 @@ export const AddVehicleWizardScreen: React.FC = () => {
             setCountryFormat={setCountryFormat}
             isDefault={isDefault}
             setIsDefault={setIsDefault}
+            styles={styles}
+            colors={colors}
           />
         );
       default:
@@ -852,7 +1233,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {vehicleId ? 'Edit Vehicle' : 'Add Vehicle'}
@@ -862,7 +1243,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
 
       {/* Step Indicator */}
       <View style={styles.progressContainer}>
-        <StepIndicator currentStep={currentStep} />
+        <StepIndicator currentStep={currentStep} styles={styles} />
       </View>
 
       {/* Step Content */}
@@ -912,389 +1293,5 @@ export const AddVehicleWizardScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonText: {
-    fontSize: 28,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    ...typography.h4,
-    color: colors.text,
-  },
-  progressContainer: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  stepIndicatorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepIndicatorItem: {
-    alignItems: 'center',
-  },
-  stepDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.background,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepDotActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '20',
-  },
-  stepDotCompleted: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-   stepNumber: {
-     ...typography.bodySmall,
-     fontWeight: '600',
-     color: colors.textSecondary,
-   },
-   stepCheckmark: {
-     color: colors.white,
-     fontSize: 18,
-     fontWeight: '700',
-   },
-  stepLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.xs,
-  },
-  stepLineActive: {
-    backgroundColor: colors.primary,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  stepContent: {
-    flex: 1,
-  },
-  stepTitle: {
-    ...typography.h4,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  stepDescription: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-  },
-  selectorButton: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: borderRadius.xl,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    ...shadows.sm,
-  },
-  selectorButtonFilled: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
-  },
-  selectorButtonDisabled: {
-    opacity: 0.5,
-  },
-  selectorLabel: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  selectorLabelFilled: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  selectorLabelDisabled: {
-    color: colors.textTertiary,
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
-  label: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    ...typography.body,
-    color: colors.text,
-  },
-  helperText: {
-    ...typography.caption,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
-  },
-  validationHint: {
-    ...typography.bodySmall,
-    color: colors.error,
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  errorText: {
-    ...typography.bodySmall,
-    color: colors.error,
-    marginTop: spacing.sm,
-  },
-  pickerItem: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  pickerItemSelected: {
-    backgroundColor: colors.primary + '15',
-  },
-  pickerItemText: {
-    ...typography.body,
-    color: colors.text,
-  },
-  pickerItemTextSelected: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  pickerItemSubtext: {
-    ...typography.caption,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  cancelText: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  modalTitle: {
-    ...typography.h5,
-    color: colors.text,
-  },
-  previewCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  carPreviewContainer: {
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  carBody: {
-    width: 200,
-    height: 80,
-    borderRadius: 20,
-    position: 'relative',
-    borderWidth: 2,
-    borderColor: colors.borderDark,
-    overflow: 'hidden',
-  },
-  carWindow: {
-    position: 'absolute',
-    top: 10,
-    left: 20,
-    right: 20,
-    height: 30,
-    backgroundColor: colors.surfaceDark,
-    borderRadius: 10,
-    opacity: 0.8,
-  },
-  carRoof: {
-    position: 'absolute',
-    top: 5,
-    left: 30,
-    right: 30,
-    height: 15,
-    backgroundColor: colors.surfaceDark,
-    borderRadius: 8,
-    opacity: 0.8,
-  },
-  carWheel: {
-    position: 'absolute',
-    bottom: -10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.borderDark,
-    borderWidth: 3,
-    borderColor: colors.textTertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  wheelInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.textTertiary,
-  },
-  carPreviewLabel: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-    fontWeight: '500',
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  colorSwatch: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.sm,
-  },
-  whiteSwatch: {
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  colorSwatchSelected: {
-    borderColor: colors.primary,
-    borderWidth: 3,
-    transform: [{ scale: 1.1 }],
-  },
-  whiteSwatchSelected: {
-    borderColor: colors.primary,
-    borderWidth: 3,
-  },
-  swatchCheckmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swatchCheckmarkText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  selectedColorText: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.lg,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    marginRight: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  checkmark: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  checkboxTextContainer: {
-    flex: 1,
-  },
-  checkboxLabel: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  checkboxHelper: {
-    ...typography.caption,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
-  },
-  actionContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  actionButton: {
-    width: '100%',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlay,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
 
 export default AddVehicleWizardScreen;

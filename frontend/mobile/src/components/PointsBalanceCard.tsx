@@ -13,7 +13,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../types';
 import { redeemPoints } from '../store/slices/pointsSlice';
 import { Button } from './Button';
-import { colors, spacing, borderRadius, shadows } from '../theme';
+import { spacing, borderRadius, shadows } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 // Star icon SVG for points
 const starIcon = `
@@ -23,10 +24,73 @@ const starIcon = `
 `;
 
 export const PointsBalanceCard: React.FC = () => {
+  const { colors } = useTheme();
   const dispatch = useDispatch();
   const balance = useSelector((state: RootState) => state.points.balance);
   const loading = useSelector((state: RootState) => state.points.loading);
   const error = useSelector((state: RootState) => state.points.error);
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xxl,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+      marginHorizontal: spacing.md,
+      marginVertical: spacing.sm,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    iconContainer: {
+      width: 32,
+      height: 32,
+      borderRadius: borderRadius.lg,
+      backgroundColor: 'rgba(250, 204, 21, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    label: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    balanceContainer: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      marginBottom: spacing.md,
+    },
+    balanceText: {
+      fontSize: 48,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      lineHeight: 56,
+    },
+    pointsLabel: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginLeft: spacing.xs,
+      marginBottom: 8,
+    },
+    errorText: {
+      color: colors.error,
+      fontSize: 12,
+      marginBottom: spacing.md,
+    },
+    redeemButton: {
+      marginTop: spacing.sm,
+    },
+  }), [colors]);
 
   const handleRedeem = () => {
     // Open a modal or navigate to redeem screen
@@ -42,7 +106,7 @@ export const PointsBalanceCard: React.FC = () => {
         </View>
         <Text style={styles.label}>Points Balance</Text>
       </View>
-      
+
       <View style={styles.balanceContainer}>
         <Text style={styles.balanceText}>
           {balance?.balance?.toLocaleString() || '0'}
@@ -63,65 +127,3 @@ export const PointsBalanceCard: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(250, 204, 21, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  balanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: spacing.md,
-  },
-  balanceText: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    lineHeight: 56,
-  },
-  pointsLabel: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
-    marginBottom: 8,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 12,
-    marginBottom: spacing.md,
-  },
-  redeemButton: {
-    marginTop: spacing.sm,
-  },
-});
