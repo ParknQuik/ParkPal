@@ -1,9 +1,9 @@
 # ParkPal Project Status Report
 
-**Last Updated:** May 4, 2026
-**Current Branch:** `feature/explore-page-revamp`
-**Production Readiness:** 95/100 (Explore Page Revamp all 5 phases complete + network detection bugfix + Dark/Light Mode migration complete)
-**Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme())
+**Last Updated:** May 11, 2026
+**Current Branch:** `feature/dark-light-mode`
+**Production Readiness:** 96/100 (Explore Page Revamp all 5 phases complete + network detection bugfix + Dark/Light Mode migration complete + penalty system implementation)
+**Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
 ---
 
@@ -14,6 +14,7 @@
  | May 4, 2026 | Kilo Code | Dark/Light Mode Phase 2 in progress: Fixed NotificationsScreen.tsx (useTheme import, moved styles inside component with useMemo), migrated ReferralScreen.tsx and PointsHistoryScreen.tsx to use useTheme() hook with dynamic styles, StatusBar fixes applied to MyBookingsScreen, QRScannerScreen, EarningsScreen, ListYourSpot, MyListingsScreen, PointsHistoryScreen, ReferralScreen | 93/100 |
 | May 4, 2026 | Kilo Code | Dark/Light Mode COMPLETE: Migrated all remaining components (Chip, PhotoUploader, YearSelector, MakeModelSelector, ColorPicker, CarPreview, SkeletonLoader, Avatar, BottomSheet) to useTheme() hook. Verified all 27 screens and 28 components now use useTheme() with useMemo for dynamic styles. No remaining direct `colors` imports from theme in any screen or component. | 95/100 |
   | May 4, 2026 | Kilo Code | Fixed ReferralScreen and PointsHistoryScreen: useStatusBarStyle hook integration with expo-status-bar, moved useStatusBarStyle() calls to top of components (Rules of Hooks compliance), fixed StatusBar style values from 'light-content'/'dark-content' to proper 'light'/'dark', improved PointsHistoryItem with formatType function at file top | 95/100 |
+| May 11, 2026 | Kilo Code | Implemented penalty system for late returns and rule violations: added penalty fields to User schema, created penalty service, updated marketplace controller and points system, enhanced booking expiry service, updated 20+ mobile screens to display penalty information and warnings, improved navigation and header components | 96/100 |
 | May 4, 2026 | Kilo Code | Fixed HomeDashboard.tsx syntax errors (broken hooks, missing brackets, useStatusBarStyle hook placement), removed console.log statements from PointsHistoryScreen.tsx and api.ts, cleaned up unused imports, added missing /points/history backend route for PointsHistoryScreen API calls | 95/100 |
  | May 4, 2026 | Kilo Code | Explore Page Revamp Phase 5 complete (marker clustering, offline fallback, LoadingSkeleton, haptics, a11y, perf), fixed network detection false-positives (useNetworkStatus hook: Google HEAD→generate_204 GET) | 93/100 |
 | May 2, 2026 | Kilo Code | Fixed H12 (error handler), H14 (host cannot book own slot) | 75/100 |
