@@ -19,6 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { haptics } from '../utils/haptics';
 import { earningsAPI } from '../services/api';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AppHeader } from '../components/AppHeader';
 
 interface EarningsSummary {
   totalEarned: number;
@@ -138,28 +139,6 @@ export const EarningsScreen: React.FC = () => {
     },
     safeArea: {
       flex: 1,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: borderRadius.md,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    title: {
-      ...typography.h2,
-      color: colors.textPrimary,
-    },
-    placeholder: {
-      width: 40,
     },
     scrollView: {
       flex: 1,
@@ -366,39 +345,27 @@ export const EarningsScreen: React.FC = () => {
     },
   }), [colors]);
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
-        <SafeAreaView edges={['top']} style={styles.safeArea}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.title}>Earnings</Text>
-            <View style={styles.placeholder} />
-          </View>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
+   if (loading) {
+     return (
+       <View style={styles.container}>
+         <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
+         <SafeAreaView edges={['top']} style={styles.safeArea}>
+           <AppHeader title="Earnings" onBack={handleBack} />
+           <View style={styles.loadingContainer}>
+             <ActivityIndicator size="large" color={colors.primary} />
+           </View>
+         </SafeAreaView>
+       </View>
+     );
+   }
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Earnings</Text>
-          <View style={styles.placeholder} />
-        </View>
+   return (
+     <View style={styles.container}>
+       <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
+       <SafeAreaView edges={['top']} style={styles.safeArea}>
+         <AppHeader title="Earnings" onBack={handleBack} />
 
-        <ScrollView
+         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}

@@ -29,6 +29,7 @@ import { typography, spacing, borderRadius, shadows } from '../theme';
 import { Chip } from '../components/Chip';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { AppHeader } from '../components/AppHeader';
 
 // Types
 type WizardStep = 1 | 2 | 3;
@@ -216,38 +217,19 @@ const COUNTRY_FORMATS: CountryFormat[] = [
 
 // Styles factory function
 const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      ...typography.h4,
-      color: colors.text,
-    },
-    progressContainer: {
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.xl,
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    stepIndicatorContainer: {
+   StyleSheet.create({
+     container: {
+       flex: 1,
+       backgroundColor: colors.background,
+     },
+     progressContainer: {
+       paddingVertical: spacing.lg,
+       paddingHorizontal: spacing.xl,
+       backgroundColor: colors.surface,
+       borderBottomWidth: 1,
+       borderBottomColor: colors.border,
+     },
+     stepIndicatorContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -581,7 +563,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
   });
 
 // Car preview component
-const CarPreview: React.FC<{ color: CarColor; styles: ReturnType<typeof createStyles> }> = ({ color, styles }) => {
+const CarPreview: React.FC<{ color: CarColor; styles: ReturnType<typeof createStyles>; colors: ReturnType<typeof useTheme>['colors'] }> = ({ color, styles, colors }) => {
   return (
     <View style={styles.carPreviewContainer}>
       <View style={[styles.carBody, { backgroundColor: color.hex }]}>
@@ -601,7 +583,11 @@ const CarPreview: React.FC<{ color: CarColor; styles: ReturnType<typeof createSt
 };
 
 // Step indicator component
-const StepIndicator: React.FC<{ currentStep: WizardStep; styles: ReturnType<typeof createStyles> }> = ({ currentStep, styles }) => {
+const StepIndicator: React.FC<{
+  currentStep: WizardStep;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useTheme>['colors'];
+}> = ({ currentStep, styles, colors }) => {
   return (
     <View style={styles.stepIndicatorContainer}>
       {[1, 2, 3].map((step) => (
@@ -613,7 +599,9 @@ const StepIndicator: React.FC<{ currentStep: WizardStep; styles: ReturnType<type
               currentStep > step && styles.stepDotCompleted,
             ]}
           >
-            {currentStep > step ? <MaterialCommunityIcons name="check" size={16} color={colors.white} /> : null}
+            {currentStep > step ? (
+              <MaterialCommunityIcons name="check" size={16} color={colors.white} />
+            ) : null}
             {currentStep === step && <Text style={styles.stepNumber}>{step}</Text>}
           </View>
           {step < 3 && (
@@ -833,7 +821,8 @@ const Step2Color: React.FC<{
   selectedColor: CarColor | null;
   setSelectedColor: (color: CarColor | null) => void;
   styles: ReturnType<typeof createStyles>;
-}> = ({ selectedColor, setSelectedColor, styles }) => {
+  colors: ReturnType<typeof useTheme>['colors'];
+}> = ({ selectedColor, setSelectedColor, styles, colors }) => {
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Choose Color</Text>
@@ -843,7 +832,7 @@ const Step2Color: React.FC<{
 
       {/* Car Preview */}
       <Card style={styles.previewCard}>
-        <CarPreview color={selectedColor || CAR_COLORS[0]} styles={styles} />
+        <CarPreview color={selectedColor || CAR_COLORS[0]} styles={styles} colors={colors} />
       </Card>
 
       {/* Color Grid */}
@@ -1205,10 +1194,11 @@ export const AddVehicleWizardScreen: React.FC = () => {
       case 2:
         return (
           <Step2Color
-            selectedColor={selectedColor}
-            setSelectedColor={setSelectedColor}
-            styles={styles}
-          />
+             selectedColor={selectedColor}
+             setSelectedColor={setSelectedColor}
+             styles={styles}
+             colors={colors}
+           />
         );
       case 3:
         return (
@@ -1231,19 +1221,14 @@ export const AddVehicleWizardScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {vehicleId ? 'Edit Vehicle' : 'Add Vehicle'}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AppHeader
+        title={vehicleId ? 'Edit Vehicle' : 'Add Vehicle'}
+        onBack={handleBack}
+      />
 
       {/* Step Indicator */}
       <View style={styles.progressContainer}>
-        <StepIndicator currentStep={currentStep} styles={styles} />
+        <StepIndicator currentStep={currentStep} styles={styles} colors={colors} />
       </View>
 
       {/* Step Content */}

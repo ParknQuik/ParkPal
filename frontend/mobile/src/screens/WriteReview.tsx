@@ -17,6 +17,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { AppHeader } from '../components/AppHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -36,27 +37,6 @@ export const WriteReview: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerButton: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.textPrimary,
     },
     spotCard: {
       backgroundColor: colors.surface,
@@ -299,16 +279,7 @@ export const WriteReview: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => navigation.goBack()}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Write a Review</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <AppHeader title="Write a Review" onBack={() => navigation.goBack()} />
 
         {/* Spot Card */}
         <View style={styles.spotCard}>

@@ -5,22 +5,31 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAppSelector } from '../store';
+import { useAppSelector, useAppDispatch } from '../store';
 import { ReferralCodeDisplay } from '../components/ReferralCodeDisplay';
 import { useTheme } from '../context/ThemeContext';
 import { typography, spacing, borderRadius } from '../theme';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { StatusBar } from 'expo-status-bar';
+import { fetchReferralStats } from '../store/slices/pointsSlice';
+import { AppHeader } from '../components/AppHeader';
 
 export const ReferralScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const dispatch = useAppDispatch();
+
+  const statusBarStyle = useStatusBarStyle();
 
   const referralStats = useAppSelector((state) => state.points.referralStats);
+
+  useEffect(() => {
+    dispatch(fetchReferralStats());
+  }, [dispatch]);
 
   const handleBack = () => {
     navigation.goBack();
@@ -54,37 +63,7 @@ export const ReferralScreen: React.FC = () => {
       backgroundColor: colors.background,
     },
     safeArea: {
-      backgroundColor: colors.white,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: borderRadius.md,
-      backgroundColor: colors.background,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    backIcon: {
-      fontSize: 24,
-      color: colors.textPrimary,
-      fontWeight: '600',
-    },
-    title: {
-      ...typography.h5,
-      color: colors.textPrimary,
-      fontWeight: '700',
-    },
-    placeholder: {
-      width: 40,
+      backgroundColor: colors.primary,
     },
     scrollView: {
       flex: 1,
@@ -163,9 +142,12 @@ export const ReferralScreen: React.FC = () => {
     },
     statsRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.md,
       marginBottom: spacing.sm,
     },
     statCard: {
+      flex: 1,
       backgroundColor: colors.background,
       borderRadius: borderRadius.lg,
       padding: spacing.lg,
@@ -193,16 +175,10 @@ export const ReferralScreen: React.FC = () => {
 
   return (
     <>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.title}>Referral Program</Text>
-            <View style={styles.placeholder} />
-          </View>
+          <AppHeader title="Referral Program" onBack={handleBack} />
           <ScrollView style={styles.scrollView}>
             <View style={styles.scrollContent}>
               <ReferralCodeDisplay />

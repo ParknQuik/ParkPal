@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { AppHeader } from '../components/AppHeader';
 
 const FAQItem = ({ question, answer }: { question: string; answer: string }) => {
   const { colors } = useTheme();
@@ -39,23 +40,14 @@ export const HelpCenterScreen: React.FC = () => {
   const navigation = useNavigation();
   const { colors } = useTheme();
 
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.textPrimary,
     },
     content: {
       flex: 1,
@@ -104,13 +96,7 @@ export const HelpCenterScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Help Center</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <AppHeader title="Help Center" onBack={handleBack} />
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>

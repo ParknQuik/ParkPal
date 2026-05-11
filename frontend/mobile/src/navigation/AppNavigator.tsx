@@ -6,8 +6,8 @@ import { loadAnalyticsOptIn, setAnalyticsOptIn } from '../store/slices/analytics
 import { analyticsAPI } from '../services/api';
 import GeofenceService from '../services/analyticsGeofenceService';
 import { AnalyticsOptInModal } from '../components/AnalyticsOptInModal';
-import { AuthStack } from './AuthStack';
 import { MainStack } from './MainStack';
+import { AuthStack } from "./AuthStack";
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Zone } from '../types';
 import { useTheme } from '../context/ThemeContext';

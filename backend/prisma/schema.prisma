@@ -23,6 +23,10 @@ model User {
   resetPasswordExpires DateTime?           @map("reset_password_expires")
   googleId             String?             @unique @map("google_id")
   pushToken            String?             @map("push_token")
+  noShowCount          Int                 @default(0) @map("no_show_count")
+  lateCancelCount      Int                 @default(0) @map("late_cancel_count")
+  suspendedUntil       DateTime?           @map("suspended_until")
+  lastStrikeAt         DateTime?           @map("last_strike_at")
   activityEvents       ActivityEvent[]
   bookings             Booking[]
   notifications        Notification[]

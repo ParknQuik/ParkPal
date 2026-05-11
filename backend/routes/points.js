@@ -18,6 +18,7 @@ module.exports = (app) => {
   app.get('/points/balance', authenticate, asyncHandler(pointsController.getBalance));
   app.post('/points/earn', authenticate, validateBody(earnPointsSchema), asyncHandler(pointsController.earnPoints));
   app.post('/points/redeem', authenticate, validateBody(redeemPointsSchema), asyncHandler(pointsController.redeemPoints));
+  app.get('/points/history', authenticate, asyncHandler(pointsController.getHistory));
 
   // Referral routes
   app.post('/referrals/generate', authenticate, asyncHandler(pointsController.generateReferralCode));

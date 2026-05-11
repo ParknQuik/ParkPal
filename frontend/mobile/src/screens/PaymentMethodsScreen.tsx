@@ -13,6 +13,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
+import { AppHeader } from '../components/AppHeader';
 
 interface PaymentMethod {
   id: string;
@@ -94,35 +95,6 @@ export const PaymentMethodsScreen: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.white,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    backIcon: {
-      fontSize: 32,
-      color: colors.textPrimary,
-      fontWeight: '300',
-    },
-    headerTitle: {
-      ...typography.h5,
-      color: colors.textPrimary,
-      fontWeight: '700',
-    },
-    headerRight: {
-      width: 40,
     },
     content: {
       padding: spacing.lg,
@@ -272,13 +244,7 @@ export const PaymentMethodsScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>‹</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment Methods</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <AppHeader title="Payment Methods" onBack={handleBack} />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>

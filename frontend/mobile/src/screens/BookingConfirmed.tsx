@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { AppHeader } from '../components/AppHeader';
 
 export const BookingConfirmed: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -79,34 +80,14 @@ export const BookingConfirmed: React.FC = () => {
     navigation.navigate('QRScanner' as never, { mode: 'checkin', bookingId } as never);
   };
 
+  const getHeaderTitle = () => {
+    return paymentMethod === 'cash' ? 'Booking Confirmed' : 'Payment Success';
+  };
+
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: colors.surface,
-    },
-    headerButton: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerButtonText: {
-      fontSize: 20,
-      color: colors.textPrimary,
-      fontWeight: '500',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.textPrimary,
     },
     successContainer: {
       alignItems: 'center',
@@ -311,13 +292,7 @@ export const BookingConfirmed: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleClose}>
-            <Text style={styles.headerButtonText}>✕</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{paymentMethod === 'cash' ? 'Booking Confirmed' : 'Payment Success'}</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <AppHeader title={getHeaderTitle()} onBack={handleClose} />
 
         {/* Success Animation */}
         <Animated.View

@@ -23,7 +23,9 @@ import { PointsHistoryScreen } from '../screens/PointsHistoryScreen';
 import { ReferralScreen } from '../screens/ReferralScreen';
 import { RootStackParamList } from '../types';
 
-const Stack = createStackNavigator<RootStackParamList>();
+export type MainStackParamList = RootStackParamList;
+
+const Stack = createStackNavigator<MainStackParamList>();
 
 export const MainStack: React.FC = () => {
   return (

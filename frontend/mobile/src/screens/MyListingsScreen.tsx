@@ -26,7 +26,7 @@ import { accessibility } from '../utils/accessibility';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const MyListingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation() as any;
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
@@ -64,7 +64,7 @@ export const MyListingsScreen: React.FC = () => {
 
   const handleEditPress = useCallback(async (listingId: number) => {
     await haptics.light();
-    navigation.navigate('ListSpot' as never, { listingId, mode: 'edit' } as never);
+    navigation.navigate('ListSpot', { listingId, mode: 'edit' });
   }, [navigation]);
 
   const handleToggleAvailability = useCallback(async (listingId: number, currentStatus: boolean) => {

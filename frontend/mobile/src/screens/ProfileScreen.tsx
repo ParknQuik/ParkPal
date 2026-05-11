@@ -24,7 +24,7 @@ import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 
 export const ProfileScreen: React.FC = () => {
-  const navigation = useNavigation();
+    const navigation = useNavigation() as any;
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const themeMode = useAppSelector((state) => state.settings.themeMode);
@@ -167,14 +167,14 @@ export const ProfileScreen: React.FC = () => {
           icon: 'car-outline' as const,
           iconColor: colors.primary,
           label: 'My Vehicles',
-          onPress: () => navigation.navigate('MyVehicles' as never),
+          onPress: () => navigation.navigate('MyVehicles' ),
         },
 
         {
           icon: 'format-list-bulleted' as const,
           iconColor: colors.accentYellow,
           label: 'My Listings',
-          onPress: () => navigation.navigate('MyListings' as never),
+          onPress: () => navigation.navigate('MyListings' ),
         },
       ],
     },
@@ -185,31 +185,31 @@ export const ProfileScreen: React.FC = () => {
           icon: 'account-circle' as const,
           iconColor: colors.accentOrange,
           label: 'Personal Information',
-          onPress: () => navigation.navigate('EditProfile' as never),
+          onPress: () => navigation.navigate('EditProfile' ),
         },
         {
           icon: 'bell-outline' as const,
           iconColor: colors.accentYellow,
           label: 'Notifications',
-          onPress: () => navigation.navigate('Notifications' as never),
+          onPress: () => navigation.navigate('Notifications' ),
         },
         {
           icon: 'shield-lock-outline' as const,
           iconColor: colors.primary,
           label: 'Security & Privacy',
-          onPress: () => navigation.navigate('SecurityPrivacy' as never),
+          onPress: () => navigation.navigate('SecurityPrivacy' ),
         },
         {
           icon: 'star-circle-outline' as const,
           iconColor: colors.accentYellow,
           label: 'Points History',
-          onPress: () => navigation.navigate('PointsHistory' as never),
+          onPress: () => navigation.navigate('PointsHistory' ),
         },
         {
           icon: 'account-multiple-outline' as const,
           iconColor: colors.info,
           label: 'Referrals',
-          onPress: () => navigation.navigate('Referral' as never),
+          onPress: () => navigation.navigate('Referral' ),
         },
       ],
     },
@@ -220,7 +220,7 @@ export const ProfileScreen: React.FC = () => {
           icon: 'help-circle-outline' as const,
           iconColor: colors.textTertiary,
           label: 'Help Center',
-          onPress: () => navigation.navigate('HelpCenter' as never),
+          onPress: () => navigation.navigate('HelpCenter' ),
         },
         {
           icon: 'logout' as const,
@@ -484,7 +484,7 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <TouchableOpacity
               style={styles.perksButton}
-              onPress={() => navigation.navigate('Earnings' as never)}
+              onPress={() => navigation.navigate('Earnings' )}
             >
               <Text style={styles.perksButtonText}>Perks</Text>
             </TouchableOpacity>

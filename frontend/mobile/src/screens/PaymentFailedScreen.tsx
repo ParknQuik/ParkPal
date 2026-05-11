@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { AppHeader } from '../components/AppHeader';
 
 const orderData = {
   image: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
@@ -31,41 +32,22 @@ export const PaymentFailedScreen: React.FC = () => {
   const { error, bookingId } = route.params as { error: string; bookingId: number };
   const { colors } = useTheme();
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
+   const handleBack = () => {
+     navigation.goBack();
+   };
 
-  const handleTryAgain = () => {
-    navigation.goBack();
-  };
+   const handleTryAgain = () => {
+     navigation.goBack();
+   };
 
-  const handleUseDifferentPayment = () => {
-    navigation.goBack();
-  };
+   const handleUseDifferentPayment = () => {
+     navigation.goBack();
+   };
 
-  const styles = React.useMemo(() => StyleSheet.create({
+   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: colors.white,
-    },
-    headerButton: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.textPrimary,
     },
     errorIconContainer: {
       alignItems: 'center',
@@ -234,13 +216,7 @@ export const PaymentFailedScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment Failed</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <AppHeader title="Payment Failed" onBack={handleBack} />
 
         {/* Error Icon */}
         <View style={styles.errorIconContainer}>

@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAppDispatch, useAppSelector } from '../store';
 import { setThemeMode } from '../store/slices/settingsSlice';
+import { AppHeader } from '../components/AppHeader';
 
 export const SecurityPrivacyScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -23,20 +24,14 @@ export const SecurityPrivacyScreen: React.FC = () => {
     dispatch(setThemeMode(value));
   };
 
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerTitle: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: colors.textPrimary,
     },
     content: {
       flex: 1,
@@ -96,9 +91,7 @@ export const SecurityPrivacyScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Security & Privacy</Text>
-      </View>
+      <AppHeader title="Security & Privacy" onBack={handleBack} />
       <ScrollView style={styles.content}>
         <View style={styles.themeSection}>
           <Text style={styles.themeLabel}>Appearance</Text>

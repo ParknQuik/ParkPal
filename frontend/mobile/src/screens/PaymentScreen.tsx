@@ -13,9 +13,10 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { paymentAPI, marketplaceAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppHeader } from '../components/AppHeader';
 
 export const PaymentScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation() as any;
   const route = useRoute();
   const { colors } = useTheme();
   const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, createBookingOnSuccess, rentalMode, maxDuration } = route.params as {
@@ -78,21 +79,21 @@ export const PaymentScreen: React.FC = () => {
 
         const response = await marketplaceAPI.confirmBooking(finalBookingId);
 
-        Alert.alert(
-          'Booking Confirmed!',
-          'Please pay in cash when you arrive at the parking location.',
-          [{ text: 'OK', onPress: () => navigation.navigate('PaymentSuccess' as never, {
-            paymentId: bookingId,
-            bookingId,
-            amount: orderData.total,
-            spotName: spotName || 'Parking Spot',
-            spotAddress: spotAddress || '',
-            startTime: startTime || '',
-            endTime: endTime || '',
-            paymentMethod: selectedPayment,
-            rentalMode,
-          } as never) }]
-        );
+Alert.alert(
+           'Booking Confirmed!',
+           'Please pay in cash when you arrive at the parking location.',
+           [{ text: 'OK', onPress: () => navigation.navigate('PaymentSuccess', {
+             paymentId: bookingId,
+             bookingId,
+             amount: orderData.total,
+             spotName: spotName || 'Parking Spot',
+             spotAddress: spotAddress || '',
+             startTime: startTime || '',
+             endTime: endTime || '',
+             paymentMethod: selectedPayment,
+             rentalMode,
+           }) }]
+         );
         return;
      } catch (err: any) {
          if (err.response?.status === 409) {
@@ -135,17 +136,17 @@ export const PaymentScreen: React.FC = () => {
         paymentIntentId,
       });
 
-      navigation.navigate('PaymentSuccess' as never, {
-        paymentId: confirmResponse.data.paymentId || paymentIntentId,
-        bookingId,
-        amount: orderData.total,
-        spotName: spotName || 'Parking Spot',
-        spotAddress: spotAddress || '',
-        startTime: startTime || '',
-        endTime: endTime || '',
-        paymentMethod: selectedPayment,
-        rentalMode,
-      } as never);
+navigation.navigate('PaymentSuccess', {
+         paymentId: confirmResponse.data.paymentId || paymentIntentId,
+         bookingId,
+         amount: orderData.total,
+         spotName: spotName || 'Parking Spot',
+         spotAddress: spotAddress || '',
+         startTime: startTime || '',
+         endTime: endTime || '',
+         paymentMethod: selectedPayment,
+         rentalMode,
+       });
      } catch (err: any) {
 
        if (err.response?.status === 409) {
@@ -156,10 +157,10 @@ export const PaymentScreen: React.FC = () => {
         );
         return;
       }
-      navigation.navigate('PaymentFailed' as never, {
-        error: err.response?.data?.error || err.message || 'Payment failed',
-        bookingId: bookingId,
-      } as never);
+navigation.navigate('PaymentFailed', {
+         error: err.response?.data?.error || err.message || 'Payment failed',
+         bookingId: bookingId,
+       });
     } finally {
       setLoading(false);
     }
@@ -177,25 +178,6 @@ export const PaymentScreen: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: colors.surface,
-    },
-    headerButton: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.textPrimary,
     },
     priceCard: {
       backgroundColor: colors.surface,
@@ -340,13 +322,7 @@ export const PaymentScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <AppHeader title="Payment" onBack={handleBack} />
 
         {/* Price Breakdown */}
         <View style={styles.priceCard}>

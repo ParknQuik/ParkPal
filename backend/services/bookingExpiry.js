@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { applyStrike } = require('./penaltyService');
 
 async function checkExpiredBookings() {
   try {
@@ -68,7 +69,10 @@ async function processExpiredBooking(booking) {
         })
       }
     });
-    
+
+    const penalty = await applyStrike(booking.userId, 'no_show', booking.id, booking.slot.address);
+    console.log(`[Booking Expiry] No-show strike applied to user ${booking.userId} — total strikes: ${penalty.totalStrikes}`);
+
     await prisma.notification.create({
       data: {
         userId: booking.slot.ownerId,
@@ -81,7 +85,7 @@ async function processExpiredBooking(booking) {
         })
       }
     });
-    
+
     console.log(`[Booking Expiry] Booking ${booking.id} marked as expired`);
   } catch (error) {
     console.error(`[Booking Expiry] Failed to process booking ${booking.id}:`, error);
@@ -164,6 +168,9 @@ async function processMissedOpenTimeBooking(booking, thresholdMinutes) {
       }
     });
     
+    const penalty = await applyStrike(booking.userId, 'no_show', booking.id, booking.slot.address);
+    console.log(`[Booking Expiry] No-show strike applied to user ${booking.userId} — total strikes: ${penalty.totalStrikes}`);
+
     await prisma.notification.create({
       data: {
         userId: booking.slot.ownerId,
@@ -177,7 +184,7 @@ async function processMissedOpenTimeBooking(booking, thresholdMinutes) {
         })
       }
     });
-    
+
     console.log(`[Booking Expiry] Open-time booking ${booking.id} marked as expired`);
   } catch (error) {
     console.error(`[Booking Expiry] Failed to process open-time booking ${booking.id}:`, error);

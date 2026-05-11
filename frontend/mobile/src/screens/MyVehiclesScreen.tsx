@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
   getVehicles,
@@ -26,6 +26,7 @@ import { Card } from '../components/Card';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../types';
+import { AppHeader } from '../components/AppHeader';
 
 export const MyVehiclesScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'MyVehicles'>>();
@@ -39,25 +40,6 @@ export const MyVehiclesScreen: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      ...typography.h3,
-      color: colors.text,
     },
     addButton: {
       width: 40,
@@ -225,15 +207,15 @@ export const MyVehiclesScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Vehicles</Text>
-        <TouchableOpacity onPress={handleAddVehicle} style={styles.addButton}>
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="My Vehicles"
+        onBack={handleBack}
+        rightAction={
+          <TouchableOpacity onPress={handleAddVehicle} style={styles.addButton}>
+            <Text style={styles.addButtonText}>+</Text>
+          </TouchableOpacity>
+        }
+      />
 
       {error && (
         <View style={styles.errorBanner}>

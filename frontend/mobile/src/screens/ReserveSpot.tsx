@@ -18,6 +18,7 @@ import DateTimePicker, {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI, vehiclesAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { AppHeader } from '../components/AppHeader';
 
 const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-US', {
@@ -203,34 +204,6 @@ export const ReserveSpot: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
-    placeholder: {
-      width: 40,
-    },
-    content: {
-      flex: 1,
-      padding: 16,
     },
     loadingContainer: {
       flex: 1,
@@ -555,16 +528,7 @@ export const ReserveSpot: React.FC = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reserve Spot</Text>
-          <View style={styles.placeholder} />
-        </View>
+        <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading spot details...</Text>
@@ -583,16 +547,7 @@ export const ReserveSpot: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reserve Spot</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.spotCard}>
