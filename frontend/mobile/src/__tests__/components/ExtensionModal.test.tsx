@@ -80,7 +80,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     
     const { marketplaceAPI } = require('../../services/api');
     marketplaceAPI.getMyBookings.mockResolvedValue({
-      data: { bookings: [mockBooking] },
+      data: [mockBooking],
     });
   });
 
@@ -101,7 +101,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await waitFor(() => {
-      expect(getByText('Extend Time')).toBeTruthy();
+      expect(getByText('Extend')).toBeTruthy();
     });
   });
 
@@ -119,7 +119,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await waitFor(() => {
-      expect(queryByText('Extend Time')).toBeNull();
+      expect(queryByText('Extend')).toBeNull();
     });
   });
 
@@ -136,7 +136,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await waitFor(() => {
-      expect(queryByText('Extend Time')).toBeNull();
+      expect(queryByText('Extend')).toBeNull();
     });
   });
 
@@ -163,11 +163,11 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await waitFor(() => {
-      expect(getByText('Extend Time')).toBeTruthy();
+      expect(getByText('Extend')).toBeTruthy();
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend Time'));
+      fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -200,7 +200,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend Time'));
+      fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -251,7 +251,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend Time'));
+      fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -309,7 +309,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend Time'));
+      fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -359,7 +359,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend Time'));
+      fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -401,7 +401,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend Time'));
+      fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {

@@ -1124,7 +1124,7 @@ export const MyBookingsScreen: React.FC = () => {
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
                       <Text style={styles.extensionModalConfirmText}>
-                        Extend & Pay ₱{extensionAvailability?.pricing.total.toFixed(2) || '0.00'}
+                        Extend & Pay ₱{extensionAvailability?.pricing?.total?.toFixed(2) || '0.00'}
                       </Text>
                     )}
                   </TouchableOpacity>
