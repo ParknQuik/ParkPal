@@ -64,7 +64,7 @@ describe('Auth Integration Flow', () => {
     expect(localStorage.getItem('user')).toBe(JSON.stringify(registerResponse.data.user));
 
     // Verify navigation was called
-    expect(mockNavigate).toHaveBeenCalledWith('/map');
+    expect(mockNavigate).toHaveBeenCalledWith('/search');
   });
 
   it('should handle login after registration', async () => {
@@ -96,7 +96,7 @@ describe('Auth Integration Flow', () => {
 
     // Verify login token stored
     expect(localStorage.getItem('token')).toBe('login-token');
-    expect(mockNavigate).toHaveBeenCalledWith('/map');
+    expect(mockNavigate).toHaveBeenCalledWith('/search');
   });
 
   it('should show validation errors preventing registration submission', async () => {

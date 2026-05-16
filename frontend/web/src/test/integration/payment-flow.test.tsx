@@ -7,6 +7,26 @@ import api from '../../api';
 // Mock the API
 vi.mock('../../api');
 
+const mockNavigate = vi.fn();
+const mockLocationState = {
+  booking: {
+    id: 123,
+    price: 50,
+    slotId: 456,
+    startTime: '2025-12-31T10:00:00Z',
+    endTime: '2025-12-31T14:00:00Z',
+  },
+};
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({ state: mockLocationState }),
+  };
+});
+
 /**
  * Integration Test: Complete Payment Flow
  *
@@ -23,6 +43,7 @@ describe('Payment Flow Integration Test', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
 
   it('should complete full payment flow successfully', async () => {
@@ -43,18 +64,6 @@ describe('Payment Flow Integration Test', () => {
         status: 'succeeded',
         paymentId: 'payment_123',
       },
-    });
-
-    const mockNavigate = vi.fn();
-    vi.mock('react-router-dom', async () => {
-      const actual = await vi.importActual('react-router-dom');
-      return {
-        ...actual,
-        useNavigate: () => mockNavigate,
-        useLocation: () => ({
-          state: { booking: mockBooking },
-        }),
-      };
     });
 
     render(
@@ -243,8 +252,6 @@ describe('Payment Flow Integration Test', () => {
   });
 
   it('should allow user to cancel payment', () => {
-    const mockNavigate = vi.fn();
-
     render(
       <BrowserRouter>
         <Routes>
@@ -257,6 +264,6 @@ describe('Payment Flow Integration Test', () => {
     expect(cancelButton).toBeEnabled();
 
     fireEvent.click(cancelButton);
-    // Navigation would occur here in actual app
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
   });
 });
