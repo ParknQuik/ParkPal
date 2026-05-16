@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -35,34 +35,22 @@ const getGreeting = (): string => {
 export const HomeDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const navigation = useNavigation();
+  const navigation = useNavigation() as any;
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
-
   const { user } = useAppSelector((state) => state.auth);
   const { currentLocation } = useAppSelector((state) => state.location);
   const { listings, bookings, filters, loading, error } = useAppSelector((state) => state.marketplace);
-
+  const userName = user?.name || 'Guest';
   // Force re-render when user is updated (for profile image changes)
   const [, forceUpdate] = useState(0);
+
+  // Hook calls at the top level - before any returns
   useEffect(() => {
     forceUpdate(n => n + 1);
   }, [user?.profileImageUrl]);
 
-  const userName = user?.name || 'Guest';
-
-  const fetchData = useCallback(async () => {
-    try {
-      const lat = currentLocation?.latitude || 14.5995;
-      const lon = currentLocation?.longitude || 120.9842;
-      await dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })).unwrap();
-      if (user?.id) {
-        await dispatch(getMyBookings()).unwrap();
-      }
-    } catch (err) {
-      ;
-    }
-  }, [dispatch, currentLocation, user?.id]);
+  const statusBarStyle = useStatusBarStyle();
 
   useEffect(() => {
     const init = async () => {
@@ -83,15 +71,25 @@ export const HomeDashboard: React.FC = () => {
     init();
   }, [dispatch, user?.id]);
 
+  const fetchData = useCallback(async () => {
+    try {
+      const lat = currentLocation?.latitude || 14.5995;
+      const lon = currentLocation?.longitude || 120.9842;
+      await dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })).unwrap();
+      if (user?.id) {
+        await dispatch(getMyBookings()).unwrap();
+      }
+    } catch (err) {
+      // silently handle error
+    }
+  }, [dispatch, currentLocation, user?.id]);
+
   const handleRefresh = useCallback(() => {
     if (refreshing) return;
-    ;
     setSearchQuery(''); // Clear search query on refresh
-    ;
     setRefreshing(true);
     const lat = currentLocation?.latitude || 14.5995;
     const lon = currentLocation?.longitude || 120.9842;
-    ;
     const fetches: Promise<any>[] = [
       dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })),
     ];
@@ -99,7 +97,6 @@ export const HomeDashboard: React.FC = () => {
       fetches.push(dispatch(getMyBookings()));
     }
     Promise.allSettled(fetches).finally(() => {
-      ;
       setRefreshing(false);
     });
   }, [dispatch, currentLocation, user?.id, refreshing]);
@@ -116,13 +113,7 @@ export const HomeDashboard: React.FC = () => {
         })
       );
     } else if (!query.trim() && currentLocation) {
-      dispatch(
-        searchListings({
-          latitude: currentLocation.latitude,
-          longitude: currentLocation.longitude,
-          radius: 3,
-        })
-      );
+      dispatch(searchListings({ latitude: currentLocation.latitude, longitude: currentLocation.longitude, radius: 3 }));
     }
   }, 500);
 
@@ -133,26 +124,22 @@ export const HomeDashboard: React.FC = () => {
 
   const handleSpotPress = useCallback(async (listingId: string) => {
     await haptics.light();
-    navigation.navigate('ParkingDetail' as never, { spotId: listingId } as never);
+    navigation.navigate('ParkingDetail', { spotId: listingId });
   }, [navigation]);
 
   const handleNotificationPress = useCallback(async () => {
-    await haptics.light();
     navigation.navigate('Notifications' as never);
   }, [navigation]);
 
   const handleExplorePress = useCallback(async () => {
-    await haptics.light();
     navigation.navigate('Explore' as never);
   }, [navigation]);
 
   const handleActivityPress = useCallback(async () => {
-    await haptics.light();
     navigation.navigate('MyBookings' as never);
   }, [navigation]);
 
   const handleProfilePress = useCallback(async () => {
-    await haptics.light();
     navigation.navigate('Profile' as never);
   }, [navigation]);
 
@@ -162,11 +149,10 @@ export const HomeDashboard: React.FC = () => {
   }, [navigation]);
 
   const handleSeeAllPress = useCallback(async () => {
-    await haptics.light();
     navigation.navigate('Explore' as never);
   }, [navigation]);
 
-  const styles = React.useMemo(() => StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -176,12 +162,11 @@ export const HomeDashboard: React.FC = () => {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: spacing.xl,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.sm,
+      marginBottom: spacing.md,
     },
     greetingLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
       gap: spacing.md,
     },
     headerAvatar: {
@@ -199,12 +184,11 @@ export const HomeDashboard: React.FC = () => {
       fontWeight: '700',
     },
     greetingTitle: {
-      ...typography.h5,
+      ...typography.h2,
       color: colors.textPrimary,
-      fontWeight: '700',
     },
     greetingSubtitle: {
-      ...typography.small,
+      ...typography.bodySmall,
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -214,8 +198,8 @@ export const HomeDashboard: React.FC = () => {
       fontWeight: '800',
     },
     header: {
+      backgroundColor: colors.primary,
       paddingTop: spacing.lg,
-      paddingHorizontal: spacing.xl,
       paddingBottom: spacing.xxl + spacing.xl,
       borderBottomLeftRadius: 40,
       borderBottomRightRadius: 40,
@@ -223,13 +207,12 @@ export const HomeDashboard: React.FC = () => {
     headerTop: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       marginBottom: spacing.xxl,
+      paddingHorizontal: spacing.xl,
     },
     headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
+      flex: 1,
     },
     avatarContainer: {
       width: 48,
@@ -237,7 +220,6 @@ export const HomeDashboard: React.FC = () => {
       borderRadius: 24,
       borderWidth: 2,
       borderColor: 'rgba(255, 255, 255, 0.3)',
-      overflow: 'hidden',
       backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
     avatar: {
@@ -245,108 +227,106 @@ export const HomeDashboard: React.FC = () => {
       height: '100%',
     },
     appTitle: {
-      ...typography.h5,
+      ...typography.h3,
       color: colors.white,
-      fontWeight: '700',
+      fontWeight: '800',
+      marginTop: 4,
     },
     appSubtitle: {
-      ...typography.small,
+      ...typography.bodySmall,
       color: 'rgba(255, 255, 255, 0.8)',
     },
     notificationButton: {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      justifyContent: 'center',
-      alignItems: 'center',
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     notificationIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
       fontSize: 20,
       color: colors.white,
     },
     greetingContainer: {
-      marginTop: spacing.sm,
+      marginTop: spacing.xs,
+      paddingHorizontal: spacing.xl,
     },
     greeting: {
       ...typography.h2,
-      color: colors.white,
-      fontWeight: '700',
+       color: colors.textPrimary,
     },
     content: {
       flex: 1,
     },
     contentContainer: {
-      paddingBottom: 80,
+      paddingBottom: 20,
+      backgroundColor: colors.background,
     },
     searchContainer: {
+      marginTop: -spacing.xs,
+      marginBottom: spacing.sm,
       paddingHorizontal: spacing.xl,
-      marginBottom: spacing.xl,
     },
     searchBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
       backgroundColor: colors.surface,
       borderRadius: borderRadius.xl,
       padding: spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
       shadowColor: colors.black,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 12,
       elevation: 5,
-      borderWidth: 1,
       borderColor: colors.border,
+      borderWidth: 1,
     },
     searchIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
-      fontSize: 20,
-      color: colors.primary,
       marginLeft: spacing.sm,
     },
     searchInput: {
-      flex: 1,
       ...typography.body,
-      color: colors.textPrimary,
+      flex: 1,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
+      color: colors.textPrimary,
     },
     filterButton: {
-      backgroundColor: colors.primary,
       padding: spacing.sm + 2,
       borderRadius: borderRadius.lg,
+      backgroundColor: colors.primary,
       shadowColor: colors.primary,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.3,
       shadowRadius: 4,
       elevation: 3,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     filterIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
       fontSize: 18,
       color: colors.white,
     },
     statsGrid: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       paddingHorizontal: spacing.xl,
-      gap: spacing.md,
-      marginBottom: spacing.xl,
+      marginTop: spacing.sm,
+      gap: spacing.sm,
     },
     statCard: {
       flex: 1,
+      minWidth: 100,
       backgroundColor: colors.surface,
-      borderRadius: borderRadius.xl,
       padding: spacing.lg,
-      alignItems: 'center',
+      borderRadius: borderRadius.lg,
       shadowColor: colors.black,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.05,
       shadowRadius: 8,
       elevation: 2,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     statIconContainer: {
       width: 40,
@@ -357,18 +337,16 @@ export const HomeDashboard: React.FC = () => {
       marginBottom: spacing.sm,
     },
     statIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
       fontSize: 20,
     },
     statLabel: {
       ...typography.tiny,
-      color: colors.textSecondary,
-      fontWeight: '700',
       textTransform: 'uppercase',
       letterSpacing: 0.5,
+      color: colors.textSecondary,
     },
     statValue: {
-      ...typography.h5,
+      ...typography.h4,
       color: colors.textPrimary,
       fontWeight: '700',
       marginTop: spacing.xs,
@@ -378,48 +356,46 @@ export const HomeDashboard: React.FC = () => {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingHorizontal: spacing.xl,
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
+      marginTop: spacing.lg,
     },
     sectionTitle: {
-      ...typography.h5,
+      ...typography.h3,
       color: colors.textPrimary,
-      fontWeight: '700',
     },
     seeAll: {
       ...typography.bodySmall,
-      color: colors.primary,
       fontWeight: '600',
+      color: colors.primary,
     },
     parkingList: {
       paddingHorizontal: spacing.xl,
     },
     parkingCard: {
-      flexDirection: 'row',
       backgroundColor: colors.surface,
-      borderRadius: borderRadius.xl,
+      borderRadius: borderRadius.lg,
       padding: spacing.md,
+      marginBottom: spacing.md,
+      flexDirection: 'row',
       shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 2 },
+      shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
-      shadowRadius: 8,
-      elevation: 2,
-      borderWidth: 1,
-      borderColor: colors.border,
+      shadowRadius: 4,
+      elevation: 1,
     },
     parkingImage: {
       width: 96,
       height: 96,
-      borderRadius: borderRadius.lg,
+      borderRadius: borderRadius.md,
     },
     parkingImagePlaceholder: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
     },
     parkingInfo: {
-      flex: 1,
       marginLeft: spacing.md,
-      justifyContent: 'space-between',
+      flex: 1,
     },
     parkingTopRow: {
       flexDirection: 'row',
@@ -429,50 +405,48 @@ export const HomeDashboard: React.FC = () => {
     parkingName: {
       ...typography.body,
       color: colors.textPrimary,
-      fontWeight: '700',
+      fontWeight: '600',
       flex: 1,
     },
     ratingContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: 4,
     },
     starIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
       fontSize: 16,
-      color: colors.accent,
     },
     ratingText: {
-      ...typography.small,
+      ...typography.bodySmall,
       color: colors.textSecondary,
-      fontWeight: '600',
     },
     parkingMiddleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginTop: spacing.xs,
-    },
-    distanceText: {
-      ...typography.small,
-      color: colors.textSecondary,
-      fontSize: 12,
     },
     distanceRow: {
       flexDirection: 'row',
       alignItems: 'center',
     },
+    distanceText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginLeft: 4,
+    },
     parkingBottomRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'flex-end',
+      alignItems: 'center',
+      marginTop: spacing.sm,
     },
     priceText: {
       ...typography.h6,
       color: colors.primary,
-      fontWeight: '700',
     },
     priceUnit: {
-      ...typography.small,
-      color: colors.textSecondary,
       fontWeight: '400',
+      fontSize: 12,
     },
     availabilityBadge: {
       paddingHorizontal: spacing.sm,
@@ -487,59 +461,53 @@ export const HomeDashboard: React.FC = () => {
     },
     availabilityText: {
       ...typography.tiny,
-      fontWeight: '700',
-      textTransform: 'uppercase',
+      fontWeight: '600',
     },
     availableText: {
-      color: colors.primary,
+      color: '#10b77f',
     },
     limitedText: {
       color: colors.secondary,
     },
     loadingContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
       paddingVertical: spacing.xxl * 2,
+      alignItems: 'center',
     },
     loadingText: {
-      ...typography.bodySmall,
+      ...typography.body,
       color: colors.textSecondary,
       marginTop: spacing.md,
     },
     errorContainer: {
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: spacing.xxl * 2,
+      paddingVertical: spacing.xxl,
     },
     errorIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
       fontSize: 48,
-      color: colors.error,
-      marginBottom: spacing.md,
     },
     errorText: {
       ...typography.body,
       color: colors.textSecondary,
-      marginBottom: spacing.md,
+      marginTop: spacing.md,
+      textAlign: 'center',
     },
     retryButton: {
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.sm,
       backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
       borderRadius: borderRadius.lg,
+      marginTop: spacing.md,
     },
     retryText: {
-      ...typography.bodySmall,
+      ...typography.body,
       color: colors.white,
       fontWeight: '600',
     },
     emptyContainer: {
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: spacing.xxl * 2,
+      paddingVertical: spacing.xxl,
     },
     emptyIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
       fontSize: 48,
       color: colors.textSecondary,
       marginBottom: spacing.md,
@@ -552,8 +520,7 @@ export const HomeDashboard: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style={useStatusBarStyle()} backgroundColor={colors.primary} />
-
+      <StatusBar style={statusBarStyle} backgroundColor={colors.primary} />
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
@@ -595,10 +562,14 @@ export const HomeDashboard: React.FC = () => {
               onChangeText={handleSearch}
               {...accessibility.textInput('Search parking')}
             />
-            <TouchableOpacity style={styles.filterButton}>
-              <MaterialCommunityIcons name="tune" size={20} color={colors.white} />
+            <TouchableOpacity style={styles.filterButton} onPress={() => {}}>
+              <MaterialCommunityIcons name="tune" size={20} color={colors.white} style={styles.filterIcon} />
             </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greeting}>Parking near {currentLocation ? 'you' : 'Manila'}</Text>
         </View>
 
         <View style={styles.statsGrid}>
@@ -651,83 +622,83 @@ export const HomeDashboard: React.FC = () => {
             </TouchableOpacity>
           </View>
         ) : (
-        <FlatList
-          data={listings}
-          scrollEnabled={false}
-          nestedScrollEnabled={true}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item: parking }) => (
-            <TouchableOpacity
-              style={styles.parkingCard}
-              onPress={() => handleSpotPress(String(parking.id))}
-              {...accessibility.button(parking.title || parking.address, `View details for ${parking.title || parking.address}`)}
-            >
-              {parking.photos && parking.photos[0] ? (
-                <Image
-                  source={{ uri: parking.photos[0] }}
-                  style={styles.parkingImage}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[styles.parkingImage, styles.parkingImagePlaceholder]}>
-                  <MaterialCommunityIcons name="car-outline" size={32} color="#94a3b8" />
-                </View>
-              )}
-              <View style={styles.parkingInfo}>
-                <View style={styles.parkingTopRow}>
-                  <Text style={styles.parkingName} numberOfLines={1}>{parking.title || parking.address}</Text>
-                  <View style={styles.ratingContainer}>
-                    <MaterialCommunityIcons name="star" size={14} color={colors.accent} />
-                    <Text style={styles.ratingText}>{parking.rating?.toFixed(1) || 'N/A'}</Text>
+          <FlatList
+            data={listings}
+            scrollEnabled={false}
+            nestedScrollEnabled={true}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item: parking }) => (
+              <TouchableOpacity
+                style={styles.parkingCard}
+                onPress={() => handleSpotPress(String(parking.id))}
+                {...accessibility.button(parking.title || parking.address, `View details for ${parking.title || parking.address}`)}
+              >
+                {parking.photos && parking.photos[0] ? (
+                  <Image
+                    source={{ uri: parking.photos[0] }}
+                    style={styles.parkingImage}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.parkingImage, styles.parkingImagePlaceholder]}>
+                    <MaterialCommunityIcons name="car-outline" size={32} color="#94a3b8" />
                   </View>
-                </View>
-                <View style={styles.parkingMiddleRow}>
-                <View style={styles.distanceRow}>
-                  <MaterialCommunityIcons name="map-marker" size={14} color={colors.textSecondary} />
-                  <Text style={styles.distanceText}> {parking.distance ? `${parking.distance.toFixed(1)} km away` : 'Nearby'}</Text>
-                </View>
-                </View>
-                <View style={styles.parkingBottomRow}>
-                  <Text style={styles.priceText}>
-                    ₱{parking.pricePerHour?.toFixed(2) || '0.00'}
-                    <Text style={styles.priceUnit}>/hr</Text>
-                  </Text>
-                  <View style={[
-                    styles.availabilityBadge,
-                    parking.availability
-                      ? styles.availableBadge
-                      : styles.limitedBadge
-                  ]}>
-                    <Text style={[
-                      styles.availabilityText,
-                      parking.availability
-                        ? styles.availableText
-                        : styles.limitedText
-                    ]}>
-                      {parking.availability ? 'Available' : 'Limited'}
+                )}
+                <View style={styles.parkingInfo}>
+                  <View style={styles.parkingTopRow}>
+                    <Text style={styles.parkingName} numberOfLines={1}>{parking.title || parking.address}</Text>
+                    <View style={styles.ratingContainer}>
+                      <MaterialCommunityIcons name="star" size={14} color={colors.accent} />
+                      <Text style={styles.ratingText}>{parking.rating?.toFixed(1) || 'N/A'}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.parkingMiddleRow}>
+                    <View style={styles.distanceRow}>
+                      <MaterialCommunityIcons name="map-marker" size={14} color={colors.textSecondary} />
+                      <Text style={styles.distanceText}> {parking.distance ? `${parking.distance.toFixed(1)} km away` : 'Nearby'}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.parkingBottomRow}>
+                    <Text style={styles.priceText}>
+                      ₱{parking.pricePerHour?.toFixed(2) || '0.00'}
+                      <Text style={styles.priceUnit}>/hr</Text>
                     </Text>
+                    <View style={[
+                      styles.availabilityBadge,
+                      parking.availability
+                        ? styles.availableBadge
+                        : styles.limitedBadge
+                    ]}>
+                      <Text style={[
+                        styles.availabilityText,
+                        parking.availability
+                          ? styles.availableText
+                          : styles.limitedText
+                      ]}>
+                        {parking.availability ? 'Available' : 'Limited'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.parkingList}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            !loading ? (
-              <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons
-                  name="map-marker-off-outline"
-                  size={48}
-                  color={colors.textSecondary}
-                  style={{ marginBottom: spacing.md }}
-                />
-                <Text style={styles.emptyText}>No parking spots found nearby</Text>
-              </View>
-            ) : null
-          }
-        />
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={styles.parkingList}
+            ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              !loading && listings.length === 0 && error === null ? (
+                <View style={styles.emptyContainer}>
+                  <MaterialCommunityIcons
+                    name="map-marker-off-outline"
+                    size={48}
+                    color={colors.textSecondary}
+                    style={{ marginBottom: spacing.md }}
+                  />
+                  <Text style={styles.emptyText}>No parking spots found nearby</Text>
+                </View>
+              ) : null
+            }
+          />
         )}
       </ScrollView>
     </SafeAreaView>

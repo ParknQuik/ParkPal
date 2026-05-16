@@ -10,8 +10,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Image,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -19,8 +19,9 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { getMyBookings } from '../store/slices/marketplaceSlice';
 import { marketplaceAPI, paymentAPI } from '../services/api';
 import { typography, spacing, borderRadius } from '../theme';
- import { useTheme } from '../context/ThemeContext';
- import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { useTheme } from '../context/ThemeContext';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AppHeader } from '../components/AppHeader';
 
 const PRIMARY = '#10b77f';
 
@@ -265,34 +266,33 @@ export const MyBookingsScreen: React.FC = () => {
     [navigation],
   );
 
-   const filteredBookings = bookings.filter((booking) => {
-     const now = new Date();
-     const startTime = new Date(booking.startTime);
-     const endTime = new Date(booking.endTime);
-     const hasSession = booking.sessionId != null;
-     
-      if (activeTab === 'upcoming') {
-        // Upcoming: pending bookings with startTime > now
-        //          confirmed bookings with startTime > now (future confirmed)
-        //          confirmed bookings with startTime <= now AND no session yet (not scanned)
-        //          active bookings with endTime > now (currently parked, not ended yet)
-        return (booking.status === 'pending' && startTime > now) ||
-               (booking.status === 'confirmed' && startTime > now) ||
-               (booking.status === 'confirmed' && startTime <= now && !hasSession) ||
-               (booking.status === 'active' && endTime > now);
-      }
-     if (activeTab === 'completed') {
-       // Completed: status is completed
-       //          OR (status is active AND endTime has passed - session ended)
-       return booking.status === 'completed' ||
-              (booking.status === 'active' && endTime <= now);
-     }
-     if (activeTab === 'cancelled') {
-       return booking.status === 'cancelled' || booking.status === 'expired';
-     }
-     return true;
-   });
+  const filteredBookings = bookings.filter((booking) => {
+    const now = new Date();
+    const startTime = new Date(booking.startTime);
+    const endTime = new Date(booking.endTime);
+    const hasSession = booking.sessionId != null;
 
+    if (activeTab === 'upcoming') {
+      // Upcoming: pending bookings with startTime > now
+      //          confirmed bookings with startTime > now (future confirmed)
+      //          confirmed bookings with startTime <= now AND no session yet (not scanned)
+      //          active bookings with endTime > now (currently parked, not ended yet)
+      return (booking.status === 'pending' && startTime > now) ||
+             (booking.status === 'confirmed' && startTime > now) ||
+             (booking.status === 'confirmed' && startTime <= now && !hasSession) ||
+             (booking.status === 'active' && endTime > now);
+    }
+    if (activeTab === 'completed') {
+      // Completed: status is completed
+      //          OR (status is active AND endTime has passed - session ended)
+      return booking.status === 'completed' ||
+             (booking.status === 'active' && endTime <= now);
+    }
+    if (activeTab === 'cancelled') {
+      return booking.status === 'cancelled' || booking.status === 'expired';
+    }
+    return true;
+  });
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
@@ -1124,7 +1124,7 @@ export const MyBookingsScreen: React.FC = () => {
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
                       <Text style={styles.extensionModalConfirmText}>
-                        Extend & Pay ₱{extensionAvailability?.pricing.total.toFixed(2) || '0.00'}
+                        Extend & Pay ₱{extensionAvailability?.pricing?.total?.toFixed(2) || '0.00'}
                       </Text>
                     )}
                   </TouchableOpacity>

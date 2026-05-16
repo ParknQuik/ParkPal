@@ -1,6 +1,6 @@
 # Documentation Guide
 
-**Last Updated:** April 20, 2026
+**Last Updated:** May 16, 2026
 
 ---
 
@@ -10,7 +10,6 @@
 | File | Purpose |
 |------|---------|
 | `STATUS_REPORT.md` | Current production readiness, blockers, deployment status |
-| `CLAUDE_OPINION_REQUEST.md` | Honest mobile app assessment for Kilo Code |
 | `ROADMAP.md` | Development roadmap and sprint planning |
 | `TECH_STACK_SUMMARY.md` | Authoritative tech stack reference |
 
@@ -74,7 +73,7 @@
 
 | Trigger | Files to Update |
 |---------|----------------|
-| Feature shipped | `STATUS_REPORT.md`, `CLAUDE_OPINION_REQUEST.md` |
+| Feature shipped | `STATUS_REPORT.md` |
 | New API endpoint | `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` + Swagger |
 | Tech stack change | `TECH_STACK_SUMMARY.md` |
 | Infrastructure change | `docs/DEPLOYMENT.md`, `docs/ENVIRONMENTS.md` |
@@ -83,7 +82,7 @@
 
 ### Rules
 
-- `STATUS_REPORT.md` is the single source of truth for project state
+- `STATUS_REPORT.md` is the primary source of truth for project state
 - Never duplicate content across files — link instead
 - Historical/one-time records go in `docs/phase-completions/` or `docs/implementations/`
 - Delete files that have been fully superseded rather than leaving stale docs

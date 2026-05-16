@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { applyStrike, checkSuspension } = require('../services/penaltyService');
 const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../services/qrcode');
 const cache = require('../services/cache');
@@ -666,6 +667,17 @@ exports.createBooking = async (req, res, next) => {
   try {
     const { slotId, startTime, endTime, rentalMode = 'fixed', maxDuration } = req.body;
     const userId = req.user.id;
+
+    // Check if user is suspended from booking
+    const suspendedUntil = await checkSuspension(userId);
+    if (suspendedUntil) {
+      const until = new Date(suspendedUntil).toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+      return res.status(403).json({
+        error: `Your account is suspended until ${until} due to repeated no-shows or late cancellations.`,
+        code: 'ACCOUNT_SUSPENDED',
+        suspendedUntil: suspendedUntil,
+      });
+    }
 
     // Parse time inputs
     const start = new Date(startTime);
@@ -1697,20 +1709,22 @@ exports.cancelBooking = async (req, res, next) => {
       return res.status(403).json({ error: 'Unauthorized to cancel this booking' });
     }
 
-    // Check if booking has already started or is within cancellation deadline
-    // Skip this check for pending bookings - they can be cancelled anytime
-    if (booking.status !== 'pending') {
-      const now = new Date();
-      const bookingStartTime = new Date(booking.startTime);
-      const cancellationDeadline = new Date(bookingStartTime.getTime() - 30 * 60 * 1000); // 30 minutes before
+    // Determine if this is a late cancellation (within 1 hour of start, for confirmed bookings)
+    const now = new Date();
+    const bookingStartTime = new Date(booking.startTime);
+    const hardDeadline = new Date(bookingStartTime.getTime() - 30 * 60 * 1000);   // 30 min — hard block
+    const penaltyDeadline = new Date(bookingStartTime.getTime() - 60 * 60 * 1000); // 1 hour — strike zone
 
-      if (now >= cancellationDeadline) {
-        return res.status(400).json({ 
+    if (booking.status !== 'pending') {
+      if (now >= hardDeadline) {
+        return res.status(400).json({
           error: 'Cannot cancel booking within 30 minutes of start time or after it has started',
-          code: 'CANCELLATION_DEADLINE_PASSED'
+          code: 'CANCELLATION_DEADLINE_PASSED',
         });
       }
     }
+
+    const isLateCancellation = booking.status === 'confirmed' && now >= penaltyDeadline && now < hardDeadline;
 
     // Cannot cancel if already checked in
     if (booking.status === 'active') {
@@ -1761,20 +1775,36 @@ exports.cancelBooking = async (req, res, next) => {
       });
     }
 
-    // Notify host of cancellation
+    const hostBody = isLateCancellation
+      ? `A booking for ${booking.slot.address} was cancelled within 1 hour of start time.`
+      : `A booking for ${booking.slot.address} has been cancelled.`;
+
     await prisma.notification.create({
       data: {
         userId: booking.slot.ownerId,
-        title: 'Booking Cancelled ❌',
-        body: `A booking for ${booking.slot.address} has been cancelled.`,
+        title: 'Booking Cancelled',
+        body: hostBody,
         type: 'booking_cancelled',
-        data: JSON.stringify({ bookingId: booking.id }),
+        data: JSON.stringify({ bookingId: booking.id, isLateCancellation }),
       },
     });
+
+    let penaltyInfo = null;
+    if (isLateCancellation) {
+      penaltyInfo = await applyStrike(booking.userId, 'late_cancel', booking.id, booking.slot.address);
+      logger.info(`Late cancellation strike applied to user ${booking.userId} — total strikes: ${penaltyInfo.totalStrikes}`);
+    }
 
     res.json({
       message: 'Booking cancelled successfully',
       booking: updatedBooking,
+      ...(isLateCancellation && {
+        warning: 'This was a late cancellation (within 1 hour of start). A strike has been recorded on your account.',
+        penaltyInfo: {
+          totalStrikes: penaltyInfo.totalStrikes,
+          suspendedUntil: penaltyInfo.suspendedUntil,
+        },
+      }),
     });
   } catch (error) {
     logger.error('Cancel booking error:', error);

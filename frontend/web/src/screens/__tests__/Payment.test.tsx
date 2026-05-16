@@ -9,25 +9,32 @@ vi.mock('../../api');
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
+let mockLocationState: { booking?: { id: number; price: number } } = {
+  booking: {
+    id: 123,
+    price: 50,
+  },
+};
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useLocation: () => ({
-      state: {
-        booking: {
-          id: 123,
-          price: 50,
-        },
-      },
-    }),
+    useLocation: () => ({ state: mockLocationState }),
   };
 });
 
 describe('Payment Screen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    mockLocationState = {
+      booking: {
+        id: 123,
+        price: 50,
+      },
+    };
   });
 
   it('renders payment methods correctly', () => {
@@ -140,14 +147,7 @@ describe('Payment Screen', () => {
   });
 
   it('shows error when no booking is provided', () => {
-    vi.mock('react-router-dom', async () => {
-      const actual = await vi.importActual('react-router-dom');
-      return {
-        ...actual,
-        useLocation: () => ({ state: {} }),
-        useNavigate: () => mockNavigate,
-      };
-    });
+    mockLocationState = {};
 
     render(
       <BrowserRouter>

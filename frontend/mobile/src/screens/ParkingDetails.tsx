@@ -18,6 +18,7 @@ import { marketplaceAPI } from '../services/api';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../types';
+import { AppHeader } from '../components/AppHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -54,6 +55,16 @@ export const ParkingDetails: React.FC = () => {
     }
   }, [spotId]);
 
+  const handleBack = () => navigation.goBack();
+
+  const handleShare = () => {
+    Share.share({
+      title: title,
+      message: `Check out this parking spot: ${title}\nAddress: ${location}\nPrice: ₱${price}/hour`,
+      url: `https://parkpal.app/spot/${spotId}`,
+    });
+  };
+
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -89,16 +100,6 @@ export const ParkingDetails: React.FC = () => {
       width: width,
       height: 280,
     },
-    headerOverlay: {
-      position: 'absolute',
-      top: 50,
-      left: 0,
-      right: 0,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-    },
     headerButton: {
       width: 40,
       height: 40,
@@ -106,18 +107,6 @@ export const ParkingDetails: React.FC = () => {
       backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    headerButtonText: {
-      fontSize: 20,
-      color: colors.textPrimary,
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: '#ffffff',
-      textShadowColor: 'rgba(0, 0, 0, 0.5)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
     },
     content: {
       padding: 20,
@@ -490,39 +479,27 @@ export const ParkingDetails: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <AppHeader
+          title="Parking Details"
+          onBack={handleBack}
+          rightAction={
+            <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
+              <MaterialCommunityIcons name="share-variant" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          }
+        />
+
         {/* Hero Image */}
         <View style={styles.heroContainer}>
-          <Image
-            source={{ uri: heroImage }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+           <Image
+             source={{ uri: heroImage }}
+             style={styles.heroImage}
+             resizeMode="cover"
+           />
+         </View>
 
-          {/* Header Overlay */}
-          <View style={styles.headerOverlay}>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Parking Details</Text>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => {
-                Share.share({
-                  title: title,
-                  message: `Check out this parking spot: ${title}\nAddress: ${location}\nPrice: ₱${price}/hour`,
-                  url: `https://parkpal.app/spot/${spotId}`,
-                });
-              }}
-            >
-              <Text style={styles.headerButtonText}>↗</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.content}>
+         <View style={styles.content}>
           {/* Title Section */}
           <View style={styles.titleSection}>
             <Text style={styles.title}>{title}</Text>

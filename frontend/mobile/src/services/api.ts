@@ -1,6 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, isLocalBackend } from '../config/api.config';
+import { API_BASE_URL } from '../config/api.config';
 import { PointsBalance, PointsHistoryResponse, ReferralStats } from '../types';
 
 // Create axios instance
@@ -12,11 +12,6 @@ const api = axios.create({
   },
 });
 
-// Log API configuration for debugging
-;
-;
-;
-
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
@@ -27,7 +22,6 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    ;
     return Promise.reject(error);
   }
 );
@@ -37,18 +31,11 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response) {
-      ;
-      
       if (error.response.status === 401) {
         await AsyncStorage.removeItem('token');
         await AsyncStorage.removeItem('user');
       }
-    } else if (error.request) {
-      ;
-    } else {
-      ;
     }
-    
     return Promise.reject(error);
   }
 );

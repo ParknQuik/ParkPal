@@ -84,7 +84,7 @@ describe('Login Component', () => {
       expect(localStorage.getItem('user')).toBe(JSON.stringify(mockResponse.data.user));
 
       // Verify navigation
-      expect(mockNavigate).toHaveBeenCalledWith('/map');
+      expect(mockNavigate).toHaveBeenCalledWith('/search');
     });
 
     it('should display error on failed login', async () => {
@@ -197,7 +197,7 @@ describe('Login Component', () => {
       expect(localStorage.getItem('token')).toBe('new-jwt-token');
 
       // Verify navigation
-      expect(mockNavigate).toHaveBeenCalledWith('/map');
+      expect(mockNavigate).toHaveBeenCalledWith('/search');
     });
 
     it('should display error on failed registration', async () => {

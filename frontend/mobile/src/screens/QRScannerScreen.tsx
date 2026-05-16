@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI } from '../services/api';
 import { typography, spacing } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AppHeader } from '../components/AppHeader';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCAN_AREA_SIZE = SCREEN_WIDTH * 0.7;
@@ -294,13 +296,6 @@ export const QRScannerScreen: React.FC = () => {
     },
     safeArea: {
       flex: 1,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
     },
     headerButton: {
       width: 44,
@@ -611,23 +606,15 @@ export const QRScannerScreen: React.FC = () => {
 
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.headerButtonText}>✕</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
-
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={handleFlashToggle}
-            >
-              <Text style={styles.headerButtonText}>{flashOn ? '⚡' : '🔦'}</Text>
-            </TouchableOpacity>
-          </View>
+          <AppHeader
+            title={getHeaderTitle()}
+            onBack={() => navigation.goBack()}
+            rightAction={
+              <TouchableOpacity onPress={handleFlashToggle} style={styles.headerButton}>
+                <Text style={styles.headerButtonText}>{flashOn ? '⚡' : '🔦'}</Text>
+              </TouchableOpacity>
+            }
+          />
 
           {!scanResult.type && (
             <View style={styles.viewfinderContainer}>

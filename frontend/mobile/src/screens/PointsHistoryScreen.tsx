@@ -6,7 +6,6 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  StatusBar,
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,8 @@ import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { PointsTransaction } from '../types';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { StatusBar } from 'expo-status-bar';
+import { AppHeader } from '../components/AppHeader';
 
 export const PointsHistoryScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -37,31 +38,29 @@ export const PointsHistoryScreen: React.FC = () => {
   };
   const { transactions, loading } = pointsState;
 
-  const fetchHistoryData = useCallback(async () => {
-    try {
-      const result = await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
-      console.log('Points history response:', result);
-    } catch (error) {
-      console.error('Error fetching points history:', error);
-    }
-  }, [dispatch]);
+  const statusBarStyle = useStatusBarStyle();
+
+   const fetchHistoryData = useCallback(async () => {
+     try {
+       await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
+     } catch (error) {
+     }
+   }, [dispatch]);
 
   useEffect(() => {
     fetchHistoryData();
   }, [fetchHistoryData]);
 
-  const handleRefresh = useCallback(async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      const result = await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
-      console.log('Points history refresh response:', result);
-    } catch (error) {
-      console.error('Error refreshing points history:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [dispatch, refreshing]);
+   const handleRefresh = useCallback(async () => {
+     if (refreshing) return;
+     setRefreshing(true);
+     try {
+       await dispatch(fetchHistory({ page: 1, limit: 50 })).unwrap();
+     } catch (error) {
+     } finally {
+       setRefreshing(false);
+     }
+   }, [dispatch, refreshing]);
 
   const handleBack = () => {
     navigation.goBack();
@@ -75,7 +74,7 @@ export const PointsHistoryScreen: React.FC = () => {
     <EmptyState
       title="No Points History"
       message="Your points transactions will appear here once you start earning or redeeming points."
-      icon="📊"
+      icon="chart-timeline"
     />
   );
 
@@ -92,7 +91,7 @@ export const PointsHistoryScreen: React.FC = () => {
       backgroundColor: colors.background,
     },
     safeArea: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.primary,
     },
     header: {
       flexDirection: 'row',
@@ -107,13 +106,13 @@ export const PointsHistoryScreen: React.FC = () => {
       width: 40,
       height: 40,
       borderRadius: borderRadius.md,
-      backgroundColor: colors.background,
+      backgroundColor: colors.white,
       justifyContent: 'center',
       alignItems: 'center',
     },
     title: {
       ...typography.h5,
-      color: colors.textPrimary,
+      color: colors.white,
       fontWeight: '700',
     },
     placeholder: {
@@ -144,36 +143,29 @@ export const PointsHistoryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Points History</Text>
-          <View style={styles.placeholder} />
-        </View>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.background} />
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <AppHeader title="Points History" onBack={handleBack} />
+        {loading && !refreshing && transactions.length === 0 ? (
+          renderLoading()
+        ) : (
+          <FlatList
+            data={transactions}
+            renderItem={renderTransactionItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={[
+              styles.listContent,
+              transactions.length === 0 && styles.emptyListContent,
+            ]}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+            }
+            ListEmptyComponent={!loading ? renderEmptyState : null}
+          />
+        )}
       </SafeAreaView>
-
-      {loading && !refreshing && transactions.length === 0 ? (
-        renderLoading()
-      ) : (
-        <FlatList
-          data={transactions}
-          renderItem={renderTransactionItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[
-            styles.listContent,
-            transactions.length === 0 && styles.emptyListContent,
-          ]}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
-          }
-          ListEmptyComponent={!loading ? renderEmptyState : null}
-        />
-      )}
     </View>
   );
 };

@@ -25,6 +25,7 @@ import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { validateEmail, validatePassword } from '../utils/helpers';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppHeader } from '../components/AppHeader';
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
 
@@ -45,14 +46,6 @@ const redirectUri = makeRedirectUri({
 if (__DEV__) {
   ;
 }
-
-const STITCH_COLORS = {
-  primary: '#10b77f',
-  accentOrange: '#f59e0b',
-  accentYellow: '#facc15',
-  backgroundLight: '#f6f8f7',
-  backgroundDark: '#10221c',
-};
 
 export const AuthScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
@@ -205,7 +198,7 @@ export const AuthScreen: React.FC = () => {
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: STITCH_COLORS.backgroundLight,
+      backgroundColor: colors.background,
     },
     keyboardView: {
       flex: 1,
@@ -213,37 +206,10 @@ export const AuthScreen: React.FC = () => {
     scrollContent: {
       flexGrow: 1,
     },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: `${STITCH_COLORS.primary}10`,
-    },
-    backButton: {
-      width: 48,
-      height: 48,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      ...typography.h6,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      flex: 1,
-      textAlign: 'center',
-      marginRight: 48,
-    },
-    headerSpacer: {
-      width: 48,
-    },
     imageSection: {
       width: '100%',
       minHeight: 200,
-      backgroundColor: `${STITCH_COLORS.primary}33`,
+      backgroundColor: `${colors.primary}33`,
     },
     imageOverlay: {
       flex: 1,
@@ -256,7 +222,7 @@ export const AuthScreen: React.FC = () => {
     },
     orangeOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(245, 158, 11, 0.2)',
+      backgroundColor: `${colors.secondary}33`,
     },
     badgeContainer: {
       position: 'relative',
@@ -265,7 +231,7 @@ export const AuthScreen: React.FC = () => {
     badge: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: STITCH_COLORS.accentYellow,
+      backgroundColor: colors.accent,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       borderRadius: 999,
@@ -279,7 +245,7 @@ export const AuthScreen: React.FC = () => {
     badgeText: {
       ...typography.small,
       fontWeight: '700',
-      color: STITCH_COLORS.backgroundDark,
+      color: colors.backgroundDark,
       textTransform: 'uppercase',
       letterSpacing: 1,
     },
@@ -310,7 +276,7 @@ export const AuthScreen: React.FC = () => {
     },
     tabContainer: {
       flexDirection: 'row',
-      backgroundColor: `${STITCH_COLORS.primary}15`,
+      backgroundColor: `${colors.primary}15`,
       borderRadius: borderRadius.lg,
       padding: spacing.xs,
       marginBottom: spacing.xl,
@@ -335,7 +301,7 @@ export const AuthScreen: React.FC = () => {
       color: colors.textSecondary,
     },
     activeTabText: {
-      color: STITCH_COLORS.primary,
+      color: colors.primary,
     },
     inputGroup: {
       marginBottom: spacing.lg,
@@ -351,7 +317,7 @@ export const AuthScreen: React.FC = () => {
       alignItems: 'center',
       backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: `${STITCH_COLORS.primary}30`,
+      borderColor: `${colors.primary}30`,
       borderRadius: borderRadius.lg,
       paddingHorizontal: spacing.md,
     },
@@ -388,14 +354,14 @@ export const AuthScreen: React.FC = () => {
       height: 20,
       borderRadius: 4,
       borderWidth: 2,
-      borderColor: `${STITCH_COLORS.primary}50`,
+      borderColor: `${colors.primary}50`,
       marginRight: spacing.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },
     checkboxChecked: {
-      backgroundColor: STITCH_COLORS.primary,
-      borderColor: STITCH_COLORS.primary,
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     checkboxLabel: {
       ...typography.bodySmall,
@@ -404,7 +370,7 @@ export const AuthScreen: React.FC = () => {
     forgotPassword: {
       ...typography.bodySmall,
       fontWeight: '600',
-      color: STITCH_COLORS.accentOrange,
+      color: colors.secondary,
     },
     continueButton: {
       marginBottom: spacing.xl,
@@ -414,7 +380,7 @@ export const AuthScreen: React.FC = () => {
       paddingHorizontal: spacing.xl,
       borderRadius: borderRadius.xl,
       alignItems: 'center',
-      shadowColor: STITCH_COLORS.primary,
+      shadowColor: colors.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
@@ -433,7 +399,7 @@ export const AuthScreen: React.FC = () => {
     dividerLine: {
       flex: 1,
       height: 1,
-      backgroundColor: `${STITCH_COLORS.primary}15`,
+      backgroundColor: `${colors.primary}15`,
     },
     dividerText: {
       ...typography.small,
@@ -453,7 +419,7 @@ export const AuthScreen: React.FC = () => {
       paddingVertical: spacing.md,
       borderRadius: borderRadius.lg,
       borderWidth: 1,
-      borderColor: `${STITCH_COLORS.primary}20`,
+      borderColor: `${colors.primary}20`,
     },
     socialIcon: {
       fontSize: 18,
@@ -498,20 +464,14 @@ export const AuthScreen: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Welcome Back</Text>
-            <View style={styles.headerSpacer} />
-          </View>
+         <ScrollView
+           contentContainerStyle={styles.scrollContent}
+           showsVerticalScrollIndicator={false}
+           keyboardShouldPersistTaps="handled"
+         >
+           <AppHeader title="Welcome Back" onBack={handleBack} />
 
-          <View style={styles.imageSection}>
+           <View style={styles.imageSection}>
             <View style={styles.imageOverlay}>
               <LinearGradient
                 colors={['rgba(16, 183, 127, 0.9)', 'rgba(16, 183, 127, 0.4)', 'transparent']}
@@ -667,12 +627,12 @@ export const AuthScreen: React.FC = () => {
               activeOpacity={0.8}
               disabled={authLoading}
             >
-              <LinearGradient
-                colors={[STITCH_COLORS.primary, STITCH_COLORS.accentOrange]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.gradientButton, authLoading && styles.gradientButtonDisabled]}
-              >
+<LinearGradient
+                 colors={[colors.primary, colors.secondary]}
+                 start={{ x: 0, y: 0 }}
+                 end={{ x: 1, y: 0 }}
+                 style={[styles.gradientButton, authLoading && styles.gradientButtonDisabled]}
+               >
                 <Text style={styles.continueButtonText}>
                   {authLoading ? 'Please wait...' : 'Continue to Dashboard'}
                 </Text>
@@ -713,12 +673,12 @@ export const AuthScreen: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <LinearGradient
-        colors={[STITCH_COLORS.primary, STITCH_COLORS.accentYellow, STITCH_COLORS.accentOrange]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.bottomBar}
-      />
+<LinearGradient
+         colors={[colors.primary, colors.accent, colors.secondary]}
+         start={{ x: 0, y: 0 }}
+         end={{ x: 1, y: 0 }}
+         style={styles.bottomBar}
+       />
     </SafeAreaView>
   );
 };

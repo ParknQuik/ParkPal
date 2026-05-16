@@ -2,6 +2,9 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
+document.documentElement.setAttribute('lang', 'en');
+document.title = 'ParkPal - Smart Parking Solutions';
+
 // Cleanup after each test
 afterEach(() => {
   cleanup();

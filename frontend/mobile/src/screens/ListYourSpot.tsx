@@ -191,9 +191,9 @@ export const ListYourSpot: React.FC = () => {
 // Upload local photos if any (only file:// URIs, not existing GCS URLs)
           const newListingId = result.id || result.data?.id;
           const localPhotos = photos.filter(p => p.startsWith('file://'));
-          
+
           ;
-          
+
           if (localPhotos.length > 0 && newListingId) {
             const uploadedUrls: string[] = [];
             for (const photoUri of localPhotos) {

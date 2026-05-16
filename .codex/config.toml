@@ -1,0 +1,10 @@
+# GCloud MCP is intentionally kept as a reference but disabled.
+# Do not uncomment this block unless the team explicitly wants Codex to start
+# the GCloud MCP server for this repo.
+#
+# [mcp_servers.gcloud]
+# args = [
+#     "-y",
+#     "@google-cloud/gcloud-mcp",
+# ]
+# command = "npx"

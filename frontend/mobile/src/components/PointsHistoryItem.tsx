@@ -59,6 +59,20 @@ const getTransactionIcon = (type: string, colors: ReturnType<typeof import('../c
   }
 };
 
+const formatType = (type: string) => {
+  const upperType = type.toUpperCase();
+  const typeMap: Record<string, string> = {
+    EARNED: 'Earned',
+    REDEEMED: 'Redeemed',
+    REFERRAL_BONUS: 'Referral Bonus',
+    REFERRAL_REWARD: 'Referral Reward',
+    EXPIRED: 'Expired',
+    ADJUSTMENT: 'Adjustment',
+    BONUS: 'Bonus',
+  };
+  return typeMap[upperType] || type;
+};
+
 export interface PointsHistoryItemProps {
   transaction: PointsTransaction;
   showBalance?: boolean;
@@ -210,16 +224,3 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
   );
 };
 
-const formatType = (type: string) => {
-  const upperType = type.toUpperCase();
-  const typeMap: Record<string, string> = {
-    EARNED: 'Earned',
-    REDEEMED: 'Redeemed',
-    REFERRAL_BONUS: 'Referral Bonus',
-    REFERRAL_REWARD: 'Referral Reward',
-    EXPIRED: 'Expired',
-    ADJUSTMENT: 'Adjustment',
-    BONUS: 'Bonus',
-  };
-  return typeMap[upperType] || type;
-};

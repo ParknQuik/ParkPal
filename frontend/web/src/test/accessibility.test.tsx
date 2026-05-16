@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { render, waitFor } from '@testing-library/react';
 import App from '../App';
 
 /**
@@ -16,38 +15,27 @@ import App from '../App';
 
 describe('Accessibility Tests', () => {
   describe('Semantic HTML', () => {
-    it('should use proper heading hierarchy', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+    it('should use proper heading hierarchy', async () => {
+      const { container } = render(<App />);
 
       // Check that headings exist and are properly nested
-      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      expect(headings.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        expect(headings.length).toBeGreaterThan(0);
+      });
     });
 
     it('should have proper document structure', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+      const { container } = render(<App />);
 
       // Check for main content area
-      const root = container.querySelector('#root');
-      expect(root).toBeInTheDocument();
+      expect(container.firstElementChild).toBeInTheDocument();
     });
   });
 
   describe('ARIA Labels', () => {
     it('should have ARIA labels on interactive elements', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+      const { container } = render(<App />);
 
       // Check buttons have accessible names
       const buttons = container.querySelectorAll('button');
@@ -61,11 +49,7 @@ describe('Accessibility Tests', () => {
     });
 
     it('should have proper alt text for images', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+      const { container } = render(<App />);
 
       const images = container.querySelectorAll('img');
       images.forEach((img) => {
@@ -76,11 +60,7 @@ describe('Accessibility Tests', () => {
 
   describe('Keyboard Navigation', () => {
     it('should have focusable interactive elements', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+      const { container } = render(<App />);
 
       const interactiveElements = container.querySelectorAll(
         'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -96,11 +76,7 @@ describe('Accessibility Tests', () => {
     });
 
     it('should not have positive tabindex values', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+      const { container } = render(<App />);
 
       const elementsWithTabIndex = container.querySelectorAll('[tabindex]');
       elementsWithTabIndex.forEach((element) => {
@@ -112,11 +88,7 @@ describe('Accessibility Tests', () => {
 
   describe('Form Accessibility', () => {
     it('should have labels for form inputs', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+      const { container } = render(<App />);
 
       const inputs = container.querySelectorAll('input:not([type="hidden"])');
       inputs.forEach((input) => {
@@ -150,11 +122,7 @@ describe('Accessibility Tests', () => {
 
   describe('Error Handling', () => {
     it('should have ErrorBoundary for graceful error handling', () => {
-      const { container } = render(
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      );
+      const { container } = render(<App />);
 
       // ErrorBoundary should be wrapping the app
       expect(container).toBeInTheDocument();

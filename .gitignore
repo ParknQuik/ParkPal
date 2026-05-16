@@ -25,3 +25,7 @@ node_modules
 # IDE
 .kilocode/
 .kilocodemodes
+
+# Local Codex/Claude hooks can auto-stage or auto-commit; keep them local-only.
+.codex/hooks.json
+.Codex/hooks.json

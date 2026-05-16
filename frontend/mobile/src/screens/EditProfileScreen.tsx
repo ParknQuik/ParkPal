@@ -15,6 +15,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUserProfile, setUser } from '../store/slices/authSlice';
@@ -22,12 +23,15 @@ import { userAPI } from '../services/api';
 import { Card } from '../components/Card';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -185,39 +189,43 @@ export const EditProfileScreen: React.FC = () => {
     }
   };
 
-  const styles = React.useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: spacing.xl,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backButton: {
-      padding: spacing.sm,
-    },
-    backText: {
-      ...typography.body,
-      color: colors.primary,
-      fontSize: 24,
-    },
-    title: {
-      ...typography.h5,
-      color: colors.textPrimary,
-      fontWeight: '700',
-    },
-    placeholder: {
-      width: 50,
-    },
-    content: {
-      flex: 1,
-      padding: spacing.xl,
-    },
+    const styles = React.useMemo(() => StyleSheet.create({
+      container: {
+        flex: 1,
+        backgroundColor: colors.background,
+      },
+      safeArea: {
+        backgroundColor: colors.primary,
+      },
+      header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: spacing.xl,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        backgroundColor: colors.primary,
+      },
+      backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.white,
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      title: {
+        ...typography.h5,
+        color: colors.white,
+        fontWeight: '700',
+      },
+      placeholder: {
+        width: 40,
+      },
+      content: {
+        flex: 1,
+        padding: spacing.xl,
+      },
     card: {
       marginBottom: spacing.xl,
     },
@@ -302,17 +310,20 @@ export const EditProfileScreen: React.FC = () => {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backText}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Edit Profile</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.primary} />
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Edit Profile</Text>
+          <View style={styles.placeholder} />
+        </View>
+      </SafeAreaView>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.card}>
@@ -385,6 +396,6 @@ export const EditProfileScreen: React.FC = () => {
           )}
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };

@@ -136,6 +136,18 @@ const Profile: React.FC = () => {
 		}
 	};
 
+	const safeStats = stats
+		? {
+			totalBookings: stats.totalBookings ?? 0,
+			activeBookings: stats.activeBookings ?? 0,
+			completedBookings: stats.completedBookings ?? 0,
+			totalSpent: stats.totalSpent ?? 0,
+			totalListings: stats.totalListings,
+			totalEarnings: stats.totalEarnings ?? 0,
+			totalHostBookings: stats.totalHostBookings ?? 0
+		}
+		: null;
+
 	if (loading) {
 		return (
 			<Container maxWidth="md" sx={{ mt: 4 }}>
@@ -153,13 +165,13 @@ const Profile: React.FC = () => {
 			</Typography>
 
 			{/* User Stats */}
-			{stats && (
+			{safeStats && (
 				<Grid container spacing={2} sx={{ mt: 2 }}>
 					<Grid item xs={6} sm={3}>
 						<Card>
 							<CardContent sx={{ textAlign: 'center' }}>
 								<Typography variant="h4" color="primary">
-									{stats.totalBookings}
+									{safeStats.totalBookings}
 								</Typography>
 								<Typography variant="body2" color="text.secondary">
 									Total Bookings
@@ -171,7 +183,7 @@ const Profile: React.FC = () => {
 						<Card>
 							<CardContent sx={{ textAlign: 'center' }}>
 								<Typography variant="h4" color="success.main">
-									{stats.activeBookings}
+									{safeStats.activeBookings}
 								</Typography>
 								<Typography variant="body2" color="text.secondary">
 									Active
@@ -183,7 +195,7 @@ const Profile: React.FC = () => {
 						<Card>
 							<CardContent sx={{ textAlign: 'center' }}>
 								<Typography variant="h4" color="text.secondary">
-									{stats.completedBookings}
+									{safeStats.completedBookings}
 								</Typography>
 								<Typography variant="body2" color="text.secondary">
 									Completed
@@ -195,7 +207,7 @@ const Profile: React.FC = () => {
 						<Card>
 							<CardContent sx={{ textAlign: 'center' }}>
 								<Typography variant="h4" color="secondary">
-									₱{stats.totalSpent.toFixed(2)}
+									₱{safeStats.totalSpent.toFixed(2)}
 								</Typography>
 								<Typography variant="body2" color="text.secondary">
 									Total Spent
@@ -203,13 +215,13 @@ const Profile: React.FC = () => {
 							</CardContent>
 						</Card>
 					</Grid>
-					{user?.role === 'host' && stats.totalListings !== undefined && (
+					{user?.role === 'host' && safeStats.totalListings !== undefined && (
 						<>
 							<Grid item xs={6} sm={4}>
 								<Card>
 									<CardContent sx={{ textAlign: 'center' }}>
 										<Typography variant="h4" color="primary">
-											{stats.totalListings}
+											{safeStats.totalListings}
 										</Typography>
 										<Typography variant="body2" color="text.secondary">
 											Listings
@@ -221,7 +233,7 @@ const Profile: React.FC = () => {
 								<Card>
 									<CardContent sx={{ textAlign: 'center' }}>
 										<Typography variant="h4" color="success.main">
-											₱{(stats.totalEarnings || 0).toFixed(2)}
+											₱{safeStats.totalEarnings.toFixed(2)}
 										</Typography>
 										<Typography variant="body2" color="text.secondary">
 											Earnings
@@ -233,7 +245,7 @@ const Profile: React.FC = () => {
 								<Card>
 									<CardContent sx={{ textAlign: 'center' }}>
 										<Typography variant="h4" color="text.secondary">
-											{stats.totalHostBookings || 0}
+											{safeStats.totalHostBookings}
 										</Typography>
 										<Typography variant="body2" color="text.secondary">
 											Host Bookings
