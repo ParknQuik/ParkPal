@@ -1,7 +1,7 @@
 # ParkPal Project Status Report
 
-**Last Updated:** May 16, 2026
-**Current Branch:** `feature/dark-light-mode`
+**Last Updated:** May 17, 2026
+**Current Branch:** `dev`
 **Production Readiness:** 96/100 (Explore Page Revamp all 5 phases complete + network detection bugfix + Dark/Light Mode migration complete + penalty system implementation)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 17, 2026 | Codex | Confirmed PR #132 and PR #133 merged into `dev`; fast-forwarded local `dev` to `aff8e45`, updated branch/date/current PR status, and documented 10 repo workflow skills including post-merge status planning | 96/100 |
 | May 16, 2026 | Codex | Retired stale `CLAUDE_OPINION_REQUEST.md` and `KILO_OPINION_REQUEST.md` audit request snapshots after confirming they contradicted the current status report; STATUS_REPORT.md remains the primary status log | 96/100 |
 | May 16, 2026 | Codex | Reconciled status report against current project claims: aligned scorecard to 96/100, kept web/backend dev services deployed and mobile EAS-ready but app-store deployment deferred during active development, updated web test evidence to 85/85 passing, documented curated agent workflow tooling and kept GCloud MCP config disabled for future use | 96/100 |
 | May 4, 2026 | Kilo Code | Dark/Light Mode Phase 2 in progress: Fixed NotificationsScreen.tsx (useTheme import, moved styles inside component with useMemo), migrated ReferralScreen.tsx and PointsHistoryScreen.tsx to use useTheme() hook with dynamic styles, StatusBar fixes applied to MyBookingsScreen, QRScannerScreen, EarningsScreen, ListYourSpot, MyListingsScreen, PointsHistoryScreen, ReferralScreen | 93/100 |
@@ -89,16 +90,17 @@ This is the **primary project status log**. Keep historical sections labeled cle
 
 This is a **living document** that tracks ParkPal's actual state based on deployment data and test results. It gets updated with every significant progress milestone.
 
-### Current Reconciliation (May 16, 2026)
+### Current Reconciliation (May 17, 2026)
 
 **Current Claims vs Supporting Evidence:**
 - **Production readiness:** 96/100, aligned to the scorecard below.
+- **Branch state:** `dev` is at `aff8e45` after PR #132 (feature/dark-light-mode) and PR #133 (post-merge status planner skill) merged.
 - **Backend:** Development service deployed on Cloud Run; latest documented test status is 277/288 passing (96.2%).
 - **Web:** Development service deployed on Cloud Run; latest local web test run is 85/85 passing (100%) as of May 16, 2026.
 - **Mobile:** EAS-ready and working for local development, but Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
-- **Workflow tooling:** Repo-local skills and role configs are intended project tooling; GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
+- **Workflow tooling:** 10 repo-local skills and Codex role configs are intended project tooling; GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
-### Current State (May 16, 2026)
+### Current State (May 17, 2026)
 
 **Deployed:**
 - Backend API: Development Cloud Run service is deployed via automated CD pipeline ✅
@@ -192,7 +194,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - CD Pipeline: Automated deployments on push to dev/qa/main
 - Billing: Optimized to $7-12/month (96% cost reduction from peak)
 - Projects: Consolidated to 1 dev project (staging/prod deleted)
-- Workflow tooling: 7 skills operational (GCloud checks use CLI, 1 orchestrator) ✅
+- Workflow tooling: 10 skills operational (GCloud checks use CLI, PR checker, post-merge status planner) ✅
 
 ## 🌐 Environment URLs
 
@@ -412,15 +414,14 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 ## Open Pull Requests
 
-**Recent PRs:**
-- #80: Documentation cleanup
-- #79: QA deployment
-- #77: SMTP secrets
+**Currently Open Against `dev`:**
+- #130: Loyalty points, referral system, and mobile bug fixes
 
-**Old PRs (Likely Stale):**
-- #51, #49, #48, #47, #46
+**Recently Merged:**
+- #132: Complete dark/light mode, Explore revamp, penalty system, and status reconciliation
+- #133: Add post-merge status planner skill
 
-**Issue:** Historical PR list needs a fresh GitHub review before it is used for release planning.
+**Issue:** Review #130 against the now-merged points/referral and penalty work before assuming it is still fully relevant.
 
 ---
 
@@ -435,7 +436,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 | **Security** | 95/100 | EXCELLENT | Secret Manager operational, auth tested, no current critical blocker documented |
 | **Performance** | 92/100 | GOOD | Cost-optimized Cloud Run; Redis deferred until scale requires it |
 | **Monitoring** | 97/100 | EXCELLENT | Automated health checks, logging, deployment status skills |
-| **Developer Experience** | 97/100 | EXCELLENT | 7 repo workflow skills and Codex role configs; GCloud MCP config retained disabled for future use |
+| **Developer Experience** | 97/100 | EXCELLENT | 10 repo workflow skills and Codex role configs; GCloud MCP config retained disabled for future use |
 
 **Overall Production Readiness: 96/100** - EXCELLENT
 
@@ -444,7 +445,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **Previous (Mar 10 AM):** 82/100
 **Previous (Mar 10 PM):** 84/100
 **Previous (Mar 12 PM):** 89 (historical)
-**Current Reality (May 16):** 96/100
+**Current Reality (May 17):** 96/100
 **Progress:** +49 points since Feb 24
 
 ---
@@ -843,9 +844,9 @@ The following March plan is retained for history only. Current status is documen
    - Re-run affected suites before PRs and release-track decisions
    - Keep status counts tied to the latest actual run
 
-2. **Review Large Feature PR Carefully**
-   - Branch includes dark/light mode, Explore revamp, points/referrals, penalty system, docs, and workflow tooling
-   - Use PR review to separate product risk from repo-local tooling changes
+2. **Audit Remaining PR #130**
+   - Compare #130 with the points/referrals and penalty work now merged through #132
+   - Close, rebase, or narrow it before merging to avoid duplicate/conflicting changes
 
 3. **Refresh Deployment Checks Before Release Planning**
    - Confirm Cloud Run backend/web health
@@ -894,7 +895,7 @@ The following March plan is retained for history only. Current status is documen
 
 ### Week 2 Goal (Mar 10) - 🟡 PARTIALLY ACHIEVED
 - ✅ Backend test pass rate: 86.7% (close to 90% target)
-- ✅ Workflow tooling: 7 skills operational (bonus achievement)
+- ✅ Workflow tooling: 7 skills operational at that checkpoint (later expanded to 10)
 - ✅ Developer experience: Significantly improved
 - ⏳ Web frontend: not yet deployed at that checkpoint
 - ⏳ Mobile: EAS Build not configured at that checkpoint
@@ -949,7 +950,7 @@ The following March plan is retained for history only. Current status is documen
    - Deployed on Cloud Run development service
 
 4. **Workflow Tooling (100%)** ✅ NEW
-   - 7 operational skills (test-runner, pr-checker, etc.)
+   - 10 operational skills (test-runner, pr-checker, post-merge status planner, etc.)
    - 2 available agents (code-reviewer, python-pro)
    - GCloud CLI and IDE diagnostic workflows (30-50% faster operations)
    - Comprehensive documentation (4 guides)
@@ -1047,7 +1048,7 @@ The following March plan is retained for history only. Current status is documen
 
 ---
 
-## Stakeholder Communication
+## Historical Stakeholder Communication (February 24, 2026)
 
 ### To Executive Team
 
@@ -1065,29 +1066,28 @@ The following March plan is retained for history only. Current status is documen
 
 ## Next Steps
 
-### Immediate (Today)
+### Immediate (May 17, 2026)
 
-1. Review this status report with team
-2. Acknowledge documentation gap
-3. Create war room for backend test fixes
-4. Assign owners to P0 blockers
+1. Review open PR #130 against the now-merged points/referral and penalty implementation.
+2. Re-run backend tests before changing the documented backend count.
+3. Verify current Cloud Run backend/web health before release-track planning.
+4. Keep app-store submission deferred until beta/public distribution is the active milestone.
 
 ### This Week
 
-1. Daily standup on test failures
-2. Fix Redis deployment
-3. Fix Secret Manager
-4. Fix email service
-5. Track progress to 75%+ test pass rate
+1. Decide whether PR #130 should be closed, rebased, or narrowed.
+2. Refresh backend and mobile test evidence after any PR #130 decision.
+3. Confirm whether Redis should remain deferred for cost optimization.
+4. Prepare a beta-readiness checklist covering mobile build, payments, email, maps, and monitoring.
 
 ### Next Review
 
-**Date:** March 3, 2026 (1 week)
+**Date:** May 24, 2026 (1 week)
 **Agenda:**
-- Backend test pass rate progress
-- Infrastructure fixes status
-- Frontend deployment plan
-- Revised timeline validation
+- PR #130 disposition
+- Fresh backend/mobile/web test evidence
+- Cloud Run health and deployment confidence
+- Beta-readiness checklist status
 
 ---
 
