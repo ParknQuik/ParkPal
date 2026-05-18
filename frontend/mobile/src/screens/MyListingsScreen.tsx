@@ -5,12 +5,12 @@ import { Modal,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  StatusBar,
   FlatList,
   RefreshControl,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,11 +24,13 @@ import { useTheme } from '../context/ThemeContext';
 import { haptics } from '../utils/haptics';
 import { accessibility } from '../utils/accessibility';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AppHeader } from '../components/AppHeader';
 
 export const MyListingsScreen: React.FC = () => {
   const navigation = useNavigation() as any;
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const [refreshing, setRefreshing] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [qrData, setQrData] = useState<string>('');
@@ -128,43 +130,32 @@ const handleFilterPress = useCallback(async () => {
       flex: 1,
       backgroundColor: colors.background,
     },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.lg,
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
+      flex: 1,
       backgroundColor: colors.background,
     },
-    headerTitle: {
-      ...typography.h2,
-      color: colors.textPrimary,
-      fontWeight: '700',
-    },
-    newListingButton: {
-      flexDirection: 'row',
+    headerAddButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       alignItems: 'center',
-      gap: spacing.xs,
-      backgroundColor: colors.primary,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm + 2,
-      borderRadius: borderRadius.xl,
-    },
-    addIcon: {
-      fontFamily: 'MaterialSymbolsOutlined',
-      fontSize: 20,
-      color: colors.white,
-    },
-    newListingText: {
-      ...typography.bodySmall,
-      color: colors.white,
-      fontWeight: '600',
+      justifyContent: 'center',
+      backgroundColor: colors.headerActionBackground,
+      shadowColor: colors.headerActionShadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
     },
     content: {
       flex: 1,
     },
     contentContainer: {
       paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
       paddingBottom: 100,
     },
     statsGrid: {
@@ -472,69 +463,67 @@ const handleFilterPress = useCallback(async () => {
       color: colors.white,
       fontWeight: '600',
     },
-    fab: {
-      position: 'absolute',
-      right: spacing.lg,
-      bottom: spacing.lg,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 4,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-    },
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
-
-
-
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.contentContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
-        }
-      >
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Listings</Text>
-            <Text style={styles.statValue}>{myListings.length}</Text>
-            <View style={styles.statFooter}>
-              <MaterialIcons name="trending-up" size={16} color={colors.primary} />
-              <Text style={styles.trendText}>{activeCount} active</Text>
-            </View>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Active Listings</Text>
-            <Text style={styles.statValue}>{activeCount}</Text>
-            <View style={styles.statFooter}>
-              <MaterialIcons name="visibility" size={16} color={colors.secondary} />
-              <Text style={styles.viewsText}>{myListings.length} total</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Parking Spots</Text>
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader
+          title="My Listings"
+          onBack={() => navigation.goBack()}
+          rightAction={
             <TouchableOpacity
-              style={styles.filterButton}
-              onPress={handleFilterPress}
-              {...accessibility.button('Filter', 'Filter listings')}
+              style={styles.headerAddButton}
+              onPress={() => navigation.navigate('ListSpot' as never)}
+              {...accessibility.button('Add Listing', 'Create a new listing')}
             >
-              <Text style={styles.filterText}>Filter</Text>
-              <MaterialIcons name="filter-list" size={18} color={colors.primary} />
+              <MaterialCommunityIcons name="plus" size={24} color={colors.primary} />
             </TouchableOpacity>
+          }
+        />
+      </SafeAreaView>
+
+      <View style={styles.contentArea}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.contentContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+          }
+        >
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Total Listings</Text>
+              <Text style={styles.statValue}>{myListings.length}</Text>
+              <View style={styles.statFooter}>
+                <MaterialIcons name="trending-up" size={16} color={colors.primary} />
+                <Text style={styles.trendText}>{activeCount} active</Text>
+              </View>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Active Listings</Text>
+              <Text style={styles.statValue}>{activeCount}</Text>
+              <View style={styles.statFooter}>
+                <MaterialIcons name="visibility" size={16} color={colors.secondary} />
+                <Text style={styles.viewsText}>{myListings.length} total</Text>
+              </View>
+            </View>
           </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Your Parking Spots</Text>
+              <TouchableOpacity
+                style={styles.filterButton}
+                onPress={handleFilterPress}
+                {...accessibility.button('Filter', 'Filter listings')}
+              >
+                <Text style={styles.filterText}>Filter</Text>
+                <MaterialIcons name="filter-list" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
 
           {loading && !refreshing ? (
             <View style={styles.loadingContainer}>
@@ -642,7 +631,8 @@ const handleFilterPress = useCallback(async () => {
           />
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
       {/* QR Code Modal */}
       <Modal
         visible={qrModalVisible}
@@ -683,13 +673,6 @@ const handleFilterPress = useCallback(async () => {
           </View>
         </TouchableOpacity>
       </Modal>
-      {/* FAB for creating new listing */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('ListSpot' as never)}
-      >
-        <MaterialIcons name="add" size={28} color={colors.white} />
-      </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 };
