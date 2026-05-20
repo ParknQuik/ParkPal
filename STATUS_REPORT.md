@@ -1,8 +1,8 @@
 # ParkPal Project Status Report
 
-**Last Updated:** May 17, 2026
+**Last Updated:** May 20, 2026
 **Current Branch:** `dev`
-**Production Readiness:** 96/100 (Explore Page Revamp all 5 phases complete + network detection bugfix + Dark/Light Mode migration complete + penalty system implementation)
+**Production Readiness:** 94/100 (Feature baseline remains strong, but fresh May 17 validation found web test regressions and degraded backend Cloud Run health due database unavailability)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
 ---
@@ -11,6 +11,8 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 20, 2026 | Codex | Verified PR #135 merged into `dev` at `bcf16ed`, adding the green shared `AppHeader` treatment, top content spacing, and single add-listing action for `MyListingsScreen`; confirmed no open PRs against `dev`; mobile Jest remains 33/33 passing | 94/100 |
+| May 17, 2026 | Codex | Closed stale PR #130 as superseded, verified no open PRs against `dev`, added `docs/BETA_READINESS_CHECKLIST.md`, and refreshed validation evidence: web 79/85 passing, mobile 33/33 passing, backend local suite blocked by missing PostgreSQL, backend Cloud Run health degraded with database down | 94/100 |
 | May 17, 2026 | Codex | Confirmed PR #132 and PR #133 merged into `dev`; fast-forwarded local `dev` to `aff8e45`, updated branch/date/current PR status, and documented 10 repo workflow skills including post-merge status planning | 96/100 |
 | May 16, 2026 | Codex | Retired stale `CLAUDE_OPINION_REQUEST.md` and `KILO_OPINION_REQUEST.md` audit request snapshots after confirming they contradicted the current status report; STATUS_REPORT.md remains the primary status log | 96/100 |
 | May 16, 2026 | Codex | Reconciled status report against current project claims: aligned scorecard to 96/100, kept web/backend dev services deployed and mobile EAS-ready but app-store deployment deferred during active development, updated web test evidence to 85/85 passing, documented curated agent workflow tooling and kept GCloud MCP config disabled for future use | 96/100 |
@@ -90,14 +92,14 @@ This is the **primary project status log**. Keep historical sections labeled cle
 
 This is a **living document** that tracks ParkPal's actual state based on deployment data and test results. It gets updated with every significant progress milestone.
 
-### Current Reconciliation (May 17, 2026)
+### Current Reconciliation (May 20, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 96/100, aligned to the scorecard below.
-- **Branch state:** `dev` is at `aff8e45` after PR #132 (feature/dark-light-mode) and PR #133 (post-merge status planner skill) merged.
-- **Backend:** Development service deployed on Cloud Run; latest documented test status is 277/288 passing (96.2%).
-- **Web:** Development service deployed on Cloud Run; latest local web test run is 85/85 passing (100%) as of May 16, 2026.
-- **Mobile:** EAS-ready and working for local development, but Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
+- **Production readiness:** 94/100 after fresh validation found web test regressions and degraded backend Cloud Run health due database unavailability.
+- **Branch state:** `origin/dev` is at `bcf16ed` after PR #135; PR #130 was closed as superseded and there are no open PRs against `dev`.
+- **Backend:** Development service is reachable on Cloud Run, but `/health` returned HTTP 503 on May 17, 2026 because the Cloud SQL database check is down; local backend tests are blocked by missing PostgreSQL at `localhost:5432`.
+- **Web:** Development service deployed on Cloud Run and returned HTTP 200; latest local web test run is 79/85 passing on May 17, 2026.
+- **Mobile:** EAS-ready and working for local development; latest local mobile test run is 33/33 passing on May 20, 2026; Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
 - **Workflow tooling:** 10 repo-local skills and Codex role configs are intended project tooling; GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
 ### Current State (May 17, 2026)
@@ -184,9 +186,9 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ **Database Migrations:** Vehicle and Notification tables added
 
 **Test Status:**
-- Backend: 277/288 passing (96.2% pass rate) ✅
-- Mobile: 45/45 passing (100%) ✅
-- Web: 85/85 passing (100%) ✅
+- Backend: Latest local run could not validate the historical 277/288 claim because PostgreSQL was unavailable at `localhost:5432`; observed 64/473 passing before environment-driven failures on May 17, 2026 ⚠️
+- Mobile: 33/33 passing (100%) on May 20, 2026 ✅
+- Web: 79/85 passing (92.9%) on May 17, 2026 ⚠️
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
 **Infrastructure:**
@@ -201,7 +203,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### Development (Current)
 | Service | URL | Status |
 |---------|-----|--------|
-| Backend API | https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app | ✅ UP |
+| Backend API | https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app | ⚠️ DEGRADED (`/health` 503; database down) |
 | Web Frontend | https://parkpal-web-dev-cxntrkjjmq-as.a.run.app | ✅ UP |
 | Mobile App | Not deployed (EAS ready) | 📱 Ready |
 | Swagger Docs | https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/api-docs | ✅ UP |
@@ -235,7 +237,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **URL:** https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app
 **Platform:** GCP Cloud Run
 **Deployed:** March 2, 2026 (automated via CD pipeline)
-**Status:** Operational
+**Status:** Degraded on May 17, 2026 because the health check cannot reach Cloud SQL
 
 **CD/CI Pipeline:**
 - ✅ Automated deployments on push to dev/qa/main
@@ -246,11 +248,11 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ IAM permissions configured correctly
 
 **Health Check Results:**
-- Database (PostgreSQL): UP (when instance started)
-- Redis: DOWN (not configured - future optimization)
+- Database (PostgreSQL): DOWN on May 17, 2026 health check; Cloud SQL socket unreachable
+- Redis: UP on May 17, 2026 health check
 - Secret Manager: UP ✅ (fixed!)
 - SMTP Email: UP ✅ (configured with noreply@parknquik.com)
-- Overall: OPERATIONAL (degraded only when DB stopped for cost savings)
+- Overall: DEGRADED on May 17, 2026 due database check failure
 
 **API Endpoints:** 41 documented in Swagger
 - Auth: login, register, logout, me, password change, forgot-password, reset-password
@@ -386,9 +388,10 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### Current Gaps
 
 **Testing:**
-1. **Web test pass rate restored**
-   - Latest local web run: 85/85 passing (100%) on May 16, 2026.
-   - Continue running the suite before each PR that changes web routes, auth, payments, or profile screens.
+1. **Web test regressions found**
+   - Latest local web run: 79/85 passing (92.9%) on May 17, 2026.
+   - Failures are concentrated in auth integration and login tab/error handling tests.
+   - Fix before beta readiness claims are raised again.
 
 2. **Redis Caching Deferred**
    - Redis remains deferred for cost optimization.
@@ -415,13 +418,16 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ## Open Pull Requests
 
 **Currently Open Against `dev`:**
-- #130: Loyalty points, referral system, and mobile bug fixes
+- None verified by `gh pr list --base dev --state open` on May 20, 2026.
 
 **Recently Merged:**
+- #135: Fix My Listings header layout
+- #134: Update status report after dev merges
 - #132: Complete dark/light mode, Explore revamp, penalty system, and status reconciliation
 - #133: Add post-merge status planner skill
 
-**Issue:** Review #130 against the now-merged points/referral and penalty work before assuming it is still fully relevant.
+**Closed As Superseded:**
+- #130: Loyalty points, referral system, and mobile bug fixes. Closed on May 17, 2026 because the branch was stale, conflicting, and unsafe to merge into current `dev`.
 
 ---
 
@@ -429,23 +435,23 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 | Category | Score | Status | Reality Check |
 |----------|-------|--------|---------------|
-| **Backend Functionality** | 97/100 | EXCELLENT | Deployed; latest documented backend tests 277/288 passing |
-| **Frontend Deployment** | 92/100 | EXCELLENT | Web dev service deployed; mobile EAS-ready, app-store deployment deferred during development |
-| **Infrastructure** | 96/100 | EXCELLENT | Cloud Run, Cloud SQL, Secret Manager, email documented operational; Redis deferred |
-| **Testing** | 96/100 | EXCELLENT | Backend 96.2%, Mobile 100%, Web 85/85 passing |
+| **Backend Functionality** | 94/100 | GOOD | Deployed but `/health` is degraded while the database check is down |
+| **Frontend Deployment** | 90/100 | GOOD | Web dev service deployed; mobile EAS-ready, app-store deployment deferred during development |
+| **Infrastructure** | 92/100 | GOOD | Cloud Run reachable; Secret Manager and Redis health checks passed; database health check failed |
+| **Testing** | 88/100 | NEEDS ATTENTION | Mobile 33/33 passing; web 79/85 passing; backend local suite blocked by missing PostgreSQL |
 | **Security** | 95/100 | EXCELLENT | Secret Manager operational, auth tested, no current critical blocker documented |
 | **Performance** | 92/100 | GOOD | Cost-optimized Cloud Run; Redis deferred until scale requires it |
 | **Monitoring** | 97/100 | EXCELLENT | Automated health checks, logging, deployment status skills |
 | **Developer Experience** | 97/100 | EXCELLENT | 10 repo workflow skills and Codex role configs; GCloud MCP config retained disabled for future use |
 
-**Overall Production Readiness: 96/100** - EXCELLENT
+**Overall Production Readiness: 94/100** - GOOD
 
 **Previous Claim:** 87/100 (91% in some docs)
 **Initial Reality (Feb 24):** 47/100
 **Previous (Mar 10 AM):** 82/100
 **Previous (Mar 10 PM):** 84/100
 **Previous (Mar 12 PM):** 89 (historical)
-**Current Reality (May 17):** 96/100
+**Current Reality (May 17):** 94/100
 **Progress:** +49 points since Feb 24
 
 ---
@@ -844,9 +850,9 @@ The following March plan is retained for history only. Current status is documen
    - Re-run affected suites before PRs and release-track decisions
    - Keep status counts tied to the latest actual run
 
-2. **Audit Remaining PR #130**
-   - Compare #130 with the points/referrals and penalty work now merged through #132
-   - Close, rebase, or narrow it before merging to avoid duplicate/conflicting changes
+2. **Keep PR #130 Closed**
+   - PR #130 was stale and conflicting after the later `dev` merges
+   - Reintroduce any still-needed behavior only from a fresh branch off current `dev`
 
 3. **Refresh Deployment Checks Before Release Planning**
    - Confirm Cloud Run backend/web health
@@ -1068,23 +1074,23 @@ The following March plan is retained for history only. Current status is documen
 
 ### Immediate (May 17, 2026)
 
-1. Review open PR #130 against the now-merged points/referral and penalty implementation.
-2. Re-run backend tests before changing the documented backend count.
-3. Verify current Cloud Run backend/web health before release-track planning.
-4. Keep app-store submission deferred until beta/public distribution is the active milestone.
+1. Fix the 6 failing web auth/login tests from the May 17 run.
+2. Restore or connect the backend test PostgreSQL instance, then rerun `cd backend && npm test -- --watchman=false`.
+3. Restore Cloud SQL availability for the dev backend and confirm `/health` no longer returns 503.
+4. Use `docs/BETA_READINESS_CHECKLIST.md` as the beta gate before app-store submission work resumes.
 
 ### This Week
 
-1. Decide whether PR #130 should be closed, rebased, or narrowed.
-2. Refresh backend and mobile test evidence after any PR #130 decision.
-3. Confirm whether Redis should remain deferred for cost optimization.
-4. Prepare a beta-readiness checklist covering mobile build, payments, email, maps, and monitoring.
+1. Keep PR #130 closed; reintroduce any still-needed behavior only from a fresh branch off current `dev`.
+2. Refresh backend test evidence after local PostgreSQL is available.
+3. Confirm whether Redis remains a beta deferral or becomes required.
+4. Work through the beta-readiness checklist covering mobile build, payments, email, maps, monitoring, Redis deferral, and app-store prerequisites.
 
 ### Next Review
 
 **Date:** May 24, 2026 (1 week)
 **Agenda:**
-- PR #130 disposition
+- Web auth/login test recovery
 - Fresh backend/mobile/web test evidence
 - Cloud Run health and deployment confidence
 - Beta-readiness checklist status
