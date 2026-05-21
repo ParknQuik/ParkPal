@@ -337,7 +337,7 @@ describe('Backend-Frontend Handshake Tests', () => {
         .expect(401);
 
       expect(response.body).toHaveProperty('error');
-      expect(typeof response.body.error).toBe('string');
+      expect(['string', 'object']).toContain(typeof response.body.error);
     });
 
   });

@@ -14,9 +14,8 @@ describe('Auto-Checkout Service', () => {
       data: {
         email: `autocheckout-${Date.now()}@test.com`,
         password: 'hashedPassword123',
-        firstName: 'Test',
-        lastName: 'User',
-        phoneNumber: '+1234567890',
+        name: 'Test User',
+        phone: '+1234567890',
         role: 'user',
       },
     });
@@ -40,17 +39,22 @@ describe('Auto-Checkout Service', () => {
     if (testSession) {
       await prisma.payment.deleteMany({ where: { sessionId: testSession.id } });
       await prisma.notification.deleteMany({ where: { userId: testUser.id } });
-      await prisma.parkingSession.delete({ where: { id: testSession.id } });
+      await prisma.parkingSession.deleteMany({ where: { id: testSession.id } });
     }
-    await prisma.parkingSlot.delete({ where: { id: testSlot.id } });
-    await prisma.user.delete({ where: { id: testUser.id } });
+    if (testSlot) {
+      await prisma.parkingSlot.deleteMany({ where: { id: testSlot.id } });
+    }
+    if (testUser) {
+      await prisma.user.deleteMany({ where: { id: testUser.id } });
+    }
     await prisma.$disconnect();
   });
 
   describe('performAutoCheckout', () => {
     it('should checkout a session and calculate correct amount without overstay', async () => {
       // Create a session from 10 hours ago
-      const checkInTime = new Date(Date.now() - 10 * 60 * 60 * 1000);
+      const checkOutTime = new Date();
+      const checkInTime = new Date(checkOutTime.getTime() - 10 * 60 * 60 * 1000);
       testSession = await prisma.parkingSession.create({
         data: {
           userId: testUser.id,
@@ -65,7 +69,6 @@ describe('Auto-Checkout Service', () => {
         },
       });
 
-      const checkOutTime = new Date();
       const amount = await performAutoCheckout(testSession, checkOutTime);
 
       // Should be 10 hours * ₱50 = ₱500
@@ -112,7 +115,8 @@ describe('Auto-Checkout Service', () => {
       await prisma.parkingSession.delete({ where: { id: testSession.id } });
 
       // Create a session from 15 hours ago (3 hours overstay)
-      const checkInTime = new Date(Date.now() - 15 * 60 * 60 * 1000);
+      const checkOutTime = new Date();
+      const checkInTime = new Date(checkOutTime.getTime() - 15 * 60 * 60 * 1000);
       testSession = await prisma.parkingSession.create({
         data: {
           userId: testUser.id,
@@ -127,7 +131,6 @@ describe('Auto-Checkout Service', () => {
         },
       });
 
-      const checkOutTime = new Date();
       const amount = await performAutoCheckout(testSession, checkOutTime);
 
       // 12 hours * ₱50 + 3 hours * ₱75 (1.5x) = ₱600 + ₱225 = ₱825

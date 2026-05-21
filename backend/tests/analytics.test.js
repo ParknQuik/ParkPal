@@ -8,6 +8,7 @@ const app = require('../index');
 const { PrismaClient } = require('@prisma/client');
 const { setupTestDatabase, teardownTestDatabase } = require('./setup');
 const ParkingSessionTracking = require('../services/parkingSessionTracking');
+const { generateToken } = require('../services/auth');
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,7 @@ afterAll(async () => {
 describe('Analytics API Routes', () => {
   let testUser;
   let testZone;
+  let authToken;
 
   beforeEach(async () => {
     // Create test user
@@ -34,6 +36,7 @@ describe('Analytics API Routes', () => {
         role: 'driver'
       }
     });
+    authToken = await generateToken(testUser);
 
     // Create test zone with geofence
     testZone = await prisma.zone.create({
@@ -66,6 +69,11 @@ describe('Analytics API Routes', () => {
 
   afterEach(async () => {
     // Clean up in reverse order of dependencies
+    await prisma.payment.deleteMany();
+    await prisma.booking.deleteMany();
+    await prisma.parkingSlot.deleteMany();
+    await prisma.notification.deleteMany();
+    await prisma.vehicle.deleteMany();
     await prisma.activityEvent.deleteMany();
     await prisma.parkingSession.deleteMany();
     await prisma.zone.deleteMany();
@@ -76,6 +84,7 @@ describe('Analytics API Routes', () => {
     it('should create a new parking session when user enters zone', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/zone/enter')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           zoneId: testZone.id,
@@ -94,6 +103,7 @@ describe('Analytics API Routes', () => {
       // Create first session
       const firstResponse = await request(app)
         .post('/api/v1/analytics/zone/enter')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           zoneId: testZone.id,
@@ -106,6 +116,7 @@ describe('Analytics API Routes', () => {
       // Try to create second session
       const secondResponse = await request(app)
         .post('/api/v1/analytics/zone/enter')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           zoneId: testZone.id,
@@ -121,6 +132,7 @@ describe('Analytics API Routes', () => {
     it('should return 404 if zone does not exist', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/zone/enter')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           zoneId: 99999,
@@ -135,6 +147,7 @@ describe('Analytics API Routes', () => {
     it('should return 400 if location is outside zone boundaries', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/zone/enter')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           zoneId: testZone.id,
@@ -149,6 +162,7 @@ describe('Analytics API Routes', () => {
     it('should return 400 if required fields are missing', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/zone/enter')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           zoneId: testZone.id
@@ -161,6 +175,7 @@ describe('Analytics API Routes', () => {
     it('should validate coordinates are in valid range', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/zone/enter')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           zoneId: testZone.id,
@@ -188,6 +203,7 @@ describe('Analytics API Routes', () => {
     it('should log activity update successfully', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/activity')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           sessionId: testSession.id,
@@ -206,6 +222,7 @@ describe('Analytics API Routes', () => {
     it('should accept activity without coordinates', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/activity')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           sessionId: testSession.id,
@@ -220,6 +237,7 @@ describe('Analytics API Routes', () => {
     it('should return 400 for invalid activity type', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/activity')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           sessionId: testSession.id,
@@ -233,6 +251,7 @@ describe('Analytics API Routes', () => {
     it('should return 400 for confidence outside 0-100 range', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/activity')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           sessionId: testSession.id,
@@ -246,6 +265,7 @@ describe('Analytics API Routes', () => {
     it('should return 400 if required fields are missing', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/activity')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           userId: testUser.id,
           sessionId: testSession.id
@@ -273,6 +293,7 @@ describe('Analytics API Routes', () => {
 
       const response = await request(app)
         .post('/api/v1/analytics/zone/exit')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           sessionId: testSession.id,
           exitTime,
@@ -288,6 +309,7 @@ describe('Analytics API Routes', () => {
     it('should handle exit without explicit exit time', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/zone/exit')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           sessionId: testSession.id
         });
@@ -299,6 +321,7 @@ describe('Analytics API Routes', () => {
     it('should return 400 if sessionId is missing', async () => {
       const response = await request(app)
         .post('/api/v1/analytics/zone/exit')
+        .set('Authorization', `Bearer ${authToken}`)
         .send({
           exitTime: new Date().toISOString()
         });
@@ -355,7 +378,8 @@ describe('Analytics API Routes', () => {
 
     it('should return zone availability with occupancy stats', async () => {
       const response = await request(app)
-        .get(`/api/v1/analytics/zones/${testZone.id}/availability`);
+        .get(`/api/v1/analytics/zones/${testZone.id}/availability`)
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('zoneId', testZone.id);
@@ -370,7 +394,8 @@ describe('Analytics API Routes', () => {
 
     it('should return 404 for non-existent zone', async () => {
       const response = await request(app)
-        .get('/api/v1/analytics/zones/99999/availability');
+        .get('/api/v1/analytics/zones/99999/availability')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Zone not found');
@@ -420,7 +445,8 @@ describe('Analytics API Routes', () => {
 
     it('should return zone metrics with default parameters', async () => {
       const response = await request(app)
-        .get(`/api/v1/analytics/zones/${testZone.id}/metrics`);
+        .get(`/api/v1/analytics/zones/${testZone.id}/metrics`)
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('zoneId', testZone.id);
@@ -437,6 +463,7 @@ describe('Analytics API Routes', () => {
 
       const response = await request(app)
         .get(`/api/v1/analytics/zones/${testZone.id}/metrics`)
+        .set('Authorization', `Bearer ${authToken}`)
         .query({ from, to });
 
       expect(response.status).toBe(200);
@@ -446,6 +473,7 @@ describe('Analytics API Routes', () => {
     it('should respect limit parameter', async () => {
       const response = await request(app)
         .get(`/api/v1/analytics/zones/${testZone.id}/metrics`)
+        .set('Authorization', `Bearer ${authToken}`)
         .query({ limit: 1 });
 
       expect(response.status).toBe(200);
@@ -454,7 +482,8 @@ describe('Analytics API Routes', () => {
 
     it('should return 404 for non-existent zone', async () => {
       const response = await request(app)
-        .get('/api/v1/analytics/zones/99999/metrics');
+        .get('/api/v1/analytics/zones/99999/metrics')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);
     });
@@ -484,7 +513,8 @@ describe('Analytics API Routes', () => {
 
     it('should return session details with activities', async () => {
       const response = await request(app)
-        .get(`/api/v1/analytics/sessions/${testSession.id}`);
+        .get(`/api/v1/analytics/sessions/${testSession.id}`)
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('sessionId', testSession.id);
@@ -498,7 +528,8 @@ describe('Analytics API Routes', () => {
 
     it('should return 404 for non-existent session', async () => {
       const response = await request(app)
-        .get('/api/v1/analytics/sessions/99999');
+        .get('/api/v1/analytics/sessions/99999')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Session not found');
@@ -548,7 +579,8 @@ describe('Analytics API Routes', () => {
 
     it('should return list of all active zones by default', async () => {
       const response = await request(app)
-        .get('/api/v1/analytics/zones');
+        .get('/api/v1/analytics/zones')
+        .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('count');
@@ -560,6 +592,7 @@ describe('Analytics API Routes', () => {
     it('should filter zones by city', async () => {
       const response = await request(app)
         .get('/api/v1/analytics/zones')
+        .set('Authorization', `Bearer ${authToken}`)
         .query({ city: 'Manila' });
 
       expect(response.status).toBe(200);
@@ -570,6 +603,7 @@ describe('Analytics API Routes', () => {
     it('should filter zones by type', async () => {
       const response = await request(app)
         .get('/api/v1/analytics/zones')
+        .set('Authorization', `Bearer ${authToken}`)
         .query({ type: 'commercial' });
 
       expect(response.status).toBe(200);
@@ -580,6 +614,7 @@ describe('Analytics API Routes', () => {
     it('should include inactive zones when requested', async () => {
       const response = await request(app)
         .get('/api/v1/analytics/zones')
+        .set('Authorization', `Bearer ${authToken}`)
         .query({ isActive: 'false' });
 
       expect(response.status).toBe(200);

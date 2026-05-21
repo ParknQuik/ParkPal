@@ -1034,6 +1034,21 @@ exports.qrCheckIn = async (req, res, next) => {
       });
     }
 
+    const activeSession = await prisma.parkingSession.findFirst({
+      where: {
+        userId,
+        slotId: slot.id,
+        status: 'active',
+      },
+    });
+
+    if (activeSession) {
+      return res.status(400).json({
+        error: 'User already checked in to this parking slot',
+        code: 'ALREADY_CHECKED_IN',
+      });
+    }
+
     // Create parking session
     const session = await prisma.parkingSession.create({
       data: {
@@ -1156,14 +1171,11 @@ exports.qrCheckOut = async (req, res, next) => {
         }
 
         // Update payment record to completed
-        // First, get the existing payment to preserve metadata
+        // Complete the existing authorization payment for this booking.
         const existingPayment = await prisma.payment.findFirst({
           where: {
             bookingId: session.bookingId,
-            metadata: {
-              path: ['paymentIntentId'],
-              equals: session.booking.authId
-            }
+            transactionId: session.booking.authId
           }
         });
 
@@ -1172,12 +1184,7 @@ exports.qrCheckOut = async (req, res, next) => {
             where: { id: existingPayment.id },
             data: {
               status: 'completed',
-              amount: captureAmount,
-              metadata: {
-                ...existingPayment.metadata,
-                capturedAt: new Date().toISOString(),
-                capturedAmount: captureAmount
-              }
+              amount: captureAmount
             }
           });
         }
@@ -1255,10 +1262,7 @@ exports.qrCheckOut = async (req, res, next) => {
       payment = await prisma.payment.findFirst({
         where: {
           bookingId: session.bookingId,
-          metadata: {
-            path: ['paymentIntentId'],
-            equals: session.booking.authId
-          }
+          transactionId: session.booking.authId
         }
       });
     }
@@ -1715,13 +1719,11 @@ exports.cancelBooking = async (req, res, next) => {
     const hardDeadline = new Date(bookingStartTime.getTime() - 30 * 60 * 1000);   // 30 min — hard block
     const penaltyDeadline = new Date(bookingStartTime.getTime() - 60 * 60 * 1000); // 1 hour — strike zone
 
-    if (booking.status !== 'pending') {
-      if (now >= hardDeadline) {
-        return res.status(400).json({
-          error: 'Cannot cancel booking within 30 minutes of start time or after it has started',
-          code: 'CANCELLATION_DEADLINE_PASSED',
-        });
-      }
+    if (now >= hardDeadline) {
+      return res.status(400).json({
+        error: 'Cannot cancel booking within 30 minutes of start time or after it has started',
+        code: 'CANCELLATION_DEADLINE_PASSED',
+      });
     }
 
     const isLateCancellation = booking.status === 'confirmed' && now >= penaltyDeadline && now < hardDeadline;
@@ -2263,23 +2265,32 @@ exports.extendBooking = async (req, res, next) => {
         },
       });
 
-      // Create payment record for extension
-      await tx.payment.create({
-        data: {
-          userId,
-          bookingId: parseInt(id),
-          amount: totalCost,
-          paymentMethod: 'extension',
-          status: 'completed',
-          paymentIntent: paymentIntentId,
-          paymentDetails: JSON.stringify({
-            type: 'extension',
-            hours: extensionHours,
-            originalEndTime: currentEndTime,
-            newEndTime,
-          }),
-        },
+      const existingExtensionPayment = await tx.payment.findUnique({
+        where: { transactionId: paymentIntentId },
       });
+
+      if (existingExtensionPayment) {
+        await tx.payment.update({
+          where: { id: existingExtensionPayment.id },
+          data: {
+            bookingId: parseInt(id),
+            amount: totalCost,
+            paymentMethod: 'extension',
+            status: 'completed',
+          },
+        });
+      } else {
+        await tx.payment.create({
+          data: {
+            userId,
+            bookingId: parseInt(id),
+            amount: totalCost,
+            paymentMethod: 'extension',
+            status: 'completed',
+            transactionId: paymentIntentId,
+          },
+        });
+      }
 
       // Create notification
       await tx.notification.create({

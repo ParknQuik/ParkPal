@@ -93,11 +93,7 @@ exports.createPaymentIntent = async (req, res, next) => {
         paymentMethod: paymentMethod || 'pending',
         amount: parseFloat(amount),
         status: 'pending',
-        metadata: {
-          paymentIntentId: result.paymentIntent.id,
-          clientKey: result.paymentIntent.attributes.client_key,
-          captureType: captureType
-        }
+        transactionId: result.paymentIntent.id
       }
     });
 
@@ -212,10 +208,7 @@ exports.confirmPayment = async (req, res, next) => {
     // Find our payment record
     const payment = await prisma.payment.findFirst({
       where: {
-        metadata: {
-          path: ['paymentIntentId'],
-          equals: paymentIntentId
-        }
+        transactionId: paymentIntentId
       },
       include: { booking: true }
     });
@@ -229,7 +222,7 @@ exports.confirmPayment = async (req, res, next) => {
      let bookingStatus = payment.booking.status;
 
      // Check if this is a manual capture (authorization hold)
-     const isManualCapture = payment.metadata?.captureType === 'manual';
+     const isManualCapture = payment.booking.rentalMode === 'open';
 
      if (status === 'succeeded') {
        paymentStatus = 'completed';
@@ -248,12 +241,7 @@ exports.confirmPayment = async (req, res, next) => {
      const updatedPayment = await prisma.payment.update({
        where: { id: payment.id },
        data: {
-         status: paymentStatus,
-         metadata: {
-           ...payment.metadata,
-           paymongoStatus: status,
-           confirmedAt: new Date().toISOString()
-         }
+         status: paymentStatus
        }
      });
 
@@ -329,10 +317,7 @@ exports.createGCashPayment = async (req, res, next) => {
         paymentMethod: 'gcash',
         amount: parseFloat(amount),
         status: 'pending',
-        metadata: {
-          sourceId: sourceResult.source.id,
-          checkoutUrl: sourceResult.source.attributes.redirect.checkout_url
-        }
+        transactionId: sourceResult.source.id
       }
     });
 
@@ -397,6 +382,7 @@ exports.getUserPayments = async (req, res, next) => {
       where: { userId },
       select: {
         id: true,
+        userId: true,
         amount: true,
         paymentMethod: true,
         status: true,
@@ -512,12 +498,7 @@ async function handlePaymentPaid(paymentData) {
 
    // Find payment record
    const payment = await prisma.payment.findFirst({
-     where: {
-       metadata: {
-         path: ['paymentIntentId'],
-         equals: paymentIntentId
-       }
-     }
+     where: { transactionId: paymentIntentId }
    });
 
    if (!payment) {
@@ -528,11 +509,7 @@ async function handlePaymentPaid(paymentData) {
   await prisma.payment.update({
     where: { id: payment.id },
     data: {
-      status: 'completed',
-      metadata: {
-        ...payment.metadata,
-        paidAt: new Date().toISOString()
-      }
+      status: 'completed'
     }
   });
 
@@ -558,12 +535,7 @@ async function handlePaymentFailed(paymentData) {
   const paymentIntentId = paymentData.attributes.payment_intent_id;
 
   const payment = await prisma.payment.findFirst({
-    where: {
-      metadata: {
-        path: ['paymentIntentId'],
-        equals: paymentIntentId
-      }
-    }
+    where: { transactionId: paymentIntentId }
   });
 
   if (!payment) {
@@ -574,12 +546,7 @@ async function handlePaymentFailed(paymentData) {
   await prisma.payment.update({
     where: { id: payment.id },
     data: {
-      status: 'failed',
-      metadata: {
-        ...payment.metadata,
-        failedAt: new Date().toISOString(),
-        failureReason: paymentData.attributes.last_payment_error?.message || 'Unknown error'
-      }
+      status: 'failed'
     }
   });
 
@@ -595,12 +562,7 @@ async function handleSourceChargeable(sourceData) {
 
   // Find payment with this source
   const payment = await prisma.payment.findFirst({
-    where: {
-      metadata: {
-        path: ['sourceId'],
-        equals: sourceId
-      }
-    }
+    where: { transactionId: sourceId }
   });
 
    if (!payment) {
@@ -619,10 +581,7 @@ async function handleSourceChargeable(sourceData) {
       where: { id: payment.id },
       data: {
         status: 'processing',
-        metadata: {
-          ...payment.metadata,
-          paymentId: result.payment.id
-        }
+        transactionId: result.payment.id
       }
     });
 

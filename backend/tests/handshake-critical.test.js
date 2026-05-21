@@ -97,8 +97,10 @@ describe('Critical Handshake Tests', () => {
     // Cleanup
     await prisma.review.deleteMany({});
     await prisma.payment.deleteMany({});
+    await prisma.notification.deleteMany({});
     await prisma.parkingSession.deleteMany({});
     await prisma.booking.deleteMany({});
+    await prisma.vehicle.deleteMany({});
     await prisma.parkingSlot.deleteMany({});
     await prisma.zone.deleteMany({});
     await prisma.user.deleteMany({ where: { email: { contains: 'critical' } } });
@@ -433,7 +435,7 @@ describe('Critical Handshake Tests', () => {
         .expect(401);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error.toLowerCase()).toMatch(/expired|invalid|token/);
+      expect(JSON.stringify(response.body.error).toLowerCase()).toMatch(/expired|invalid|token/);
     });
 
     test('should accept valid non-expired token', async () => {

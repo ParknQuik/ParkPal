@@ -10,6 +10,13 @@ const {
 jest.mock('axios');
 const axios = require('axios');
 
+const mockVerifyIdToken = jest.fn();
+jest.mock('google-auth-library', () => ({
+  OAuth2Client: jest.fn().mockImplementation(() => ({
+    verifyIdToken: mockVerifyIdToken,
+  })),
+}));
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -36,6 +43,8 @@ afterAll(async () => {
 
 beforeEach(() => {
   axios.get.mockReset();
+  axios.post?.mockReset?.();
+  mockVerifyIdToken.mockReset();
 });
 
 describe('Google Auth API', () => {
@@ -50,7 +59,7 @@ describe('Google Auth API', () => {
     });
 
     it('should return 401 for invalid google token', async () => {
-      axios.get.mockRejectedValueOnce(new Error('Invalid token'));
+      mockVerifyIdToken.mockRejectedValueOnce(new Error('Invalid token'));
 
       const response = await request(app)
         .post('/api/v1/auth/google')
@@ -61,13 +70,13 @@ describe('Google Auth API', () => {
     });
 
     it('should authenticate with a valid id_token', async () => {
-      axios.get.mockResolvedValueOnce({
-        data: {
+      mockVerifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
           sub: 'google-id-12345',
           email: 'googleuser@example.com',
           name: 'Google User',
           picture: 'https://example.com/photo.jpg',
-        },
+        }),
       });
 
       const response = await request(app)
@@ -84,13 +93,13 @@ describe('Google Auth API', () => {
     });
 
     it('should link google account to existing user by email', async () => {
-      axios.get.mockResolvedValueOnce({
-        data: {
+      mockVerifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
           sub: 'google-id-existing',
           email: 'test-driver@example.com',
           name: 'Test Driver',
           picture: 'https://example.com/new-photo.jpg',
-        },
+        }),
       });
 
       const response = await request(app)
@@ -104,12 +113,12 @@ describe('Google Auth API', () => {
     });
 
     it('should return JWT token on success', async () => {
-      axios.get.mockResolvedValueOnce({
-        data: {
+      mockVerifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
           sub: 'google-id-jwt-test',
           email: 'jwt-test@example.com',
           name: 'JWT Test',
-        },
+        }),
       });
 
       const response = await request(app)
@@ -121,29 +130,36 @@ describe('Google Auth API', () => {
       expect(response.body.token.length).toBeGreaterThan(0);
     });
 
-    it('should fallback to access_token when id_token fails', async () => {
-      axios.get
-        .mockRejectedValueOnce(new Error('id_token validation failed'))
-        .mockResolvedValueOnce({
-          data: {
-            sub: 'google-access-token-id',
-            email: 'access-user@example.com',
-            name: 'Access Token User',
-          },
-        });
+    it('should exchange an authorization code and authenticate with returned id_token', async () => {
+      axios.post.mockResolvedValueOnce({
+        data: {
+          id_token: 'server-id-token',
+          access_token: 'server-access-token',
+        },
+      });
+      mockVerifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
+          sub: 'google-code-id',
+          email: 'code-user@example.com',
+          name: 'Code User',
+        }),
+      });
 
       const response = await request(app)
         .post('/api/v1/auth/google')
-        .send({ googleToken: 'valid-access-token' });
+        .send({ code: 'valid-auth-code' });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('token');
-      expect(response.body.user.email).toBe('access-user@example.com');
-      expect(axios.get).toHaveBeenCalledTimes(2);
+      expect(response.body.user.email).toBe('code-user@example.com');
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(mockVerifyIdToken).toHaveBeenCalledWith(
+        expect.objectContaining({ idToken: 'server-id-token' })
+      );
     });
 
     it('should return 401 when both id_token and access_token fail', async () => {
-      axios.get.mockRejectedValue(new Error('Verification failed'));
+      mockVerifyIdToken.mockRejectedValue(new Error('Verification failed'));
 
       const response = await request(app)
         .post('/api/v1/auth/google')
@@ -154,11 +170,11 @@ describe('Google Auth API', () => {
     });
 
     it('should return 401 when google response has no sub', async () => {
-      axios.get.mockResolvedValueOnce({
-        data: {
+      mockVerifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
           email: 'no-sub@example.com',
           name: 'No Sub User',
-        },
+        }),
       });
 
       const response = await request(app)

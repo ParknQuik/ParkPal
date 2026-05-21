@@ -276,7 +276,7 @@ class ParkingSessionTrackingService {
       );
 
       // Only confirm if circling time is reasonable (0-60 minutes)
-      if (circlingDurationSeconds < 0 || circlingDurationSeconds > 3600) {
+      if (new Date(parkingTime).getTime() > Date.now() || circlingDurationSeconds < 0 || circlingDurationSeconds > 3600) {
         console.warn(`Invalid circling time for session ${sessionId}: ${circlingDurationSeconds}s`);
         return;
       }
@@ -322,9 +322,9 @@ class ParkingSessionTrackingService {
         });
       } else {
         // User left without parking - mark as abandoned
-        const circlingDurationSeconds = Math.floor(
+        const circlingDurationSeconds = Math.max(0, Math.ceil(
           (new Date(exitTime).getTime() - new Date(session.circlingStartTime).getTime()) / 1000
-        );
+        ));
 
         await prisma.parkingSession.update({
           where: { id: sessionId },

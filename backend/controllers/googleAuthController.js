@@ -28,18 +28,26 @@ exports.googleAuth = async (req, res, next) => {
       const tokenToVerify = id_token || access_token;
 
       // Verify the token with audience validation
-      const ticket = await client.verifyIdToken({
-        idToken: tokenToVerify,
-        audience: process.env.GOOGLE_CLIENT_ID
-      });
-      googleUser = ticket.getPayload();
+      try {
+        const ticket = await client.verifyIdToken({
+          idToken: tokenToVerify,
+          audience: process.env.GOOGLE_CLIENT_ID
+        });
+        googleUser = ticket.getPayload();
+      } catch (error) {
+        return res.status(401).json({ error: 'Invalid Google token' });
+      }
      } else if (googleToken) {
        // Legacy: accept pre-exchanged token
-       const ticket = await client.verifyIdToken({
-         idToken: googleToken,
-         audience: process.env.GOOGLE_CLIENT_ID
-       });
-       googleUser = ticket.getPayload();
+       try {
+         const ticket = await client.verifyIdToken({
+           idToken: googleToken,
+           audience: process.env.GOOGLE_CLIENT_ID
+         });
+         googleUser = ticket.getPayload();
+       } catch (error) {
+         return res.status(401).json({ error: 'Invalid Google token' });
+       }
     } else {
       return res.status(400).json({ error: 'Authorization code or Google token is required' });
     }

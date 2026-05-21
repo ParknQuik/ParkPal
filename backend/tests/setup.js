@@ -39,6 +39,7 @@ async function cleanDatabase() {
   await prisma.notification.deleteMany();
   await prisma.pointsTransaction.deleteMany();
   await prisma.referral.deleteMany();
+  await prisma.vehicle.deleteMany();
   await prisma.user.deleteMany();
 }
 

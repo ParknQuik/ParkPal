@@ -130,7 +130,7 @@ describe('Vehicles API', () => {
           model: 'Vios',
           year: 2023,
           color: 'Blue',
-          licensePlate: 'DUPLICATE-1',
+          licensePlate: 'DUP-001',
         });
 
       const response = await request(app)
@@ -141,7 +141,7 @@ describe('Vehicles API', () => {
           model: 'Civic',
           year: 2022,
           color: 'White',
-          licensePlate: 'DUPLICATE-1',
+          licensePlate: 'DUP-001',
         });
 
       expect(response.status).toBe(400);
