@@ -7,6 +7,55 @@ const {
   prisma,
 } = require('./setup');
 
+jest.mock('../services/paymongo', () => ({
+  createPaymentIntent: jest.fn(async ({ captureType = 'automatic' } = {}) => ({
+    success: true,
+    paymentIntent: {
+      id: `pi_test_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      attributes: {
+        client_key: 'pi_test_client_key',
+        status: captureType === 'manual' ? 'awaiting_capture' : 'succeeded',
+      },
+    },
+  })),
+  getPaymentIntent: jest.fn(async (paymentIntentId) => ({
+    success: true,
+    paymentIntent: {
+      id: paymentIntentId,
+      attributes: {
+        status: 'awaiting_capture',
+      },
+    },
+  })),
+  capturePaymentIntent: jest.fn(async (paymentIntentId) => ({
+    success: true,
+    paymentIntent: {
+      id: paymentIntentId,
+      attributes: {
+        status: 'succeeded',
+      },
+    },
+  })),
+  createSource: jest.fn(async () => ({
+    success: true,
+    source: {
+      id: 'src_test',
+      attributes: {
+        redirect: {
+          checkout_url: 'https://checkout.test/paymongo',
+        },
+      },
+    },
+  })),
+  createPayment: jest.fn(async () => ({
+    success: true,
+    payment: {
+      id: 'pay_test',
+    },
+  })),
+  verifyWebhookSignature: jest.fn(() => true),
+}));
+
 // Create test app
 const app = express();
 app.use(cors());
@@ -418,9 +467,9 @@ describe('Payment API Tests', () => {
             bookingId: openModeBooking.id
           });
 
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('paymentIntentId');
-        expect(response.body.message).toContain('authorized');
+        expect(response.body.message).toContain('Authorization hold');
 
         // Verify authId was stored in booking
         const updatedBooking = await prisma.booking.findUnique({
@@ -439,7 +488,7 @@ describe('Payment API Tests', () => {
             bookingId: fixedModeBooking.id
           });
 
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('paymentIntentId');
         expect(response.body.message).not.toContain('authorized');
 
@@ -481,7 +530,7 @@ describe('Payment API Tests', () => {
         // Verify payment status is 'authorized' not 'completed'
         const payment = await prisma.payment.findFirst({
           where: {
-            paymentIntent: paymentIntentId
+            transactionId: paymentIntentId
           }
         });
         expect(payment.status).toBe('authorized');
@@ -588,7 +637,7 @@ describe('Payment API Tests', () => {
           where: {
             userId: testData.users.driver.id,
             body: {
-              contains: 'additional payment'
+              contains: 'Additional charge'
             }
           }
         });

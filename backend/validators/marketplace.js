@@ -250,7 +250,21 @@ exports.qrCheckinSchema = Joi.object({
   bookingId: Joi.number()
     .integer()
     .positive()
-    .optional()
+    .optional(),
+  userLat: Joi.number()
+    .min(-90)
+    .max(90)
+    .required()
+    .messages({
+      'any.required': 'User latitude is required'
+    }),
+  userLon: Joi.number()
+    .min(-180)
+    .max(180)
+    .required()
+    .messages({
+      'any.required': 'User longitude is required'
+    })
 });
 
 exports.qrCheckoutSchema = Joi.object({

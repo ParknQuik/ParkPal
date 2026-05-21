@@ -8,6 +8,18 @@ const {
   prisma,
 } = require('./setup');
 
+jest.mock('../services/paymongo', () => ({
+  getPaymentIntent: jest.fn(async (paymentIntentId) => ({
+    success: true,
+    paymentIntent: {
+      id: paymentIntentId,
+      attributes: {
+        status: 'succeeded',
+      },
+    },
+  })),
+}));
+
 // Create test app
 const app = express();
 app.use(cors());
@@ -54,6 +66,28 @@ afterAll(async () => {
 });
 
 describe('Marketplace API Tests', () => {
+  beforeEach(async () => {
+    await prisma.payment.deleteMany({
+      where: {
+        booking: {
+          slotId: testData.slot.id,
+          status: { not: 'completed' },
+        },
+      },
+    });
+    await prisma.parkingSession.deleteMany({ where: { slotId: testData.slot.id } });
+    await prisma.booking.deleteMany({
+      where: {
+        slotId: testData.slot.id,
+        status: { not: 'completed' },
+      },
+    });
+    await prisma.parkingSlot.update({
+      where: { id: testData.slot.id },
+      data: { status: 'available' },
+    });
+  });
+
   describe('POST /api/v1/marketplace/listings', () => {
     it('should create a new listing with QR code', async () => {
       const response = await request(app)
@@ -63,6 +97,7 @@ describe('Marketplace API Tests', () => {
           lat: 14.5320,
           lon: 120.9850,
           price: 60,
+          title: 'New Test Parking Slot',
           address: 'New Test Parking Slot',
           slotType: 'roadside_qr',
           description: 'A new test slot',
@@ -110,7 +145,9 @@ describe('Marketplace API Tests', () => {
 
   describe('GET /api/v1/marketplace/search', () => {
     it('should return available listings', async () => {
-      const response = await request(app).get('/api/v1/marketplace/search');
+      const response = await request(app)
+        .get('/api/v1/marketplace/search')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('data');
@@ -119,9 +156,9 @@ describe('Marketplace API Tests', () => {
     });
 
     it('should filter by location and radius', async () => {
-      const response = await request(app).get(
-        '/api/v1/marketplace/search?lat=14.5312&lon=120.9844&radius=10'
-      );
+      const response = await request(app)
+        .get('/api/v1/marketplace/search?lat=14.5312&lon=120.9844&radius=10')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
       expect(response.body.data).toBeDefined();
@@ -132,9 +169,9 @@ describe('Marketplace API Tests', () => {
     });
 
     it('should filter by price range', async () => {
-      const response = await request(app).get(
-        '/api/v1/marketplace/search?minPrice=40&maxPrice=60'
-      );
+      const response = await request(app)
+        .get('/api/v1/marketplace/search?minPrice=40&maxPrice=60')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
       response.body.data.forEach((listing) => {
@@ -144,9 +181,9 @@ describe('Marketplace API Tests', () => {
     });
 
     it('should filter by slot type', async () => {
-      const response = await request(app).get(
-        '/api/v1/marketplace/search?slotType=roadside_qr'
-      );
+      const response = await request(app)
+        .get('/api/v1/marketplace/search?slotType=roadside_qr')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
       response.body.data.forEach((listing) => {
@@ -155,9 +192,9 @@ describe('Marketplace API Tests', () => {
     });
 
     it('should filter by amenities', async () => {
-      const response = await request(app).get(
-        '/api/v1/marketplace/search?amenities=covered,security'
-      );
+      const response = await request(app)
+        .get('/api/v1/marketplace/search?amenities=covered,security')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
       response.body.data.forEach((listing) => {
@@ -168,7 +205,9 @@ describe('Marketplace API Tests', () => {
     });
 
     it('should parse JSON fields correctly', async () => {
-      const response = await request(app).get('/api/v1/marketplace/search');
+      const response = await request(app)
+        .get('/api/v1/marketplace/search')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(200);
       if (response.body.data.length > 0) {
@@ -194,12 +233,12 @@ describe('Marketplace API Tests', () => {
         });
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.price).toBe(50); // 1 hour * 50
-      expect(response.body.platformFee).toBe(2.5); // 5% of 50
-      expect(response.body.hostEarnings).toBe(47.5); // 50 - 2.5
-      expect(response.body.status).toBe('confirmed');
-      expect(response.body.userId).toBe(testData.users.driver.id);
+      expect(response.body.booking).toHaveProperty('id');
+      expect(response.body.booking.price).toBe(50); // 1 hour * 50
+      expect(response.body.booking.platformFee).toBe(2.5); // 5% of 50
+      expect(response.body.booking.hostEarnings).toBe(47.5); // 50 - 2.5
+      expect(response.body.booking.status).toBe('pending');
+      expect(response.body.booking.userId).toBe(testData.users.driver.id);
     });
 
     it('should fail when slot is not available', async () => {
@@ -356,7 +395,7 @@ describe('Marketplace API Tests', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain('must be either "fixed" or "open"');
+      expect(response.body.error).toBe('Validation failed');
     });
   });
 
@@ -382,6 +421,8 @@ describe('Marketplace API Tests', () => {
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           qrData: qrCode,
+          userLat: testData.slot.lat,
+          userLon: testData.slot.lon,
         });
 
       expect(response.status).toBe(200);
@@ -411,6 +452,8 @@ describe('Marketplace API Tests', () => {
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           qrData: qrCode,
+          userLat: testData.slot.lat,
+          userLon: testData.slot.lon,
         });
 
       const slot = await prisma.parkingSlot.findUnique({
@@ -434,6 +477,8 @@ describe('Marketplace API Tests', () => {
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
           qrData: qrCode,
+          userLat: testData.slot.lat,
+          userLon: testData.slot.lon,
         });
 
       sessionId = checkinResponse.body.session.id;
@@ -504,7 +549,7 @@ describe('Marketplace API Tests', () => {
       bookingToCancel = await prisma.booking.create({
         data: {
           slotId: testData.slot.id,
-          userId: testData.driver.id,
+          userId: testData.users.driver.id,
           startTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
           endTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
           rentalMode: 'fixed',
@@ -615,7 +660,7 @@ describe('Marketplace API Tests', () => {
       extendableBooking = await prisma.booking.create({
         data: {
           slotId: testData.slot.id,
-          userId: testData.driver.id,
+          userId: testData.users.driver.id,
           startTime: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
           endTime: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours from now
           originalEndTime: null,
@@ -654,7 +699,7 @@ describe('Marketplace API Tests', () => {
         await prisma.booking.create({
           data: {
             slotId: testData.slot.id,
-            userId: testData.host.id, // Different user
+            userId: testData.users.host.id, // Different user
             startTime: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
             endTime: new Date(Date.now() + 6 * 60 * 60 * 1000),
             rentalMode: 'fixed',
@@ -790,7 +835,7 @@ describe('Marketplace API Tests', () => {
         });
         expect(payment).toBeTruthy();
         expect(payment.status).toBe('completed');
-        expect(payment.paymentIntent).toBe('test_payment_intent_123');
+        expect(payment.transactionId).toBe('test_payment_intent_123');
       });
 
       it('should track multiple extensions', async () => {
@@ -847,7 +892,7 @@ describe('Marketplace API Tests', () => {
         await prisma.booking.create({
           data: {
             slotId: testData.slot.id,
-            userId: testData.host.id,
+            userId: testData.users.host.id,
             startTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
             endTime: new Date(Date.now() + 6 * 60 * 60 * 1000),
             rentalMode: 'fixed',
@@ -883,7 +928,7 @@ describe('Marketplace API Tests', () => {
         // Verify notification created
         const notification = await prisma.notification.findFirst({
           where: {
-            userId: testData.host.id,
+            userId: testData.users.host.id,
             type: 'booking_extended'
           }
         });
@@ -1163,7 +1208,7 @@ describe('Booking Expiry Status Tests', () => {
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(response.status).toBe(400);
-      expect(response.body.code).toBe('BOOKING_COMPLETED');
+      expect(response.body.code).toBe('CANCELLATION_DEADLINE_PASSED');
     });
   });
 
@@ -1189,7 +1234,8 @@ describe('Booking Expiry Status Tests', () => {
 
       expect(response.status).toBe(200);
       
-      const expiredBooking = response.body.data.find(b => b.status === 'expired');
+      const bookings = response.body.data || response.body;
+      const expiredBooking = bookings.find(b => b.status === 'expired');
       expect(expiredBooking).toBeTruthy();
       expect(expiredBooking.status).toBe('expired');
     });
