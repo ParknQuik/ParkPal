@@ -1,6 +1,6 @@
 # Documentation Guide
 
-**Last Updated:** May 16, 2026
+**Last Updated:** May 21, 2026
 
 ---
 
@@ -12,6 +12,7 @@
 | `STATUS_REPORT.md` | Current production readiness, blockers, deployment status |
 | `ROADMAP.md` | Development roadmap and sprint planning |
 | `TECH_STACK_SUMMARY.md` | Authoritative tech stack reference |
+| `docs/BETA_READINESS_CHECKLIST.md` | Beta gate checklist and latest validation evidence |
 
 ### Architecture & Infrastructure
 | File | Purpose |
