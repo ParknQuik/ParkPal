@@ -2,7 +2,7 @@
 
 **Last Updated:** May 21, 2026
 **Status:** Future beta/deployment gate, not the active local development plan
-**Baseline:** `dev` at `05f4dc3` after PR #140; PR #130 remains closed as superseded
+**Baseline:** `dev` at `b86ff60` after PR #141; PR #130 remains closed as superseded
 
 This checklist tracks the minimum evidence needed before ParknQuik moves from local-first active development into GCP-backed beta distribution. The existing local development setup remains the proof-of-concept baseline; GCP/Cloud Run validation and app-store submission stay deferred until every required item below is either complete or explicitly waived.
 
@@ -10,12 +10,12 @@ This checklist tracks the minimum evidence needed before ParknQuik moves from lo
 
 | Area | Latest Evidence | Beta Impact |
 |------|-----------------|-------------|
-| PR queue | No open PRs against `dev` after PR #140 merged; PR #130 remains closed as superseded | No stale branch should be merged into beta baseline |
-| Git hygiene | `git diff --check` passed for PR #137 refresh, PR #139 status reconciliation, and PR #140 beta checklist on May 21, 2026 | Formatting whitespace is clean |
-| Web tests | GitHub Frontend Web Tests passed for PR #138, PR #137, and PR #139 on May 21, 2026; latest local web run remains 79/85 passing on May 17, 2026 | Refresh local web evidence before beta readiness claims are raised |
-| Mobile tests | `frontend/mobile npm test -- --runInBand --watchman=false`: 33/33 passing locally on May 21, 2026; GitHub Frontend Mobile Checks passed for PR #138, PR #137, and PR #139 | Current automated mobile unit coverage is green |
+| PR queue | PR #141 merged into `dev` at `b86ff60`; PR #130 remains closed as superseded | No stale branch should be merged into beta baseline |
+| Git hygiene | `git diff --check` passed for PR #137 refresh, PR #139 status reconciliation, PR #140 beta checklist, and PR #141 local-first correction on May 21, 2026 | Formatting whitespace is clean |
+| Web tests | GitHub Frontend Web Tests passed for PR #141, PR #138, PR #137, and PR #139 on May 21, 2026; latest local web run remains 79/85 passing on May 17, 2026 | Refresh local web evidence before beta readiness claims are raised |
+| Mobile tests | `frontend/mobile npm test -- --runInBand --watchman=false`: 33/33 passing locally on May 21, 2026; GitHub Frontend Mobile Checks passed for PR #141, PR #138, PR #137, and PR #139 | Current automated mobile unit coverage is green |
 | Mobile TypeScript | `npx tsc --noEmit` still fails in known pre-existing areas: `src/navigation/types.ts` and `src/screens/MyBookingsScreen.tsx` | Resolve before beta or explicitly risk-accept |
-| Backend tests | GitHub Backend Tests passed for PR #138, PR #137, and PR #139 on May 21, 2026; latest local full-suite evidence should be refreshed against the existing local development database/setup | Use the existing local development database/setup for local validation before replacing historical local pass-rate claims |
+| Backend tests | GitHub Backend Tests passed for PR #141, PR #138, PR #137, and PR #139 on May 21, 2026; latest local full-suite evidence should be refreshed against the existing local development database/setup | Use the existing local development database/setup for local validation before replacing historical local pass-rate claims |
 | Backend Cloud Run health | Last direct `/health` evidence remains May 17, 2026: HTTP 503 degraded from the database check; Redis and Secret Manager were up | Recheck before GCP deployment/beta evidence is signed off |
 | Web Cloud Run | Web service previously returned HTTP 200 | Recheck before GCP deployment/beta evidence is signed off |
 | API docs | `/api-docs/` previously returned HTTP 200 after redirect | Recheck before GCP deployment/beta evidence is signed off |
