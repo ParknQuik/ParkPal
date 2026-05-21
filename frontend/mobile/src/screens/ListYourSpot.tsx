@@ -258,13 +258,18 @@ export const ListYourSpot: React.FC = () => {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: colors.headerActionBackground,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: colors.headerActionShadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
     },
     headerTitle: {
       ...typography.h4,
-      color: colors.white,
+      color: colors.appHeaderText,
       fontWeight: '700',
     },
     headerPlaceholder: {
@@ -459,17 +464,20 @@ export const ListYourSpot: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle={`${useStatusBarStyle()}-content`} />
+      <StatusBar
+        barStyle={`${useStatusBarStyle()}-content`}
+        backgroundColor={colors.appHeaderBackground}
+      />
 
       <LinearGradient
-        colors={['#6366f1', '#8b5cf6']}
+        colors={colors.listSpotHeaderGradient}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.white} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{isEditMode ? 'Edit Listing' : 'List Your Spot'}</Text>
           <View style={styles.headerPlaceholder} />

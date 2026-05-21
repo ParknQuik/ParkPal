@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -27,6 +28,7 @@ import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../types';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const MyVehiclesScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'MyVehicles'>>();
@@ -35,20 +37,35 @@ export const MyVehiclesScreen: React.FC = () => {
 
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     addButton: {
       width: 40,
       height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.headerActionBackground,
       alignItems: 'center',
       justifyContent: 'center',
+      shadowColor: colors.headerActionShadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
     },
     addButtonText: {
-      fontSize: 32,
+      fontSize: 28,
       color: colors.primary,
       fontWeight: 'bold',
     },
@@ -198,15 +215,16 @@ export const MyVehiclesScreen: React.FC = () => {
 
   if (loading && vehicles.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <LoadingSpinner />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       <AppHeader
         title="My Vehicles"
         onBack={handleBack}
@@ -216,6 +234,7 @@ export const MyVehiclesScreen: React.FC = () => {
           </TouchableOpacity>
         }
       />
+      </SafeAreaView>
 
       {error && (
         <View style={styles.errorBanner}>
@@ -224,7 +243,7 @@ export const MyVehiclesScreen: React.FC = () => {
       )}
 
       <ScrollView
-        style={styles.content}
+        style={[styles.contentArea, styles.content]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -294,8 +313,6 @@ export const MyVehiclesScreen: React.FC = () => {
           </View>
         )}
        </ScrollView>
-     </SafeAreaView>
+     </View>
   );
 };
-
-

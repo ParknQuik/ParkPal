@@ -8,10 +8,12 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const orderData = {
   image: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=400',
@@ -31,6 +33,7 @@ export const PaymentFailedScreen: React.FC = () => {
   const route = useRoute();
   const { error, bookingId } = route.params as { error: string; bookingId: number };
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
    const handleBack = () => {
      navigation.goBack();
@@ -46,6 +49,13 @@ export const PaymentFailedScreen: React.FC = () => {
 
    const styles = React.useMemo(() => StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -213,11 +223,14 @@ export const PaymentFailedScreen: React.FC = () => {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title="Payment Failed" onBack={handleBack} />
+      </SafeAreaView>
 
+      <View style={styles.contentArea}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Error Icon */}
         <View style={styles.errorIconContainer}>
           <View style={styles.errorIconCircle}>
@@ -303,6 +316,7 @@ export const PaymentFailedScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };

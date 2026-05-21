@@ -63,7 +63,7 @@ export const ReferralScreen: React.FC = () => {
       backgroundColor: colors.background,
     },
     safeArea: {
-      backgroundColor: colors.primary,
+      backgroundColor: colors.appHeaderBackground,
     },
     scrollView: {
       flex: 1,
@@ -175,7 +175,7 @@ export const ReferralScreen: React.FC = () => {
 
   return (
     <>
-      <StatusBar style={statusBarStyle} />
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           <AppHeader title="Referral Program" onBack={handleBack} />
@@ -225,4 +225,3 @@ export const ReferralScreen: React.FC = () => {
     </>
   );
 };
-

@@ -9,16 +9,19 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { paymentAPI, marketplaceAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const PaymentScreen: React.FC = () => {
   const navigation = useNavigation() as any;
   const route = useRoute();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, createBookingOnSuccess, rentalMode, maxDuration } = route.params as {
     bookingId: number;
     amount: number;
@@ -179,6 +182,13 @@ navigation.navigate('PaymentFailed', {
       flex: 1,
       backgroundColor: colors.background,
     },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     priceCard: {
       backgroundColor: colors.surface,
       borderRadius: 16,
@@ -319,11 +329,14 @@ navigation.navigate('PaymentFailed', {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title="Payment" onBack={handleBack} />
+      </SafeAreaView>
 
+      <View style={styles.contentArea}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Price Breakdown */}
         <View style={styles.priceCard}>
           <Text style={styles.sectionTitle}>Price Details</Text>
@@ -400,6 +413,7 @@ navigation.navigate('PaymentFailed', {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };

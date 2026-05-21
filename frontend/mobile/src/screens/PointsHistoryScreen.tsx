@@ -91,7 +91,8 @@ export const PointsHistoryScreen: React.FC = () => {
       backgroundColor: colors.background,
     },
     safeArea: {
-      backgroundColor: colors.primary,
+      flex: 1,
+      backgroundColor: colors.appHeaderBackground,
     },
     header: {
       flexDirection: 'row',
@@ -101,6 +102,10 @@ export const PointsHistoryScreen: React.FC = () => {
       paddingVertical: spacing.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+    },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
     },
     backButton: {
       width: 40,
@@ -143,28 +148,30 @@ export const PointsHistoryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.background} />
-      <SafeAreaView edges={['top']} style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
         <AppHeader title="Points History" onBack={handleBack} />
-        {loading && !refreshing && transactions.length === 0 ? (
-          renderLoading()
-        ) : (
-          <FlatList
-            data={transactions}
-            renderItem={renderTransactionItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[
-              styles.listContent,
-              transactions.length === 0 && styles.emptyListContent,
-            ]}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
-            }
-            ListEmptyComponent={!loading ? renderEmptyState : null}
-          />
-        )}
+        <View style={styles.contentArea}>
+          {loading && !refreshing && transactions.length === 0 ? (
+            renderLoading()
+          ) : (
+            <FlatList
+              data={transactions}
+              renderItem={renderTransactionItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={[
+                styles.listContent,
+                transactions.length === 0 && styles.emptyListContent,
+              ]}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+              }
+              ListEmptyComponent={!loading ? renderEmptyState : null}
+            />
+          )}
+        </View>
       </SafeAreaView>
     </View>
   );

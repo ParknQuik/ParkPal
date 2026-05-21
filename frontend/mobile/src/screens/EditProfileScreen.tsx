@@ -195,7 +195,7 @@ export const EditProfileScreen: React.FC = () => {
         backgroundColor: colors.background,
       },
       safeArea: {
-        backgroundColor: colors.primary,
+        backgroundColor: colors.appHeaderBackground,
       },
       header: {
         flexDirection: 'row',
@@ -204,19 +204,24 @@ export const EditProfileScreen: React.FC = () => {
         padding: spacing.xl,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
-        backgroundColor: colors.primary,
+        backgroundColor: colors.appHeaderBackground,
       },
       backButton: {
         width: 40,
         height: 40,
         borderRadius: borderRadius.md,
-        backgroundColor: colors.white,
+        backgroundColor: colors.headerActionBackground,
         justifyContent: 'center',
         alignItems: 'center',
+        shadowColor: colors.headerActionShadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 3,
       },
       title: {
         ...typography.h5,
-        color: colors.white,
+        color: colors.appHeaderText,
         fontWeight: '700',
       },
       placeholder: {
@@ -311,7 +316,7 @@ export const EditProfileScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.primary} />
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity

@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import * as Google from 'expo-auth-session';
@@ -20,12 +20,12 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { login, signup, setUser, setToken } from '../store/slices/authSlice';
 import { authAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Button } from '../components/Button';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { validateEmail, validatePassword } from '../utils/helpers';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
 
@@ -66,8 +66,16 @@ export const AuthScreen: React.FC = () => {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const authLoading = useAppSelector((state) => state.auth.loading);
   const authError = useAppSelector((state) => state.auth.error);
+  const submitButtonLabel = authLoading
+    ? activeTab === 'login'
+      ? 'Logging in...'
+      : 'Signing up...'
+    : activeTab === 'login'
+      ? 'Login'
+      : 'Sign Up';
 
   const [request, response, promptAsync] = Google.useAuthRequest(
     {
@@ -200,6 +208,13 @@ export const AuthScreen: React.FC = () => {
       flex: 1,
       backgroundColor: colors.background,
     },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     keyboardView: {
       flex: 1,
     },
@@ -209,7 +224,7 @@ export const AuthScreen: React.FC = () => {
     imageSection: {
       width: '100%',
       minHeight: 200,
-      backgroundColor: `${colors.primary}33`,
+      backgroundColor: colors.authTabBackground,
     },
     imageOverlay: {
       flex: 1,
@@ -222,7 +237,7 @@ export const AuthScreen: React.FC = () => {
     },
     orangeOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: `${colors.secondary}33`,
+      backgroundColor: colors.authImageOverlay,
     },
     badgeContainer: {
       position: 'relative',
@@ -239,7 +254,6 @@ export const AuthScreen: React.FC = () => {
       marginBottom: spacing.sm,
     },
     badgeIcon: {
-      fontSize: 12,
       marginRight: spacing.xs,
     },
     badgeText: {
@@ -276,7 +290,7 @@ export const AuthScreen: React.FC = () => {
     },
     tabContainer: {
       flexDirection: 'row',
-      backgroundColor: `${colors.primary}15`,
+      backgroundColor: colors.authTabBackground,
       borderRadius: borderRadius.lg,
       padding: spacing.xs,
       marginBottom: spacing.xl,
@@ -289,7 +303,7 @@ export const AuthScreen: React.FC = () => {
     },
     activeTab: {
       backgroundColor: colors.surface,
-      shadowColor: colors.black,
+      shadowColor: colors.headerActionShadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.1,
       shadowRadius: 2,
@@ -317,7 +331,7 @@ export const AuthScreen: React.FC = () => {
       alignItems: 'center',
       backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: `${colors.primary}30`,
+      borderColor: colors.authInputBorder,
       borderRadius: borderRadius.lg,
       paddingHorizontal: spacing.md,
     },
@@ -354,7 +368,7 @@ export const AuthScreen: React.FC = () => {
       height: 20,
       borderRadius: 4,
       borderWidth: 2,
-      borderColor: `${colors.primary}50`,
+      borderColor: colors.authCheckboxBorder,
       marginRight: spacing.sm,
       alignItems: 'center',
       justifyContent: 'center',
@@ -399,7 +413,7 @@ export const AuthScreen: React.FC = () => {
     dividerLine: {
       flex: 1,
       height: 1,
-      backgroundColor: `${colors.primary}15`,
+      backgroundColor: colors.authDivider,
     },
     dividerText: {
       ...typography.small,
@@ -419,7 +433,7 @@ export const AuthScreen: React.FC = () => {
       paddingVertical: spacing.md,
       borderRadius: borderRadius.lg,
       borderWidth: 1,
-      borderColor: `${colors.primary}20`,
+      borderColor: colors.authInputBorder,
     },
     socialIcon: {
       fontSize: 18,
@@ -444,7 +458,7 @@ export const AuthScreen: React.FC = () => {
       opacity: 0.7,
     },
     authErrorContainer: {
-      backgroundColor: `${colors.error}10`,
+      backgroundColor: colors.authErrorSurface,
       borderColor: colors.error,
       borderWidth: 1,
       borderRadius: borderRadius.md,
@@ -459,29 +473,36 @@ export const AuthScreen: React.FC = () => {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title="Welcome Back" onBack={handleBack} />
+      </SafeAreaView>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        style={[styles.contentArea, styles.keyboardView]}
       >
-         <ScrollView
-           contentContainerStyle={styles.scrollContent}
-           showsVerticalScrollIndicator={false}
-           keyboardShouldPersistTaps="handled"
-         >
-           <AppHeader title="Welcome Back" onBack={handleBack} />
-
-           <View style={styles.imageSection}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.imageSection}>
             <View style={styles.imageOverlay}>
               <LinearGradient
-                colors={['rgba(16, 183, 127, 0.9)', 'rgba(16, 183, 127, 0.4)', 'transparent']}
+                colors={colors.authHeroGradient}
                 style={styles.imageGradient}
               >
                 <View style={styles.orangeOverlay} />
               </LinearGradient>
               <View style={styles.badgeContainer}>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeIcon}>⚡</Text>
+                  <MaterialCommunityIcons
+                    name="lightning-bolt"
+                    size={14}
+                    color={colors.backgroundDark}
+                    style={styles.badgeIcon}
+                  />
                   <Text style={styles.badgeText}>New Update</Text>
                 </View>
               </View>
@@ -612,7 +633,7 @@ export const AuthScreen: React.FC = () => {
                 onPress={() => setRememberMe(!rememberMe)}
               >
                 <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
+                  {rememberMe && <MaterialCommunityIcons name="check" size={16} color={colors.white} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Remember me</Text>
               </TouchableOpacity>
@@ -626,15 +647,18 @@ export const AuthScreen: React.FC = () => {
               onPress={handleSubmit}
               activeOpacity={0.8}
               disabled={authLoading}
+              accessibilityRole="button"
+              accessibilityLabel={submitButtonLabel}
+              accessibilityState={{ disabled: authLoading, busy: authLoading }}
             >
-<LinearGradient
-                 colors={[colors.primary, colors.secondary]}
-                 start={{ x: 0, y: 0 }}
-                 end={{ x: 1, y: 0 }}
-                 style={[styles.gradientButton, authLoading && styles.gradientButtonDisabled]}
-               >
+              <LinearGradient
+                colors={[colors.primary, colors.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.gradientButton, authLoading && styles.gradientButtonDisabled]}
+              >
                 <Text style={styles.continueButtonText}>
-                  {authLoading ? 'Please wait...' : 'Continue to Dashboard'}
+                  {submitButtonLabel}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -656,8 +680,16 @@ export const AuthScreen: React.FC = () => {
                 style={styles.socialButton}
                 onPress={handleGooglePress}
                 disabled={!request || googleLoading}
+                accessibilityRole="button"
+                accessibilityLabel={googleLoading ? 'Signing in with Google' : 'Continue with Google'}
+                accessibilityState={{ disabled: !request || googleLoading, busy: googleLoading }}
               >
-                <Text style={styles.socialIcon}>G</Text>
+                <MaterialCommunityIcons
+                  name="google"
+                  size={18}
+                  color={colors.textPrimary}
+                  style={styles.socialIcon}
+                />
                 <Text style={styles.socialButtonText}>
                   {googleLoading ? 'Signing in...' : 'Google'}
                 </Text>
@@ -665,20 +697,28 @@ export const AuthScreen: React.FC = () => {
               <TouchableOpacity
                 style={[styles.socialButton, styles.socialButtonDisabled]}
                 disabled={true}
+                accessibilityRole="button"
+                accessibilityLabel="Apple sign in coming soon"
+                accessibilityState={{ disabled: true }}
               >
-                <Text style={styles.socialIcon}>🍎</Text>
+                <MaterialCommunityIcons
+                  name="apple"
+                  size={20}
+                  color={colors.textTertiary}
+                  style={styles.socialIcon}
+                />
                 <Text style={[styles.socialButtonText, styles.socialButtonTextDisabled]}>Apple (Soon)</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-<LinearGradient
-         colors={[colors.primary, colors.accent, colors.secondary]}
-         start={{ x: 0, y: 0 }}
-         end={{ x: 1, y: 0 }}
-         style={styles.bottomBar}
-       />
-    </SafeAreaView>
+      <LinearGradient
+        colors={[colors.primary, colors.accent, colors.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.bottomBar}
+      />
+    </View>
   );
 };

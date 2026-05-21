@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Animated,
   Dimensions,
@@ -12,6 +11,7 @@ import {
   TextInput,
   Easing,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, Camera } from 'expo-camera';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -294,20 +294,28 @@ export const QRScannerScreen: React.FC = () => {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
     },
-    safeArea: {
+    headerSafeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    scannerContent: {
       flex: 1,
     },
     headerButton: {
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: colors.headerActionBackground,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: colors.headerActionShadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
     },
     headerButtonText: {
       fontSize: 20,
-      color: '#fff',
+      color: colors.primary,
       fontWeight: '600',
     },
     headerTitle: {
@@ -592,7 +600,7 @@ export const QRScannerScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor="#000" />
+      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.appHeaderBackground} />
 
       <CameraView
         style={StyleSheet.absoluteFill}
@@ -605,7 +613,7 @@ export const QRScannerScreen: React.FC = () => {
       />
 
       <View style={styles.overlay}>
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
           <AppHeader
             title={getHeaderTitle()}
             onBack={() => navigation.goBack()}
@@ -615,7 +623,9 @@ export const QRScannerScreen: React.FC = () => {
               </TouchableOpacity>
             }
           />
+        </SafeAreaView>
 
+        <View style={styles.scannerContent}>
           {!scanResult.type && (
             <View style={styles.viewfinderContainer}>
               <Animated.View
@@ -789,7 +799,7 @@ export const QRScannerScreen: React.FC = () => {
               )}
             </View>
           )}
-        </SafeAreaView>
+        </View>
       </View>
     </View>
   );

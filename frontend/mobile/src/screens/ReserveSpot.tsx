@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -19,6 +20,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI, vehiclesAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-US', {
@@ -44,6 +46,7 @@ export const ReserveSpot: React.FC = () => {
   const route = useRoute();
   const { spotId } = (route.params || {}) as { spotId?: string };
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const [spot, setSpot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -204,6 +207,16 @@ export const ReserveSpot: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      flex: 1,
     },
     loadingContainer: {
       flex: 1,
@@ -527,13 +540,16 @@ export const ReserveSpot: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
+      <View style={styles.container}>
+        <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
+        </SafeAreaView>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading spot details...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -546,9 +562,13 @@ export const ReserveSpot: React.FC = () => {
   const spotNumber = spot?.spotNumber || spot?.slotNumber || '';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
+      </SafeAreaView>
 
+      <View style={styles.contentArea}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.spotCard}>
           <View style={styles.spotInfo}>
@@ -784,6 +804,7 @@ export const ReserveSpot: React.FC = () => {
           and Cancellation Policy.
         </Text>
       </View>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };

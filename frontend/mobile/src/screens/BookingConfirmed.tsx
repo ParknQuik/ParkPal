@@ -12,16 +12,19 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const BookingConfirmed: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const { paymentId, bookingId, amount, spotName, spotAddress, startTime, endTime, paymentMethod, rentalMode } = route.params as any;
   const scaleAnim = new Animated.Value(0);
   const fadeAnim = new Animated.Value(0);
@@ -86,6 +89,13 @@ export const BookingConfirmed: React.FC = () => {
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -289,11 +299,14 @@ export const BookingConfirmed: React.FC = () => {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title={getHeaderTitle()} onBack={handleClose} />
+      </SafeAreaView>
 
+      <View style={styles.contentArea}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Success Animation */}
         <Animated.View
           style={[
@@ -403,6 +416,7 @@ export const BookingConfirmed: React.FC = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };
