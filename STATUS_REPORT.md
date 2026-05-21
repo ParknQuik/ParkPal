@@ -2,7 +2,7 @@
 
 **Last Updated:** May 21, 2026
 **Current Branch:** `dev`
-**Production Readiness:** 95/100 (Backend and mobile PR checks are green after the May 21 merges; remaining confidence gaps are stale local web evidence, known mobile TypeScript drift, and the previously degraded backend Cloud Run health check)
+**Production Readiness:** 95/100 (Backend and mobile PR checks are green after the May 21 merges; remaining confidence gaps are stale local web evidence, known mobile TypeScript drift, and future deployment health validation)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
 ---
@@ -11,9 +11,10 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 21, 2026 | Codex | Corrected status docs to reflect the local-first development path: local validation should use the existing development setup, Redis stays deferred, and Cloud Run health checks are future deployment/beta gates rather than immediate stabilization work | 95/100 |
 | May 21, 2026 | Codex | Verified PR #138 merged into `dev` at `a55d6b5` with backend, web, mobile, security, and quality checks passing; refreshed and merged PR #137 at `bffa3f0`, normalizing mobile header safe areas across 24 `frontend/mobile` files; confirmed no open PRs against `dev`; local mobile Jest remains 33/33 passing | 95/100 |
 | May 20, 2026 | Codex | Verified PR #135 merged into `dev` at `bcf16ed`, adding the green shared `AppHeader` treatment, top content spacing, and single add-listing action for `MyListingsScreen`; confirmed no open PRs against `dev`; mobile Jest remains 33/33 passing | 94/100 |
-| May 17, 2026 | Codex | Closed stale PR #130 as superseded, verified no open PRs against `dev`, added `docs/BETA_READINESS_CHECKLIST.md`, and refreshed validation evidence: web 79/85 passing, mobile 33/33 passing, backend local suite blocked by missing PostgreSQL, backend Cloud Run health degraded with database down | 94/100 |
+| May 17, 2026 | Codex | Closed stale PR #130 as superseded, verified no open PRs against `dev`, added `docs/BETA_READINESS_CHECKLIST.md`, and refreshed validation evidence: web 79/85 passing, mobile 33/33 passing, backend local suite pending local development setup validation, backend Cloud Run health degraded with database down | 94/100 |
 | May 17, 2026 | Codex | Confirmed PR #132 and PR #133 merged into `dev`; fast-forwarded local `dev` to `aff8e45`, updated branch/date/current PR status, and documented 10 repo workflow skills including post-merge status planning | 96/100 |
 | May 16, 2026 | Codex | Retired stale `CLAUDE_OPINION_REQUEST.md` and `KILO_OPINION_REQUEST.md` audit request snapshots after confirming they contradicted the current status report; STATUS_REPORT.md remains the primary status log | 96/100 |
 | May 16, 2026 | Codex | Reconciled status report against current project claims: aligned scorecard to 96/100, kept web/backend dev services deployed and mobile EAS-ready but app-store deployment deferred during active development, updated web test evidence to 85/85 passing, documented curated agent workflow tooling and kept GCloud MCP config disabled for future use | 96/100 |
@@ -96,9 +97,9 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### Current Reconciliation (May 21, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests and PR #137 completed the mobile header-safe-area merge; deployment health still needs a fresh Cloud Run `/health` check before raising the score further.
-- **Branch state:** `origin/dev` is at `bffa3f0` after PR #138 and PR #137; PR #130 remains closed as superseded and there are no open PRs against `dev`.
-- **Backend:** PR #138 merged at `a55d6b5` with GitHub Backend Tests passing on May 21, 2026. The last direct Cloud Run `/health` evidence is still the May 17 HTTP 503 caused by the database check, so live backend health needs re-verification.
+- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests, PR #137 completed the mobile header-safe-area merge, PR #139 refreshed status reporting, and PR #140 added the beta readiness checklist. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
+- **Branch state:** `origin/dev` is at `05f4dc3` after PR #140; PR #130 remains closed as superseded and there are no open PRs against `dev`.
+- **Backend:** PR #138 merged at `a55d6b5` with GitHub Backend Tests passing on May 21, 2026. Local backend validation should be refreshed against the existing working local development setup; Cloud Run `/health` rechecks belong to future deployment/beta validation.
 - **Web:** Development service was previously deployed on Cloud Run and returned HTTP 200. GitHub Frontend Web Tests passed for PR #138 and PR #137 on May 21, 2026; the last local web run remains 79/85 passing on May 17, 2026 and should be refreshed before beta readiness claims are raised.
 - **Mobile:** EAS-ready and working for local development; local mobile Jest passed 33/33 on May 21, 2026 during the PR #137 refresh, and GitHub Frontend Mobile Checks passed for PR #138 and PR #137. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
 - **Workflow tooling:** 10 repo-local skills and Codex role configs are intended project tooling; GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
@@ -187,7 +188,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ **Database Migrations:** Vehicle and Notification tables added
 
 **Test Status:**
-- Backend: GitHub Backend Tests passed for PR #138 and PR #137 on May 21, 2026 ✅; latest local full-suite evidence still requires PostgreSQL availability before it can be refreshed
+- Backend: GitHub Backend Tests passed for PR #138 and PR #137 on May 21, 2026 ✅; latest local full-suite evidence should be refreshed against the existing working local development setup
 - Mobile: 33/33 passing (100%) locally on May 21, 2026; GitHub Frontend Mobile Checks also passed for PR #138 and PR #137 ✅
 - Web: GitHub Frontend Web Tests passed for PR #138 and PR #137 on May 21, 2026 ✅; latest local web run remains 79/85 passing (92.9%) on May 17, 2026 and needs refresh
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
@@ -392,12 +393,12 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 1. **Refresh stale local test evidence**
    - GitHub backend, web, and mobile checks passed for PR #138 and PR #137 on May 21, 2026.
    - Latest local web run is still 79/85 passing (92.9%) from May 17, 2026 and should be rerun.
-   - Latest local backend full-suite evidence still depends on PostgreSQL availability.
+   - Latest local backend full-suite evidence should be refreshed against the existing working local development setup.
    - Latest local mobile Jest is current at 33/33 passing on May 21, 2026.
 
 2. **Redis Caching Deferred**
    - Redis remains deferred for cost optimization.
-   - Add it later only when traffic or session-management requirements justify it.
+   - No Redis provisioning is part of the current stabilization work; add it later only when traffic or session-management requirements justify it.
 
 3. **Secret Manager Operational**
    - Current status sections document Secret Manager as operational.
@@ -408,7 +409,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
    - Re-verify transactional email delivery before production launch.
 
 **Infrastructure:**
-- Redis remains deferred for cost optimization.
+- Redis remains deferred for cost optimization; no Redis provisioning is part of the current stabilization work.
 - Secret Manager and email are documented as operational.
 - Backend and web are deployed through Cloud Run.
 
@@ -465,7 +466,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### P0 - CRITICAL (Must Fix Immediately)
 
 **1. Backend Test Status** ✅ **CI GREEN; LOCAL REFRESH NEEDED**
-- **Impact:** Backend test confidence improved after PR #138, but local full-suite evidence still depends on PostgreSQL availability
+- **Impact:** Backend test confidence improved after PR #138, but local full-suite evidence should be refreshed against the existing working local development setup
 - **Initial:** 50/271 passing (18.5%)
 - **Previous:** 235/271 passing (86.7%)
 - **Current:** GitHub Backend Tests passed for PR #138 and PR #137 on May 21, 2026 ✅
@@ -478,7 +479,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
   - ✅ Fixed parking slot creation fields (Mar 10)
   - ✅ Added email service tests (Mar 10) **+18 tests!**
   - **Total Progress:** +219 tests passing (+78% improvement)
-- **Remaining:** Re-run the local backend suite once PostgreSQL is available before replacing the historical local pass-rate count
+- **Remaining:** Re-run the local backend suite against the existing working local development setup before replacing the historical local pass-rate count
 
 **2. Redis Not Configured** ⏳ **DEFERRED**
 - **Impact:** No caching, slightly degraded performance
@@ -1079,17 +1080,16 @@ The following March plan is retained for history only. Current status is documen
 ### Immediate (May 21, 2026)
 
 1. Refresh local web test evidence after the GitHub web checks passed for PR #138 and PR #137.
-2. Restore or connect the backend test PostgreSQL instance, then rerun `cd backend && npm test`.
-3. Re-check the dev backend Cloud Run `/health` endpoint and confirm whether the May 17 database-related 503 is resolved.
-4. Resolve the known mobile TypeScript drift in `src/navigation/types.ts` and `src/screens/MyBookingsScreen.tsx`.
-5. Use `docs/BETA_READINESS_CHECKLIST.md` as the beta gate before app-store submission work resumes.
+2. Rerun `cd backend && npm test` against the existing working local development setup; do not provision new PostgreSQL or Redis resources for the current stabilization pass.
+3. Resolve the known mobile TypeScript drift in `src/navigation/types.ts` and `src/screens/MyBookingsScreen.tsx`.
+4. Use `docs/BETA_READINESS_CHECKLIST.md` as a future beta/deployment gate before GCP deployment validation or app-store submission work resumes.
 
 ### This Week
 
 1. Keep PR #130 closed; reintroduce any still-needed behavior only from a fresh branch off current `dev`.
 2. Refresh backend and web local test evidence now that CI is green for the latest merges.
-3. Confirm whether Redis remains a beta deferral or becomes required.
-4. Work through the beta-readiness checklist covering mobile build, payments, email, maps, monitoring, Redis deferral, and app-store prerequisites.
+3. Keep Redis deferred unless scale or a concrete feature requirement changes the decision.
+4. Keep the beta-readiness checklist current as a future gate covering mobile build, payments, email, maps, monitoring, Cloud Run validation, Redis deferral, and app-store prerequisites.
 
 ### Next Review
 
@@ -1097,7 +1097,7 @@ The following March plan is retained for history only. Current status is documen
 **Agenda:**
 - Fresh local web/backend test evidence
 - Mobile TypeScript drift cleanup
-- Cloud Run health and deployment confidence
+- Future Cloud Run health and deployment confidence gates
 - Beta-readiness checklist status
 
 ---
