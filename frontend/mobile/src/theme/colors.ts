@@ -43,12 +43,25 @@ export const lightColors = {
   // Overlay
   overlay: 'rgba(0, 0, 0, 0.5)',
   overlayLight: 'rgba(0, 0, 0, 0.3)',
+  authImageOverlay: 'rgba(245, 158, 11, 0.2)',
+  authTabBackground: 'rgba(16, 183, 127, 0.08)',
+  authInputBorder: 'rgba(16, 183, 127, 0.18)',
+  authCheckboxBorder: 'rgba(16, 183, 127, 0.32)',
+  authDivider: 'rgba(16, 183, 127, 0.08)',
+  authErrorSurface: 'rgba(239, 68, 68, 0.08)',
+  appHeaderBackground: '#10b77f',
+  appHeaderText: '#ffffff',
+  headerActionBackground: '#ffffff',
+  headerActionShadow: '#000000',
 
   // Gradients - Updated for Stitch design
   gradientPrimary: ['#10b77f', '#0d9668'] as const,
   gradientSecondary: ['#10b77f', '#f59e0b'] as const,
   gradientAccent: ['#f59e0b', '#facc15'] as const,
   gradientDark: ['#1e293b', '#334155'] as const,
+  authHeroGradient: ['rgba(16, 183, 127, 0.9)', 'rgba(16, 183, 127, 0.4)', 'transparent'] as const,
+  forgotPasswordHeaderGradient: ['#10b77f', '#10b77f'] as const,
+  listSpotHeaderGradient: ['#10b77f', '#10b77f'] as const,
 
   // New Stitch-specific
   accentOrange: '#f59e0b',
@@ -97,11 +110,24 @@ export const darkColors = {
 
   overlay: 'rgba(0, 0, 0, 0.7)',
   overlayLight: 'rgba(0, 0, 0, 0.5)',
+  authImageOverlay: 'rgba(245, 158, 11, 0.18)',
+  authTabBackground: 'rgba(16, 183, 127, 0.14)',
+  authInputBorder: 'rgba(16, 183, 127, 0.28)',
+  authCheckboxBorder: 'rgba(16, 183, 127, 0.42)',
+  authDivider: 'rgba(16, 183, 127, 0.16)',
+  authErrorSurface: 'rgba(239, 68, 68, 0.14)',
+  appHeaderBackground: '#10b77f',
+  appHeaderText: '#ffffff',
+  headerActionBackground: '#f1f5f4',
+  headerActionShadow: '#000000',
 
   gradientPrimary: ['#10b77f', '#0d9668'] as const,
   gradientSecondary: ['#10b77f', '#f59e0b'] as const,
   gradientAccent: ['#f59e0b', '#facc15'] as const,
   gradientDark: ['#0f1a14', '#1a2e22'] as const,
+  authHeroGradient: ['rgba(16, 183, 127, 0.9)', 'rgba(16, 183, 127, 0.45)', 'transparent'] as const,
+  forgotPasswordHeaderGradient: ['#10b77f', '#10b77f'] as const,
+  listSpotHeaderGradient: ['#10b77f', '#10b77f'] as const,
 
   accentOrange: '#f59e0b',
   accentYellow: '#facc15',

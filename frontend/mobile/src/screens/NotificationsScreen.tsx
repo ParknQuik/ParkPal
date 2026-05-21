@@ -9,11 +9,14 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { notificationsAPI, Notification } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { typography, spacing, borderRadius } from '../theme';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const NOTIFICATION_ICONS: Record<string, string> = {
   booking_confirmed: '\u2705',
@@ -46,7 +49,8 @@ function getRelativeTime(dateString: string): string {
 }
 
 export const NotificationsScreen: React.FC = () => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const navigation = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -135,14 +139,17 @@ export const NotificationsScreen: React.FC = () => {
       flex: 1,
       backgroundColor: colors.background,
     },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: spacing.md,
-      paddingTop: spacing.xxxl,
+      paddingTop: spacing.md,
       paddingBottom: spacing.md,
-      backgroundColor: colors.white,
+      backgroundColor: colors.appHeaderBackground,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
@@ -151,6 +158,8 @@ export const NotificationsScreen: React.FC = () => {
       height: 40,
       alignItems: 'center',
       justifyContent: 'center',
+      borderRadius: 20,
+      backgroundColor: colors.headerActionBackground,
     },
     headerTitleContainer: {
       flexDirection: 'row',
@@ -160,7 +169,7 @@ export const NotificationsScreen: React.FC = () => {
     headerTitle: {
       fontSize: typography.sizes.lg,
       fontWeight: '600' as const,
-      color: colors.textPrimary,
+      color: colors.appHeaderText,
     },
     badge: {
       backgroundColor: colors.error,
@@ -181,6 +190,8 @@ export const NotificationsScreen: React.FC = () => {
       height: 40,
       alignItems: 'center',
       justifyContent: 'center',
+      borderRadius: 20,
+      backgroundColor: colors.headerActionBackground,
     },
     loadingContainer: {
       flex: 1,
@@ -272,7 +283,7 @@ export const NotificationsScreen: React.FC = () => {
       color: colors.textSecondary,
       marginTop: spacing.xs,
     },
-  }), [colors]);
+  }), [colors, isDark]);
 
   const renderItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity
@@ -318,9 +329,15 @@ export const NotificationsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={24}
+            color={colors.primary}
+          />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Notifications</Text>
@@ -340,10 +357,11 @@ export const NotificationsScreen: React.FC = () => {
           <MaterialCommunityIcons
             name="check-all"
             size={24}
-            color={unreadCount > 0 ? colors.primary : colors.textSecondary}
+            color={unreadCount > 0 ? colors.primary : (isDark ? colors.primaryDark : colors.textSecondary)}
           />
         </TouchableOpacity>
       </View>
+      </SafeAreaView>
 
       {loading ? (
         <View style={styles.loadingContainer}>

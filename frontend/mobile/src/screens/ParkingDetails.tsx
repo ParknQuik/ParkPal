@@ -12,6 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { marketplaceAPI } from '../services/api';
@@ -19,6 +20,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../types';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +30,7 @@ export const ParkingDetails: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const { spotId, fromBooking, bookingId, bookingStatus, startTime, endTime, totalAmount, rentalMode } = route.params || {};
   const showReserveButton = fromBooking !== true;
 
@@ -70,6 +73,13 @@ export const ParkingDetails: React.FC = () => {
       flex: 1,
       backgroundColor: colors.background,
     },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     centered: {
       flex: 1,
       justifyContent: 'center',
@@ -104,9 +114,14 @@ export const ParkingDetails: React.FC = () => {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.headerActionBackground,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: colors.headerActionShadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
     },
     content: {
       padding: 20,
@@ -477,19 +492,22 @@ export const ParkingDetails: React.FC = () => {
   const spotLon = spot.lon || spot.longitude || 0;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader
           title="Parking Details"
           onBack={handleBack}
           rightAction={
             <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-              <MaterialCommunityIcons name="share-variant" size={24} color={colors.textPrimary} />
+              <MaterialCommunityIcons name="share-variant" size={24} color={colors.primary} />
             </TouchableOpacity>
           }
         />
+      </SafeAreaView>
 
+      <View style={styles.contentArea}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero Image */}
         <View style={styles.heroContainer}>
            <Image
@@ -646,6 +664,7 @@ export const ParkingDetails: React.FC = () => {
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };

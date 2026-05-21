@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const FAQItem = ({ question, answer }: { question: string; answer: string }) => {
   const { colors } = useTheme();
@@ -39,6 +41,7 @@ const FAQItem = ({ question, answer }: { question: string; answer: string }) => 
 export const HelpCenterScreen: React.FC = () => {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const handleBack = () => {
     navigation.goBack();
@@ -46,6 +49,13 @@ export const HelpCenterScreen: React.FC = () => {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -95,9 +105,12 @@ export const HelpCenterScreen: React.FC = () => {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader title="Help Center" onBack={handleBack} />
-      <ScrollView style={styles.content}>
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title="Help Center" onBack={handleBack} />
+      </SafeAreaView>
+      <ScrollView style={[styles.contentArea, styles.content]}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
           {faqs.map((faq, index) => (
@@ -114,6 +127,6 @@ export const HelpCenterScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };

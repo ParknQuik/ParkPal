@@ -13,11 +13,13 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const { width } = Dimensions.get('window');
 
@@ -32,9 +34,17 @@ export const WriteReview: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -276,11 +286,14 @@ export const WriteReview: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title="Write a Review" onBack={() => navigation.goBack()} />
+      </SafeAreaView>
 
+      <View style={styles.contentArea}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Spot Card */}
         <View style={styles.spotCard}>
           <Image
@@ -364,6 +377,7 @@ export const WriteReview: React.FC = () => {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };

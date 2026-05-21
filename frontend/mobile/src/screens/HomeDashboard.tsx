@@ -198,7 +198,7 @@ export const HomeDashboard: React.FC = () => {
       fontWeight: '800',
     },
     header: {
-      backgroundColor: colors.primary,
+      backgroundColor: colors.appHeaderBackground,
       paddingTop: spacing.lg,
       paddingBottom: spacing.xxl + spacing.xl,
       borderBottomLeftRadius: 40,
@@ -520,7 +520,7 @@ export const HomeDashboard: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.primary} />
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}

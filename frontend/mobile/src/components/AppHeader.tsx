@@ -20,7 +20,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.header, { backgroundColor: colors.primary }]}>
+    <View style={[styles.header, { backgroundColor: colors.appHeaderBackground }]}>
       {showBack ? (
         <TouchableOpacity
           style={styles.backButton}
@@ -28,7 +28,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <View style={styles.backButtonCircle}>
+          <View
+            style={[
+              styles.backButtonCircle,
+              {
+                backgroundColor: colors.headerActionBackground,
+                shadowColor: colors.headerActionShadow,
+              },
+            ]}
+          >
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -40,7 +48,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <View style={styles.placeholder} />
       )}
 
-      <Text style={styles.title} numberOfLines={1}>
+      <Text style={[styles.title, { color: colors.appHeaderText }]} numberOfLines={1}>
         {title}
       </Text>
 
@@ -72,10 +80,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -83,7 +89,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h5,
-    color: '#ffffff',
     fontWeight: '700',
     flex: 1,
     textAlign: 'center',

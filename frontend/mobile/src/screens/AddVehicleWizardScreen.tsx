@@ -14,6 +14,7 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -30,6 +31,7 @@ import { Chip } from '../components/Chip';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 // Types
 type WizardStep = 1 | 2 | 3;
@@ -219,6 +221,13 @@ const COUNTRY_FORMATS: CountryFormat[] = [
 const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
    StyleSheet.create({
      container: {
+       flex: 1,
+       backgroundColor: colors.background,
+     },
+     safeArea: {
+       backgroundColor: colors.appHeaderBackground,
+     },
+     contentArea: {
        flex: 1,
        backgroundColor: colors.background,
      },
@@ -1020,6 +1029,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
   const route = useRoute<any>();
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -1219,13 +1229,16 @@ export const AddVehicleWizardScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       <AppHeader
         title={vehicleId ? 'Edit Vehicle' : 'Add Vehicle'}
         onBack={handleBack}
       />
+      </SafeAreaView>
 
+      <View style={styles.contentArea}>
       {/* Step Indicator */}
       <View style={styles.progressContainer}>
         <StepIndicator currentStep={currentStep} styles={styles} colors={colors} />
@@ -1275,7 +1288,8 @@ export const AddVehicleWizardScreen: React.FC = () => {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };
 

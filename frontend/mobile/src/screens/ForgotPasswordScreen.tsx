@@ -30,8 +30,8 @@ export const ForgotPasswordScreen: React.FC = () => {
   const CUSTOM_COLORS = useMemo(() => ({
     primary: '#10b77f',
     accentOrange: colors.secondary,
-    background: '#f6f8f7',
-  }), [colors.secondary]);
+    background: colors.background,
+  }), [colors.background, colors.secondary]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -52,13 +52,18 @@ export const ForgotPasswordScreen: React.FC = () => {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: colors.headerActionBackground,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: colors.headerActionShadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
     },
     headerTitle: {
       ...typography.h5,
-      color: colors.white,
+      color: colors.appHeaderText,
       fontWeight: '700',
     },
     headerIconContainer: {
@@ -207,14 +212,14 @@ export const ForgotPasswordScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <LinearGradient
-          colors={[CUSTOM_COLORS.primary, colors.backgroundDarkStitch]}
+          colors={colors.forgotPasswordHeaderGradient}
           style={styles.header}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.headerTop}>
             <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.white} />
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Forgot Password</Text>
             <View style={styles.iconButton} />
@@ -256,14 +261,14 @@ export const ForgotPasswordScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <LinearGradient
-        colors={[CUSTOM_COLORS.primary, colors.backgroundDarkStitch]}
+        colors={colors.forgotPasswordHeaderGradient}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerTop}>
           <TouchableOpacity style={styles.iconButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.white} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Forgot Password</Text>
           <View style={styles.iconButton} />

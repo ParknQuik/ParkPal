@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Card } from '../components/Card';
@@ -14,6 +15,7 @@ import { Button } from '../components/Button';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 interface PaymentMethod {
   id: string;
@@ -27,6 +29,7 @@ interface PaymentMethod {
 export const PaymentMethodsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const [selectedMethod, setSelectedMethod] = useState<string>('cash');
 
@@ -93,6 +96,13 @@ export const PaymentMethodsScreen: React.FC = () => {
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -242,11 +252,13 @@ export const PaymentMethodsScreen: React.FC = () => {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <AppHeader title="Payment Methods" onBack={handleBack} />
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title="Payment Methods" onBack={handleBack} />
+      </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.contentArea} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           {/* Info Banner */}
           <Card style={styles.infoBanner}>
@@ -322,6 +334,6 @@ export const PaymentMethodsScreen: React.FC = () => {
           </Card>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };

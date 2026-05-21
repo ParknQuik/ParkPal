@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -24,6 +25,7 @@ import { EmptyState } from '../components/EmptyState';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const QRGeneratorScreen: React.FC = () => {
   const [listings, setListings] = useState<any[]>([]);
@@ -34,6 +36,7 @@ export const QRGeneratorScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAppSelector((state) => state.auth);
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   useEffect(() => {
     loadMyListings();
@@ -139,6 +142,13 @@ export const QRGeneratorScreen: React.FC = () => {
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -269,10 +279,13 @@ export const QRGeneratorScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AppHeader title="Generate QR Code" onBack={() => navigation.goBack()} />
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title="Generate QR Code" onBack={() => navigation.goBack()} />
+      </SafeAreaView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.contentArea, styles.content]} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
           Select a parking spot to generate a QR code for check-in
         </Text>
@@ -357,6 +370,6 @@ export const QRGeneratorScreen: React.FC = () => {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };

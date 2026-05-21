@@ -1,16 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAppDispatch, useAppSelector } from '../store';
 import { setThemeMode } from '../store/slices/settingsSlice';
 import { AppHeader } from '../components/AppHeader';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 export const SecurityPrivacyScreen: React.FC = () => {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const dispatch = useAppDispatch();
   const themeMode = useAppSelector((state) => state.settings.themeMode);
 
@@ -30,6 +33,13 @@ export const SecurityPrivacyScreen: React.FC = () => {
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -90,9 +100,12 @@ export const SecurityPrivacyScreen: React.FC = () => {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <AppHeader title="Security & Privacy" onBack={handleBack} />
-      <ScrollView style={styles.content}>
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title="Security & Privacy" onBack={handleBack} />
+      </SafeAreaView>
+      <ScrollView style={[styles.contentArea, styles.content]}>
         <View style={styles.themeSection}>
           <Text style={styles.themeLabel}>Appearance</Text>
           <View style={styles.themeOptions}>
@@ -140,6 +153,6 @@ export const SecurityPrivacyScreen: React.FC = () => {
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };

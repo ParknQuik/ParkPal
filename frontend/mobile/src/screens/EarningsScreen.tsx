@@ -139,6 +139,11 @@ export const EarningsScreen: React.FC = () => {
     },
     safeArea: {
       flex: 1,
+      backgroundColor: colors.appHeaderBackground,
+    },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
     },
     scrollView: {
       flex: 1,
@@ -348,11 +353,13 @@ export const EarningsScreen: React.FC = () => {
    if (loading) {
      return (
        <View style={styles.container}>
-         <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
+         <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.appHeaderBackground} />
          <SafeAreaView edges={['top']} style={styles.safeArea}>
            <AppHeader title="Earnings" onBack={handleBack} />
-           <View style={styles.loadingContainer}>
-             <ActivityIndicator size="large" color={colors.primary} />
+           <View style={styles.contentArea}>
+             <View style={styles.loadingContainer}>
+               <ActivityIndicator size="large" color={colors.primary} />
+             </View>
            </View>
          </SafeAreaView>
        </View>
@@ -361,11 +368,12 @@ export const EarningsScreen: React.FC = () => {
 
    return (
      <View style={styles.container}>
-       <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.background} />
+       <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.appHeaderBackground} />
        <SafeAreaView edges={['top']} style={styles.safeArea}>
          <AppHeader title="Earnings" onBack={handleBack} />
 
-         <ScrollView
+         <View style={styles.contentArea}>
+           <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -465,7 +473,8 @@ export const EarningsScreen: React.FC = () => {
               })
             )}
           </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
 
         <View style={styles.footer}>
           <TouchableOpacity onPress={handleWithdraw} style={styles.withdrawButton}>
