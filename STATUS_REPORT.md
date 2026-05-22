@@ -11,7 +11,9 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 22, 2026 | Codex | Verified PR #145 merged into `dev` at `a4bd5c4`, reconciling markdown status docs and moving the generated knowledge index database to a repo-scoped OS temp cache so normal rebuilds no longer require `.agents/knowledge` write access | 95/100 |
 | May 22, 2026 | Codex | Verified PR #144 merged into `dev` at `bf737ea`, adding the repo-local agent knowledge index, query/build scripts, freshness warnings, validation harness, and agent onboarding docs; refreshed the ignored local knowledge DB and confirmed one older docs PR (#142) remains open against `dev` | 95/100 |
+| May 21, 2026 | Codex | Verified PR #141 merged into `dev` at `b86ff60`, confirming the local-first status correction became part of the live development baseline with GitHub backend, web, and mobile checks passing | 95/100 |
 | May 21, 2026 | Codex | Corrected status docs to reflect the local-first development path: local validation should use the existing development setup, Redis stays deferred, and Cloud Run health checks are future deployment/beta gates rather than immediate stabilization work | 95/100 |
 | May 21, 2026 | Codex | Verified PR #138 merged into `dev` at `a55d6b5` with backend, web, mobile, security, and quality checks passing; refreshed and merged PR #137 at `bffa3f0`, normalizing mobile header safe areas across 24 `frontend/mobile` files; confirmed no open PRs against `dev`; local mobile Jest remains 33/33 passing | 95/100 |
 | May 20, 2026 | Codex | Verified PR #135 merged into `dev` at `bcf16ed`, adding the green shared `AppHeader` treatment, top content spacing, and single add-listing action for `MyListingsScreen`; confirmed no open PRs against `dev`; mobile Jest remains 33/33 passing | 94/100 |
@@ -98,11 +100,11 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### Current Reconciliation (May 22, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests, PR #137 completed the mobile header-safe-area merge, PR #139 refreshed status reporting, PR #140 added the beta readiness checklist, and PR #144 added the repo-local knowledge index. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
-- **Branch state:** `origin/dev` is at `bf737ea` after PR #144; PR #130 remains closed as superseded and PR #142 remains open against `dev` with an older docs-only status update branch.
-- **Backend:** PR #138 merged at `a55d6b5` with GitHub Backend Tests passing on May 21, 2026. Local backend validation should be refreshed against the existing working local development setup; Cloud Run `/health` rechecks belong to future deployment/beta validation.
-- **Web:** Development service was previously deployed on Cloud Run and returned HTTP 200. GitHub Frontend Web Tests passed for PR #138 and PR #137 on May 21, 2026; the last local web run remains 79/85 passing on May 17, 2026 and should be refreshed before beta readiness claims are raised.
-- **Mobile:** EAS-ready and working for local development; local mobile Jest passed 33/33 on May 21, 2026 during the PR #137 refresh, and GitHub Frontend Mobile Checks passed for PR #138 and PR #137. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
+- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests, PR #137 completed the mobile header-safe-area merge, PR #139 refreshed status reporting, PR #140 added the beta readiness checklist, PR #141 corrected the local-first status path, PR #144 added the repo-local knowledge index, and PR #145 reconciled current markdown status docs. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
+- **Branch state:** `origin/dev` is at `a4bd5c4` after PR #145; PR #130 remains closed as superseded and PR #142 remains open against `dev` with an older docs-only status update branch.
+- **Backend:** PR #138 merged at `a55d6b5` with GitHub Backend Tests passing on May 21, 2026, and PR #141 backend checks also passed for the docs correction. Local backend validation should be refreshed against the existing working local development setup; Cloud Run `/health` rechecks belong to future deployment/beta validation.
+- **Web:** Development service was previously deployed on Cloud Run and returned HTTP 200. GitHub Frontend Web Tests passed for PR #141, PR #138, and PR #137 on May 21, 2026; the last local web run remains 79/85 passing on May 17, 2026 and should be refreshed before beta readiness claims are raised.
+- **Mobile:** EAS-ready and working for local development; local mobile Jest passed 33/33 on May 21, 2026 during the PR #137 refresh, and GitHub Frontend Mobile Checks passed for PR #141, PR #138, and PR #137. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
 - **Workflow tooling:** 11 repo-local skills, Codex role configs, and the `.agents/knowledge` index configuration are intended project tooling; the generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
 ### Current State (May 22, 2026)
@@ -189,9 +191,9 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ **Database Migrations:** Vehicle and Notification tables added
 
 **Test Status:**
-- Backend: GitHub Backend Tests passed for PR #138 and PR #137 on May 21, 2026 ✅; latest local full-suite evidence should be refreshed against the existing working local development setup
-- Mobile: 33/33 passing (100%) locally on May 21, 2026; GitHub Frontend Mobile Checks also passed for PR #138 and PR #137 ✅
-- Web: GitHub Frontend Web Tests passed for PR #138 and PR #137 on May 21, 2026 ✅; latest local web run remains 79/85 passing (92.9%) on May 17, 2026 and needs refresh
+- Backend: GitHub Backend Tests passed for PR #141, PR #138, and PR #137 on May 21, 2026 ✅; latest local full-suite evidence should be refreshed against the existing working local development setup
+- Mobile: 33/33 passing (100%) locally on May 21, 2026; GitHub Frontend Mobile Checks also passed for PR #141, PR #138, and PR #137 ✅
+- Web: GitHub Frontend Web Tests passed for PR #141, PR #138, and PR #137 on May 21, 2026 ✅; latest local web run remains 79/85 passing (92.9%) on May 17, 2026 and needs refresh
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
 **Infrastructure:**
@@ -392,7 +394,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 **Testing:**
 1. **Refresh stale local test evidence**
-   - GitHub backend, web, and mobile checks passed for PR #138 and PR #137 on May 21, 2026.
+   - GitHub backend, web, and mobile checks passed for PR #141, PR #138, and PR #137 on May 21, 2026.
    - Latest local web run is still 79/85 passing (92.9%) from May 17, 2026 and should be rerun.
    - Latest local backend full-suite evidence should be refreshed against the existing working local development setup.
    - Latest local mobile Jest is current at 33/33 passing on May 21, 2026.
@@ -425,6 +427,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - #142: `docs/post-141-status-update` — older docs-only status update branch, verified open by `gh pr list --base dev --state open` on May 22, 2026.
 
 **Recently Merged:**
+- #145: Reconcile markdown status docs
 - #144: Add agent knowledge index
 - #143: Configure dev GCS photo bucket
 - #138: Stabilize backend payment and marketplace tests
@@ -472,7 +475,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Impact:** Backend test confidence improved after PR #138, but local full-suite evidence should be refreshed against the existing working local development setup
 - **Initial:** 50/271 passing (18.5%)
 - **Previous:** 235/271 passing (86.7%)
-- **Current:** GitHub Backend Tests passed for PR #138 and PR #137 on May 21, 2026 ✅
+- **Current:** GitHub Backend Tests passed for PR #141, PR #138, and PR #137 on May 21, 2026 ✅
 - **Target:** 95%+ (273+/288 passing)
 - **What Was Fixed (Feb 24 - Mar 10, 2026):**
   - ✅ Installed PostgreSQL 16 locally (Feb 24)
