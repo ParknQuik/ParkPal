@@ -18,6 +18,11 @@ node_modules
 !package-lock.json
 !tsconfig.json
 !app.json
+!.agents/knowledge/sources.json
+
+# Generated agent knowledge index
+.agents/knowledge/knowledge.db
+.agents/knowledge/knowledge.db-*
 
 # macOS system files
 .DS_Store

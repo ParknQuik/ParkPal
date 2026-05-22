@@ -9,6 +9,8 @@
 ### Always Read First
 | File | Purpose |
 |------|---------|
+| `.agents/knowledge/README.md` | Repo-local knowledge index usage and rules |
+| `.agents/knowledge/sources.json` | Configured markdown sources for agent retrieval |
 | `STATUS_REPORT.md` | Current production readiness, blockers, deployment status |
 | `ROADMAP.md` | Development roadmap and sprint planning |
 | `TECH_STACK_SUMMARY.md` | Authoritative tech stack reference |
@@ -70,11 +72,18 @@
 
 ## Documentation Standards
 
+### Agent Retrieval
+
+- Run `npm run knowledge:query -- "<topic>"` before broad documentation scans.
+- Rebuild with `npm run knowledge:build` when indexed sources change.
+- Use query results as source-grounded pointers; verify current status with live git state and `STATUS_REPORT.md`.
+
 ### When to Update
 
 | Trigger | Files to Update |
 |---------|----------------|
 | Feature shipped | `STATUS_REPORT.md` |
+| Knowledge source added or removed | `.agents/knowledge/sources.json`, then `npm run knowledge:build` |
 | New API endpoint | `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` + Swagger |
 | Tech stack change | `TECH_STACK_SUMMARY.md` |
 | Infrastructure change | `docs/DEPLOYMENT.md`, `docs/ENVIRONMENTS.md` |
@@ -84,6 +93,7 @@
 ### Rules
 
 - `STATUS_REPORT.md` is the primary source of truth for project state
+- The knowledge index is a retrieval layer, not a replacement for source docs
 - Never duplicate content across files — link instead
 - Historical/one-time records go in `docs/phase-completions/` or `docs/implementations/`
 - Delete files that have been fully superseded rather than leaving stale docs
