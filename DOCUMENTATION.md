@@ -74,9 +74,12 @@
 
 ### Agent Retrieval
 
-- Run `npm run knowledge:query -- "<topic>"` before broad documentation scans.
+- Run `npm run knowledge:context -- "<intent>"` for startup, current-status, continue, and planning prompts.
+- Use the cited line ranges from `knowledge:context` as the default read boundary; do not open full Markdown files unless implementation detail is genuinely needed.
+- Run `npm run knowledge:query -- "<topic>"` only for deeper investigation.
 - Rebuild with `npm run knowledge:build` when indexed sources change.
-- Use query results as source-grounded pointers; verify current status with live git state and `STATUS_REPORT.md`.
+- Markdown remains canonical storage. The SQLite database is a generated retrieval/cache layer, and token savings come from bounded retrieval rather than deleting Markdown.
+- Use retrieval results as source-grounded pointers; verify current status with live git state and cited `STATUS_REPORT.md` ranges.
 
 ### When to Update
 
@@ -93,7 +96,7 @@
 ### Rules
 
 - `STATUS_REPORT.md` is the primary source of truth for project state
-- The knowledge index is a retrieval layer, not a replacement for source docs
+- The knowledge index is a retrieval/cache layer, not a replacement for source docs
 - Never duplicate content across files — link instead
 - Historical/one-time records go in `docs/phase-completions/`, `docs/plans/`, or `docs/implementations/`
 - Delete files that have been fully superseded rather than leaving stale docs
