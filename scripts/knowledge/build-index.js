@@ -30,7 +30,9 @@ const VALID_STATUSES = new Set([
 
 const topicRules = [
   [/header|safe\s*area|statusbar|status bar|theme|dark\s*mode/i, ['mobile', 'theme', 'headers']],
-  [/payment|paymongo|gcash|maya|card/i, ['payments']],
+  [/payment|paymongo|gcash|maya|card|cash|intent|confirmation/i, ['payments']],
+  [/qr|scanner|camera|hook order|useStatusBarStyle|early return/i, ['mobile', 'qr-scanner']],
+  [/icon|emoji|MaterialCommunityIcons/i, ['mobile', 'ui']],
   [/cloud\s*run|gcp|deployment|secret manager|cloud sql|redis/i, ['infrastructure', 'deployment']],
   [/auth|login|seed|password|credential/i, ['auth']],
   [/booking|reservation|checkout|penalty|auto-checkout/i, ['booking']],
@@ -266,6 +268,97 @@ function parseMarkdown(sourcePath, sourceConfig) {
   return chunks;
 }
 
+function findEntryLineRange(text, entryId) {
+  const lines = text.split(/\r?\n/);
+  const idPattern = new RegExp(`"id"\\s*:\\s*"${escapeRegex(entryId)}"`);
+  const idIndex = lines.findIndex((line) => idPattern.test(line));
+  if (idIndex === -1) {
+    return { startLine: 1, endLine: lines.length };
+  }
+
+  let startIndex = idIndex;
+  while (startIndex > 0 && !/^\s*\{/.test(lines[startIndex])) {
+    startIndex -= 1;
+  }
+
+  let depth = 0;
+  let started = false;
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index];
+    for (const char of line) {
+      if (char === '{') {
+        depth += 1;
+        started = true;
+      } else if (char === '}') {
+        depth -= 1;
+      }
+    }
+    if (started && depth === 0) {
+      return { startLine: startIndex + 1, endLine: index + 1 };
+    }
+  }
+
+  return { startLine: startIndex + 1, endLine: lines.length };
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function asList(value) {
+  return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
+function parseSourceMap(sourcePath, sourceConfig) {
+  const absolutePath = repoPath(sourcePath);
+  const text = fs.readFileSync(absolutePath, 'utf8');
+  const sourceMap = JSON.parse(text);
+  const entries = asList(sourceMap.entries);
+
+  return entries.map((entry) => {
+    const sourcePaths = asList(entry.sourcePaths);
+    const routeKeywords = asList(entry.routeKeywords);
+    const relatedApis = asList(entry.relatedApis);
+    const validationCommands = asList(entry.validationCommands);
+    const knownFailurePatterns = asList(entry.knownFailurePatterns);
+    const { startLine, endLine } = findEntryLineRange(text, entry.id || entry.title || 'entry');
+    const title = entry.title || entry.id || sourcePath;
+    const content = [
+      `# ${title}`,
+      '',
+      `ID: ${entry.id || 'unknown'}`,
+      `Subsystem: ${entry.subsystem || sourceConfig.subsystem}`,
+      '',
+      '## Route Keywords',
+      ...routeKeywords.map((keyword) => `- ${keyword}`),
+      '',
+      '## Source Paths',
+      ...sourcePaths.map((sourcePathValue) => `- ${sourcePathValue}`),
+      '',
+      '## Related APIs',
+      ...relatedApis.map((api) => `- ${api}`),
+      '',
+      '## Validation Commands',
+      ...validationCommands.map((command) => `- ${command}`),
+      '',
+      '## Known Failure Patterns',
+      ...knownFailurePatterns.map((pattern) => `- ${pattern}`)
+    ].join('\n');
+
+    return {
+      sourcePath,
+      headingPath: ['Source Map', title],
+      subsystem: entry.subsystem || sourceConfig.subsystem,
+      knowledgeStatus: entry.knowledgeStatus || sourceConfig.defaultStatus,
+      priority: entry.priority || sourceConfig.priority,
+      references: sourcePaths,
+      content,
+      startLine,
+      endLine
+    };
+  });
+}
+
 function inferTopics(chunk) {
   const haystack = `${chunk.headingPath.join(' ')}\n${chunk.content}`;
   const topics = new Set();
@@ -303,6 +396,14 @@ function extractReferences(chunk) {
   }
 
   return Array.from(references).sort();
+}
+
+function parseSource(sourcePath, sourceConfig) {
+  if (sourceConfig.type === 'source-map') {
+    return parseSourceMap(sourcePath, sourceConfig);
+  }
+
+  return parseMarkdown(sourcePath, sourceConfig);
 }
 
 function buildChunkId(chunk, index) {
@@ -454,13 +555,13 @@ function main() {
     }
 
     const sourceMetadata = getSourceMetadata(source.path);
-    const parsed = parseMarkdown(source.path, source);
+    const parsed = parseSource(source.path, source);
     parsed.forEach((chunk) => {
       annotateFreshness(chunk, indexedAt);
       applyStatusOverrides(chunk, source.statusOverrides);
       chunk.topics = inferTopics(chunk);
       chunk.summary = summarize(chunk);
-      chunk.references = extractReferences(chunk);
+      chunk.references = chunk.references || extractReferences(chunk);
       chunk.lastIndexedCommit = commit;
       chunk.lastIndexedAt = indexedAt;
       chunk.indexHeadCommit = commit;

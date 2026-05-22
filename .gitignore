@@ -19,6 +19,7 @@ node_modules
 !tsconfig.json
 !app.json
 !.agents/knowledge/sources.json
+!.agents/knowledge/source-map.json
 
 # Generated agent knowledge index
 .agents/knowledge/knowledge.db

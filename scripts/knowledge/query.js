@@ -5,7 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const { pathToFileURL } = require('node:url');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.resolve(__dirname, '../..');
@@ -467,6 +467,74 @@ function assertFreshnessWarnings() {
   });
 }
 
+function runCheckCommand(env) {
+  return spawnSync(
+    process.execPath,
+    ['--no-warnings', path.join(__dirname, 'check.js')],
+    {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8'
+    }
+  );
+}
+
+function runRebuildIfStale(env) {
+  return spawnSync(
+    process.execPath,
+    ['--no-warnings', path.join(__dirname, 'rebuild-if-stale.js')],
+    {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8'
+    }
+  );
+}
+
+function assertFreshnessCommands() {
+  withTempKnowledgeDb((tempDbPath, env) => {
+    const freshCheck = runCheckCommand(env);
+    if (freshCheck.status !== 0) {
+      throw new Error(`Self-test expected knowledge:check success for fresh DB: ${freshCheck.stderr}`);
+    }
+    if (!freshCheck.stdout.includes('Knowledge DB is fresh.')) {
+      throw new Error('Self-test expected knowledge:check fresh message.');
+    }
+
+    corruptHeadCommit(tempDbPath);
+    const staleCheck = runCheckCommand(env);
+    if (staleCheck.status === 0) {
+      throw new Error('Self-test expected knowledge:check to fail for stale DB.');
+    }
+    if (!staleCheck.stderr.includes('Knowledge DB was built at')) {
+      throw new Error('Self-test expected knowledge:check stale output to include HEAD drift warning.');
+    }
+
+    const rebuild = runRebuildIfStale(env);
+    if (rebuild.status !== 0) {
+      throw new Error(`Self-test expected knowledge:rebuild-if-stale success: ${rebuild.stderr}`);
+    }
+    if (!rebuild.stdout.includes('rebuilding')) {
+      throw new Error('Self-test expected knowledge:rebuild-if-stale to rebuild stale DB.');
+    }
+
+    const rebuiltCheck = runCheckCommand(env);
+    if (rebuiltCheck.status !== 0) {
+      throw new Error('Self-test expected rebuilt DB to be fresh.');
+    }
+  });
+
+  withTempKnowledgeDb((_tempDbPath, env) => {
+    const skipped = runRebuildIfStale(env);
+    if (skipped.status !== 0) {
+      throw new Error(`Self-test expected knowledge:rebuild-if-stale skip success: ${skipped.stderr}`);
+    }
+    if (!skipped.stdout.includes('rebuild skipped')) {
+      throw new Error('Self-test expected knowledge:rebuild-if-stale to skip fresh DB.');
+    }
+  });
+}
+
 function runContextOutput(query, env, limit = 3) {
   return execFileSync(
     process.execPath,
@@ -544,6 +612,38 @@ function runQueryChecks(db) {
       ],
       rejectedReferences: [
         '.agents/knowledge/sources.js'
+      ]
+    },
+    {
+      query: 'cash payment 403 booking modal PaymentScreen',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/PaymentScreen.tsx',
+        'backend/controllers/paymentsController.js'
+      ]
+    },
+    {
+      query: 'React hook order useStatusBarStyle QRScannerScreen',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/QRScannerScreen.tsx',
+        'frontend/mobile/src/hooks/useStatusBarStyle.ts'
+      ]
+    },
+    {
+      query: 'payment page MaterialCommunityIcons emoji cash',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/PaymentScreen.tsx'
       ]
     }
   ];
@@ -642,6 +742,7 @@ function runQueryChecks(db) {
 
 function runSelfTest() {
   assertFreshnessWarnings();
+  assertFreshnessCommands();
   assertContextOutput();
 
   withTempKnowledgeDb((tempDbPath) => {

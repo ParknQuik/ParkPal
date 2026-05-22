@@ -18,7 +18,7 @@ npm run knowledge:context -- "current project status"
 If the database is missing or stale, rebuild it:
 
 ```bash
-npm run knowledge:build
+npm run knowledge:rebuild-if-stale
 ```
 
 Use the cited source line ranges as the default read boundary. Treat `needs-verification`, `planned`, and `historical` results as leads, not confirmed truth. Use `npm run knowledge:query -- "<topic>"` only when the task needs deeper investigation.
