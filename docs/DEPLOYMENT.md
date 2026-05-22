@@ -152,7 +152,8 @@ gsutil ls -p parkpal-474417
 ```
 
 **Buckets:**
-- `gs://parkpal-prod-photos` - User-uploaded photos
+- `gs://parkpal-dev-photos` - Development and staging user-uploaded photos
+- `gs://parkpal-prod-photos` - Production user-uploaded photos
 - `gs://parkpal-prod-backups` - Database backups
 
 ---
@@ -195,7 +196,7 @@ gcloud run deploy parkpal-backend-dev \
   --allow-unauthenticated \
   --service-account parkpal-backend-service@parkpal-474417.iam.gserviceaccount.com \
   --set-cloudsql-instances parkpal-474417:asia-southeast1:parkpal-db \
-  --set-env-vars NODE_ENV=development,GCP_PROJECT_ID=parkpal-474417,GCS_BUCKET_NAME=parkpal-prod-photos \
+  --set-env-vars NODE_ENV=development,GCP_PROJECT_ID=parkpal-474417,GCS_BUCKET_NAME=parkpal-dev-photos \
   --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,SMTP_HOST=SMTP_HOST:latest,SMTP_PORT=SMTP_PORT:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASS=SMTP_PASS:latest \
   --min-instances 0 \
   --max-instances 10 \
@@ -211,11 +212,11 @@ curl https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/health
 
 ### Environment-Specific Configurations
 
-| Branch | Environment | Service Name | Instances | Memory | CPU |
-|--------|-------------|--------------|-----------|--------|-----|
-| `dev` | Development | `parkpal-backend-dev` | 0-5 | 512Mi | 1 |
-| `qa` | Staging | `parkpal-backend-staging` | 0-10 | 512Mi | 1 |
-| `main` | Production | `parkpal-backend-prod` | 1-100 | 1Gi | 2 |
+| Branch | Environment | Service Name | GCS Bucket | Instances | Memory | CPU |
+|--------|-------------|--------------|------------|-----------|--------|-----|
+| `dev` | Development | `parkpal-backend-dev` | `parkpal-dev-photos` | 0-5 | 512Mi | 1 |
+| `qa` | Staging | `parkpal-backend-staging` | `parkpal-dev-photos` | 0-10 | 512Mi | 1 |
+| `main` | Production | `parkpal-backend-prod` | `parkpal-prod-photos` | 1-100 | 1Gi | 2 |
 
 ---
 
@@ -555,7 +556,7 @@ curl https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/health
 |---------|---------------|--------------|
 | Cloud SQL | db-custom-1-3840 | $80 |
 | Cloud Run | 0-10 instances | $0-15 |
-| Cloud Storage | 2 buckets | $2 |
+| Cloud Storage | 3 buckets | $2 |
 | Secret Manager | 10 secrets | $0 (free tier) |
 | Redis Cloud | External | $5 |
 | **Total** | | **~$87-102** |

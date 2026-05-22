@@ -45,16 +45,28 @@ jobs:
       - name: Set environment variables
         id: env-vars
         run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TARGET_ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            TARGET_ENV="production"
+          elif [ "${{ github.ref }}" == "refs/heads/qa" ]; then
+            TARGET_ENV="staging"
+          else
+            TARGET_ENV="development"
+          fi
+
+          if [ "$TARGET_ENV" == "production" ]; then
             echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
             echo "SERVICE_SUFFIX=prod" >> $GITHUB_OUTPUT
+            echo "GCS_BUCKET_NAME=parkpal-prod-photos" >> $GITHUB_OUTPUT
             echo "MIN_INSTANCES=1" >> $GITHUB_OUTPUT
             echo "MAX_INSTANCES=100" >> $GITHUB_OUTPUT
             echo "MEMORY=1Gi" >> $GITHUB_OUTPUT
             echo "CPU=2" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" == "refs/heads/qa" ]; then
+          elif [ "$TARGET_ENV" == "staging" ]; then
             echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
             echo "SERVICE_SUFFIX=staging" >> $GITHUB_OUTPUT
+            echo "GCS_BUCKET_NAME=parkpal-dev-photos" >> $GITHUB_OUTPUT
             echo "MIN_INSTANCES=0" >> $GITHUB_OUTPUT
             echo "MAX_INSTANCES=10" >> $GITHUB_OUTPUT
             echo "MEMORY=512Mi" >> $GITHUB_OUTPUT
@@ -62,6 +74,7 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
             echo "SERVICE_SUFFIX=dev" >> $GITHUB_OUTPUT
+            echo "GCS_BUCKET_NAME=parkpal-dev-photos" >> $GITHUB_OUTPUT
             echo "MIN_INSTANCES=0" >> $GITHUB_OUTPUT
             echo "MAX_INSTANCES=5" >> $GITHUB_OUTPUT
             echo "MEMORY=512Mi" >> $GITHUB_OUTPUT
@@ -117,7 +130,7 @@ jobs:
             --allow-unauthenticated \
             --service-account parkpal-backend-service@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
-            --set-env-vars NODE_ENV=${{ steps.env-vars.outputs.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCS_BUCKET_NAME=parkpal-prod-photos \
+            --set-env-vars NODE_ENV=${{ steps.env-vars.outputs.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCS_BUCKET_NAME=${{ steps.env-vars.outputs.GCS_BUCKET_NAME }} \
             --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest \
             --min-instances ${{ steps.env-vars.outputs.MIN_INSTANCES }} \
             --max-instances ${{ steps.env-vars.outputs.MAX_INSTANCES }} \

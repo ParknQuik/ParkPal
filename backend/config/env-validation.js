@@ -8,12 +8,14 @@ const logger = require('./logger');
 const REQUIRED_VARS = {
   production: [
     'DATABASE_URL',
+    'GCS_BUCKET_NAME',
     'JWT_SECRET',
     'NODE_ENV',
     'PORT',
   ],
   development: [
     'DATABASE_URL',
+    'GCS_BUCKET_NAME',
     'JWT_SECRET',
   ],
   test: [
@@ -231,6 +233,7 @@ function printEnvironmentSummary() {
   logger.info(`  Node Environment: ${env}`);
   logger.info(`  Port: ${process.env.PORT || '3001'}`);
   logger.info(`  Database: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'Not configured'}`);
+  logger.info(`  GCS Bucket: ${process.env.GCS_BUCKET_NAME || 'Not configured'}`);
   logger.info(`  Redis: ${process.env.REDIS_URL ? 'Enabled' : 'Disabled'}`);
   logger.info(`  Secret Manager: ${process.env.USE_SECRET_MANAGER === 'true' ? 'Enabled' : 'Disabled'}`);
   logger.info(`  JWT Secret: ${process.env.JWT_SECRET ? 'Set (' + process.env.JWT_SECRET.length + ' chars)' : 'Not set'}`);
