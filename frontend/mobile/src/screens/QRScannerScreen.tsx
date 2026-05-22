@@ -53,6 +53,7 @@ export const QRScannerScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<QRScannerParams, 'QRScanner'>>();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   const scanMode: ScanMode = route.params?.mode || 'generic';
   const bookingId = route.params?.bookingId;
@@ -600,7 +601,7 @@ export const QRScannerScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.appHeaderBackground} />
 
       <CameraView
         style={StyleSheet.absoluteFill}

@@ -153,6 +153,9 @@ export const ReserveSpot: React.FC = () => {
   const priceLabel = rentalMode === 'open'
     ? `Estimated max (${MAX_DURATION_HOURS}hrs)`
     : 'Total';
+  const noShowPolicyNote = rentalMode === 'open'
+    ? 'Cancel at least 1 hour before start to avoid a strike. Cancellations close 30 minutes before start. For open-time bookings, check in within 30 minutes of your start time.'
+    : 'Cancel at least 1 hour before start to avoid a strike. Cancellations close 30 minutes before start. Check in during your reserved time to keep the spot from expiring.';
 
   const handleProceedToPayment = async () => {
     if (startDate <= new Date()) {
@@ -536,6 +539,33 @@ export const ReserveSpot: React.FC = () => {
       color: colors.textSecondary,
       marginTop: 4,
     },
+    policyNote: {
+      flexDirection: 'row',
+      backgroundColor: `${colors.warning}15`,
+      borderWidth: 1,
+      borderColor: `${colors.warning}80`,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 24,
+    },
+    policyNoteIcon: {
+      marginRight: 10,
+      marginTop: 1,
+    },
+    policyNoteContent: {
+      flex: 1,
+    },
+    policyNoteTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    policyNoteText: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: colors.textSecondary,
+    },
   }), [colors]);
 
   if (loading) {
@@ -780,6 +810,19 @@ export const ReserveSpot: React.FC = () => {
               </Text>
             </View>
           )}
+        </View>
+
+        <View style={styles.policyNote}>
+          <MaterialCommunityIcons
+            name="alert-circle-outline"
+            size={20}
+            color={colors.warning}
+            style={styles.policyNoteIcon}
+          />
+          <View style={styles.policyNoteContent}>
+            <Text style={styles.policyNoteTitle}>Late cancellation and no-show policy</Text>
+            <Text style={styles.policyNoteText}>{noShowPolicyNote}</Text>
+          </View>
         </View>
 
         <View style={styles.bottomSpacer} />

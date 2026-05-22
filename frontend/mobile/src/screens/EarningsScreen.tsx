@@ -44,6 +44,7 @@ interface Transaction {
 export const EarningsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -353,7 +354,7 @@ export const EarningsScreen: React.FC = () => {
    if (loading) {
      return (
        <View style={styles.container}>
-         <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.appHeaderBackground} />
+         <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.appHeaderBackground} />
          <SafeAreaView edges={['top']} style={styles.safeArea}>
            <AppHeader title="Earnings" onBack={handleBack} />
            <View style={styles.contentArea}>
@@ -368,7 +369,7 @@ export const EarningsScreen: React.FC = () => {
 
    return (
      <View style={styles.container}>
-       <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.appHeaderBackground} />
+       <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.appHeaderBackground} />
        <SafeAreaView edges={['top']} style={styles.safeArea}>
          <AppHeader title="Earnings" onBack={handleBack} />
 

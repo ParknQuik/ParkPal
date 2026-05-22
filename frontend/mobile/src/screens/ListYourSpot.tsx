@@ -37,6 +37,7 @@ export const ListYourSpot: React.FC = () => {
   const route = useRoute<any>();
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
 
   // Get params from navigation (passed when editing)
   const listingId = route.params?.listingId;
@@ -465,7 +466,7 @@ export const ListYourSpot: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar
-        barStyle={`${useStatusBarStyle()}-content`}
+        barStyle={`${statusBarStyle}-content`}
         backgroundColor={colors.appHeaderBackground}
       />
 

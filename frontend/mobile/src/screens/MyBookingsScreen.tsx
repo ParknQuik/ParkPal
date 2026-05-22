@@ -94,6 +94,7 @@ export const MyBookingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
   const [refreshing, setRefreshing] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
@@ -822,7 +823,7 @@ export const MyBookingsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-       <StatusBar barStyle={`${useStatusBarStyle()}-content`} backgroundColor={colors.surface} />
+       <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.surface} />
 
       <View style={styles.tabsContainer}>
         {TABS.map((tab) => (
