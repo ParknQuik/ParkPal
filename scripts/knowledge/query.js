@@ -9,7 +9,12 @@ const { execFileSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.resolve(__dirname, '../..');
-const DEFAULT_DB_PATH = path.join(ROOT, '.agents/knowledge/knowledge.db');
+const DEFAULT_DB_PATH = path.join(
+  os.tmpdir(),
+  'parkpal-knowledge',
+  crypto.createHash('sha1').update(ROOT).digest('hex').slice(0, 12),
+  'knowledge.db'
+);
 const DB_PATH = process.env.KNOWLEDGE_DB_PATH
   ? path.resolve(ROOT, process.env.KNOWLEDGE_DB_PATH)
   : DEFAULT_DB_PATH;

@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
@@ -9,7 +10,12 @@ const { DatabaseSync } = require('node:sqlite');
 const ROOT = path.resolve(__dirname, '../..');
 const KNOWLEDGE_DIR = path.join(ROOT, '.agents/knowledge');
 const SOURCES_PATH = path.join(KNOWLEDGE_DIR, 'sources.json');
-const DEFAULT_DB_PATH = path.join(KNOWLEDGE_DIR, 'knowledge.db');
+const DEFAULT_DB_PATH = path.join(
+  os.tmpdir(),
+  'parkpal-knowledge',
+  crypto.createHash('sha1').update(ROOT).digest('hex').slice(0, 12),
+  'knowledge.db'
+);
 const DB_PATH = process.env.KNOWLEDGE_DB_PATH
   ? path.resolve(ROOT, process.env.KNOWLEDGE_DB_PATH)
   : DEFAULT_DB_PATH;
@@ -37,6 +43,14 @@ const topicRules = [
 
 function repoPath(...parts) {
   return path.join(ROOT, ...parts);
+}
+
+function displayPath(filePath) {
+  const relativePath = path.relative(ROOT, filePath);
+  if (relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath)) {
+    return relativePath;
+  }
+  return filePath;
 }
 
 function readJson(filePath) {
@@ -296,10 +310,16 @@ function buildChunkId(chunk, index) {
   return `${chunk.sourcePath}#${heading}#${String(index + 1).padStart(3, '0')}`;
 }
 
-function createDatabase(chunks) {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+function removeDatabaseFiles(dbPath) {
+  for (const suffix of ['', '-journal', '-shm', '-wal']) {
+    fs.rmSync(`${dbPath}${suffix}`, { force: true });
+  }
+}
 
-  const db = new DatabaseSync(DB_PATH);
+function createDatabase(chunks, dbPath) {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+  const db = new DatabaseSync(dbPath);
   db.exec(`
     PRAGMA journal_mode = DELETE;
     DROP TABLE IF EXISTS chunks_fts;
@@ -398,6 +418,20 @@ function createDatabase(chunks) {
   }
 }
 
+function writeDatabase(chunks) {
+  const dbDir = path.dirname(DB_PATH);
+  const dbName = path.basename(DB_PATH);
+  const tempDbPath = path.join(dbDir, `.${dbName}.${process.pid}.${Date.now()}.tmp`);
+
+  removeDatabaseFiles(tempDbPath);
+  try {
+    createDatabase(chunks, tempDbPath);
+    fs.renameSync(tempDbPath, DB_PATH);
+  } finally {
+    removeDatabaseFiles(tempDbPath);
+  }
+}
+
 function main() {
   const config = readJson(SOURCES_PATH);
   const indexedAt = new Date().toISOString();
@@ -437,7 +471,7 @@ function main() {
     });
   }
 
-  createDatabase(allChunks);
+  writeDatabase(allChunks);
 
   const statusCounts = Object.fromEntries(Array.from(VALID_STATUSES, (status) => [status, 0]));
   for (const chunk of allChunks) {
@@ -448,7 +482,7 @@ function main() {
   console.log(
     `Current: ${statusCounts.current}, planned: ${statusCounts.planned}, historical: ${statusCounts.historical}, deprecated: ${statusCounts.deprecated}, needs-verification: ${statusCounts['needs-verification']}.`
   );
-  console.log(`Database: ${path.relative(ROOT, DB_PATH)}`);
+  console.log(`Database: ${displayPath(DB_PATH)}`);
 }
 
 main();

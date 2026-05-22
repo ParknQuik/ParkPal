@@ -1,6 +1,6 @@
 # ParkPal Project Status Report
 
-**Last Updated:** May 21, 2026
+**Last Updated:** May 22, 2026
 **Current Branch:** `dev`
 **Production Readiness:** 95/100 (Backend and mobile PR checks are green after the May 21 merges; remaining confidence gaps are stale local web evidence, known mobile TypeScript drift, and future deployment health validation)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 22, 2026 | Codex | Verified PR #144 merged into `dev` at `bf737ea`, adding the repo-local agent knowledge index, query/build scripts, freshness warnings, validation harness, and agent onboarding docs; refreshed the ignored local knowledge DB and confirmed one older docs PR (#142) remains open against `dev` | 95/100 |
 | May 21, 2026 | Codex | Corrected status docs to reflect the local-first development path: local validation should use the existing development setup, Redis stays deferred, and Cloud Run health checks are future deployment/beta gates rather than immediate stabilization work | 95/100 |
 | May 21, 2026 | Codex | Verified PR #138 merged into `dev` at `a55d6b5` with backend, web, mobile, security, and quality checks passing; refreshed and merged PR #137 at `bffa3f0`, normalizing mobile header safe areas across 24 `frontend/mobile` files; confirmed no open PRs against `dev`; local mobile Jest remains 33/33 passing | 95/100 |
 | May 20, 2026 | Codex | Verified PR #135 merged into `dev` at `bcf16ed`, adding the green shared `AppHeader` treatment, top content spacing, and single add-listing action for `MyListingsScreen`; confirmed no open PRs against `dev`; mobile Jest remains 33/33 passing | 94/100 |
@@ -94,17 +95,17 @@ This is the **primary project status log**. Keep historical sections labeled cle
 
 This is a **living document** that tracks ParkPal's actual state based on deployment data and test results. It gets updated with every significant progress milestone.
 
-### Current Reconciliation (May 21, 2026)
+### Current Reconciliation (May 22, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests, PR #137 completed the mobile header-safe-area merge, PR #139 refreshed status reporting, and PR #140 added the beta readiness checklist. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
-- **Branch state:** `origin/dev` is at `05f4dc3` after PR #140; PR #130 remains closed as superseded and there are no open PRs against `dev`.
+- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests, PR #137 completed the mobile header-safe-area merge, PR #139 refreshed status reporting, PR #140 added the beta readiness checklist, and PR #144 added the repo-local knowledge index. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
+- **Branch state:** `origin/dev` is at `bf737ea` after PR #144; PR #130 remains closed as superseded and PR #142 remains open against `dev` with an older docs-only status update branch.
 - **Backend:** PR #138 merged at `a55d6b5` with GitHub Backend Tests passing on May 21, 2026. Local backend validation should be refreshed against the existing working local development setup; Cloud Run `/health` rechecks belong to future deployment/beta validation.
 - **Web:** Development service was previously deployed on Cloud Run and returned HTTP 200. GitHub Frontend Web Tests passed for PR #138 and PR #137 on May 21, 2026; the last local web run remains 79/85 passing on May 17, 2026 and should be refreshed before beta readiness claims are raised.
 - **Mobile:** EAS-ready and working for local development; local mobile Jest passed 33/33 on May 21, 2026 during the PR #137 refresh, and GitHub Frontend Mobile Checks passed for PR #138 and PR #137. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
-- **Workflow tooling:** 10 repo-local skills and Codex role configs are intended project tooling; GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
+- **Workflow tooling:** 11 repo-local skills, Codex role configs, and the `.agents/knowledge` index configuration are intended project tooling; the generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
-### Current State (May 21, 2026)
+### Current State (May 22, 2026)
 
 **Deployed:**
 - Backend API: Development Cloud Run service is deployed via automated CD pipeline ✅
@@ -198,7 +199,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - CD Pipeline: Automated deployments on push to dev/qa/main
 - Billing: Optimized to $7-12/month (96% cost reduction from peak)
 - Projects: Consolidated to 1 dev project (staging/prod deleted)
-- Workflow tooling: 10 skills operational (GCloud checks use CLI, PR checker, post-merge status planner) ✅
+- Workflow tooling: 11 skills operational plus repo-local knowledge index tooling (GCloud checks use CLI, PR checker, post-merge status planner, ParkPal knowledge search) ✅
 
 ## 🌐 Environment URLs
 
@@ -421,9 +422,11 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ## Open Pull Requests
 
 **Currently Open Against `dev`:**
-- None verified by `gh pr list --base dev --state open` on May 21, 2026.
+- #142: `docs/post-141-status-update` — older docs-only status update branch, verified open by `gh pr list --base dev --state open` on May 22, 2026.
 
 **Recently Merged:**
+- #144: Add agent knowledge index
+- #143: Configure dev GCS photo bucket
 - #138: Stabilize backend payment and marketplace tests
 - #137: Normalize mobile header safe areas
 - #135: Fix My Listings header layout
@@ -1077,7 +1080,7 @@ The following March plan is retained for history only. Current status is documen
 
 ## Next Steps
 
-### Immediate (May 21, 2026)
+### Immediate (May 22, 2026)
 
 1. Refresh local web test evidence after the GitHub web checks passed for PR #138 and PR #137.
 2. Rerun `cd backend && npm test` against the existing working local development setup; do not provision new PostgreSQL or Redis resources for the current stabilization pass.

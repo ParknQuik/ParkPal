@@ -1,6 +1,6 @@
 # Documentation Guide
 
-**Last Updated:** May 21, 2026
+**Last Updated:** May 22, 2026
 
 ---
 
@@ -95,6 +95,6 @@
 - `STATUS_REPORT.md` is the primary source of truth for project state
 - The knowledge index is a retrieval layer, not a replacement for source docs
 - Never duplicate content across files — link instead
-- Historical/one-time records go in `docs/phase-completions/` or `docs/implementations/`
+- Historical/one-time records go in `docs/phase-completions/`, `docs/plans/`, or `docs/implementations/`
 - Delete files that have been fully superseded rather than leaving stale docs
-- Keep file names simple and descriptive (no dates in filenames)
+- Keep canonical reusable docs simple and descriptive; dated filenames are allowed only for one-time implementation plans or historical records
