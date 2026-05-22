@@ -1,5 +1,5 @@
 import { CompositeScreenProps } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { StackScreenProps } from '@react-navigation/stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { RootStackParamList } from '../types';
 import type { MainStackParamList } from './MainStack';
@@ -11,10 +11,10 @@ type TabParamList = {
   Profile: undefined;
 };
 
-export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;
+export type RootStackScreenProps<T extends keyof RootStackParamList> = StackScreenProps<RootStackParamList, T>;
 
 export type MainStackScreenProps<T extends keyof MainStackParamList> = CompositeScreenProps<
-  NativeStackScreenProps<MainStackParamList, T>,
+  StackScreenProps<MainStackParamList, T>,
   RootStackScreenProps<'MainTabs'>
 >;
 
@@ -23,4 +23,4 @@ export type TabScreenProps<T extends keyof TabParamList> = CompositeScreenProps<
   MainStackScreenProps<'MainTabs'>
 >;
 
-export { NativeStackScreenProps, BottomTabScreenProps, CompositeScreenProps, TabParamList };
+export { StackScreenProps, BottomTabScreenProps, CompositeScreenProps, TabParamList };

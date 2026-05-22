@@ -2,7 +2,7 @@
 
 **Last Updated:** May 22, 2026
 **Current Branch:** `dev`
-**Production Readiness:** 95/100 (Backend and mobile PR checks are green after the May 21 merges; remaining confidence gaps are stale local web evidence, known mobile TypeScript drift, and future deployment health validation)
+**Production Readiness:** 95/100 (Local web/backend/mobile validation has been refreshed; remaining confidence gaps are future deployment health validation and beta distribution gates)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
 ---
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 22, 2026 | Codex | Resolved mobile TypeScript drift in navigation/image imports; refreshed local validation with mobile TypeScript passing, targeted mobile booking tests 9/9 passing, web tests 85/85 passing, backend tests 471/473 passing with 2 skipped, `git diff --check` passing, and no open PRs against `dev` | 95/100 |
 | May 22, 2026 | Codex | Verified PR #145 merged into `dev` at `a4bd5c4`, reconciling markdown status docs and moving the generated knowledge index database to a repo-scoped OS temp cache so normal rebuilds no longer require `.agents/knowledge` write access | 95/100 |
 | May 22, 2026 | Codex | Verified PR #144 merged into `dev` at `bf737ea`, adding the repo-local agent knowledge index, query/build scripts, freshness warnings, validation harness, and agent onboarding docs; refreshed the ignored local knowledge DB and confirmed one older docs PR (#142) remains open against `dev` | 95/100 |
 | May 21, 2026 | Codex | Verified PR #141 merged into `dev` at `b86ff60`, confirming the local-first status correction became part of the live development baseline with GitHub backend, web, and mobile checks passing | 95/100 |
@@ -393,11 +394,12 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### Current Gaps
 
 **Testing:**
-1. **Refresh stale local test evidence**
+1. **Local test evidence refreshed**
    - GitHub backend, web, and mobile checks passed for PR #141, PR #138, and PR #137 on May 21, 2026.
-   - Latest local web run is still 79/85 passing (92.9%) from May 17, 2026 and should be rerun.
-   - Latest local backend full-suite evidence should be refreshed against the existing working local development setup.
-   - Latest local mobile Jest is current at 33/33 passing on May 21, 2026.
+   - Latest local web run is 85/85 passing on May 22, 2026.
+   - Latest local backend full-suite run is 471/473 passing with 2 skipped on May 22, 2026, against the existing working local development setup.
+   - Latest local mobile TypeScript run passes on May 22, 2026.
+   - Latest targeted local mobile booking tests are 9/9 passing on May 22, 2026.
 
 2. **Redis Caching Deferred**
    - Redis remains deferred for cost optimization.
@@ -1085,24 +1087,21 @@ The following March plan is retained for history only. Current status is documen
 
 ### Immediate (May 22, 2026)
 
-1. Refresh local web test evidence after the GitHub web checks passed for PR #138 and PR #137.
-2. Rerun `cd backend && npm test` against the existing working local development setup; do not provision new PostgreSQL or Redis resources for the current stabilization pass.
-3. Resolve the known mobile TypeScript drift in `src/navigation/types.ts` and `src/screens/MyBookingsScreen.tsx`.
-4. Use `docs/BETA_READINESS_CHECKLIST.md` as a future beta/deployment gate before GCP deployment validation or app-store submission work resumes.
+1. Review and merge the mobile TypeScript drift cleanup from a feature branch into `dev`.
+2. Keep `docs/BETA_READINESS_CHECKLIST.md` as the future beta/deployment gate before GCP deployment validation or app-store submission work resumes.
+3. Recheck Cloud Run health only when beta/deployment validation resumes; do not provision new PostgreSQL or Redis resources for the current local-first stabilization pass.
 
 ### This Week
 
 1. Keep PR #130 closed; reintroduce any still-needed behavior only from a fresh branch off current `dev`.
-2. Refresh backend and web local test evidence now that CI is green for the latest merges.
-3. Keep Redis deferred unless scale or a concrete feature requirement changes the decision.
-4. Keep the beta-readiness checklist current as a future gate covering mobile build, payments, email, maps, monitoring, Cloud Run validation, Redis deferral, and app-store prerequisites.
+2. Keep Redis deferred unless scale or a concrete feature requirement changes the decision.
+3. Keep the beta-readiness checklist current as a future gate covering mobile build, payments, email, maps, monitoring, Cloud Run validation, Redis deferral, and app-store prerequisites.
 
 ### Next Review
 
 **Date:** May 24, 2026 (1 week)
 **Agenda:**
 - Fresh local web/backend test evidence
-- Mobile TypeScript drift cleanup
 - Future Cloud Run health and deployment confidence gates
 - Beta-readiness checklist status
 
