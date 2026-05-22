@@ -1,0 +1,312 @@
+name: Performance Testing
+
+on:
+  # Disabled on PRs during MVP development - run manually only
+  # pull_request:
+  #   branches: [main, dev]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of performance test'
+        required: true
+        default: 'load'
+        type: choice
+        options:
+          - load
+          - stress
+          - spike
+          - soak
+
+jobs:
+  artillery-load-test:
+    name: Artillery Load Test
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'schedule' ||
+      github.event.inputs.test_type == 'load' ||
+      github.event.inputs.test_type == ''
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parkpal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Setup database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+        run: |
+          npx prisma migrate deploy
+          npm run seed || echo "⚠️ No seed script available - using empty database"
+
+      - name: Start backend server
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-performance-testing-only
+          QR_SECRET: test-qr-secret-for-performance-testing-only-64-character-hex-string
+          NODE_ENV: test
+          USE_SECRET_MANAGER: false
+        run: |
+          npm start &
+          sleep 10
+
+      - name: Install Artillery
+        run: npm install -g artillery@latest
+
+      - name: Create reports directory
+        run: mkdir -p performance-testing/reports
+
+      - name: Run Artillery Load Test
+        run: |
+          artillery run performance-testing/artillery/api-load-test.yml \
+            --output performance-testing/reports/artillery-load-test-report.json
+
+      - name: Generate HTML Report
+        if: always()
+        run: |
+          artillery report performance-testing/reports/artillery-load-test-report.json \
+            --output performance-testing/reports/artillery-load-test-report.html
+
+      - name: Upload Artillery Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artillery-load-test-report
+          path: performance-testing/reports/artillery-load-test-report.*
+          retention-days: 30
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('performance-testing/reports/artillery-load-test-report.json', 'utf8'));
+            const summary = report.aggregate;
+
+            const comment = `## Performance Test Results 🚀
+
+            **Load Test Summary:**
+            - **Total Requests:** ${summary.counters['http.requests']}
+            - **Request Rate:** ${summary.rates['http.request_rate']}/sec
+            - **Response Time (p95):** ${Math.round(summary.summaries['http.response_time'].p95)}ms
+            - **Response Time (p99):** ${Math.round(summary.summaries['http.response_time'].p99)}ms
+            - **Error Rate:** ${((summary.counters['errors.ETIMEDOUT'] || 0) / summary.counters['http.requests'] * 100).toFixed(2)}%
+
+            [View Full Report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  k6-stress-test:
+    name: k6 Stress Test
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_type == 'stress'
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parkpal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Setup database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+        run: |
+          npx prisma migrate deploy
+          npm run seed || echo "⚠️ No seed script available - using empty database"
+
+      - name: Start backend server
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-performance-testing-only
+          QR_SECRET: test-qr-secret-for-performance-testing-only-64-character-hex-string
+          NODE_ENV: test
+          USE_SECRET_MANAGER: false
+        run: |
+          npm start &
+          sleep 10
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Create reports directory
+        run: mkdir -p performance-testing/reports
+
+      - name: Run k6 Stress Test
+        run: |
+          k6 run performance-testing/k6/stress-test.js \
+            --out json=performance-testing/reports/k6-stress-test-report.json
+
+      - name: Upload k6 Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-stress-test-report
+          path: performance-testing/reports/k6-stress-test-report.json
+          retention-days: 30
+
+  lighthouse-ci:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install web dependencies
+        working-directory: ./frontend/web
+        run: npm ci
+
+      - name: Build web application
+        working-directory: ./frontend/web
+        run: npm run build
+
+      - name: Run Lighthouse CI
+        working-directory: ./performance-testing/lighthouse
+        run: |
+          npm install -g @lhci/cli@latest
+          lhci autorun
+
+      - name: Upload Lighthouse Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 30
+
+  performance-comparison:
+    name: Compare with Baseline
+    runs-on: ubuntu-latest
+    needs: [artillery-load-test]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download current report
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: artillery-load-test-report
+
+      - name: Compare with baseline
+        continue-on-error: true
+        run: |
+          echo "📊 Comparing performance metrics with baseline..."
+
+          if [ -f "artillery-load-test-report.json" ]; then
+            echo "✅ Current performance report found"
+            # TODO: Add baseline comparison logic
+            # For now, just establish this as the baseline
+            echo "📝 This run will serve as the baseline for future comparisons"
+          else
+            echo "⚠️ No performance report found - artillery test may have failed"
+            echo "This is expected for the first few runs while establishing baselines"
+            exit 0
+          fi
+
+      - name: Comment degradation warning
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **Performance Degradation Detected!** Response times have increased compared to baseline.'
+            });

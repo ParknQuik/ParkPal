@@ -1,5 +1,6 @@
 const alertsController = require('../controllers/alertsController');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
-  app.get('/api/alerts', alertsController.getAlerts);
+  app.get('/alerts', asyncHandler(alertsController.getAlerts));
 };

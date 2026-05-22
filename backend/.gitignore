@@ -1,0 +1,15 @@
+# Environment variables - NEVER COMMIT THESE
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.qa
+
+# Database files
+*.db
+*.db-journal
+
+# PostgreSQL data (Docker volumes managed externally)
+# Migrations are committed, but SQLite backup is ignored
+prisma/migrations_sqlite_backup/

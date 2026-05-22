@@ -1,292 +1,569 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
+  RefreshControl,
+  Alert,
+  ActivityIndicator,
+  Platform,
+  ActionSheetIOS,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useAppDispatch, useAppSelector } from '../store';
-import { logout } from '../store/slices/authSlice';
-import { Avatar } from '../components/Avatar';
-import { Card } from '../components/Card';
-import { colors, typography, spacing, borderRadius } from '../theme';
-import { formatCurrency, formatDate } from '../utils/helpers';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAppSelector, useAppDispatch } from '../store';
+import { logout, checkAuth, updateUserProfile } from '../store/slices/authSlice';
+import { setThemeMode } from '../store/slices/settingsSlice';
+import { userAPI } from '../services/api';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export const ProfileScreen: React.FC = () => {
-  const navigation = useNavigation();
+    const navigation = useNavigation() as any;
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const themeMode = useAppSelector((state) => state.settings.themeMode);
+  const { colors } = useTheme();
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
 
-  if (!user) return null;
+  const handleLogout = useCallback(() => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await dispatch(logout()).unwrap();
+            } catch (err) {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  }, [dispatch]);
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await dispatch(checkAuth()).unwrap();
+    } catch (err) {
+      ;
+    } finally {
+      setRefreshing(false);
+    }
+  }, [dispatch]);
+
+  const getFileName = (uri: string) => {
+    const timestamp = Date.now();
+    const ext = uri.split('.').pop() || 'jpg';
+    return `profile-${timestamp}.${ext}`;
   };
+
+  const handleChangePhoto = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) openCamera();
+          else if (buttonIndex === 2) openGallery();
+        }
+      );
+    } else {
+      Alert.alert('Change Photo', 'Choose an option', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Take Photo', onPress: openCamera },
+        { text: 'Choose from Gallery', onPress: openGallery },
+      ]);
+    }
+  }, []);
+
+  const openCamera = async () => {
+    const hasPermission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!hasPermission?.granted) {
+      Alert.alert('Permission needed', 'Camera permission is required');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const openGallery = async () => {
+    const hasPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!hasPermission?.granted) {
+      Alert.alert('Permission needed', 'Media library permission is required');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (imageUri: string) => {
+    try {
+      setUploading(true);
+      const fileName = getFileName(imageUri);
+
+      const { uploadUrl, fileName: gcsFileName } = await userAPI.getProfileUploadUrl(fileName).then(res => res.data);
+
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: blob,
+      });
+
+      const updatedUser = await userAPI.uploadProfilePicture(gcsFileName).then(res => res.data);
+
+      await dispatch(updateUserProfile({
+        name: user?.name || '',
+        phone: user?.phone || null,
+        profileImageUrl: updatedUser.profileImageUrl || undefined,
+      })).unwrap();
+
+      Alert.alert('Success', 'Profile picture updated');
+    } catch (error) {
+      ;
+      Alert.alert('Error', 'Failed to upload photo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const userName = user?.name || 'Guest';
+  const userEmail = user?.email || 'No email';
+  const userInitial = userName.charAt(0).toUpperCase();
 
   const menuSections = [
     {
-      title: 'Account',
+      title: 'My Account',
       items: [
-        { icon: '👤', label: 'Edit Profile', action: () => {} },
-        { icon: '💳', label: 'Payment Methods', action: () => {} },
-        { icon: '📍', label: 'Saved Addresses', action: () => {} },
-      ],
-    },
-    {
-      title: 'Parking',
-      items: [
-        { icon: '🚗', label: 'My Vehicles', action: () => {} },
         {
-          icon: '📋',
-          label: 'My Listings',
-          action: () => navigation.navigate('ListSpot' as never),
+          icon: 'car-outline' as const,
+          iconColor: colors.primary,
+          label: 'My Vehicles',
+          onPress: () => navigation.navigate('MyVehicles' ),
         },
-        { icon: '⭐', label: 'Reviews', action: () => {} },
+
+        {
+          icon: 'format-list-bulleted' as const,
+          iconColor: colors.accentYellow,
+          label: 'My Listings',
+          onPress: () => navigation.navigate('MyListings' ),
+        },
       ],
     },
     {
-      title: 'Settings',
+      title: 'Account Settings',
       items: [
-        { icon: '🔔', label: 'Notifications', action: () => {} },
-        { icon: '🔒', label: 'Privacy & Security', action: () => {} },
-        { icon: '❓', label: 'Help & Support', action: () => {} },
-        { icon: '📄', label: 'Terms & Conditions', action: () => {} },
+        {
+          icon: 'account-circle' as const,
+          iconColor: colors.accentOrange,
+          label: 'Personal Information',
+          onPress: () => navigation.navigate('EditProfile' ),
+        },
+        {
+          icon: 'bell-outline' as const,
+          iconColor: colors.accentYellow,
+          label: 'Notifications',
+          onPress: () => navigation.navigate('Notifications' ),
+        },
+        {
+          icon: 'shield-lock-outline' as const,
+          iconColor: colors.primary,
+          label: 'Security & Privacy',
+          onPress: () => navigation.navigate('SecurityPrivacy' ),
+        },
+        {
+          icon: 'star-circle-outline' as const,
+          iconColor: colors.accentYellow,
+          label: 'Points History',
+          onPress: () => navigation.navigate('PointsHistory' ),
+        },
+        {
+          icon: 'account-multiple-outline' as const,
+          iconColor: colors.info,
+          label: 'Referrals',
+          onPress: () => navigation.navigate('Referral' ),
+        },
+      ],
+    },
+    {
+      title: 'Support',
+      items: [
+        {
+          icon: 'help-circle-outline' as const,
+          iconColor: colors.textTertiary,
+          label: 'Help Center',
+          onPress: () => navigation.navigate('HelpCenter' ),
+        },
+        {
+          icon: 'logout' as const,
+          iconColor: colors.error,
+          label: 'Sign Out',
+          onPress: handleLogout,
+        },
       ],
     },
   ];
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <LinearGradient
-          colors={colors.gradientPrimary}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.profileSection}>
-            <Avatar uri={user.avatar} name={user.name} size={80} />
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-            {user.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
-          </View>
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    profileInfo: {
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      paddingTop: spacing.xl,
+    },
+    avatarCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    avatarContainer: {
+      position: 'relative',
+      marginBottom: spacing.md,
+    },
+    editButton: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      backgroundColor: colors.primary,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.white,
+    },
+    uploadOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 40,
+    },
+    avatarText: {
+      ...typography.h2,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    userName: {
+      ...typography.h3,
+      color: colors.textPrimary,
+      fontWeight: '700',
+    },
+    userEmail: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    membershipCard: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+      marginTop: spacing.lg,
+      width: '100%',
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    membershipLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    membershipIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.accentOrange,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    membershipLabel: {
+      ...typography.small,
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      fontWeight: '500',
+    },
+    membershipValue: {
+      ...typography.h5,
+      color: colors.accentOrange,
+      fontWeight: '700',
+    },
+    perksButton: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.lg,
+    },
+    perksButtonText: {
+      ...typography.bodySmall,
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: 100,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      ...typography.small,
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      fontWeight: '700',
+      marginBottom: spacing.md,
+    },
+    menuContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.xl,
+      overflow: 'hidden',
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    menuItemLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    menuIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.lg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    menuLabel: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    themeToggle: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+      padding: 3,
+      gap: 2,
+    },
+    themeOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: borderRadius.sm,
+    },
+    themeOptionActive: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    themeOptionText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.textTertiary,
+    },
+    themeOptionTextActive: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+  }), [colors]);
 
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.totalBookings}</Text>
-              <Text style={styles.statLabel}>Bookings</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {formatCurrency(user.totalSpent)}
-              </Text>
-              <Text style={styles.statLabel}>Spent</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>4.8</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+        }
+      >
+        <View style={styles.profileInfo}>
+          <View style={styles.avatarContainer}>
+            {uploading && (
+              <View style={styles.uploadOverlay}>
+                <ActivityIndicator size="small" color={colors.white} />
+              </View>
+            )}
+            {user?.profileImageUrl ? (
+              <Image
+                source={{ uri: user!.profileImageUrl + '?t=' + Date.now() }}
+                style={styles.avatarImage}
+                cachePolicy="none"
+              />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>{userInitial}</Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.editButton} onPress={handleChangePhoto}>
+              <MaterialCommunityIcons name="camera" size={14} color={colors.white} />
+            </TouchableOpacity>
           </View>
-        </LinearGradient>
+          <Text style={styles.userName}>{userName}</Text>
+          <Text style={styles.userEmail}>{userEmail}</Text>
+
+          <View style={styles.membershipCard}>
+            <View style={styles.membershipLeft}>
+              <View style={styles.membershipIconContainer}>
+                <MaterialCommunityIcons
+                  name="star-circle"
+                  size={28}
+                  color={colors.white}
+                />
+              </View>
+              <View>
+                <Text style={styles.membershipLabel}>Bookings</Text>
+                <Text style={styles.membershipValue}>{user?.totalBookings || 0} total</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.perksButton}
+              onPress={() => navigation.navigate('Earnings' )}
+            >
+              <Text style={styles.perksButtonText}>Perks</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.content}>
-          <Card style={styles.memberCard}>
-            <View style={styles.memberCardHeader}>
-              <Text style={styles.memberCardTitle}>Member Since</Text>
-              <Text style={styles.memberCardBadge}>Premium</Text>
-            </View>
-            <Text style={styles.memberCardDate}>
-              {formatDate(user.activeSince)}
-            </Text>
-          </Card>
-
           {menuSections.map((section, sectionIndex) => (
-            <View key={sectionIndex} style={styles.menuSection}>
+            <View key={sectionIndex} style={styles.section}>
               <Text style={styles.sectionTitle}>{section.title}</Text>
-              <Card style={styles.menuCard}>
+              <View style={styles.menuContainer}>
                 {section.items.map((item, itemIndex) => (
-                  <React.Fragment key={itemIndex}>
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      onPress={item.action}
-                    >
-                      <View style={styles.menuItemLeft}>
-                        <Text style={styles.menuIcon}>{item.icon}</Text>
-                        <Text style={styles.menuLabel}>{item.label}</Text>
+                  <TouchableOpacity
+                    key={itemIndex}
+                    style={styles.menuItem}
+                    onPress={item.onPress}
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <View
+                        style={[
+                          styles.menuIconContainer,
+                          { backgroundColor: `${item.iconColor}15` },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={item.icon}
+                          size={22}
+                          color={item.iconColor}
+                        />
                       </View>
-                      <Text style={styles.menuArrow}>›</Text>
-                    </TouchableOpacity>
-                    {itemIndex < section.items.length - 1 && (
-                      <View style={styles.menuDivider} />
-                    )}
-                  </React.Fragment>
+                      <Text style={styles.menuLabel}>{item.label}</Text>
+                    </View>
+                    <MaterialCommunityIcons
+                      name="chevron-right"
+                      size={24}
+                      color={colors.textTertiary}
+                    />
+                  </TouchableOpacity>
                 ))}
-              </Card>
+              </View>
             </View>
           ))}
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.version}>Version 1.0.0</Text>
+          {/* Appearance */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Appearance</Text>
+            <View style={styles.menuContainer}>
+              <View style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <View style={[styles.menuIconContainer, { backgroundColor: `${colors.info}15` }]}>
+                    <MaterialCommunityIcons name="theme-light-dark" size={22} color={colors.info} />
+                  </View>
+                  <Text style={styles.menuLabel}>Theme</Text>
+                </View>
+                <View style={styles.themeToggle}>
+                  {(['system', 'light', 'dark'] as const).map((mode) => (
+                    <TouchableOpacity
+                      key={mode}
+                      style={[styles.themeOption, themeMode === mode && styles.themeOptionActive]}
+                      onPress={() => dispatch(setThemeMode(mode))}
+                    >
+                      <MaterialCommunityIcons
+                        name={mode === 'system' ? 'circle-half-full' : mode === 'light' ? 'weather-sunny' : 'weather-night'}
+                        size={16}
+                        color={themeMode === mode ? colors.primary : colors.textTertiary}
+                      />
+                      <Text style={[styles.themeOptionText, themeMode === mode && styles.themeOptionTextActive]}>
+                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xxxl,
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  userName: {
-    ...typography.h3,
-    color: colors.white,
-    fontWeight: '700',
-    marginTop: spacing.lg,
-  },
-  userEmail: {
-    ...typography.body,
-    color: colors.white,
-    opacity: 0.9,
-    marginTop: spacing.xs,
-  },
-  userPhone: {
-    ...typography.bodySmall,
-    color: colors.white,
-    opacity: 0.8,
-    marginTop: spacing.xs,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginHorizontal: spacing.xl,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  statValue: {
-    ...typography.h4,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  statLabel: {
-    ...typography.small,
-    color: colors.white,
-    opacity: 0.9,
-    marginTop: spacing.xs,
-  },
-  content: {
-    padding: spacing.xl,
-    marginTop: -spacing.xl,
-  },
-  memberCard: {
-    marginBottom: spacing.xl,
-  },
-  memberCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  memberCardTitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  memberCardBadge: {
-    ...typography.small,
-    color: colors.primary,
-    fontWeight: '700',
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  memberCardDate: {
-    ...typography.h5,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  menuSection: {
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    ...typography.h6,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: spacing.md,
-  },
-  menuCard: {
-    padding: 0,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  menuIcon: {
-    fontSize: 24,
-    marginRight: spacing.lg,
-  },
-  menuLabel: {
-    ...typography.body,
-    color: colors.textPrimary,
-  },
-  menuArrow: {
-    fontSize: 24,
-    color: colors.textTertiary,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginLeft: spacing.lg + 24 + spacing.lg,
-  },
-  logoutButton: {
-    backgroundColor: colors.error,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  logoutText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  version: {
-    ...typography.small,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-});
+export default ProfileScreen;

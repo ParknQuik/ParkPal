@@ -1,14 +1,14 @@
 const prisma = require('../config/prisma');
 const { broadcast } = require('../services/websocket');
 
-exports.getSlots = async (req, res) => {
+exports.getSlots = async (req, res, next) => {
   try {
     const { status, lat, lon, radius } = req.query;
 
     const where = {};
     if (status) where.status = status;
 
-    const slots = await prisma.slot.findMany({
+    const slots = await prisma.parkingSlot.findMany({
       where,
       include: {
         owner: {
@@ -19,14 +19,14 @@ exports.getSlots = async (req, res) => {
 
     res.json(slots);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.getSlotById = async (req, res) => {
+exports.getSlotById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const slot = await prisma.slot.findUnique({
+    const slot = await prisma.parkingSlot.findUnique({
       where: { id: parseInt(id) },
       include: {
         owner: {
@@ -41,21 +41,22 @@ exports.getSlotById = async (req, res) => {
 
     res.json(slot);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.listSlot = async (req, res) => {
+exports.listSlot = async (req, res, next) => {
   try {
-    const { lat, lon, price, address } = req.body;
+    const { lat, lon, price, address, slotType } = req.body;
     const ownerId = req.user.id;
 
-    const slot = await prisma.slot.create({
+    const slot = await prisma.parkingSlot.create({
       data: {
         lat: parseFloat(lat),
         lon: parseFloat(lon),
         price: parseFloat(price),
         address,
+        slotType: slotType || 'roadside_qr',
         status: 'available',
         ownerId
       }
@@ -64,23 +65,23 @@ exports.listSlot = async (req, res) => {
     broadcast({ type: 'slot_listed', slot });
     res.status(201).json(slot);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.updateSlot = async (req, res) => {
+exports.updateSlot = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status, price, address } = req.body;
     const ownerId = req.user.id;
 
-    const slot = await prisma.slot.findUnique({ where: { id: parseInt(id) } });
+    const slot = await prisma.parkingSlot.findUnique({ where: { id: parseInt(id) } });
 
     if (!slot || slot.ownerId !== ownerId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const updated = await prisma.slot.update({
+    const updated = await prisma.parkingSlot.update({
       where: { id: parseInt(id) },
       data: { status, price, address }
     });
@@ -88,36 +89,36 @@ exports.updateSlot = async (req, res) => {
     broadcast({ type: 'slot_updated', slot: updated });
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.deleteSlot = async (req, res) => {
+exports.deleteSlot = async (req, res, next) => {
   try {
     const { id } = req.params;
     const ownerId = req.user.id;
 
-    const slot = await prisma.slot.findUnique({ where: { id: parseInt(id) } });
+    const slot = await prisma.parkingSlot.findUnique({ where: { id: parseInt(id) } });
 
     if (!slot || slot.ownerId !== ownerId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    await prisma.slot.delete({ where: { id: parseInt(id) } });
+    await prisma.parkingSlot.delete({ where: { id: parseInt(id) } });
 
     broadcast({ type: 'slot_deleted', slotId: parseInt(id) });
     res.json({ message: 'Slot deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.reserveSlot = async (req, res) => {
+exports.reserveSlot = async (req, res, next) => {
   try {
     const { slotId, startTime, endTime } = req.body;
     const userId = req.user.id;
 
-    const slot = await prisma.slot.findUnique({
+    const slot = await prisma.parkingSlot.findUnique({
       where: { id: parseInt(slotId) }
     });
 
@@ -125,18 +126,26 @@ exports.reserveSlot = async (req, res) => {
       return res.status(400).json({ error: 'Slot not available' });
     }
 
+    // Calculate platform fee and host earnings
+    const hours = Math.ceil((new Date(endTime) - new Date(startTime)) / (1000 * 60 * 60));
+    const totalPrice = slot.price * hours;
+    const platformFee = totalPrice * 0.05;
+    const hostEarnings = totalPrice - platformFee;
+
     const booking = await prisma.booking.create({
       data: {
         slotId: parseInt(slotId),
         userId,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        price: slot.price,
+        price: totalPrice,
+        platformFee,
+        hostEarnings,
         status: 'pending'
       }
     });
 
-    await prisma.slot.update({
+    await prisma.parkingSlot.update({
       where: { id: parseInt(slotId) },
       data: { status: 'reserved' }
     });
@@ -144,11 +153,11 @@ exports.reserveSlot = async (req, res) => {
     broadcast({ type: 'slot_reserved', booking });
     res.status(201).json(booking);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.getUserBookings = async (req, res) => {
+exports.getUserBookings = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -162,6 +171,6 @@ exports.getUserBookings = async (req, res) => {
 
     res.json(bookings);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };

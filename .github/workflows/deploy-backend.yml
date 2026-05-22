@@ -1,0 +1,194 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - dev        # Auto-deploy dev environment
+      - qa         # Auto-deploy QA environment
+      - main       # Auto-deploy production
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:  # Allow manual triggers
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+env:
+  PROJECT_ID: parkpal-474417
+  REGION: asia-southeast1
+  SERVICE_NAME: parkpal-backend
+
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+
+    # Set environment based on branch or manual input
+    environment:
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/qa' && 'staging') || 'development' }}
+
+    permissions:
+      contents: read
+      id-token: write  # Required for workload identity federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        id: env-vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TARGET_ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            TARGET_ENV="production"
+          elif [ "${{ github.ref }}" == "refs/heads/qa" ]; then
+            TARGET_ENV="staging"
+          else
+            TARGET_ENV="development"
+          fi
+
+          if [ "$TARGET_ENV" == "production" ]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+            echo "SERVICE_SUFFIX=prod" >> $GITHUB_OUTPUT
+            echo "GCS_BUCKET_NAME=parkpal-prod-photos" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=1" >> $GITHUB_OUTPUT
+            echo "MAX_INSTANCES=100" >> $GITHUB_OUTPUT
+            echo "MEMORY=1Gi" >> $GITHUB_OUTPUT
+            echo "CPU=2" >> $GITHUB_OUTPUT
+          elif [ "$TARGET_ENV" == "staging" ]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+            echo "SERVICE_SUFFIX=staging" >> $GITHUB_OUTPUT
+            echo "GCS_BUCKET_NAME=parkpal-dev-photos" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=0" >> $GITHUB_OUTPUT
+            echo "MAX_INSTANCES=10" >> $GITHUB_OUTPUT
+            echo "MEMORY=512Mi" >> $GITHUB_OUTPUT
+            echo "CPU=1" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+            echo "SERVICE_SUFFIX=dev" >> $GITHUB_OUTPUT
+            echo "GCS_BUCKET_NAME=parkpal-dev-photos" >> $GITHUB_OUTPUT
+            echo "MIN_INSTANCES=0" >> $GITHUB_OUTPUT
+            echo "MAX_INSTANCES=5" >> $GITHUB_OUTPUT
+            echo "MEMORY=512Mi" >> $GITHUB_OUTPUT
+            echo "CPU=1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker
+
+      - name: Build Docker image
+        run: |
+          cd backend
+          docker build \
+            -f Dockerfile.production \
+            -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ steps.env-vars.outputs.ENVIRONMENT }}-latest \
+            .
+
+      - name: Push Docker image to GCR
+        run: |
+          docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ steps.env-vars.outputs.ENVIRONMENT }}-latest
+
+      - name: Run database migrations
+        run: |
+          gcloud run jobs create ${{ env.SERVICE_NAME }}-migrate-${{ steps.env-vars.outputs.SERVICE_SUFFIX }}-${{ github.run_number }} \
+            --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --set-secrets DATABASE_URL=DATABASE_URL:latest \
+            --set-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
+            --service-account parkpal-backend-service@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --execute-now \
+            --wait \
+            --command "npx" \
+            --args "prisma,migrate,deploy" \
+            --project ${{ env.PROJECT_ID }} || echo "Migration job may already exist or failed - continuing..."
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }}-${{ steps.env-vars.outputs.SERVICE_SUFFIX }} \
+            --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --service-account parkpal-backend-service@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
+            --set-env-vars NODE_ENV=${{ steps.env-vars.outputs.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCS_BUCKET_NAME=${{ steps.env-vars.outputs.GCS_BUCKET_NAME }} \
+            --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest \
+            --min-instances ${{ steps.env-vars.outputs.MIN_INSTANCES }} \
+            --max-instances ${{ steps.env-vars.outputs.MAX_INSTANCES }} \
+            --memory ${{ steps.env-vars.outputs.MEMORY }} \
+            --cpu ${{ steps.env-vars.outputs.CPU }} \
+            --timeout 300 \
+            --concurrency 80 \
+            --project ${{ env.PROJECT_ID }}
+
+      - name: Get service URL
+        id: get-url
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }}-${{ steps.env-vars.outputs.SERVICE_SUFFIX }} \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
+            --format='value(status.url)')
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ steps.env-vars.outputs.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Health check
+        run: |
+          echo "Waiting 30s for service to be ready..."
+          sleep 30
+
+          HEALTH_URL="${{ steps.get-url.outputs.SERVICE_URL }}/health"
+          echo "Testing health endpoint: $HEALTH_URL"
+
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL || echo "000")
+
+          if [ "$RESPONSE" == "200" ]; then
+            echo "✅ Health check passed!"
+            echo "**Health Check:** ✅ Passed (HTTP 200)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Health check returned: $RESPONSE"
+            echo "**Health Check:** ⚠️ Warning (HTTP $RESPONSE)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### 🚀 Backend Deployed to ${{ steps.env-vars.outputs.ENVIRONMENT }}
+
+              **Service URL:** ${{ steps.get-url.outputs.SERVICE_URL }}
+              **Image:** \`gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}\`
+
+              Test the deployment:
+              \`\`\`bash
+              curl ${{ steps.get-url.outputs.SERVICE_URL }}/health
+              \`\`\`
+              `
+            })

@@ -1,6 +1,6 @@
 # Environment Configuration Guide
 
-This document explains how to manage different environments (development, QA, production) in the ParkPal application.
+This document explains how to manage different environments (development, QA, production) in the ParknQuik application.
 
 ## Branch Strategy
 
@@ -77,6 +77,7 @@ cp .env.production .env
 | `PORT` | Server port | 3001 | 3001 | 3001 |
 | `NODE_ENV` | Environment name | development | qa | production |
 | `DATABASE_URL` | Database connection | SQLite | PostgreSQL | PostgreSQL |
+| `GCS_BUCKET_NAME` | Photo upload bucket | parkpal-dev-photos | parkpal-dev-photos | parkpal-prod-photos |
 | `JWT_SECRET` | JWT signing secret | dev_secret | qa_secret | strong_secret |
 | `ALLOWED_ORIGINS` | CORS origins | localhost | qa domain | prod domain |
 | `LOG_LEVEL` | Logging level | debug | info | error |
@@ -87,7 +88,7 @@ cp .env.production .env
 |----------|-------------|-----|-----|------|
 | `VITE_API_BASE_URL` | Backend API URL | localhost:3001 | qa-api.parkpal.com | api.parkpal.com |
 | `VITE_GOOGLE_MAPS_API_KEY` | Google Maps key | - | QA key | Prod key |
-| `VITE_APP_NAME` | Application name | ParkPal Dev | ParkPal QA | ParkPal |
+| `VITE_APP_NAME` | Application name | ParknQuik Dev | ParknQuik QA | ParknQuik |
 | `VITE_ENVIRONMENT` | Environment name | development | qa | production |
 
 ## Development Workflow
@@ -199,6 +200,7 @@ npx prisma migrate deploy
 ### Development
 - Debug logging enabled
 - SQLite database
+- Photo uploads use `gs://parkpal-dev-photos`
 - Hot reload enabled
 - Detailed error messages
 - CORS allows localhost
@@ -206,6 +208,7 @@ npx prisma migrate deploy
 ### QA
 - Info-level logging
 - PostgreSQL database
+- Photo uploads use `gs://parkpal-dev-photos` until a dedicated staging bucket exists
 - Mimics production setup
 - Test payment gateway
 - Limited error details
@@ -213,6 +216,7 @@ npx prisma migrate deploy
 ### Production
 - Error-level logging only
 - PostgreSQL with replication
+- Photo uploads use `gs://parkpal-prod-photos`
 - Optimized builds
 - Live payment gateway
 - Generic error messages

@@ -1,0 +1,795 @@
+
+> parknquik-backend@1.0.0 test
+> jest --detectOpenHandles --forceExit
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+FAIL tests/marketplace.test.js
+  ● Console
+
+    console.warn
+      hibp package not installed - skipping breached password checking
+
+       7 |   pwnedPassword = require('hibp').pwnedPassword;
+       8 | } catch (err) {
+    >  9 |   console.warn('hibp package not installed - skipping breached password checking');
+         |           ^
+      10 | }
+      11 |
+      12 | exports.authenticate = (req, res, next) => {
+
+      at Object.warn (services/auth.js:9:11)
+      at Object.require (controllers/authController.js:2:76)
+      at Object.require (routes/auth.js:1:24)
+      at require (routes/v1/index.js:16:22)
+      at Object.v1Router (tests/marketplace.test.js:26:20)
+
+  ● Marketplace API Tests › POST /api/v1/marketplace/qr/checkin › should fail with invalid QR code format
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "Invalid QR code"
+    Received string:    "Validation failed"
+
+      318 |
+      319 |       expect(response.status).toBe(400);
+    > 320 |       expect(response.body.error).toContain('Invalid QR code');
+          |                                   ^
+      321 |     });
+      322 |
+      323 |     it('should update slot status to occupied', async () => {
+
+      at Object.toContain (tests/marketplace.test.js:320:35)
+
+FAIL tests/handshake-critical.test.js
+  ● Console
+
+    console.log
+      Secret Manager is disabled. Using local environment variables.
+
+      at SecretManager.log [as initialize] (config/secretManager.js:15:15)
+
+    console.warn
+      hibp package not installed - skipping breached password checking
+
+       7 |   pwnedPassword = require('hibp').pwnedPassword;
+       8 | } catch (err) {
+    >  9 |   console.warn('hibp package not installed - skipping breached password checking');
+         |           ^
+      10 | }
+      11 |
+      12 | exports.authenticate = (req, res, next) => {
+
+      at Object.warn (services/auth.js:9:11)
+      at Object.require (controllers/authController.js:2:76)
+      at Object.require (routes/auth.js:1:24)
+      at require (routes/v1/index.js:16:22)
+      at Object.v1Router (index.js:108:20)
+      at Object.require (tests/handshake-critical.test.js:18:13)
+
+    console.log
+      Broadcast sent to 0 client(s)
+
+      at log (services/websocket.js:162:11)
+
+    console.log
+      Broadcast sent to 0 client(s)
+
+      at log (services/websocket.js:162:11)
+
+  ● Critical Handshake Tests › WebSocket Handshake › should establish WebSocket connection with valid token
+
+    Expected done to be called once, but it was called multiple times.
+
+      123 |
+      124 |       ws.on('close', () => {
+    > 125 |         done();
+          |         ^
+      126 |       });
+      127 |
+      128 |       ws.on('error', (error) => {
+
+      at WebSocket.done (tests/handshake-critical.test.js:125:9)
+      at WebSocket.emitClose (node_modules/ws/lib/websocket.js:262:12)
+      at emitErrorAndClose (node_modules/ws/lib/websocket.js:1042:13)
+      at ClientRequest.<anonymous> (node_modules/ws/lib/websocket.js:881:5)
+
+  ● Critical Handshake Tests › WebSocket Handshake › should establish WebSocket connection with valid token
+
+    Expected done to be called once, but it was called multiple times.
+
+      123 |
+      124 |       ws.on('close', () => {
+    > 125 |         done();
+          |         ^
+      126 |       });
+      127 |
+      128 |       ws.on('error', (error) => {
+
+      at WebSocket.done (tests/handshake-critical.test.js:125:9)
+      at WebSocket.emitClose (node_modules/ws/lib/websocket.js:262:12)
+      at emitErrorAndClose (node_modules/ws/lib/websocket.js:1042:13)
+      at ClientRequest.<anonymous> (node_modules/ws/lib/websocket.js:881:5)
+
+  ● Critical Handshake Tests › WebSocket Handshake › should reject WebSocket connection with invalid token
+
+    Expected done to be called once, but it was called multiple times.
+
+      141 |         // WebSocket closed - either rejected by server or connection failed
+      142 |         // Both are acceptable for invalid token
+    > 143 |         done();
+          |         ^
+      144 |       });
+      145 |
+      146 |       ws.on('open', () => {
+
+      at WebSocket.done (tests/handshake-critical.test.js:143:9)
+      at WebSocket.emitClose (node_modules/ws/lib/websocket.js:262:12)
+      at emitErrorAndClose (node_modules/ws/lib/websocket.js:1042:13)
+      at ClientRequest.<anonymous> (node_modules/ws/lib/websocket.js:881:5)
+
+  ● Critical Handshake Tests › WebSocket Handshake › should reject WebSocket connection with invalid token
+
+    Expected done to be called once, but it was called multiple times.
+
+      141 |         // WebSocket closed - either rejected by server or connection failed
+      142 |         // Both are acceptable for invalid token
+    > 143 |         done();
+          |         ^
+      144 |       });
+      145 |
+      146 |       ws.on('open', () => {
+
+      at WebSocket.done (tests/handshake-critical.test.js:143:9)
+      at WebSocket.emitClose (node_modules/ws/lib/websocket.js:262:12)
+      at emitErrorAndClose (node_modules/ws/lib/websocket.js:1042:13)
+      at ClientRequest.<anonymous> (node_modules/ws/lib/websocket.js:881:5)
+
+  ● Critical Handshake Tests › WebSocket Handshake › should reject WebSocket connection without token
+
+    Expected done to be called once, but it was called multiple times.
+
+      172 |         receivedClose = true;
+      173 |         // WebSocket closed - connection rejected
+    > 174 |         done();
+          |         ^
+      175 |       });
+      176 |
+      177 |       ws.on('open', () => {
+
+      at WebSocket.done (tests/handshake-critical.test.js:174:9)
+      at WebSocket.emitClose (node_modules/ws/lib/websocket.js:262:12)
+      at emitErrorAndClose (node_modules/ws/lib/websocket.js:1042:13)
+      at ClientRequest.<anonymous> (node_modules/ws/lib/websocket.js:881:5)
+
+  ● Critical Handshake Tests › WebSocket Handshake › should reject WebSocket connection without token
+
+    Expected done to be called once, but it was called multiple times.
+
+      172 |         receivedClose = true;
+      173 |         // WebSocket closed - connection rejected
+    > 174 |         done();
+          |         ^
+      175 |       });
+      176 |
+      177 |       ws.on('open', () => {
+
+      at WebSocket.done (tests/handshake-critical.test.js:174:9)
+      at WebSocket.emitClose (node_modules/ws/lib/websocket.js:262:12)
+      at emitErrorAndClose (node_modules/ws/lib/websocket.js:1042:13)
+      at ClientRequest.<anonymous> (node_modules/ws/lib/websocket.js:881:5)
+
+PASS tests/auth.test.js
+  ● Console
+
+    console.warn
+      hibp package not installed - skipping breached password checking
+
+       7 |   pwnedPassword = require('hibp').pwnedPassword;
+       8 | } catch (err) {
+    >  9 |   console.warn('hibp package not installed - skipping breached password checking');
+         |           ^
+      10 | }
+      11 |
+      12 | exports.authenticate = (req, res, next) => {
+
+      at Object.warn (services/auth.js:9:11)
+      at Object.require (controllers/authController.js:2:76)
+      at Object.require (routes/auth.js:1:24)
+      at require (routes/v1/index.js:16:22)
+      at Object.v1Router (tests/auth.test.js:21:20)
+
+PASS tests/alerts.test.js
+  ● Console
+
+    console.warn
+      hibp package not installed - skipping breached password checking
+
+       7 |   pwnedPassword = require('hibp').pwnedPassword;
+       8 | } catch (err) {
+    >  9 |   console.warn('hibp package not installed - skipping breached password checking');
+         |           ^
+      10 | }
+      11 |
+      12 | exports.authenticate = (req, res, next) => {
+
+      at Object.warn (services/auth.js:9:11)
+      at Object.require (controllers/authController.js:2:76)
+      at Object.require (routes/auth.js:1:24)
+      at require (routes/v1/index.js:16:22)
+      at Object.v1Router (tests/alerts.test.js:20:20)
+
+PASS tests/handshake.test.js
+  ● Console
+
+    console.log
+      Secret Manager is disabled. Using local environment variables.
+
+      at SecretManager.log [as initialize] (config/secretManager.js:15:15)
+
+    console.warn
+      hibp package not installed - skipping breached password checking
+
+       7 |   pwnedPassword = require('hibp').pwnedPassword;
+       8 | } catch (err) {
+    >  9 |   console.warn('hibp package not installed - skipping breached password checking');
+         |           ^
+      10 | }
+      11 |
+      12 | exports.authenticate = (req, res, next) => {
+
+      at Object.warn (services/auth.js:9:11)
+      at Object.require (controllers/authController.js:2:76)
+      at Object.require (routes/auth.js:1:24)
+      at require (routes/v1/index.js:16:22)
+      at Object.v1Router (index.js:108:20)
+      at Object.require (tests/handshake.test.js:9:13)
+
+    console.warn
+      [DEPRECATED] GET /v1/parking/slots - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express-rate-limit/dist/index.cjs:899:7
+      at node_modules/express-rate-limit/dist/index.cjs:782:5
+
+    console.warn
+      [ERROR] {
+        timestamp: '2025-12-07T02:22:24.594Z',
+        method: 'GET',
+        url: '/api/v1/parking/slots',
+        statusCode: 404,
+        message: 'Route GET /api/v1/parking/slots not found',
+        userId: undefined
+      }
+
+      89 |   // Log error
+      90 |   const logLevel = statusCode >= 500 ? 'error' : 'warn';
+    > 91 |   console[logLevel]('[ERROR]', {
+         |                    ^
+      92 |     timestamp: new Date().toISOString(),
+      93 |     method: req.method,
+      94 |     url: req.url,
+
+      at errorHandler (middleware/errorHandler.js:91:20)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:71:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at next (middleware/errorHandler.js:116:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at next (middleware/deprecation.js:55:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express-rate-limit/dist/index.cjs:899:7
+      at node_modules/express-rate-limit/dist/index.cjs:782:5
+
+    console.warn
+      [DEPRECATED] GET /v1/parking/slots - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express-rate-limit/dist/index.cjs:899:7
+      at node_modules/express-rate-limit/dist/index.cjs:782:5
+
+    console.warn
+      [ERROR] {
+        timestamp: '2025-12-07T02:22:24.884Z',
+        method: 'GET',
+        url: '/api/v1/parking/slots?lat=14.5995&lon=120.9842&radius=5',
+        statusCode: 404,
+        message: 'Route GET /api/v1/parking/slots not found',
+        userId: undefined
+      }
+
+      89 |   // Log error
+      90 |   const logLevel = statusCode >= 500 ? 'error' : 'warn';
+    > 91 |   console[logLevel]('[ERROR]', {
+         |                    ^
+      92 |     timestamp: new Date().toISOString(),
+      93 |     method: req.method,
+      94 |     url: req.url,
+
+      at errorHandler (middleware/errorHandler.js:91:20)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:71:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at next (middleware/errorHandler.js:116:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at next (middleware/deprecation.js:55:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express-rate-limit/dist/index.cjs:899:7
+      at node_modules/express-rate-limit/dist/index.cjs:782:5
+
+    console.warn
+      [DEPRECATED] GET /health - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express-rate-limit/dist/index.cjs:899:7
+      at node_modules/express-rate-limit/dist/index.cjs:782:5
+
+    console.warn
+      [DEPRECATED] GET /v1/nonexistent - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express-rate-limit/dist/index.cjs:899:7
+      at node_modules/express-rate-limit/dist/index.cjs:782:5
+
+    console.warn
+      [ERROR] {
+        timestamp: '2025-12-07T02:22:24.895Z',
+        method: 'GET',
+        url: '/api/v1/nonexistent',
+        statusCode: 404,
+        message: 'Route GET /api/v1/nonexistent not found',
+        userId: undefined
+      }
+
+      89 |   // Log error
+      90 |   const logLevel = statusCode >= 500 ? 'error' : 'warn';
+    > 91 |   console[logLevel]('[ERROR]', {
+         |                    ^
+      92 |     timestamp: new Date().toISOString(),
+      93 |     method: req.method,
+      94 |     url: req.url,
+
+      at errorHandler (middleware/errorHandler.js:91:20)
+      at Layer.handle_error (node_modules/express/lib/router/layer.js:71:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:326:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at next (middleware/errorHandler.js:116:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at next (middleware/deprecation.js:55:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express/lib/router/index.js:646:15
+      at next (node_modules/express/lib/router/index.js:265:14)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/express-rate-limit/dist/index.cjs:899:7
+      at node_modules/express-rate-limit/dist/index.cjs:782:5
+
+PASS tests/parking.test.js
+  ● Console
+
+    console.warn
+      hibp package not installed - skipping breached password checking
+
+       7 |   pwnedPassword = require('hibp').pwnedPassword;
+       8 | } catch (err) {
+    >  9 |   console.warn('hibp package not installed - skipping breached password checking');
+         |           ^
+      10 | }
+      11 |
+      12 | exports.authenticate = (req, res, next) => {
+
+      at Object.warn (services/auth.js:9:11)
+      at Object.require (controllers/authController.js:2:76)
+      at Object.require (routes/auth.js:1:24)
+      at require (routes/v1/index.js:16:22)
+      at Object.v1Router (tests/parking.test.js:26:20)
+
+    console.warn
+      [DEPRECATED] POST /slots - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:137:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+    console.warn
+      [DEPRECATED] POST /slots - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:137:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+    console.warn
+      [DEPRECATED] POST /slots - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:137:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+    console.warn
+      [DEPRECATED] PUT /slots/291 - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at param (node_modules/express/lib/router/index.js:365:14)
+      at param (node_modules/express/lib/router/index.js:376:14)
+      at Function.process_params (node_modules/express/lib/router/index.js:421:3)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:137:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+    console.warn
+      [DEPRECATED] PUT /slots/291 - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at param (node_modules/express/lib/router/index.js:365:14)
+      at param (node_modules/express/lib/router/index.js:376:14)
+      at Function.process_params (node_modules/express/lib/router/index.js:421:3)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:137:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+    console.warn
+      [DEPRECATED] PUT /slots/291 - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at param (node_modules/express/lib/router/index.js:365:14)
+      at param (node_modules/express/lib/router/index.js:376:14)
+      at Function.process_params (node_modules/express/lib/router/index.js:421:3)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:137:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+    console.warn
+      [DEPRECATED] PUT /slots/291 - User anonymous
+
+      36 |     // Log deprecation usage
+      37 |     const userId = req.user ? req.user.id : 'anonymous';
+    > 38 |     console.warn(`[DEPRECATED] ${req.method} ${req.path} - User ${userId}`);
+         |             ^
+      39 |
+      40 |     // Wrap res.json to add deprecation warning to response body
+      41 |     const originalJson = res.json.bind(res);
+
+      at warn (middleware/deprecation.js:38:13)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at param (node_modules/express/lib/router/index.js:365:14)
+      at param (node_modules/express/lib/router/index.js:376:14)
+      at Function.process_params (node_modules/express/lib/router/index.js:421:3)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at node_modules/body-parser/lib/read.js:137:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+PASS tests/payments.test.js
+  ● Console
+
+    console.warn
+      hibp package not installed - skipping breached password checking
+
+       7 |   pwnedPassword = require('hibp').pwnedPassword;
+       8 | } catch (err) {
+    >  9 |   console.warn('hibp package not installed - skipping breached password checking');
+         |           ^
+      10 | }
+      11 |
+      12 | exports.authenticate = (req, res, next) => {
+
+      at Object.warn (services/auth.js:9:11)
+      at Object.require (controllers/authController.js:2:76)
+      at Object.require (routes/auth.js:1:24)
+      at require (routes/v1/index.js:16:22)
+      at Object.v1Router (tests/payments.test.js:25:20)
+
+
+Test Suites: 2 failed, 5 passed, 7 total
+Tests:       4 failed, 146 passed, 150 total
+Snapshots:   0 total
+Time:        6.44 s
+Ran all test suites.

@@ -1,0 +1,174 @@
+config:
+  target: "http://localhost:3000"
+  # For production testing, use: "https://your-production-url.com"
+
+  phases:
+    # Warm-up phase: Gradual ramp to get system ready
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm-up"
+
+    # Ramp-up phase: Gradually increase load
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 50
+      name: "Ramp-up"
+
+    # Sustained load: Maintain steady traffic
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+
+    # Spike test: Sudden traffic increase
+    - duration: 60
+      arrivalRate: 100
+      name: "Spike"
+
+    # Cool-down: Gradual decrease
+    - duration: 60
+      arrivalRate: 100
+      rampTo: 5
+      name: "Cool-down"
+
+  # Performance thresholds
+  ensure:
+    p95: 500  # 95th percentile response time < 500ms
+    p99: 1000 # 99th percentile response time < 1s
+    maxErrorRate: 1 # Error rate < 1%
+
+  # Default headers
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  # Plugins disabled - causing CI issues, not essential for basic load testing
+  # plugins:
+  # processor: "./performance-testing/artillery/artillery-helpers.js"  # Disabled: not currently used, causing CI issues
+
+scenarios:
+  # Scenario 1: User Authentication Flow
+  - name: "Authentication Flow"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/v1/auth/register"
+          json:
+            name: "Test User {{ $randomString() }}"
+            email: "test-{{ $randomString() }}@example.com"
+            password: "SecurePass123!@#"
+            phoneNumber: "+639{{ $randomNumber(100000000, 999999999) }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+  # Scenario 2: Search and Browse Parking Spots
+  - name: "Search Parking Spots"
+    weight: 35
+    flow:
+      - get:
+          url: "/api/v1/marketplace/listings?latitude=14.5995&longitude=120.9842&radius=5"
+      - get:
+          url: "/api/v1/marketplace/listings/{{ $randomNumber(1, 100) }}"
+      - get:
+          url: "/api/v1/parking/spots?latitude=14.5995&longitude=120.9842"
+  # Scenario 3: Booking Flow (Authenticated)
+  - name: "Complete Booking Flow"
+    weight: 25
+    flow:
+      # Login first
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+
+      # Search for available spots
+      - get:
+          url: "/api/v1/marketplace/listings?latitude=14.5995&longitude=120.9842&radius=5"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$[0].id"
+              as: "listingId"
+      # Create booking
+      - post:
+          url: "/api/v1/marketplace/bookings"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            listingId: "{{ listingId }}"
+            startTime: "2026-01-15T08:00:00Z"
+            endTime: "2026-01-15T10:00:00Z"
+            vehicleInfo:
+              plateNumber: "ABC{{ $randomNumber(100, 999) }}"
+              vehicleType: "sedan"
+          capture:
+            - json: "$.booking.id"
+              as: "bookingId"
+      # Get booking details
+      - get:
+          url: "/api/v1/marketplace/bookings/{{ bookingId }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+  # Scenario 4: Host Dashboard Operations
+  - name: "Host Dashboard"
+    weight: 15
+    flow:
+      # Host login
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "host@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "hostToken"
+
+      # View host listings
+      - get:
+          url: "/api/v1/marketplace/host/listings"
+          headers:
+            Authorization: "Bearer {{ hostToken }}"
+      # View earnings
+      - get:
+          url: "/api/v1/marketplace/host/earnings"
+          headers:
+            Authorization: "Bearer {{ hostToken }}"
+      # View bookings
+      - get:
+          url: "/api/v1/marketplace/host/bookings"
+          headers:
+            Authorization: "Bearer {{ hostToken }}"
+  # Scenario 5: Payment Operations
+  - name: "Payment Flow"
+    weight: 5
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+
+      # Create payment intent
+      - post:
+          url: "/api/v1/payments/create-payment-intent"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            amount: {{ $randomNumber(100, 1000) }}
+            bookingId: "{{ $randomString() }}"
+      # Get payment methods
+      - get:
+          url: "/api/v1/payments/methods"
+          headers:
+            Authorization: "Bearer {{ authToken }}"

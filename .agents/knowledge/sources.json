@@ -1,0 +1,93 @@
+{
+  "sources": [
+    {
+      "path": "STATUS_REPORT.md",
+      "subsystem": "status",
+      "priority": "always",
+      "defaultStatus": "current",
+      "statusOverrides": [
+        {
+          "status": "historical",
+          "headingIncludes": ["Historical", "Previously Completed", "Superseded"]
+        },
+        {
+          "status": "historical",
+          "contentIncludes": ["Historical", "Previously Completed", "Superseded"]
+        },
+        {
+          "status": "needs-verification",
+          "contentIncludes": ["recheck", "rechecks", "refresh", "refreshed", "needs verification", "needs refresh"]
+        }
+      ]
+    },
+    {
+      "path": "DOCUMENTATION.md",
+      "subsystem": "docs",
+      "priority": "always",
+      "defaultStatus": "current"
+    },
+    {
+      "path": "ROADMAP.md",
+      "subsystem": "planning",
+      "priority": "high",
+      "defaultStatus": "planned",
+      "statusOverrides": [
+        {
+          "status": "historical",
+          "dateBefore": "2026-05-01",
+          "contentIncludes": ["February", "March", "April", "launch", "next steps", "Immediate Actions", "This Week"]
+        },
+        {
+          "status": "historical",
+          "headingIncludes": ["Next Steps (This Week)", "Immediate Actions"]
+        },
+        {
+          "status": "historical",
+          "headingIncludes": ["Public Launch", "Launch Week"]
+        }
+      ]
+    },
+    {
+      "path": "TECH_STACK_SUMMARY.md",
+      "subsystem": "architecture",
+      "priority": "high",
+      "defaultStatus": "current"
+    },
+    {
+      "path": "docs/BETA_READINESS_CHECKLIST.md",
+      "subsystem": "status",
+      "priority": "high",
+      "defaultStatus": "needs-verification",
+      "statusOverrides": [
+        {
+          "status": "needs-verification",
+          "contentIncludes": ["recheck", "rechecks", "refresh", "refreshed", "needs verification", "needs refresh"]
+        }
+      ]
+    },
+    {
+      "path": "docs/PARKPAL_SYSTEM_ARCHITECTURE.md",
+      "subsystem": "architecture",
+      "priority": "high",
+      "defaultStatus": "current"
+    },
+    {
+      "path": "frontend/mobile/TESTING.md",
+      "subsystem": "mobile",
+      "priority": "medium",
+      "defaultStatus": "current"
+    },
+    {
+      "path": "backend/AUTO_CHECKOUT.md",
+      "subsystem": "backend",
+      "priority": "medium",
+      "defaultStatus": "current"
+    },
+    {
+      "path": ".claude/session-start-instructions.md",
+      "subsystem": "agent-workflow",
+      "priority": "medium",
+      "defaultStatus": "needs-verification"
+    }
+  ]
+}

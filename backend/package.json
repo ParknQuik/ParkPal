@@ -1,26 +1,78 @@
 {
-  "name": "parking-backend",
+  "name": "parknquik-backend",
   "version": "1.0.0",
   "main": "index.js",
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "FORCE_COLOR=0 node index.js",
+    "dev": "FORCE_COLOR=0 nodemon index.js",
+    "seed": "node prisma/seed.js",
+    "test": "NODE_ENV=test jest --detectOpenHandles --forceExit",
+    "test:watch": "NODE_ENV=test jest --watch",
+    "test:coverage": "NODE_ENV=test jest --coverage --detectOpenHandles --forceExit"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
+    "testTimeout": 10000,
+    "setupFiles": [
+      "<rootDir>/test/setup.js"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@turf|kdbush|supercluster|robust-predicates)/)"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 75,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
   },
   "dependencies": {
+    "@google-cloud/secret-manager": "^6.1.0",
+    "@google-cloud/storage": "^7.18.0",
     "@prisma/client": "^5.9.0",
+    "@turf/boolean-point-in-polygon": "^7.3.4",
+    "@turf/circle": "^7.3.4",
+    "@turf/distance": "^7.3.4",
+    "@turf/helpers": "^7.3.4",
+    "@turf/turf": "^7.3.4",
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "hibp": "^15.2.0",
+    "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^6.9.7",
+    "pg": "^8.16.3",
+    "prom-client": "^15.1.3",
+    "qrcode": "^1.5.4",
     "redis": "^4.6.12",
+    "resend": "^6.9.2",
+    "sharp": "^0.34.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "ws": "^8.16.0"
+    "winston": "^3.19.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
     "nodemon": "^3.0.3",
-    "prisma": "^5.9.0"
+    "prisma": "^5.9.0",
+    "supertest": "^7.1.4",
+    "ws": "^8.18.3"
   }
 }

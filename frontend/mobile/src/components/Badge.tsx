@@ -1,13 +1,21 @@
+// ParknQuik Mobile App - Badge Component
+// Updated: March 14, 2026
+// Design: Google Stitch - Green theme rebrand
+// Changes: Green theme colors (success color already uses green from theme)
+
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { BadgeProps } from '../types';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export const Badge: React.FC<BadgeProps> = ({
   text,
   variant = 'default',
   style,
 }) => {
+  const { colors } = useTheme();
+
   const getColors = () => {
     switch (variant) {
       case 'success':

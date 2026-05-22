@@ -1,8 +1,14 @@
-export const formatCurrency = (amount: number): string => {
-  return `$${amount.toFixed(2)}`;
+export const formatCurrency = (amount: number | null | undefined): string => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return '$0.00';
+  }
+  return `₱${amount.toFixed(2)}`;
 };
 
-export const formatDistance = (distanceInKm: number): string => {
+export const formatDistance = (distanceInKm: number | null | undefined): string => {
+  if (distanceInKm === null || distanceInKm === undefined || isNaN(distanceInKm)) {
+    return 'N/A';
+  }
   if (distanceInKm < 1) {
     return `${Math.round(distanceInKm * 1000)}m`;
   }

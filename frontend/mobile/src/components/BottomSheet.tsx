@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,8 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native';
-import { colors, spacing, borderRadius } from '../theme';
+import { spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   height = SCREEN_HEIGHT * 0.6,
 }) => {
+  const { colors } = useTheme();
   const translateY = useRef(new Animated.Value(height)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -79,6 +81,41 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     })
   ).current;
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    overlayBg: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.overlay,
+    },
+    sheet: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: borderRadius.xxl,
+      borderTopRightRadius: borderRadius.xxl,
+      paddingTop: spacing.md,
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      backgroundColor: colors.border,
+      borderRadius: borderRadius.sm,
+      alignSelf: 'center',
+      marginBottom: spacing.lg,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.xl,
+    },
+  }), [colors]);
+
   return (
     <Modal
       visible={visible}
@@ -108,38 +145,3 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  overlayBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlay,
-  },
-  sheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.xxl,
-    borderTopRightRadius: borderRadius.xxl,
-    paddingTop: spacing.md,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: colors.border,
-    borderRadius: borderRadius.sm,
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-  },
-});

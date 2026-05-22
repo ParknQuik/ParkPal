@@ -1,5 +1,37 @@
 {
+  "name": "parknquik-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "contract:generate": "cd backend && node scripts/generate-api-contract.js",
+    "contract:validate": "node scripts/validate-api-contract.js",
+    "contract:test": "npm run contract:generate && npm run contract:validate",
+    "knowledge:build": "node --no-warnings scripts/knowledge/build-index.js",
+    "knowledge:context": "node --no-warnings scripts/knowledge/context.js",
+    "knowledge:measure-savings": "node --no-warnings scripts/knowledge/measure-savings.js",
+    "knowledge:query": "node --no-warnings scripts/knowledge/query.js",
+    "knowledge:refresh": "npm run knowledge:build",
+    "knowledge:validate": "node --no-warnings scripts/knowledge/query.js --self-test",
+    "pretest": "npm run contract:test",
+    "test:all": "bash test-automator/scripts/run-all-tests.sh",
+    "test:fix": "node test-automator/scripts/fix-failing-tests.js",
+    "test:report": "node test-automator/scripts/generate-test-report.js",
+    "test:enforce-coverage": "node test-automator/scripts/test-coverage-enforcer.js",
+    "perf:load": "artillery run performance-testing/artillery/api-load-test.yml",
+    "perf:load:report": "artillery run performance-testing/artillery/api-load-test.yml --output performance-testing/reports/load-test.json && artillery report performance-testing/reports/load-test.json --output performance-testing/reports/load-test.html && open performance-testing/reports/load-test.html",
+    "perf:stress": "artillery run performance-testing/artillery/stress-test.yml",
+    "perf:soak": "artillery run performance-testing/artillery/soak-test.yml",
+    "perf:k6:load": "k6 run performance-testing/k6/load-test.js",
+    "perf:k6:stress": "k6 run performance-testing/k6/stress-test.js",
+    "perf:k6:spike": "k6 run performance-testing/k6/spike-test.js",
+    "perf:lighthouse": "cd performance-testing/lighthouse && lhci autorun",
+    "perf:lighthouse:mobile": "cd performance-testing/lighthouse && lhci autorun --config=.lighthouserc-mobile.json",
+    "perf:all": "npm run perf:load && npm run perf:k6:load && npm run perf:lighthouse"
+  },
   "dependencies": {
-    "@vitejs/plugin-react": "^5.0.4"
+    "@types/react": "~19.2.10",
+    "@vitejs/plugin-react": "^5.0.4",
+    "expo": "^55.0.19",
+    "typescript": "~5.9.2"
   }
 }

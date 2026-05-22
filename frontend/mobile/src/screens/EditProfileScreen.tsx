@@ -1,0 +1,406 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  ActionSheetIOS,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAppDispatch, useAppSelector } from '../store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { updateUserProfile, setUser } from '../store/slices/authSlice';
+import { userAPI } from '../services/api';
+import { Card } from '../components/Card';
+import { typography, spacing, borderRadius } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+
+export const EditProfileScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state) => state.auth);
+  const { colors } = useTheme();
+  const statusBarStyle = useStatusBarStyle();
+
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(user?.profileImageUrl || null);
+  const [uploading, setUploading] = useState(false);
+
+  const getFileName = (uri: string): string => {
+    const parts = uri.split('/');
+    return parts[parts.length - 1] || `profile_${Date.now()}.jpg`;
+  };
+
+  const handleImagePicker = () => {
+    const options = ['Take Photo', 'Choose from Gallery', 'Cancel'];
+    const cancelButtonIndex = 2;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          title: 'Change Profile Photo',
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) {
+            openCamera();
+          } else if (buttonIndex === 1) {
+            openGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert('Change Profile Photo', 'Choose an option', [
+        { text: 'Take Photo', onPress: openCamera },
+        { text: 'Choose from Gallery', onPress: openGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
+  const openCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Camera permission is required to take photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const openGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Gallery permission is required to select photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    try {
+      setUploading(true);
+      const fileName = getFileName(uri);
+
+      const { data: { uploadUrl, fileName: gcsFileName } } = await userAPI.getProfileUploadUrl(fileName);
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // Upload to GCS with proper error handling
+      const uploadResult = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: {
+          'Content-Type': 'image/jpeg',
+        },
+      });
+
+      if (!uploadResult.ok) {
+        const errorText = await uploadResult.text();
+        ;
+        throw new Error(`Upload failed: ${uploadResult.status} - ${errorText}`);
+      }
+
+      // Small delay to ensure GCS has processed the file
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const processResult = await userAPI.uploadProfilePicture(gcsFileName);
+
+      // The API returns the user object in processResult.data
+      const responseData = processResult.data;
+
+      // Extract profileImageUrl from the response - it's the resized image URL
+      const newImageUrl = responseData?.profileImageUrl;
+
+      if (newImageUrl) {
+        setProfileImage(newImageUrl);
+
+        // Also persist to AsyncStorage
+        const updatedUser = { ...user!, profileImageUrl: newImageUrl };
+        AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+
+        Alert.alert('Success', 'Profile photo updated successfully');
+      } else {
+        ;
+        Alert.alert('Error', 'Failed to get profile image URL');
+      }
+    } catch (error: any) {
+      ;
+      Alert.alert('Error', error.message || 'Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Validation Error', 'Name is required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await dispatch(
+        updateUserProfile({
+          name: name.trim(),
+          phone: phone.trim() || null,
+        })
+      ).unwrap();
+
+      Alert.alert('Success', 'Profile updated successfully', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    const styles = React.useMemo(() => StyleSheet.create({
+      container: {
+        flex: 1,
+        backgroundColor: colors.background,
+      },
+      safeArea: {
+        backgroundColor: colors.appHeaderBackground,
+      },
+      header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: spacing.xl,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        backgroundColor: colors.appHeaderBackground,
+      },
+      backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.headerActionBackground,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: colors.headerActionShadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 3,
+      },
+      title: {
+        ...typography.h5,
+        color: colors.appHeaderText,
+        fontWeight: '700',
+      },
+      placeholder: {
+        width: 40,
+      },
+      content: {
+        flex: 1,
+        padding: spacing.xl,
+      },
+    card: {
+      marginBottom: spacing.xl,
+    },
+    formGroup: {
+      marginBottom: spacing.lg,
+    },
+    label: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '600',
+      marginBottom: spacing.sm,
+    },
+    input: {
+      ...typography.body,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg,
+      color: colors.textPrimary,
+    },
+    inputDisabled: {
+      backgroundColor: colors.background,
+      color: colors.textSecondary,
+    },
+    helperText: {
+      ...typography.small,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.md,
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      ...typography.body,
+      color: colors.white,
+      fontWeight: '700',
+    },
+    photoSection: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+      paddingVertical: spacing.md,
+    },
+    profileImageContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      overflow: 'hidden',
+      marginBottom: spacing.sm,
+    },
+    profileImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    profileImagePlaceholder: {
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    profileImagePlaceholderText: {
+      fontSize: 40,
+    },
+    uploadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    changePhotoText: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+  }), [colors]);
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Edit Profile</Text>
+          <View style={styles.placeholder} />
+        </View>
+      </SafeAreaView>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Card style={styles.card}>
+          <View style={styles.photoSection}>
+            <View style={styles.profileImageContainer}>
+              {profileImage ? (
+                <Image
+                  source={{ uri: profileImage + '?t=' + Date.now() }}
+                  style={styles.profileImage} />
+              ) : (
+                <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
+                  <Text style={styles.profileImagePlaceholderText}>👤</Text>
+                </View>
+              )}
+              {uploading && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator color={colors.white} />
+                </View>
+              )}
+            </View>
+            <TouchableOpacity onPress={handleImagePicker} disabled={uploading}>
+              <Text style={styles.changePhotoText}>Change Photo</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your name"
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="words"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Phone</Text>
+            <TextInput
+              style={styles.input}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="Enter your phone number (optional)"
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, styles.inputDisabled]}
+              value={user?.email || ''}
+              editable={false}
+            />
+            <Text style={styles.helperText}>Email cannot be changed</Text>
+          </View>
+        </Card>
+
+        <TouchableOpacity
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Changes</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+};

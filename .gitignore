@@ -1,1 +1,36 @@
 node_modules
+
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env*.local
+
+# Keep environment templates with placeholders (can be committed)
+# .env.example
+# .env.development
+# .env.staging
+# .env.production
+
+# GCP Service Account Keys
+**/secrets/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!app.json
+!.agents/knowledge/sources.json
+
+# Generated agent knowledge index
+.agents/knowledge/knowledge.db
+.agents/knowledge/knowledge.db-*
+
+# macOS system files
+.DS_Store
+
+# IDE
+.kilocode/
+.kilocodemodes
+
+# Local Codex/Claude hooks can auto-stage or auto-commit; keep them local-only.
+.codex/hooks.json
+.Codex/hooks.json

@@ -1,5 +1,15 @@
 const parkingController = require('../controllers/parkingController');
 const { authenticate } = require('../services/auth');
+const { deprecate } = require('../middleware/deprecation');
+const { validateBody, validateQuery, validateParams } = require('../middleware/validation');
+const {
+  createSlotSchema,
+  updateSlotSchema,
+  createBookingSchema,
+  getSlotsQuerySchema,
+  idParamSchema
+} = require('../validators/parking');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
   /**
@@ -34,7 +44,10 @@ module.exports = (app) => {
    *               items:
    *                 $ref: '#/components/schemas/Slot'
    */
-  app.get('/api/slots', parkingController.getSlots);
+  app.get(
+    '/slots',
+    validateQuery(getSlotsQuerySchema),
+    asyncHandler(parkingController.getSlots));
 
   /**
    * @swagger
@@ -59,7 +72,10 @@ module.exports = (app) => {
    *       404:
    *         description: Slot not found
    */
-  app.get('/api/slots/:id', parkingController.getSlotById);
+  app.get(
+    '/slots/:id',
+    validateParams(idParamSchema),
+    asyncHandler(parkingController.getSlotById));
 
   /**
    * @swagger
@@ -113,7 +129,16 @@ module.exports = (app) => {
    *       401:
    *         description: Unauthorized
    */
-  app.post('/api/slots', authenticate, parkingController.listSlot);
+  app.post(
+    '/slots',
+    deprecate({
+      alternative: 'POST /api/marketplace/listings',
+      sunset: '2026-06-01',
+      message: 'Use the new Marketplace API for creating listings with QR codes and enhanced features.'
+    }),
+    authenticate,
+    validateBody(createSlotSchema),
+    asyncHandler(parkingController.listSlot));
 
   /**
    * @swagger
@@ -149,7 +174,17 @@ module.exports = (app) => {
    *       403:
    *         description: Not authorized to update this slot
    */
-  app.put('/api/slots/:id', authenticate, parkingController.updateSlot);
+  app.put(
+    '/slots/:id',
+    deprecate({
+      alternative: 'PUT /api/marketplace/listings/:id',
+      sunset: '2026-06-01',
+      message: 'Use the Marketplace API for updating listings.'
+    }),
+    authenticate,
+    validateParams(idParamSchema),
+    validateBody(updateSlotSchema),
+    asyncHandler(parkingController.updateSlot));
 
   /**
    * @swagger
@@ -171,7 +206,11 @@ module.exports = (app) => {
    *       403:
    *         description: Not authorized to delete this slot
    */
-  app.delete('/api/slots/:id', authenticate, parkingController.deleteSlot);
+  app.delete(
+    '/slots/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    asyncHandler(parkingController.deleteSlot));
 
   /**
    * @swagger
@@ -213,7 +252,11 @@ module.exports = (app) => {
    *       400:
    *         description: Slot not available
    */
-  app.post('/api/bookings', authenticate, parkingController.reserveSlot);
+  app.post(
+    '/bookings',
+    authenticate,
+    validateBody(createBookingSchema),
+    asyncHandler(parkingController.reserveSlot));
 
   /**
    * @swagger
@@ -233,5 +276,144 @@ module.exports = (app) => {
    *               items:
    *                 $ref: '#/components/schemas/Booking'
    */
-  app.get('/api/bookings', authenticate, parkingController.getUserBookings);
+  app.get('/bookings', authenticate, asyncHandler(parkingController.getUserBookings));
+
+  // =============================================================================
+  // MOBILE APP COMPATIBILITY ALIASES
+  // /parking/spots/* routes are aliases for /slots/* for mobile app compatibility
+  // =============================================================================
+
+  /**
+   * @swagger
+   * /api/parking/spots:
+   *   get:
+   *     summary: Get all parking spots (alias for /slots)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for GET /slots
+   *     parameters:
+   *       - in: query
+   *         name: latitude
+   *         schema:
+   *           type: number
+   *       - in: query
+   *         name: longitude
+   *         schema:
+   *           type: number
+   *       - in: query
+   *         name: radius
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: List of parking spots
+   */
+  app.get(
+    '/parking/spots',
+    validateQuery(getSlotsQuerySchema),
+    asyncHandler(parkingController.getSlots));
+
+  /**
+   * @swagger
+   * /api/parking/spots/{id}:
+   *   get:
+   *     summary: Get parking spot by ID (alias for /slots/:id)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for GET /slots/:id
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Parking spot details
+   *       404:
+   *         description: Spot not found
+   */
+  app.get(
+    '/parking/spots/:id',
+    validateParams(idParamSchema),
+    asyncHandler(parkingController.getSlotById));
+
+  /**
+   * @swagger
+   * /api/parking/spots:
+   *   post:
+   *     summary: Create a new parking spot (alias for /slots)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for POST /slots
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       201:
+   *         description: Spot created successfully
+   */
+  app.post(
+    '/parking/spots',
+    authenticate,
+    validateBody(createSlotSchema),
+    asyncHandler(parkingController.listSlot));
+
+  /**
+   * @swagger
+   * /api/parking/spots/{id}:
+   *   put:
+   *     summary: Update parking spot (alias for /slots/:id)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for PUT /slots/:id
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     requestBody:
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Spot updated successfully
+   */
+  app.put(
+    '/parking/spots/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    validateBody(updateSlotSchema),
+    asyncHandler(parkingController.updateSlot));
+
+  /**
+   * @swagger
+   * /api/parking/spots/{id}:
+   *   delete:
+   *     summary: Delete parking spot (alias for /slots/:id)
+   *     tags: [Parking Spots]
+   *     description: Mobile app compatibility alias for DELETE /slots/:id
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *     responses:
+   *       200:
+   *         description: Spot deleted successfully
+   */
+  app.delete(
+    '/parking/spots/:id',
+    authenticate,
+    validateParams(idParamSchema),
+    asyncHandler(parkingController.deleteSlot));
 };

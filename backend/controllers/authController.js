@@ -1,12 +1,17 @@
 const prisma = require('../config/prisma');
-const { generateToken, hashPassword, comparePassword } = require('../services/auth');
+const logger = require('../config/logger');
+const crypto = require('crypto');
+const { generateToken, hashPassword, comparePassword, validatePassword } = require('../services/auth');
+const { sendPasswordResetEmail } = require('../services/email');
 
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, role = 'user' } = req.body;
+    const { name, email, password, role } = req.validatedData;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    // Async password validation (for breached password check)
+    const passwordValidation = await validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -28,9 +33,9 @@ exports.register = async (req, res) => {
       }
     });
 
-    const token = generateToken(user);
+    const token = await generateToken(user);
 
-    res.status(201).json({
+    const response = {
       user: {
         id: user.id,
         name: user.name,
@@ -38,13 +43,68 @@ exports.register = async (req, res) => {
         role: user.role
       },
       token
-    });
+    };
+
+    // Include warnings if any
+    if (passwordValidation.warnings) {
+      response.warnings = passwordValidation.warnings;
+    }
+
+    res.status(201).json(response);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-exports.login = async (req, res) => {
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { oldPassword, newPassword } = req.validatedData;
+    const userId = req.user.id;
+
+    // Get user
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify old password
+    const isValidOldPassword = await comparePassword(oldPassword, user.password);
+    if (!isValidOldPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Validate new password (for breached password check)
+    const passwordValidation = await validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
+    }
+
+    // Hash and update
+    const hashedPassword = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        updatedAt: new Date()
+      }
+    });
+
+    const response = { message: 'Password changed successfully' };
+
+    if (passwordValidation.warnings) {
+      response.warnings = passwordValidation.warnings;
+    }
+
+    res.json(response);
+   } catch (error) {
+     next(error);
+   }
+};
+
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -66,18 +126,166 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = generateToken(user);
+    const token = await generateToken(user);
 
     res.json({
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        phone: user.phone ?? null,
+        profileImageUrl: user.profileImageUrl ?? null,
       },
       token
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
+  }
+};
+
+/**
+ * Get current user
+ */
+exports.getCurrentUser = async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        phone: true,
+        profileImageUrl: true,
+        createdAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Logout user
+ */
+exports.logout = async (req, res, next) => {
+  try {
+    // If using JWT blacklist or refresh tokens, invalidate them here
+    // For now, logout is handled client-side by removing the token
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Forgot password - Send reset token via email
+ */
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.validatedData;
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    // Always return success message (security: don't reveal if email exists)
+    // This prevents email enumeration attacks
+    const successMessage = 'If an account exists with that email, a password reset link has been sent.';
+
+    if (!user) {
+      return res.json({ message: successMessage });
+    }
+
+    // Generate reset token (32 bytes = 64 hex characters)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Set expiry to 1 hour from now
+    const resetExpires = new Date(Date.now() + 3600000); // 1 hour
+
+    // Save token to database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetExpires
+      }
+    });
+
+    // Send email
+    try {
+      await sendPasswordResetEmail(user.email, user.name, resetToken);
+     } catch (emailError) {
+       // Don't expose email sending failures to client
+     }
+
+    res.json({ message: successMessage });
+   } catch (error) {
+     next(error);
+   }
+};
+
+/**
+ * Reset password - Validate token and update password
+ */
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.validatedData;
+
+    // Find user with valid token
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: {
+          gt: new Date() // Token not expired
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        error: 'Invalid or expired reset token. Please request a new password reset.'
+      });
+    }
+
+    // Validate new password (HIBP breach check)
+    const passwordValidation = await validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        updatedAt: new Date()
+      }
+    });
+
+    const response = { message: 'Password reset successfully. You can now log in with your new password.' };
+
+    // Include warnings if any
+    if (passwordValidation.warnings) {
+      response.warnings = passwordValidation.warnings;
+    }
+
+    res.json(response);
+  } catch (error) {
+    logger.error('Reset password error:', error);
+    next(error);
   }
 };

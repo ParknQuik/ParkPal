@@ -1,0 +1,112 @@
+config:
+  target: "http://localhost:3000"
+  # Long-running test to detect memory leaks and stability issues
+
+  phases:
+    # 24-hour test at moderate load
+    - duration: 86400  # 24 hours
+      arrivalRate: 50
+      name: "24-hour soak test"
+
+  # Thresholds should remain stable throughout
+  ensure:
+    p95: 600   # Allow slightly higher than load test
+    p99: 1200
+    maxErrorRate: 1
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+scenarios:
+  # Realistic mixed operations
+  - name: "Continuous User Activity"
+    weight: 40
+    flow:
+      - get:
+          url: "/api/v1/marketplace/listings?latitude=14.5995&longitude=120.9842&radius=5"
+          expect:
+            - statusCode: 200
+
+      - think: 2  # 2 second pause between requests
+
+      - get:
+          url: "/api/v1/marketplace/listings/{{ $randomNumber(1, 100) }}"
+          expect:
+            - statusCode: [200, 404]
+
+  - name: "Authentication Operations"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+
+      - think: 5
+
+      - get:
+          url: "/api/v1/auth/profile"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Booking Operations"
+    weight: 25
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+
+      - get:
+          url: "/api/v1/marketplace/bookings"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+      - think: 3
+
+  - name: "Host Operations"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "host@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "hostToken"
+
+      - get:
+          url: "/api/v1/marketplace/host/earnings"
+          headers:
+            Authorization: "Bearer {{ hostToken }}"
+          expect:
+            - statusCode: 200
+
+      - think: 5
+
+      - get:
+          url: "/api/v1/marketplace/host/bookings"
+          headers:
+            Authorization: "Bearer {{ hostToken }}"
+          expect:
+            - statusCode: 200

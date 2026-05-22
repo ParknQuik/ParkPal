@@ -10,7 +10,7 @@ import {
 	CardContent,
 	Alert
 } from '@mui/material';
-import api from '../api.jsx';
+import api from '../api';
 
 const Reservation = () => {
 	const navigate = useNavigate();
@@ -44,7 +44,7 @@ const Reservation = () => {
 		setError('');
 
 		try {
-			const { data } = await api.post('/api/bookings', {
+			const { data } = await api.post('/bookings', {
 				slotId: slot.id,
 				startTime,
 				endTime
