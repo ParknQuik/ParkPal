@@ -1,22 +1,44 @@
 # Session Start Instructions
 
-**Last Updated:** April 20, 2026
+**Last Updated:** May 22, 2026
 **Documentation Structure:** 38 files (consolidated from 100+)
 
 ---
 
 ## When the user says "start"
 
-### Step 1: Read Current State
+### Step 1: Query Repo Knowledge First
 
-**Read this file:**
-- **`STATUS_REPORT.md`** — production readiness, deployment status, blockers, timeline
+Use the repo-local knowledge index before broad markdown scans:
 
-### Step 2: Read on-demand (only if relevant to what user wants to work on)
+```bash
+npm run knowledge:query -- "current project status"
+```
+
+If the database is missing or stale, rebuild it:
+
+```bash
+npm run knowledge:build
+```
+
+Use query results to choose exact source files and line ranges to inspect. Treat `needs-verification`, `planned`, and `historical` results as leads, not confirmed truth.
+
+### Step 2: Verify Current State
+
+Always verify current project status against live repo evidence:
+
+```bash
+git status --short --branch --untracked-files=all
+git log -1 --oneline --decorate
+```
+
+Then read the relevant `STATUS_REPORT.md` sections cited by the knowledge query.
+
+### Step 3: Read on-demand (only if relevant to what user wants to work on)
 
 | Topic | File |
 |-------|------|
-| Mobile app issues / Kilo Code handoff | `CLAUDE_OPINION_REQUEST.md` |
+| Repo knowledge search | `npm run knowledge:query -- "<topic>"` |
 | Roadmap / sprint planning | `ROADMAP.md` |
 | Tech stack | `TECH_STACK_SUMMARY.md` |
 | System architecture / data models | `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` |
@@ -39,28 +61,9 @@ Provide a concise summary (3-4 sentences) of current state, then ask: **"What wo
 
 ---
 
-## Current State (April 2026)
+## Current State
 
-**Deployment:**
-- Backend API: ✅ Cloud Run — https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app
-- Web Frontend: ✅ Cloud Run — https://parkpal-web-dev-cxntrkjjmq-as.a.run.app
-- Mobile App: ❌ Not in app stores (EAS ready)
-
-**Production Readiness: 60-65%** (per latest honest audit in `CLAUDE_OPINION_REQUEST.md`)
-
-**Active blockers (from re-audit April 18, 2026):**
-1. `ListYourSpot.tsx:133` — undefined `isEditMode` crashes on render
-2. Listing photo upload sends device file paths instead of GCS URLs — photos never upload
-3. `mediaApi.ts:9` — hardcoded IP `192.168.100.176` breaks all media uploads
-4. Payment methods backend returns 501 (not implemented)
-
-**Tech Stack:**
-- Backend: Node.js + Express + PostgreSQL + Prisma
-- Mobile: React Native + Expo + Redux Toolkit
-- Web: React + Vite + Material-UI
-- Payments: PayMongo (GCash, Cards, GrabPay, Maya, Cash)
-- Infrastructure: GCP Cloud Run, Cloud SQL, Secret Manager, Cloud Storage
-- Analytics (future): Databricks on GCP
+Do not trust a copied status snapshot in this instruction file. Query the knowledge index, then verify against live git state and `STATUS_REPORT.md`.
 
 ---
 

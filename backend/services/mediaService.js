@@ -9,7 +9,11 @@ const storage = new Storage({
   keyFilename: process.env.GCP_KEYFILE_PATH
 });
 
-const bucketName = process.env.GCS_BUCKET_NAME || 'parkpal-prod-photos';
+const bucketName = process.env.GCS_BUCKET_NAME;
+if (!bucketName) {
+  throw new Error('GCS_BUCKET_NAME is required for media storage');
+}
+
 const bucket = storage.bucket(bucketName);
 
 // Image size configurations
