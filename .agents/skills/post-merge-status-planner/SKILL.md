@@ -9,7 +9,17 @@ Use this skill when the user says a PR has merged to `dev`, asks to update `STAT
 
 ## Workflow
 
-### 1. Verify the merge landed on `dev`
+### 1. Query repo knowledge
+
+Use the repo-local knowledge index before broad status/doc scans:
+
+```bash
+npm run knowledge:query -- "post merge status report dev current gaps blockers"
+```
+
+Use the cited files and line ranges as pointers. Treat `needs-verification`, `planned`, and `historical` chunks as leads, then verify with live repo state.
+
+### 2. Verify the merge landed on `dev`
 
 Use live repo state, not assumptions.
 
@@ -28,7 +38,7 @@ git pull --ff-only origin dev
 
 If the working tree is dirty, stop and explain what is blocking the branch switch.
 
-### 2. Update `STATUS_REPORT.md`
+### 3. Update `STATUS_REPORT.md`
 
 Read the current report and reconcile it against live evidence.
 
@@ -53,7 +63,7 @@ Required update targets:
 
 Do not commit `.codex/hooks.json` or any auto-commit behavior.
 
-### 3. Validate before commit
+### 4. Validate before commit
 
 Run checks proportional to the merge contents. At minimum:
 
@@ -81,7 +91,7 @@ cd backend && npm test
 
 If a check cannot run because of environment or sandbox limits, capture the exact error and state the residual risk.
 
-### 4. Commit and push with approval
+### 5. Commit and push with approval
 
 Follow the repo policy in `.claude/session-start-instructions.md`.
 
@@ -103,7 +113,7 @@ Suggested commit message:
 docs: update status report after dev merge
 ```
 
-### 5. Plan next steps
+### 6. Plan next steps
 
 After `STATUS_REPORT.md` is updated and pushed, produce a decision-complete next-steps plan.
 
