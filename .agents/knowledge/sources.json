@@ -88,6 +88,19 @@
       "subsystem": "agent-workflow",
       "priority": "medium",
       "defaultStatus": "needs-verification"
+    },
+    {
+      "path": "docs/agent-knowledge/SESSION_LEARNINGS.md",
+      "subsystem": "agent-workflow",
+      "priority": "high",
+      "defaultStatus": "current"
+    },
+    {
+      "path": ".agents/knowledge/source-map.json",
+      "type": "source-map",
+      "subsystem": "agent-workflow",
+      "priority": "high",
+      "defaultStatus": "current"
     }
   ]
 }

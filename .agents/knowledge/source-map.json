@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "description": "Curated source ownership and routing hints for high-traffic ParkPal implementation areas. This is not full source-code indexing.",
+  "entries": [
+    {
+      "id": "mobile-payment-flow",
+      "title": "Mobile payment flow and cash booking confirmation",
+      "subsystem": "payments",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/screens/PaymentScreen.tsx",
+        "frontend/mobile/src/screens/PaymentFailedScreen.tsx",
+        "frontend/mobile/src/screens/PaymentMethodsScreen.tsx",
+        "backend/controllers/paymentsController.js",
+        "backend/routes/payments.js",
+        "backend/services/paymongo.js",
+        "backend/validators/payments.js",
+        "backend/tests/payments.test.js"
+      ],
+      "routeKeywords": [
+        "cash payment",
+        "cash booking",
+        "payment 403",
+        "payment modal",
+        "PaymentScreen",
+        "PaymentFailed",
+        "PayMongo",
+        "payment intent",
+        "confirmation"
+      ],
+      "relatedApis": [
+        "confirm payment intent",
+        "create booking",
+        "payment method selection",
+        "cash booking confirmation"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npx tsc --noEmit",
+        "cd backend && npm test -- payments.test.js"
+      ],
+      "knownFailurePatterns": [
+        "Cash booking returns 403 before canonical confirmation completes.",
+        "Payment failure stays in a modal instead of routing to PaymentFailed.",
+        "Backend payment tests can fail when local Postgres is not running or seeded."
+      ]
+    },
+    {
+      "id": "mobile-qr-scanner-hooks",
+      "title": "QR scanner screen hook order and status bar handling",
+      "subsystem": "mobile",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/screens/QRScannerScreen.tsx",
+        "frontend/mobile/src/hooks/useStatusBarStyle.ts",
+        "frontend/mobile/src/theme/colors.ts"
+      ],
+      "routeKeywords": [
+        "QRScannerScreen",
+        "QR scanner",
+        "hook order",
+        "useStatusBarStyle",
+        "early return",
+        "permission branch",
+        "status bar"
+      ],
+      "relatedApis": [
+        "useStatusBarStyle",
+        "camera permission flow",
+        "QR scan navigation"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npx tsc --noEmit"
+      ],
+      "knownFailurePatterns": [
+        "Calling useStatusBarStyle after permission or loading early returns changes hook order.",
+        "Status bar colors can drift when screen branches bypass shared header/status-bar patterns."
+      ]
+    },
+    {
+      "id": "mobile-ui-payment-icons",
+      "title": "Mobile payment UI icon consistency",
+      "subsystem": "mobile",
+      "priority": "medium",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/screens/PaymentScreen.tsx",
+        "frontend/mobile/src/screens/PaymentMethodsScreen.tsx",
+        "frontend/mobile/src/screens/PaymentFailedScreen.tsx",
+        "frontend/mobile/src/components/AppHeader.tsx",
+        "frontend/mobile/src/theme/colors.ts"
+      ],
+      "routeKeywords": [
+        "payment page icons",
+        "MaterialCommunityIcons",
+        "emoji",
+        "cash icon",
+        "native-looking placeholder",
+        "mobile UI consistency"
+      ],
+      "relatedApis": [
+        "MaterialCommunityIcons",
+        "payment method rendering",
+        "shared mobile theme tokens"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npx tsc --noEmit"
+      ],
+      "knownFailurePatterns": [
+        "Payment screen uses emoji or placeholder symbols instead of MaterialCommunityIcons.",
+        "Payment icons drift from shared mobile visual language."
+      ]
+    },
+    {
+      "id": "booking-lifecycle",
+      "title": "Booking lifecycle and renter booking refresh",
+      "subsystem": "booking",
+      "priority": "medium",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/screens/BookingConfirmed.tsx",
+        "frontend/mobile/src/screens/MyBookingsScreen.tsx",
+        "backend/services/bookingExpiry.js",
+        "backend/services/autoCheckout.js",
+        "backend/controllers/parkingController.js",
+        "backend/routes/parking.js",
+        "backend/tests/bookingExpiry.test.js"
+      ],
+      "routeKeywords": [
+        "booking confirmation",
+        "MyBookingsScreen",
+        "useFocusEffect",
+        "booking refresh",
+        "auto checkout",
+        "booking expiry",
+        "renter booking"
+      ],
+      "relatedApis": [
+        "booking creation",
+        "booking expiry",
+        "auto checkout",
+        "focus refresh"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npx tsc --noEmit",
+        "cd backend && npm test -- bookingExpiry.test.js"
+      ],
+      "knownFailurePatterns": [
+        "Mounted booking tabs do not refresh after navigation unless focus-based refresh is used.",
+        "Booking lifecycle tests can depend on local database setup."
+      ]
+    },
+    {
+      "id": "mobile-theme-and-headers",
+      "title": "Mobile theme tokens, headers, and status bar safe areas",
+      "subsystem": "theme",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/components/AppHeader.tsx",
+        "frontend/mobile/src/hooks/useStatusBarStyle.ts",
+        "frontend/mobile/src/theme/colors.ts",
+        "frontend/mobile/src/screens/MyListingsScreen.tsx",
+        "frontend/mobile/src/screens/PaymentScreen.tsx",
+        "frontend/mobile/src/screens/QRScannerScreen.tsx"
+      ],
+      "routeKeywords": [
+        "AppHeader",
+        "safe area",
+        "StatusBar",
+        "useStatusBarStyle",
+        "appHeaderBackground",
+        "dark mode",
+        "mobile header",
+        "theme token"
+      ],
+      "relatedApis": [
+        "AppHeader",
+        "useStatusBarStyle",
+        "appHeaderBackground",
+        "appHeaderText"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npx tsc --noEmit"
+      ],
+      "knownFailurePatterns": [
+        "Top safe area uses body background instead of appHeaderBackground.",
+        "Screen status bar colors do not match shared header treatment.",
+        "Bespoke headers drift from AppHeader token usage."
+      ]
+    }
+  ]
+}

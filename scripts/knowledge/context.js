@@ -44,6 +44,11 @@ function formatContext(query, rows, warnings) {
     ''
   ];
 
+  if (warnings.length > 0) {
+    lines.push('First action: rebuild the knowledge DB before planning from these results because HEAD or indexed sources changed.');
+    lines.push('');
+  }
+
   lines.push(...formatWarnings(warnings));
 
   if (rows.length === 0) {
