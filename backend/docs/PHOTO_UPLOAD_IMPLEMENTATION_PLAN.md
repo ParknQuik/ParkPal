@@ -26,7 +26,7 @@ Implement photo upload functionality to allow hosts to add photos to their parki
 
 ### Storage Strategy
 ```
-GCP Cloud Storage Bucket: parkpal-media-production
+GCP Cloud Storage Buckets: parkpal-dev-photos / parkpal-prod-photos
 ├── listings/
 │   ├── {listing_id}/
 │   │   ├── {photo_id}_original.jpg
@@ -54,13 +54,16 @@ GCP Cloud Storage Bucket: parkpal-media-production
 #### 1.1 Create GCS Bucket
 ```bash
 # Via GCP Console or gcloud CLI
-gsutil mb -p parkpal-project -c STANDARD -l asia-southeast1 gs://parkpal-media-production
+gsutil mb -p parkpal-project -c STANDARD -l asia-southeast1 gs://parkpal-dev-photos
+gsutil mb -p parkpal-project -c STANDARD -l asia-southeast1 gs://parkpal-prod-photos
 
 # Set CORS configuration
-gsutil cors set cors.json gs://parkpal-media-production
+gsutil cors set cors.json gs://parkpal-dev-photos
+gsutil cors set cors.json gs://parkpal-prod-photos
 
 # Set lifecycle rules (delete incomplete uploads after 1 day)
-gsutil lifecycle set lifecycle.json gs://parkpal-media-production
+gsutil lifecycle set lifecycle.json gs://parkpal-dev-photos
+gsutil lifecycle set lifecycle.json gs://parkpal-prod-photos
 ```
 
 **CORS Configuration** (`cors.json`):
@@ -114,7 +117,7 @@ gcloud secrets create GCS_SERVICE_ACCOUNT_KEY --data-file=gcs-key.json
 #### 1.3 Environment Variables
 Add to backend `.env` and Secret Manager:
 ```env
-GCS_BUCKET_NAME=parkpal-media-production
+GCS_BUCKET_NAME=parkpal-dev-photos
 GCS_PROJECT_ID=parkpal-project
 GCS_SERVICE_ACCOUNT_KEY=<key from Secret Manager>
 ```
