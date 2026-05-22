@@ -23,9 +23,9 @@ export const PaymentScreen: React.FC = () => {
   const { colors } = useTheme();
   const statusBarStyle = useStatusBarStyle();
   const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, createBookingOnSuccess, rentalMode, maxDuration } = route.params as {
-    bookingId: number;
+    bookingId?: number;
     amount: number;
-    spotId?: number;
+    spotId?: number | string;
     spotName?: string;
     spotAddress?: string;
     startTime?: string;
@@ -43,6 +43,22 @@ export const PaymentScreen: React.FC = () => {
     serviceFee: Math.round((amount || 0) * 0.05),
     total: (amount || 0) + Math.round((amount || 0) * 0.05),
   };
+  const cashPolicyNote = rentalMode === 'open'
+    ? 'Cash bookings still reserve the spot now. Cancel at least 1 hour before start to avoid a strike, and check in within 30 minutes of your start time.'
+    : 'Cash bookings still reserve the spot now. Cancel at least 1 hour before start to avoid a strike, and check in during your reserved time.';
+
+  const extractBookingId = (payload: any): number | undefined => {
+    const id =
+      payload?.booking?.id ??
+      payload?.id ??
+      payload?.data?.booking?.id ??
+      payload?.data?.id ??
+      payload?.data?.data?.booking?.id ??
+      payload?.data?.data?.id;
+
+    const numericId = Number(id);
+    return Number.isFinite(numericId) ? numericId : undefined;
+  };
 
   const createBookingIfNeeded = async (): Promise<number | undefined> => {
     if (createBookingOnSuccess && !bookingId && spotId) {
@@ -53,8 +69,7 @@ export const PaymentScreen: React.FC = () => {
         rentalMode: rentalMode as 'fixed' | 'open',
         maxDuration: rentalMode === 'open' ? maxDuration : undefined,
       });
-      const rawData = createResponse.data;
-      return rawData?.id || rawData?.data?.id || rawData?.data?.data?.id || rawData?.booking?.id;
+      return extractBookingId(createResponse.data);
     }
     return bookingId;
   };
@@ -80,45 +95,50 @@ export const PaymentScreen: React.FC = () => {
           throw new Error('Failed to create booking');
         }
 
-        const response = await marketplaceAPI.confirmBooking(finalBookingId);
+        const intentResponse = await paymentAPI.createPaymentIntent({
+          amount: orderData.total,
+          paymentMethod: 'cash',
+          bookingId: finalBookingId,
+        });
 
-Alert.alert(
-           'Booking Confirmed!',
-           'Please pay in cash when you arrive at the parking location.',
-           [{ text: 'OK', onPress: () => navigation.navigate('PaymentSuccess', {
-             paymentId: bookingId,
-             bookingId,
-             amount: orderData.total,
-             spotName: spotName || 'Parking Spot',
-             spotAddress: spotAddress || '',
-             startTime: startTime || '',
-             endTime: endTime || '',
-             paymentMethod: selectedPayment,
-             rentalMode,
-           }) }]
-         );
+        const confirmResponse = await paymentAPI.confirmPayment({
+          paymentIntentId: intentResponse.data.paymentIntentId,
+        });
+
+        navigation.navigate('PaymentSuccess', {
+          paymentId: confirmResponse.data.payment?.id || intentResponse.data.paymentId,
+          bookingId: finalBookingId,
+          amount: orderData.total,
+          spotName: spotName || 'Parking Spot',
+          spotAddress: spotAddress || '',
+          startTime: startTime || '',
+          endTime: endTime || '',
+          paymentMethod: selectedPayment,
+          rentalMode,
+        });
         return;
-     } catch (err: any) {
-         if (err.response?.status === 409) {
-          Alert.alert(
-            'Slot Unavailable',
-            err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
-          );
+      } catch (err: any) {
+        if (err.response?.status === 409) {
+          navigation.navigate('PaymentFailed', {
+            error: err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',
+            bookingId: bookingId,
+          });
           return;
         }
 
-        Alert.alert('Error', err.message || 'Failed to confirm booking. Please try again.');
+        navigation.navigate('PaymentFailed', {
+          error: err.response?.data?.error || err.message || 'Failed to confirm booking. Please try again.',
+          bookingId: bookingId,
+        });
         return;
       } finally {
         setLoading(false);
       }
     }
 
+    let finalBookingId: number | undefined = bookingId;
     setLoading(true);
     try {
-      let finalBookingId: number | undefined = bookingId;
-
       if (createBookingOnSuccess && !bookingId && spotId) {
         finalBookingId = await createBookingIfNeeded();
       }
@@ -133,26 +153,25 @@ Alert.alert(
         bookingId: finalBookingId,
       });
 
-      const { paymentIntentId, clientSecret } = intentResponse.data;
+      const { paymentIntentId } = intentResponse.data;
 
       const confirmResponse = await paymentAPI.confirmPayment({
         paymentIntentId,
       });
 
-navigation.navigate('PaymentSuccess', {
-         paymentId: confirmResponse.data.paymentId || paymentIntentId,
-         bookingId,
-         amount: orderData.total,
-         spotName: spotName || 'Parking Spot',
-         spotAddress: spotAddress || '',
-         startTime: startTime || '',
-         endTime: endTime || '',
-         paymentMethod: selectedPayment,
-         rentalMode,
-       });
-     } catch (err: any) {
-
-       if (err.response?.status === 409) {
+      navigation.navigate('PaymentSuccess', {
+        paymentId: confirmResponse.data.paymentId || paymentIntentId,
+        bookingId: finalBookingId,
+        amount: orderData.total,
+        spotName: spotName || 'Parking Spot',
+        spotAddress: spotAddress || '',
+        startTime: startTime || '',
+        endTime: endTime || '',
+        paymentMethod: selectedPayment,
+        rentalMode,
+      });
+    } catch (err: any) {
+      if (err.response?.status === 409) {
         Alert.alert(
           'Slot Unavailable',
           err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',
@@ -160,21 +179,21 @@ navigation.navigate('PaymentSuccess', {
         );
         return;
       }
-navigation.navigate('PaymentFailed', {
-         error: err.response?.data?.error || err.message || 'Payment failed',
-         bookingId: bookingId,
-       });
+      navigation.navigate('PaymentFailed', {
+        error: err.response?.data?.error || err.message || 'Payment failed',
+        bookingId: finalBookingId,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const paymentMethods = [
-    { id: 'cash', name: 'Cash', icon: '💵', description: 'Pay with cash at location' },
-    { id: 'gcash', name: 'GCash', icon: '💚', description: 'Pay with GCash e-wallet' },
-    { id: 'card', name: 'Credit/Debit Card', icon: '💳', description: 'Visa, Mastercard, Amex' },
-    { id: 'grab_pay', name: 'GrabPay', icon: '🟢', description: 'Pay with GrabPay' },
-    { id: 'paymaya', name: 'Maya', icon: '🔵', description: 'Pay with Maya e-wallet' },
+    { id: 'cash', name: 'Cash', icon: 'cash', description: 'Pay with cash at location' },
+    { id: 'gcash', name: 'GCash', icon: 'cellphone', description: 'Pay with GCash e-wallet' },
+    { id: 'card', name: 'Credit/Debit Card', icon: 'credit-card-outline', description: 'Visa, Mastercard, Amex' },
+    { id: 'grab_pay', name: 'GrabPay', icon: 'wallet-outline', description: 'Pay with GrabPay' },
+    { id: 'paymaya', name: 'Maya', icon: 'wallet-plus-outline', description: 'Pay with Maya e-wallet' },
   ];
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -270,8 +289,13 @@ navigation.navigate('PaymentFailed', {
       alignItems: 'center',
       flex: 1,
     },
-    paymentIcon: {
-      fontSize: 28,
+    paymentIconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: `${colors.primary}12`,
+      justifyContent: 'center',
+      alignItems: 'center',
       marginRight: 14,
     },
     paymentTextContainer: {
@@ -304,6 +328,33 @@ navigation.navigate('PaymentFailed', {
       height: 12,
       borderRadius: 6,
       backgroundColor: colors.primary,
+    },
+    cashPolicyNote: {
+      flexDirection: 'row',
+      backgroundColor: `${colors.warning}15`,
+      borderWidth: 1,
+      borderColor: `${colors.warning}80`,
+      borderRadius: 12,
+      padding: 14,
+      marginTop: 4,
+    },
+    cashPolicyIcon: {
+      marginRight: 10,
+      marginTop: 1,
+    },
+    cashPolicyContent: {
+      flex: 1,
+    },
+    cashPolicyTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    cashPolicyText: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: colors.textSecondary,
     },
     footer: {
       backgroundColor: colors.surface,
@@ -373,7 +424,13 @@ navigation.navigate('PaymentFailed', {
               onPress={() => setSelectedPayment(method.id)}
             >
               <View style={styles.paymentOptionContent}>
-                <Text style={styles.paymentIcon}>{method.icon}</Text>
+                <View style={styles.paymentIconContainer}>
+                  <MaterialCommunityIcons
+                    name={method.icon as any}
+                    size={24}
+                    color={colors.primary}
+                  />
+                </View>
                 <View style={styles.paymentTextContainer}>
                   <Text style={styles.paymentName}>{method.name}</Text>
                   <Text style={styles.paymentDescription}>{method.description}</Text>
@@ -391,6 +448,21 @@ navigation.navigate('PaymentFailed', {
               </View>
             </TouchableOpacity>
           ))}
+
+          {selectedPayment === 'cash' && (
+            <View style={styles.cashPolicyNote}>
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={20}
+                color={colors.warning}
+                style={styles.cashPolicyIcon}
+              />
+              <View style={styles.cashPolicyContent}>
+                <Text style={styles.cashPolicyTitle}>Cash booking policy</Text>
+                <Text style={styles.cashPolicyText}>{cashPolicyNote}</Text>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
