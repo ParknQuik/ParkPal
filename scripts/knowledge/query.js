@@ -467,6 +467,39 @@ function assertFreshnessWarnings() {
   });
 }
 
+function runContextOutput(query, env, limit = 3) {
+  return execFileSync(
+    process.execPath,
+    ['--no-warnings', path.join(__dirname, 'context.js'), query, '--limit', String(limit)],
+    {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8'
+    }
+  );
+}
+
+function assertContextOutput() {
+  withTempKnowledgeDb((_tempDbPath, env) => {
+    const output = runContextOutput('current project status', env);
+    if (!output.includes('ParkPal Lean Knowledge Context')) {
+      throw new Error('Self-test expected context output header.');
+    }
+    if (!output.includes('Branch:') || !output.includes('HEAD:')) {
+      throw new Error('Self-test expected context output to include Branch and HEAD.');
+    }
+    if (!/STATUS_REPORT\.md:\d+-\d+/.test(output)) {
+      throw new Error('Self-test expected context output to include cited STATUS_REPORT.md line range.');
+    }
+    if (output.includes('Suggested next reads:')) {
+      throw new Error('Self-test expected context output to omit broad suggested reads.');
+    }
+    if (!output.includes('read no more than the cited line ranges')) {
+      throw new Error('Self-test expected context output to include bounded-read instruction.');
+    }
+  });
+}
+
 function runQueryChecks(db) {
   const checks = [
     {
@@ -609,6 +642,7 @@ function runQueryChecks(db) {
 
 function runSelfTest() {
   assertFreshnessWarnings();
+  assertContextOutput();
 
   withTempKnowledgeDb((tempDbPath) => {
     const db = openDatabase(tempDbPath);
@@ -650,4 +684,13 @@ function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  collectWarnings,
+  formatWarnings,
+  openDatabase,
+  queryIndex
+};

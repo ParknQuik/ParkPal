@@ -7,12 +7,12 @@
 
 ## When the user says "start"
 
-### Step 1: Query Repo Knowledge First
+### Step 1: Get Lean Repo Context First
 
-Use the repo-local knowledge index before broad markdown scans:
+Use the token-budgeted context wrapper before broad markdown scans:
 
 ```bash
-npm run knowledge:query -- "current project status"
+npm run knowledge:context -- "current project status"
 ```
 
 If the database is missing or stale, rebuild it:
@@ -21,7 +21,7 @@ If the database is missing or stale, rebuild it:
 npm run knowledge:build
 ```
 
-Use query results to choose exact source files and line ranges to inspect. Treat `needs-verification`, `planned`, and `historical` results as leads, not confirmed truth.
+Use the cited source line ranges as the default read boundary. Treat `needs-verification`, `planned`, and `historical` results as leads, not confirmed truth. Use `npm run knowledge:query -- "<topic>"` only when the task needs deeper investigation.
 
 ### Step 2: Verify Current State
 
@@ -32,13 +32,14 @@ git status --short --branch --untracked-files=all
 git log -1 --oneline --decorate
 ```
 
-Then read the relevant `STATUS_REPORT.md` sections cited by the knowledge query.
+Then read the relevant `STATUS_REPORT.md` sections cited by `knowledge:context`.
 
 ### Step 3: Read on-demand (only if relevant to what user wants to work on)
 
 | Topic | File |
 |-------|------|
-| Repo knowledge search | `npm run knowledge:query -- "<topic>"` |
+| Lean repo context | `npm run knowledge:context -- "<intent>"` |
+| Deeper repo knowledge search | `npm run knowledge:query -- "<topic>"` |
 | Roadmap / sprint planning | `ROADMAP.md` |
 | Tech stack | `TECH_STACK_SUMMARY.md` |
 | System architecture / data models | `docs/PARKPAL_SYSTEM_ARCHITECTURE.md` |
@@ -63,7 +64,7 @@ Provide a concise summary (3-4 sentences) of current state, then ask: **"What wo
 
 ## Current State
 
-Do not trust a copied status snapshot in this instruction file. Query the knowledge index, then verify against live git state and `STATUS_REPORT.md`.
+Do not trust a copied status snapshot in this instruction file. Start with `knowledge:context`, then verify against live git state and only the cited `STATUS_REPORT.md` ranges unless the task requires more detail.
 
 ---
 

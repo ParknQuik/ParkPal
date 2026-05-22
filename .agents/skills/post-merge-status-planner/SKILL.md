@@ -14,10 +14,10 @@ Use this skill when the user says a PR has merged to `dev`, asks to update `STAT
 Use the repo-local knowledge index before broad status/doc scans:
 
 ```bash
-npm run knowledge:query -- "post merge status report dev current gaps blockers"
+npm run knowledge:context -- "post merge status report dev current gaps blockers"
 ```
 
-Use the cited files and line ranges as pointers. Treat `needs-verification`, `planned`, and `historical` chunks as leads, then verify with live repo state.
+Use the cited line ranges as the default read boundary. Treat `needs-verification`, `planned`, and `historical` chunks as leads, then verify with live repo state. Use `npm run knowledge:query -- "<topic>"` only when the merge requires deeper investigation.
 
 ### 2. Verify the merge landed on `dev`
 
