@@ -1,9 +1,9 @@
 # ParkPal Development Roadmap
 
-**Last Updated:** May 1, 2026
-**Current Week:** Phase 6A In Progress
-**Current Phase:** Phase 6A — Mobile Analytics Integration
-**Target Public Launch:** May-June 2026
+**Last Updated:** May 22, 2026
+**Current Week:** Local-first quality stabilization
+**Current Phase:** Phase 6A complete; beta readiness deferred until validation gates are refreshed
+**Target Public Launch:** Deferred until beta readiness evidence is complete
 
 ---
 
@@ -26,22 +26,21 @@
 
 ## Overview
 
-This roadmap reflects the **actual state** of ParkPal as of February 24, 2026, based on deployment data and test results. It provides a realistic path from current critical issues to public launch.
+This roadmap is a planning record. For current project state, branch status, open PRs, and latest validation evidence, read `STATUS_REPORT.md` first.
 
-### Current Reality (April 9, 2026)
+### Current Reality (May 22, 2026)
 
-- Backend: DEPLOYED and healthy (93.4% test pass rate) ✅
-- Web Frontend: DEPLOYED ✅
-- Mobile App: Code ready, EAS configured
-- Infrastructure: All services UP
+- Local development remains the proof-of-concept baseline.
+- Phase 6A mobile analytics, Explore Page Revamp, dark/light mode, and penalty system work are complete.
+- Backend and web Cloud Run validation are future beta/deployment gates, not the current local stabilization target.
+- Mobile app-store submission is intentionally deferred during active development.
 
 ### Target State
 
-- All platforms deployed and functional
-- 90%+ test pass rate across all systems
-- Beta tested with 60 users
-- Production-ready infrastructure
-- Public launch: Late April 2026
+- Fresh local web and backend validation evidence
+- Resolved or risk-accepted mobile TypeScript drift
+- Completed beta readiness checklist evidence
+- Beta distribution only after the explicit release gate is met
 
 ---
 

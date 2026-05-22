@@ -1,8 +1,8 @@
 # Beta Readiness Checklist
 
-**Last Updated:** May 21, 2026
+**Last Updated:** May 22, 2026
 **Status:** Future beta/deployment gate, not the active local development plan
-**Baseline:** `dev` at `05f4dc3` after PR #140; PR #130 remains closed as superseded
+**Baseline:** `dev` at `bf737ea` after PR #144; PR #130 remains closed as superseded and PR #142 remains open as an older docs-only status update branch
 
 This checklist tracks the minimum evidence needed before ParknQuik moves from local-first active development into GCP-backed beta distribution. The existing local development setup remains the proof-of-concept baseline; GCP/Cloud Run validation and app-store submission stay deferred until every required item below is either complete or explicitly waived.
 
@@ -10,7 +10,7 @@ This checklist tracks the minimum evidence needed before ParknQuik moves from lo
 
 | Area | Latest Evidence | Beta Impact |
 |------|-----------------|-------------|
-| PR queue | No open PRs against `dev` after PR #140 merged; PR #130 remains closed as superseded | No stale branch should be merged into beta baseline |
+| PR queue | PR #142 remains open against `dev` as an older docs-only status update branch after PR #144 merged; PR #130 remains closed as superseded | Resolve or close stale docs-only PRs before using `dev` as a beta baseline |
 | Git hygiene | `git diff --check` passed for PR #137 refresh, PR #139 status reconciliation, and PR #140 beta checklist on May 21, 2026 | Formatting whitespace is clean |
 | Web tests | GitHub Frontend Web Tests passed for PR #138, PR #137, and PR #139 on May 21, 2026; latest local web run remains 79/85 passing on May 17, 2026 | Refresh local web evidence before beta readiness claims are raised |
 | Mobile tests | `frontend/mobile npm test -- --runInBand --watchman=false`: 33/33 passing locally on May 21, 2026; GitHub Frontend Mobile Checks passed for PR #138, PR #137, and PR #139 | Current automated mobile unit coverage is green |
