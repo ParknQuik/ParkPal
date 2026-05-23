@@ -8,6 +8,11 @@ const { execFileSync, spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '../..');
 const DEFAULT_BASELINE_REF = 'origin/dev';
 const DEFAULT_LIMIT = 8;
+const STARTUP_CONTEXT_LIMIT = 1;
+const TASK_CONTEXT_LIMIT = 3;
+const STARTUP_TOKEN_BUDGET = 500;
+const FOLLOW_UP_TOKEN_BUDGET = 800;
+const REAL_STARTUP_FILE = 'AGENTS.md';
 
 const QUERY_SPECS = [
   {
@@ -61,6 +66,7 @@ const QUERY_SPECS = [
     query: 'current project status',
     group: 'current-status',
     expectedPaths: [
+      '.agents/knowledge/compact/status.jsonl',
       'STATUS_REPORT.md',
       'docs/BETA_READINESS_CHECKLIST.md'
     ],
@@ -68,12 +74,14 @@ const QUERY_SPECS = [
       'src/navigation/types.ts',
       'src/screens/MyBookingsScreen.tsx'
     ],
-    requireTopPath: 'STATUS_REPORT.md'
+    requireTopPath: '.agents/knowledge/compact/status.jsonl'
   },
   {
     query: 'continue roadmap next steps current gaps blockers',
     group: 'current-status',
     expectedPaths: [
+      '.agents/knowledge/compact/roadmap.jsonl',
+      '.agents/knowledge/compact/status.jsonl',
       'STATUS_REPORT.md',
       'docs/BETA_READINESS_CHECKLIST.md'
     ],
@@ -81,7 +89,7 @@ const QUERY_SPECS = [
       'src/navigation/types.ts',
       'src/screens/MyBookingsScreen.tsx'
     ],
-    requireTopPath: 'STATUS_REPORT.md'
+    requireTopPath: '.agents/knowledge/compact/roadmap.jsonl'
   },
   {
     query: 'mobile header dark mode',
@@ -100,6 +108,7 @@ const QUERY_SPECS = [
     query: 'post merge status report dev current gaps blockers',
     group: 'current-status',
     expectedPaths: [
+      '.agents/knowledge/compact/status.jsonl',
       'STATUS_REPORT.md',
       'docs/BETA_READINESS_CHECKLIST.md'
     ],
@@ -111,7 +120,7 @@ const QUERY_SPECS = [
       '.agents/knowledge/sources.js',
       'src/screens/MyBookingsScreen.ts'
     ],
-    requireTopPath: 'STATUS_REPORT.md'
+    requireTopPath: '.agents/knowledge/compact/status.jsonl'
   }
 ];
 
@@ -368,7 +377,7 @@ function readLineRange(root, relativePath, startLine, endLine) {
 
 function parseCitations(contextOutput) {
   const citations = [];
-  const citationPattern = /^\d+\.\s+(.+?):(\d+)-(\d+)$/gm;
+  const citationPattern = /^\d+\.\s+(.+?):(\d+)-(\d+)(?:\s|$)/gm;
   let match = citationPattern.exec(contextOutput);
 
   while (match) {
@@ -381,6 +390,22 @@ function parseCitations(contextOutput) {
   }
 
   return citations;
+}
+
+function buildCompactRecordPayload(root, dbPath, intent) {
+  const payload = queryKnowledge(root, dbPath, intent, TASK_CONTEXT_LIMIT * 5);
+  const rows = (payload.results || [])
+    .filter((row) => row.sourcePath.startsWith('.agents/knowledge/compact/'))
+    .slice(0, TASK_CONTEXT_LIMIT);
+
+  if (rows.length === 0) {
+    return 'No compact knowledge records were found in the query output.';
+  }
+
+  return rows.map((row) => [
+    `--- ${row.sourcePath}:${row.startLine}-${row.endLine} ---`,
+    readLineRange(root, row.sourcePath, row.startLine, row.endLine)
+  ].join('\n')).join('\n\n');
 }
 
 function buildCitedExcerptPayload(root, contextOutput) {
@@ -422,20 +447,40 @@ function savingsPercent(oldBaseline, comparisonBaseline) {
 function measureTokenSavings(root, dbPath) {
   const intent = 'current project status';
   const env = { KNOWLEDGE_DB_PATH: dbPath };
-  const contextOutput = runNodeScript(root, 'scripts/knowledge/context.js', [intent], env);
+  const startupContextOutput = runNodeScript(root, 'scripts/knowledge/context.js', [
+    intent,
+    '--limit',
+    String(STARTUP_CONTEXT_LIMIT)
+  ], env);
+  const taskContextOutput = runNodeScript(root, 'scripts/knowledge/context.js', [
+    intent,
+    '--limit',
+    String(TASK_CONTEXT_LIMIT)
+  ], env);
   const queryOutput = runNodeScript(root, 'scripts/knowledge/query.js', [intent], env);
-  const citedExcerptPayload = buildCitedExcerptPayload(root, contextOutput);
+  const compactRecordPayload = buildCompactRecordPayload(root, dbPath, intent);
+  const citedExcerptPayload = buildCitedExcerptPayload(root, taskContextOutput);
 
   const scenarios = [
     measurePayload(
-      'new:context-only',
-      `npm run knowledge:context -- "${intent}"`,
-      contextOutput
+      'startup:agents-md',
+      `automatic repo instructions: ${REAL_STARTUP_FILE}`,
+      readRepoFile(root, REAL_STARTUP_FILE)
     ),
     measurePayload(
-      'new:context-plus-cited',
-      `npm run knowledge:context -- "${intent}" + cited source line ranges`,
-      `${contextOutput}\n\n${citedExcerptPayload}`
+      'startup:limit-1',
+      `npm run knowledge:context -- "${intent}" --limit ${STARTUP_CONTEXT_LIMIT}`,
+      startupContextOutput
+    ),
+    measurePayload(
+      'follow-up:compact-context-plus-records',
+      `npm run knowledge:context -- "${intent}" --limit ${TASK_CONTEXT_LIMIT} + compact JSONL records`,
+      `${taskContextOutput}\n\n${compactRecordPayload}`
+    ),
+    measurePayload(
+      'follow-up:markdown-context-plus-cited',
+      `npm run knowledge:context -- "${intent}" --limit ${TASK_CONTEXT_LIMIT} + cited canonical source ranges`,
+      `${taskContextOutput}\n\n${citedExcerptPayload}`
     ),
     measurePayload(
       'old:minimal',
@@ -453,7 +498,7 @@ function measureTokenSavings(root, dbPath) {
       `${queryOutput}\n\n${buildFullFilePayload(root, OLD_BASELINE_FILES.broad)}`
     )
   ];
-  const comparisonBaseline = scenarios.find((scenario) => scenario.name === 'new:context-plus-cited');
+  const comparisonBaseline = scenarios.find((scenario) => scenario.name === 'follow-up:compact-context-plus-records');
 
   return scenarios.map((scenario) => ({
     ...scenario,
@@ -463,7 +508,7 @@ function measureTokenSavings(root, dbPath) {
   }));
 }
 
-function validate(scoredQueries) {
+function validate(scoredQueries, tokenSavings) {
   const failures = [];
 
   for (const item of scoredQueries) {
@@ -471,8 +516,14 @@ function validate(scoredQueries) {
       if (!item.current.expectedAnyHit) {
         failures.push(`${item.spec.query}: current build missed session-aware source-map/session-learning routes.`);
       }
-      if (item.current.pathHitCount <= item.baseline.pathHitCount) {
-        failures.push(`${item.spec.query}: current expected-path hits did not beat baseline.`);
+      if (item.current.pathHitCount < item.baseline.pathHitCount) {
+        failures.push(`${item.spec.query}: current expected-path hits regressed against baseline.`);
+      }
+      if (
+        item.baseline.pathHitCount < item.baseline.expectedPathCount
+        && item.current.pathHitCount <= item.baseline.pathHitCount
+      ) {
+        failures.push(`${item.spec.query}: current expected-path hits did not improve over incomplete baseline.`);
       }
     }
 
@@ -491,6 +542,30 @@ function validate(scoredQueries) {
     if (item.current.rejectedReferenceHits.length > 0) {
       failures.push(`${item.spec.query}: current results include rejected truncated references: ${item.current.rejectedReferenceHits.join(', ')}.`);
     }
+  }
+
+  const startupScenarios = [
+    tokenSavings.find((scenario) => scenario.name === 'startup:agents-md'),
+    tokenSavings.find((scenario) => scenario.name === 'startup:limit-1')
+  ];
+  const compactFollowUp = tokenSavings.find((scenario) => scenario.name === 'follow-up:compact-context-plus-records');
+
+  for (const scenario of startupScenarios) {
+    if (!scenario) {
+      failures.push('startup token scenario is missing.');
+    } else if (scenario.estimatedTokens >= STARTUP_TOKEN_BUDGET) {
+      failures.push(
+        `${scenario.name} estimated ${scenario.estimatedTokens} tokens, expected below ${STARTUP_TOKEN_BUDGET}.`
+      );
+    }
+  }
+
+  if (!compactFollowUp) {
+    failures.push('follow-up compact token scenario is missing.');
+  } else if (compactFollowUp.estimatedTokens >= FOLLOW_UP_TOKEN_BUDGET) {
+    failures.push(
+      `${compactFollowUp.name} estimated ${compactFollowUp.estimatedTokens} tokens, expected below ${FOLLOW_UP_TOKEN_BUDGET}.`
+    );
   }
 
   return failures;
@@ -576,10 +651,12 @@ function formatReport(report) {
     '',
     '## Token Savings',
     '',
+    `Startup budget: startup:agents-md and startup:limit-1 must stay below ${STARTUP_TOKEN_BUDGET} estimated tokens`,
+    `Compact follow-up budget: follow-up:compact-context-plus-records must stay below ${FOLLOW_UP_TOKEN_BUDGET} estimated tokens`,
     'Token estimate: Math.ceil(characterCount / 4)',
     '',
     markdownTable(
-      ['Scenario', 'Est. tokens', 'Words', 'Bytes', 'Savings vs new+cited'],
+      ['Scenario', 'Est. tokens', 'Words', 'Bytes', 'Savings vs compact follow-up'],
       tokenRows
     ),
     '',
@@ -646,7 +723,7 @@ function main() {
         }
       },
       tokenSavings,
-      failures: validate(queries)
+      failures: validate(queries, tokenSavings)
     };
 
     if (options.json) {

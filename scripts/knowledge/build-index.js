@@ -359,6 +359,91 @@ function parseSourceMap(sourcePath, sourceConfig) {
   });
 }
 
+function validateCompactRecord(record, sourcePath, lineNumber) {
+  const requiredFields = ['id', 'h', 'sys', 'st', 'pri', 'txt', 'src'];
+  for (const field of requiredFields) {
+    if (record[field] === undefined || record[field] === null || record[field] === '') {
+      throw new Error(`${sourcePath}:${lineNumber} missing compact field "${field}"`);
+    }
+  }
+
+  if (!VALID_STATUSES.has(record.st)) {
+    throw new Error(`${sourcePath}:${lineNumber} invalid compact status "${record.st}"`);
+  }
+
+  if (!record.src.path || !Number.isInteger(record.src.start) || !Number.isInteger(record.src.end)) {
+    throw new Error(`${sourcePath}:${lineNumber} compact src must include path, start, and end`);
+  }
+
+  const canonicalPath = repoPath(record.src.path);
+  if (!fs.existsSync(canonicalPath)) {
+    throw new Error(`${sourcePath}:${lineNumber} compact src path does not exist: ${record.src.path}`);
+  }
+
+  const canonicalLineCount = fs.readFileSync(canonicalPath, 'utf8').split(/\r?\n/).length;
+  if (record.src.start < 1 || record.src.end < record.src.start || record.src.end > canonicalLineCount) {
+    throw new Error(
+      `${sourcePath}:${lineNumber} compact src range ${record.src.path}:${record.src.start}-${record.src.end} is outside the file`
+    );
+  }
+}
+
+function parseCompactJsonl(sourcePath, sourceConfig) {
+  const absolutePath = repoPath(sourcePath);
+  const lines = fs.readFileSync(absolutePath, 'utf8').split(/\r?\n/);
+  const chunks = [];
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    let entry;
+    try {
+      entry = JSON.parse(trimmed);
+    } catch (error) {
+      throw new Error(`${sourcePath}:${index + 1}: ${error.message}`);
+    }
+
+    validateCompactRecord(entry, sourcePath, index + 1);
+
+    const tags = asList(entry.tags);
+    const refs = asList(entry.refs);
+    const content = [
+      `id=${entry.id}`,
+      `h=${entry.h}`,
+      `sys=${entry.sys}`,
+      `st=${entry.st}`,
+      `pri=${entry.pri}`,
+      entry.d ? `d=${entry.d}` : null,
+      `txt=${entry.txt}`,
+      `refs=${refs.join(' ')}`,
+      `src=${entry.src.path}:${entry.src.start}-${entry.src.end}`,
+      `tags=${tags.join(' ')}`
+    ].filter(Boolean).join('\n');
+
+    chunks.push({
+      recordId: entry.id,
+      sourcePath,
+      headingPath: ['Compact', entry.h],
+      subsystem: entry.sys || sourceConfig.subsystem,
+      knowledgeStatus: entry.st || sourceConfig.defaultStatus,
+      priority: entry.pri || sourceConfig.priority,
+      references: refs,
+      compactText: entry.txt,
+      compactDate: entry.d || null,
+      compactTags: tags,
+      canonicalSourcePath: entry.src.path,
+      canonicalStartLine: entry.src.start,
+      canonicalEndLine: entry.src.end,
+      content,
+      startLine: index + 1,
+      endLine: index + 1
+    });
+  });
+
+  return chunks;
+}
+
 function inferTopics(chunk) {
   const haystack = `${chunk.headingPath.join(' ')}\n${chunk.content}`;
   const topics = new Set();
@@ -370,6 +455,9 @@ function inferTopics(chunk) {
   }
 
   topics.add(chunk.subsystem);
+  for (const tag of chunk.compactTags || []) {
+    topics.add(tag);
+  }
   return Array.from(topics).sort();
 }
 
@@ -399,6 +487,10 @@ function extractReferences(chunk) {
 }
 
 function parseSource(sourcePath, sourceConfig) {
+  if (sourceConfig.type === 'compact-jsonl') {
+    return parseCompactJsonl(sourcePath, sourceConfig);
+  }
+
   if (sourceConfig.type === 'source-map') {
     return parseSourceMap(sourcePath, sourceConfig);
   }
@@ -437,6 +529,11 @@ function createDatabase(chunks, dbPath) {
       summary TEXT NOT NULL,
       content TEXT NOT NULL,
       sourceReferences TEXT NOT NULL,
+      compactText TEXT,
+      compactDate TEXT,
+      canonicalSourcePath TEXT,
+      canonicalStartLine INTEGER,
+      canonicalEndLine INTEGER,
       startLine INTEGER NOT NULL,
       endLine INTEGER NOT NULL,
       lastIndexedCommit TEXT NOT NULL,
@@ -462,10 +559,11 @@ function createDatabase(chunks, dbPath) {
   const insertChunk = db.prepare(`
     INSERT INTO chunks (
       id, sourcePath, headingPath, subsystem, topics, knowledgeStatus, priority,
-      summary, content, sourceReferences, startLine, endLine, lastIndexedCommit,
-      lastIndexedAt, indexHeadCommit, sourceHash, sourceMtimeMs, staleReason,
-      detectedDate, isStale
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      summary, content, sourceReferences, compactText, compactDate,
+      canonicalSourcePath, canonicalStartLine, canonicalEndLine, startLine,
+      endLine, lastIndexedCommit, lastIndexedAt, indexHeadCommit, sourceHash,
+      sourceMtimeMs, staleReason, detectedDate, isStale
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const insertFts = db.prepare(`
     INSERT INTO chunks_fts (
@@ -487,6 +585,11 @@ function createDatabase(chunks, dbPath) {
         chunk.summary,
         chunk.content,
         JSON.stringify(chunk.references),
+        chunk.compactText || null,
+        chunk.compactDate || null,
+        chunk.canonicalSourcePath || null,
+        chunk.canonicalStartLine || null,
+        chunk.canonicalEndLine || null,
         chunk.startLine,
         chunk.endLine,
         chunk.lastIndexedCommit,

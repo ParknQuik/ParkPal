@@ -9,6 +9,9 @@ const { execFileSync, spawnSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.resolve(__dirname, '../..');
+const STARTUP_TOKEN_BUDGET = 500;
+const FOLLOW_UP_TOKEN_BUDGET = 800;
+const REAL_STARTUP_FILE = 'AGENTS.md';
 const DEFAULT_DB_PATH = path.join(
   os.tmpdir(),
   'parkpal-knowledge',
@@ -38,6 +41,8 @@ const SCORE_WEIGHTS = {
   staleChunkPenalty: -2.0,
   historicalIntentBoost: 1.2
 };
+
+const COMPACT_SOURCE_PREFIX = '.agents/knowledge/compact/';
 
 function parseArgs(argv) {
   const options = {
@@ -129,6 +134,19 @@ function hasCurrentIntent(query) {
   return /\b(continue|next|roadmap|current|gaps?|blockers?|status|today|now)\b/i.test(query);
 }
 
+function compactIntentSource(query) {
+  if (/\b(startup|start|workflow|agent|commit|push|pr|knowledge|validate|validation|routing)\b/i.test(query)) {
+    return `${COMPACT_SOURCE_PREFIX}workflow.jsonl`;
+  }
+  if (/\b(roadmap|plan|phase|next|continue|future|target)\b/i.test(query)) {
+    return `${COMPACT_SOURCE_PREFIX}roadmap.jsonl`;
+  }
+  if (/\b(status|current|blockers?|gaps?|readiness|deployment|beta|health|tests?|validation)\b/i.test(query)) {
+    return `${COMPACT_SOURCE_PREFIX}status.jsonl`;
+  }
+  return null;
+}
+
 function calculateScore(row, query) {
   const tokens = tokenize(query);
   const heading = row.headingPath.join(' ');
@@ -154,6 +172,8 @@ function calculateScore(row, query) {
   if (currentIntent && row.sourcePath === 'STATUS_REPORT.md') score += SCORE_WEIGHTS.currentIntentStatusReport;
   if (currentIntent && row.sourcePath === 'docs/BETA_READINESS_CHECKLIST.md') score += SCORE_WEIGHTS.currentIntentBetaReadiness;
   if (currentIntent && !wantsHistory && row.sourcePath === 'ROADMAP.md') score += SCORE_WEIGHTS.currentIntentRoadmapPenalty;
+  if (row.sourcePath.startsWith(COMPACT_SOURCE_PREFIX)) score += 2.0;
+  if (row.sourcePath === compactIntentSource(query)) score += 5.0;
   if (!wantsHistory && ['historical', 'deprecated'].includes(row.knowledgeStatus)) score += SCORE_WEIGHTS.staleStatusPenalty;
   if (!wantsHistory && row.isStale) score += SCORE_WEIGHTS.staleChunkPenalty;
   if (wantsHistory && ['historical', 'deprecated'].includes(row.knowledgeStatus)) score += SCORE_WEIGHTS.historicalIntentBoost;
@@ -252,6 +272,11 @@ function queryIndex(db, query, options = {}) {
       chunks.priority,
       chunks.summary,
       chunks.sourceReferences,
+      chunks.compactText,
+      chunks.compactDate,
+      chunks.canonicalSourcePath,
+      chunks.canonicalStartLine,
+      chunks.canonicalEndLine,
       chunks.content,
       chunks.startLine,
       chunks.endLine,
@@ -278,6 +303,9 @@ function queryIndex(db, query, options = {}) {
         headingPath: parseJsonArray(row.headingPath),
         topics: parseJsonArray(row.topics),
         references: parseJsonArray(row.sourceReferences),
+        citationPath: row.canonicalSourcePath || row.sourcePath,
+        citationStartLine: row.canonicalStartLine || row.startLine,
+        citationEndLine: row.canonicalEndLine || row.endLine,
         isStale: Boolean(row.isStale)
       };
       result.score = calculateScore(result, query);
@@ -367,7 +395,10 @@ function formatResults(query, rows, warnings = []) {
       lines.push(`   staleReason: ${row.staleReason}`);
     }
     lines.push(`   summary: ${row.summary}`);
-    lines.push(`   source: ${row.sourcePath}:${row.startLine}-${row.endLine}`);
+    lines.push(`   source: ${row.citationPath || row.sourcePath}:${row.citationStartLine || row.startLine}-${row.citationEndLine || row.endLine}`);
+    if (row.sourcePath !== (row.citationPath || row.sourcePath)) {
+      lines.push(`   record: ${row.sourcePath}:${row.startLine}-${row.endLine}`);
+    }
     lines.push('');
   });
 
@@ -550,11 +581,11 @@ function runContextOutput(query, env, limit = 3) {
 function assertContextOutput() {
   withTempKnowledgeDb((_tempDbPath, env) => {
     const output = runContextOutput('current project status', env);
-    if (!output.includes('ParkPal Lean Knowledge Context')) {
+    if (!output.includes('ParkPal Compact Context')) {
       throw new Error('Self-test expected context output header.');
     }
-    if (!output.includes('Branch:') || !output.includes('HEAD:')) {
-      throw new Error('Self-test expected context output to include Branch and HEAD.');
+    if (!output.includes('git=')) {
+      throw new Error('Self-test expected context output to include compact git state.');
     }
     if (!/STATUS_REPORT\.md:\d+-\d+/.test(output)) {
       throw new Error('Self-test expected context output to include cited STATUS_REPORT.md line range.');
@@ -562,17 +593,42 @@ function assertContextOutput() {
     if (output.includes('Suggested next reads:')) {
       throw new Error('Self-test expected context output to omit broad suggested reads.');
     }
-    if (!output.includes('read no more than the cited line ranges')) {
+    if (!output.includes('read cited ranges if needed')) {
       throw new Error('Self-test expected context output to include bounded-read instruction.');
     }
+    if (Math.ceil(output.length / 4) >= FOLLOW_UP_TOKEN_BUDGET) {
+      throw new Error('Self-test expected compact follow-up context below 800 estimated tokens.');
+    }
+
+    const startupOutput = runContextOutput('current project status', env, 1);
+    if (Math.ceil(startupOutput.length / 4) >= STARTUP_TOKEN_BUDGET) {
+      throw new Error('Self-test expected compact startup context below 500 estimated tokens.');
+    }
   });
+}
+
+function assertRealStartupPayload() {
+  const payload = fs.readFileSync(path.join(ROOT, REAL_STARTUP_FILE), 'utf8');
+  const estimatedTokens = Math.ceil(payload.length / 4);
+
+  if (payload.includes('@.claude/session-start-instructions.md')) {
+    throw new Error('Self-test expected AGENTS.md not to auto-include detailed session instructions.');
+  }
+
+  if (estimatedTokens >= STARTUP_TOKEN_BUDGET) {
+    throw new Error(
+      `Self-test expected ${REAL_STARTUP_FILE} below ${STARTUP_TOKEN_BUDGET} estimated tokens; got ${estimatedTokens}.`
+    );
+  }
 }
 
 function runQueryChecks(db) {
   const checks = [
     {
       query: 'current project status',
-      expectedPaths: ['STATUS_REPORT.md']
+      expectedFirstPath: '.agents/knowledge/compact/status.jsonl',
+      expectedPaths: ['.agents/knowledge/compact/status.jsonl'],
+      expectedReferences: ['STATUS_REPORT.md']
     },
     {
       query: 'mobile header dark mode',
@@ -597,6 +653,9 @@ function runQueryChecks(db) {
     },
     {
       query: 'post merge status report dev current gaps blockers',
+      expectedPaths: [
+        '.agents/knowledge/compact/status.jsonl'
+      ],
       expectedReferences: [
         'src/screens/MyBookingsScreen.tsx'
       ],
@@ -744,6 +803,7 @@ function runSelfTest() {
   assertFreshnessWarnings();
   assertFreshnessCommands();
   assertContextOutput();
+  assertRealStartupPayload();
 
   withTempKnowledgeDb((tempDbPath) => {
     const db = openDatabase(tempDbPath);
