@@ -155,7 +155,7 @@ function statusRecords() {
       st: 'current',
       pri: 'high',
       d: '2026-05-23',
-      txt: 'No open PRs against dev as verified on May 23. Recently merged: #150, #149, #147, #146, #145, #144, #143, #142, #138, #137, #135.',
+      txt: 'No open PRs against dev as verified on May 23. Recently merged: #151, #150, #149, #147, #146, #145, #144, #143, #142, #138, #137.',
       refs: ['STATUS_REPORT.md'],
       src: { path: 'STATUS_REPORT.md', start: prStart, end: prStart + 3 },
       tags: ['pr', 'branch', 'dev', 'workflow', 'current']
