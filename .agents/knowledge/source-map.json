@@ -189,6 +189,139 @@
         "Screen status bar colors do not match shared header treatment.",
         "Bespoke headers drift from AppHeader token usage."
       ]
+    },
+    {
+      "id": "backend-authentication-flow",
+      "title": "Backend authentication, JWT, and password reset flow",
+      "subsystem": "backend",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "backend/controllers/authController.js",
+        "backend/routes/auth.js",
+        "backend/services/auth.js",
+        "backend/services/websocket.js",
+        "backend/validators/auth.js",
+        "backend/tests/auth.test.js",
+        "backend/tests/password-reset.test.js",
+        "backend/tests/googleAuth.test.js"
+      ],
+      "routeKeywords": [
+        "backend auth",
+        "authentication flow",
+        "login endpoint",
+        "register endpoint",
+        "JWT",
+        "password reset",
+        "forgot password",
+        "reset token",
+        "Google auth",
+        "WebSocket authentication"
+      ],
+      "relatedApis": [
+        "POST /api/v1/auth/register",
+        "POST /api/v1/auth/login",
+        "POST /api/v1/auth/forgot-password",
+        "POST /api/v1/auth/reset-password",
+        "Authorization Bearer token"
+      ],
+      "validationCommands": [
+        "cd backend && npm test -- auth.test.js password-reset.test.js googleAuth.test.js"
+      ],
+      "knownFailurePatterns": [
+        "Local 401s can come from missing seeded users or stale tokens before app code is at fault.",
+        "Password-reset token tests depend on database state and token expiry semantics.",
+        "WebSocket clients must provide a valid JWT token during connection setup."
+      ]
+    },
+    {
+      "id": "web-dashboard-guide-components",
+      "title": "Web dashboard guide, protected routes, and dashboard components",
+      "subsystem": "web",
+      "priority": "medium",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/web/WEB_DASHBOARD_GUIDE.md",
+        "frontend/web/src/screens/AdminDashboard.jsx",
+        "frontend/web/src/screens/HostDashboard.jsx",
+        "frontend/web/src/components/NavBar.tsx",
+        "frontend/web/src/components/ProtectedRoute.tsx",
+        "frontend/web/src/contexts/AuthContext.tsx",
+        "frontend/web/src/components/__tests__/ProtectedRoute.test.tsx",
+        "frontend/web/src/components/__tests__/NavBar.test.tsx",
+        "frontend/web/src/__tests__/auth-integration.test.tsx"
+      ],
+      "routeKeywords": [
+        "web dashboard",
+        "dashboard guide",
+        "AdminDashboard",
+        "HostDashboard",
+        "ProtectedRoute",
+        "NavBar",
+        "AuthContext",
+        "web login",
+        "dashboard components"
+      ],
+      "relatedApis": [
+        "dashboard navigation",
+        "protected route gating",
+        "auth context session state",
+        "host dashboard",
+        "admin dashboard"
+      ],
+      "validationCommands": [
+        "cd frontend/web && npm test -- --run"
+      ],
+      "knownFailurePatterns": [
+        "Dashboard routes can fail tests when rendered outside the expected router/auth providers.",
+        "ProtectedRoute behavior depends on AuthContext loading and authenticated-user state.",
+        "Web work is not the current mobile-first focus unless explicitly selected."
+      ]
+    },
+    {
+      "id": "cloud-run-deployment-configuration",
+      "title": "Cloud Run deployment workflow and environment configuration",
+      "subsystem": "deployment",
+      "priority": "high",
+      "knowledgeStatus": "needs-verification",
+      "sourcePaths": [
+        ".github/workflows/deploy-backend.yml",
+        ".github/workflows/deploy-web.yml",
+        "backend/cloudbuild.yaml",
+        "docs/DEPLOYMENT.md",
+        "docs/ENVIRONMENTS.md",
+        "docs/GCP_SECRET_MANAGER.md",
+        "frontend/web/DEPLOYMENT_SETUP.md",
+        "STATUS_REPORT.md"
+      ],
+      "routeKeywords": [
+        "Cloud Run",
+        "Cloud Run deployment",
+        "deploy backend",
+        "deploy web",
+        "GCP deployment",
+        "deployment workflow",
+        "Secret Manager",
+        "environment config",
+        "deployed backend",
+        "beta deployment gate"
+      ],
+      "relatedApis": [
+        "deploy-backend GitHub Actions workflow",
+        "deploy-web GitHub Actions workflow",
+        "gcloud run deploy",
+        "GCP Secret Manager",
+        "Cloud Run health check"
+      ],
+      "validationCommands": [
+        "rtk git diff --check .github/workflows/deploy-backend.yml .github/workflows/deploy-web.yml docs/DEPLOYMENT.md docs/ENVIRONMENTS.md",
+        "rtk npm run knowledge:query -- \"Cloud Run deployment\" --json"
+      ],
+      "knownFailurePatterns": [
+        "Historical Cloud Run notes are beta/deployment gates, not current local-development priorities.",
+        "Local development should use .env while deployed services use configured Cloud Run environment and Secret Manager values.",
+        "Backend Cloud Run health has required re-verification before beta or production sign-off."
+      ]
     }
   ]
 }
