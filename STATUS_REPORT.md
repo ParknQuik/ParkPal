@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 23, 2026 | Codex | Verified PR #151 merged into `dev` at `38ae37a`, shipping compact knowledge context, tracked compact JSONL mirrors, and the single automatic startup card; GitHub PR checks passed and no open PRs remain against `dev` | 95/100 |
 | May 23, 2026 | Codex | Verified `dev` at `be163bc` after merged PRs #146, #147, #149, and #150; confirmed no open PRs against `dev`; reconciled the status report to keep beta/deployment gates as follow-up work while shipping the compact knowledge-context enhancement from a feature branch | 95/100 |
 | May 22, 2026 | Codex | Resolved mobile TypeScript drift in navigation/image imports; refreshed local validation with mobile TypeScript passing, targeted mobile booking tests 9/9 passing, web tests 85/85 passing, backend tests 471/473 passing with 2 skipped, `git diff --check` passing, and no open PRs against `dev` | 95/100 |
 | May 22, 2026 | Codex | Verified PR #145 merged into `dev` at `a4bd5c4`, reconciling markdown status docs and moving the generated knowledge index database to a repo-scoped OS temp cache so normal rebuilds no longer require `.agents/knowledge` write access | 95/100 |
@@ -102,12 +103,12 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### Current Reconciliation (May 23, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests, PR #137 completed the mobile header-safe-area merge, PR #139 refreshed status reporting, PR #140 added the beta readiness checklist, PR #141 corrected the local-first status path, PR #144 added the repo-local knowledge index, PR #145 reconciled current markdown status docs, PR #146 and PR #150 added lean/session-aware knowledge benchmarks, PR #147 fixed mobile TypeScript drift, and PR #149 improved cash booking payment flow and mobile UI consistency. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
-- **Branch state:** `origin/dev` is at `be163bc` after PR #150; PR #130 remains closed as superseded, PR #142 has merged, and there are no open PRs against `dev` as verified by `gh pr list --base dev --state open` on May 23, 2026.
+- **Production readiness:** 95/100 after PR #138 stabilized backend payment/marketplace tests, PR #137 completed the mobile header-safe-area merge, PR #139 refreshed status reporting, PR #140 added the beta readiness checklist, PR #141 corrected the local-first status path, PR #144 added the repo-local knowledge index, PR #145 reconciled current markdown status docs, PR #146 and PR #150 added lean/session-aware knowledge benchmarks, PR #147 fixed mobile TypeScript drift, PR #149 improved cash booking payment flow and mobile UI consistency, and PR #151 shipped compact knowledge context. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
+- **Branch state:** `origin/dev` is at `38ae37a` after PR #151; PR #130 remains closed as superseded, PR #142 has merged, and there are no open PRs against `dev` as verified by `gh pr list --base dev --state open` on May 23, 2026.
 - **Backend:** PR #138 merged at `a55d6b5` with GitHub Backend Tests passing on May 21, 2026, and latest local backend full-suite evidence remains 471/473 passing with 2 skipped on May 22, 2026. Cloud Run `/health` rechecks belong to future deployment/beta validation.
 - **Web:** Development service was previously deployed on Cloud Run and returned HTTP 200. Latest local web evidence is 85/85 passing on May 22, 2026.
 - **Mobile:** EAS-ready and working for local development; local mobile TypeScript passes and targeted mobile booking tests are 9/9 passing as of May 22, 2026. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
-- **Workflow tooling:** 11 repo-local skills, Codex role configs, and the `.agents/knowledge` index configuration are intended project tooling; the generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
+- **Workflow tooling:** 11 repo-local skills, Codex role configs, compact knowledge context, tracked compact JSONL mirrors, and the `.agents/knowledge` index configuration are intended project tooling; the generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
 ### Current State (May 23, 2026)
 
@@ -430,6 +431,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - None. Verified by `gh pr list --base dev --state open` on May 23, 2026.
 
 **Recently Merged:**
+- #151: Add compact knowledge context
 - #150: Add session-aware knowledge index regression benchmark
 - #149: Improve cash booking payment flow and mobile UI consistency
 - #147: Fix mobile TypeScript drift
@@ -1093,7 +1095,7 @@ The following March plan is retained for history only. Current status is documen
 
 ### Immediate (May 23, 2026)
 
-1. Ship the compact knowledge-context enhancement from a feature branch into `dev`.
+1. Test the new compact startup approach from a fresh session: `start`, verify it rebuilds if stale, returns one compact context result, verifies git state, and stops for task selection.
 2. Keep `docs/BETA_READINESS_CHECKLIST.md` as the future beta/deployment gate before GCP deployment validation or app-store submission work resumes.
 3. Recheck Cloud Run health only when beta/deployment validation resumes; do not provision new PostgreSQL or Redis resources for the current local-first stabilization pass.
 
