@@ -22,7 +22,7 @@ function main() {
   }
 
   console.log('Knowledge DB is missing or stale; rebuilding.');
-  execFileSync(process.execPath, ['--no-warnings', 'scripts/knowledge/build-index.js'], {
+  execFileSync('npm', ['run', 'knowledge:build'], {
     cwd: process.cwd(),
     stdio: 'inherit'
   });

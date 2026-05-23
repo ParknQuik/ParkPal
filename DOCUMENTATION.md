@@ -1,6 +1,6 @@
 # Documentation Guide
 
-**Last Updated:** May 22, 2026
+**Last Updated:** May 23, 2026
 
 ---
 
@@ -74,8 +74,9 @@
 
 ### Agent Retrieval
 
-- Run `npm run knowledge:context -- "<intent>"` for startup, current-status, continue, and planning prompts.
-- Use the cited line ranges from `knowledge:context` as the default read boundary; do not open full Markdown files unless implementation detail is genuinely needed.
+- For startup, run `npm run knowledge:rebuild-if-stale`, then `npm run knowledge:context -- "<intent>" --limit 1`, verify live git state, and stop to ask what to work on.
+- For planning, implementation, current-status follow-up, continue, and handoff prompts after task selection, run `npm run knowledge:context -- "<intent>" --limit 3`.
+- Use cited line ranges as the default read boundary after task selection; do not open full Markdown files unless implementation detail is genuinely needed.
 - Run `npm run knowledge:query -- "<topic>"` only for deeper investigation.
 - Rebuild with `npm run knowledge:build` when indexed sources change.
 - Markdown remains canonical storage. The SQLite database is a generated retrieval/cache layer, and token savings come from bounded retrieval rather than deleting Markdown.

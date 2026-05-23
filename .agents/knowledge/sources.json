@@ -1,9 +1,30 @@
 {
   "sources": [
     {
-      "path": "STATUS_REPORT.md",
+      "path": ".agents/knowledge/compact/status.jsonl",
+      "type": "compact-jsonl",
       "subsystem": "status",
       "priority": "always",
+      "defaultStatus": "current"
+    },
+    {
+      "path": ".agents/knowledge/compact/roadmap.jsonl",
+      "type": "compact-jsonl",
+      "subsystem": "planning",
+      "priority": "always",
+      "defaultStatus": "planned"
+    },
+    {
+      "path": ".agents/knowledge/compact/workflow.jsonl",
+      "type": "compact-jsonl",
+      "subsystem": "agent-workflow",
+      "priority": "always",
+      "defaultStatus": "current"
+    },
+    {
+      "path": "STATUS_REPORT.md",
+      "subsystem": "status",
+      "priority": "high",
       "defaultStatus": "current",
       "statusOverrides": [
         {
@@ -23,7 +44,7 @@
     {
       "path": "DOCUMENTATION.md",
       "subsystem": "docs",
-      "priority": "always",
+      "priority": "medium",
       "defaultStatus": "current"
     },
     {

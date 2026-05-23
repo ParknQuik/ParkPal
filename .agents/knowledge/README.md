@@ -8,9 +8,11 @@ database is only a fast retrieval layer.
 
 ```bash
 npm run knowledge:build
+npm run knowledge:compact
 npm run knowledge:check
 npm run knowledge:rebuild-if-stale
-npm run knowledge:context -- "current project status"
+npm run knowledge:context -- "current project status" --limit 1
+npm run knowledge:context -- "current project status" --limit 3 --verbose
 npm run knowledge:query -- "mobile header dark mode"
 npm run knowledge:add-learning -- --title "Short learning title" --lesson "Concrete lesson"
 npm run knowledge:query -- "current project status" --json
@@ -22,7 +24,7 @@ For test and debugging work only, both build and query scripts support a
 
 ```bash
 KNOWLEDGE_DB_PATH=/tmp/parkpal-knowledge.db npm run knowledge:build
-KNOWLEDGE_DB_PATH=/tmp/parkpal-knowledge.db npm run knowledge:context -- "current project status"
+KNOWLEDGE_DB_PATH=/tmp/parkpal-knowledge.db npm run knowledge:context -- "current project status" --limit 1
 KNOWLEDGE_DB_PATH=/tmp/parkpal-knowledge.db npm run knowledge:query -- "current project status" --json
 ```
 
@@ -32,7 +34,11 @@ so multiple checkouts do not share an index.
 
 ## Files
 
-- `sources.json` lists the deliberately indexed markdown sources.
+- `sources.json` lists the deliberately indexed compact, markdown, and curated
+  JSON sources.
+- `compact/*.jsonl` stores generated-plus-curated compact mirrors for status,
+  roadmap, and workflow routing. Each record keeps a canonical `src` citation
+  back to human-readable docs.
 - `source-map.json` lists curated source ownership, route keywords, validation
   commands, and known failure patterns for high-traffic implementation areas.
 - `docs/agent-knowledge/SESSION_LEARNINGS.md` stores durable curated lessons
@@ -43,11 +49,18 @@ so multiple checkouts do not share an index.
 
 ## Token-Budgeted Context
 
-Use `npm run knowledge:context -- "<intent>"` as the default agent entrypoint for
-startup, current-status, continue, and planning prompts. It prints the current
-branch and HEAD, freshness warnings, and the top cited knowledge chunks with
-summary, status, score, and exact source line ranges. It intentionally omits
-full chunk content and broad suggested reads.
+Use `npm run knowledge:context -- "<intent>" --limit 1` as the default startup
+entrypoint. Startup is an under-500-token routing pass: rebuild the index if
+stale, print one compact cited result plus branch and HEAD, verify git state,
+then stop and ask what to work on. Do not read cited ranges during plain startup
+unless the user provides a specific intent that requires verified status.
+
+Use `npm run knowledge:context -- "<intent>" --limit 3` for planning,
+implementation, current-status follow-up, and continue prompts after the user
+chooses a task. By default it prints compact one-line records with status,
+subsystem, score, short text, and canonical source line ranges. The target for
+compact follow-up context plus compact JSONL records is under 800 estimated
+tokens. Use `--verbose` for the older readable multi-line output when debugging.
 
 Agents should read no more than the cited line ranges unless the task genuinely
 requires deeper implementation detail. `npm run knowledge:query -- "<topic>"`
@@ -57,10 +70,14 @@ remains the escape hatch for deeper investigation.
 
 - Add sources deliberately instead of indexing every markdown file.
 - Keep Markdown as canonical, human-reviewable storage.
+- Keep compact JSONL mirrors agent-facing and cite their canonical `src` ranges
+  before using them as verified status.
 - Treat SQLite as generated retrieval/cache data, not canonical content.
 - Treat `needs-verification`, `planned`, and `historical` results as leads.
-- Verify current status with git, `STATUS_REPORT.md`, and source files before
-  making implementation claims.
+- During plain startup, verify only git state after the one-result context pass.
+- For explicit current-status follow-up, verify with git, cited
+  `STATUS_REPORT.md` ranges, and source files before making implementation
+  claims.
 
 ## Freshness
 
@@ -99,6 +116,10 @@ default ignored database untouched. It covers:
 - payment, QR hook-order, and mobile icon source-map/session-learning queries
 - `.json` and `.tsx` reference extraction without truncated extensions
 - lean context output with Branch/HEAD, cited line ranges, and no suggested broad reads
+- compact mirrors parse and their canonical `src` ranges exist
+- startup `--limit 1` context staying below 500 estimated tokens
+- compact follow-up context plus compact JSONL records staying below 800
+  estimated tokens
 
 ## Manual Learning Capture
 

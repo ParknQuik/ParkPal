@@ -6,6 +6,9 @@ const { execFileSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '../..');
 const INTENT = 'current project status';
+const STARTUP_LIMIT = 1;
+const TASK_CONTEXT_LIMIT = 3;
+const REAL_STARTUP_FILE = 'AGENTS.md';
 
 const OLD_BASELINE_FILES = {
   minimal: [
@@ -47,7 +50,7 @@ function readLineRange(relativePath, startLine, endLine) {
 
 function parseCitations(contextOutput) {
   const citations = [];
-  const citationPattern = /^\d+\.\s+(.+?):(\d+)-(\d+)$/gm;
+  const citationPattern = /^\d+\.\s+(.+?):(\d+)-(\d+)(?:\s|$)/gm;
   let match = citationPattern.exec(contextOutput);
 
   while (match) {
@@ -60,6 +63,22 @@ function parseCitations(contextOutput) {
   }
 
   return citations;
+}
+
+function buildCompactRecordPayload(queryJsonOutput, limit) {
+  const payload = JSON.parse(queryJsonOutput);
+  const rows = (payload.results || [])
+    .filter((row) => row.sourcePath.startsWith('.agents/knowledge/compact/'))
+    .slice(0, limit);
+
+  if (rows.length === 0) {
+    return 'No compact knowledge records were found in the query output.';
+  }
+
+  return rows.map((row) => [
+    `--- ${row.sourcePath}:${row.startLine}-${row.endLine} ---`,
+    readLineRange(row.sourcePath, row.startLine, row.endLine)
+  ].join('\n')).join('\n\n');
 }
 
 function buildCitedExcerptPayload(contextOutput) {
@@ -121,7 +140,7 @@ function savingsPercent(oldBaseline, newBaseline) {
 
 function formatScenarioTable(scenarios, comparisonBaseline) {
   const rows = [
-    ['Scenario', 'Est. tokens', 'Words', 'Bytes', 'Savings vs new+cited']
+    ['Scenario', 'Est. tokens', 'Words', 'Bytes', 'Savings vs compact follow-up']
   ];
 
   for (const scenario of scenarios) {
@@ -155,20 +174,33 @@ function unique(values) {
 }
 
 function main() {
-  const contextOutput = runNodeScript('context.js', [INTENT]);
+  const startupContextOutput = runNodeScript('context.js', [INTENT, '--limit', String(STARTUP_LIMIT)]);
+  const taskContextOutput = runNodeScript('context.js', [INTENT, '--limit', String(TASK_CONTEXT_LIMIT)]);
   const queryOutput = runNodeScript('query.js', [INTENT]);
-  const citedExcerptPayload = buildCitedExcerptPayload(contextOutput);
+  const queryJsonOutput = runNodeScript('query.js', [INTENT, '--json', '--limit', String(TASK_CONTEXT_LIMIT * 5)]);
+  const citedExcerptPayload = buildCitedExcerptPayload(taskContextOutput);
+  const compactRecordPayload = buildCompactRecordPayload(queryJsonOutput, TASK_CONTEXT_LIMIT);
 
   const scenarios = [
     measurePayload(
-      'new:context-only',
-      `npm run knowledge:context -- "${INTENT}"`,
-      contextOutput
+      'startup:agents-md',
+      `automatic repo instructions: ${REAL_STARTUP_FILE}`,
+      readRepoFile(REAL_STARTUP_FILE)
     ),
     measurePayload(
-      'new:context-plus-cited',
-      `npm run knowledge:context -- "${INTENT}" + cited source line ranges`,
-      `${contextOutput}\n\n${citedExcerptPayload}`
+      'startup:limit-1',
+      `npm run knowledge:context -- "${INTENT}" --limit ${STARTUP_LIMIT}`,
+      startupContextOutput
+    ),
+    measurePayload(
+      'follow-up:compact-context-plus-records',
+      `npm run knowledge:context -- "${INTENT}" --limit ${TASK_CONTEXT_LIMIT} + compact JSONL records`,
+      `${taskContextOutput}\n\n${compactRecordPayload}`
+    ),
+    measurePayload(
+      'follow-up:markdown-context-plus-cited',
+      `npm run knowledge:context -- "${INTENT}" --limit ${TASK_CONTEXT_LIMIT} + cited canonical source ranges`,
+      `${taskContextOutput}\n\n${citedExcerptPayload}`
     ),
     measurePayload(
       'old:minimal',
@@ -187,14 +219,16 @@ function main() {
     )
   ];
 
-  const comparisonBaseline = scenarios.find((scenario) => scenario.name === 'new:context-plus-cited');
+  const comparisonBaseline = scenarios.find((scenario) => scenario.name === 'follow-up:compact-context-plus-records');
   const warnings = unique([
-    ...extractFreshnessWarnings(contextOutput),
+    ...extractFreshnessWarnings(startupContextOutput),
+    ...extractFreshnessWarnings(taskContextOutput),
     ...extractFreshnessWarnings(queryOutput)
   ]);
 
   console.log('ParkPal Knowledge Context Savings Benchmark');
   console.log(`Intent: ${INTENT}`);
+  console.log(`Real startup instruction file: ${REAL_STARTUP_FILE}`);
   console.log('Token estimate: Math.ceil(characterCount / 4)');
   console.log('');
   console.log(formatScenarioTable(scenarios, comparisonBaseline));
