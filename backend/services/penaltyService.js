@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 const STRIKE_RESET_DAYS = 60;
 
@@ -96,4 +95,38 @@ async function checkSuspension(userId) {
   return null;
 }
 
-module.exports = { applyStrike, checkSuspension };
+async function getBehaviorStatus(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      noShowCount: true,
+      lateCancelCount: true,
+      suspendedUntil: true,
+      lastStrikeAt: true,
+    },
+  });
+
+  if (!user) return null;
+
+  const totalStrikes = user.noShowCount + user.lateCancelCount;
+  const isSuspended = Boolean(user.suspendedUntil && new Date(user.suspendedUntil) > new Date());
+
+  return {
+    noShowCount: user.noShowCount,
+    lateCancelCount: user.lateCancelCount,
+    totalStrikes,
+    isSuspended,
+    suspendedUntil: user.suspendedUntil,
+    lastStrikeAt: user.lastStrikeAt,
+    strikeResetDays: STRIKE_RESET_DAYS,
+    policySummary: {
+      warning: 'First strike is a warning.',
+      suspension: 'Second and later strikes temporarily pause booking access.',
+      noShow: 'No-shows and missed open-time check-ins count as no-show strikes.',
+      lateCancellation: 'Cancellations within 1 hour of start count as late-cancellation strikes.',
+      reset: `Strikes reset after ${STRIKE_RESET_DAYS} days without another strike.`,
+    },
+  };
+}
+
+module.exports = { applyStrike, checkSuspension, getBehaviorStatus, STRIKE_RESET_DAYS };

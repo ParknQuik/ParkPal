@@ -1,7 +1,12 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api.config';
-import { PointsBalance, PointsHistoryResponse, ReferralStats } from '../types';
+import type {
+  BehaviorStatus,
+  PointsBalance,
+  PointsHistoryResponse,
+  ReferralStats,
+} from '../types';
 
 // Create axios instance
 const api = axios.create({
@@ -236,6 +241,10 @@ export const userAPI = {
       phone: string | null;
       profileImageUrl: string | null;
     }>('/users/profile/upload', { fileName }),
+};
+
+export const behaviorAPI = {
+  getStatus: () => api.get<BehaviorStatus>('/users/behavior-status'),
 };
 
 // Payment endpoints (PayMongo integration)

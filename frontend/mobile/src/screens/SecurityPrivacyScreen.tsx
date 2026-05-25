@@ -2,13 +2,15 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAppDispatch, useAppSelector } from '../store';
+import { fetchBehaviorStatus } from '../store/slices/behaviorSlice';
 import { setThemeMode } from '../store/slices/settingsSlice';
 import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AccountStanding } from '../components/AccountStanding';
 
 export const SecurityPrivacyScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -16,6 +18,13 @@ export const SecurityPrivacyScreen: React.FC = () => {
   const statusBarStyle = useStatusBarStyle();
   const dispatch = useAppDispatch();
   const themeMode = useAppSelector((state) => state.settings.themeMode);
+  const behaviorStatus = useAppSelector((state) => state.behavior.status);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(fetchBehaviorStatus());
+    }, [dispatch])
+  );
 
   const themeOptions: Array<{ label: string; value: 'system' | 'light' | 'dark' }> = [
     { label: 'System', value: 'system' },
@@ -48,6 +57,9 @@ export const SecurityPrivacyScreen: React.FC = () => {
       padding: 16,
     },
     section: {
+      marginBottom: 24,
+    },
+    standingSection: {
       marginBottom: 24,
     },
     sectionTitle: {
@@ -106,6 +118,10 @@ export const SecurityPrivacyScreen: React.FC = () => {
         <AppHeader title="Security & Privacy" onBack={handleBack} />
       </SafeAreaView>
       <ScrollView style={[styles.contentArea, styles.content]}>
+        <View style={styles.standingSection}>
+          <AccountStanding status={behaviorStatus} testID="security-account-standing" />
+        </View>
+
         <View style={styles.themeSection}>
           <Text style={styles.themeLabel}>Appearance</Text>
           <View style={styles.themeOptions}>
