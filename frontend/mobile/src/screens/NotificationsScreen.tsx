@@ -32,6 +32,10 @@ function getNotificationIcon(type: string): string {
   return NOTIFICATION_ICONS[type] ?? DEFAULT_ICON;
 }
 
+function isPenaltyNotification(type: string): boolean {
+  return type === 'penalty_strike';
+}
+
 function getRelativeTime(dateString: string): string {
   const now = Date.now();
   const then = new Date(dateString).getTime();
@@ -208,10 +212,12 @@ export const NotificationsScreen: React.FC = () => {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.white,
+      backgroundColor: colors.surface,
       borderRadius: borderRadius.md,
       padding: spacing.md,
       marginBottom: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     cardUnread: {
       backgroundColor: colors.surfaceSecondary,
@@ -222,7 +228,7 @@ export const NotificationsScreen: React.FC = () => {
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: colors.background,
+      backgroundColor: colors.surfaceSecondary,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: spacing.sm,
@@ -230,6 +236,9 @@ export const NotificationsScreen: React.FC = () => {
     },
     icon: {
       fontSize: 22,
+    },
+    penaltyIconContainer: {
+      backgroundColor: `${colors.warning}18`,
     },
     unreadDot: {
       position: 'absolute',
@@ -291,8 +300,12 @@ export const NotificationsScreen: React.FC = () => {
       activeOpacity={0.7}
       onPress={() => handleMarkAsRead(item.id)}
     >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{getNotificationIcon(item.type)}</Text>
+      <View style={[styles.iconContainer, isPenaltyNotification(item.type) && styles.penaltyIconContainer]}>
+        {isPenaltyNotification(item.type) ? (
+          <MaterialCommunityIcons name="shield-alert-outline" size={24} color={colors.warning} />
+        ) : (
+          <Text style={styles.icon}>{getNotificationIcon(item.type)}</Text>
+        )}
         {!item.read && <View style={styles.unreadDot} />}
       </View>
       <View style={styles.textContainer}>

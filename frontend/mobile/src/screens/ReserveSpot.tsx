@@ -221,6 +221,10 @@ export const ReserveSpot: React.FC = () => {
     content: {
       flex: 1,
     },
+    contentContainer: {
+      padding: 16,
+      paddingBottom: 120,
+    },
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -236,7 +240,7 @@ export const ReserveSpot: React.FC = () => {
       borderRadius: 16,
       padding: 16,
       marginBottom: 24,
-      shadowColor: '#000',
+      shadowColor: colors.black,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.05,
       shadowRadius: 8,
@@ -287,17 +291,22 @@ export const ReserveSpot: React.FC = () => {
       width: 100,
       height: 100,
       borderRadius: 12,
-      backgroundColor: colors.border,
+      backgroundColor: colors.surfaceSecondary,
     },
     spotImagePlaceholder: {
       width: 100,
       height: 100,
       borderRadius: 12,
-      backgroundColor: colors.border,
+      backgroundColor: colors.surfaceSecondary,
       justifyContent: 'center',
       alignItems: 'center',
     },
     section: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
       marginBottom: 24,
     },
     sectionTitle: {
@@ -313,7 +322,7 @@ export const ReserveSpot: React.FC = () => {
     },
     rentalModeOption: {
       flex: 1,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceSecondary,
       borderRadius: 12,
       padding: 16,
       borderWidth: 2,
@@ -358,7 +367,7 @@ export const ReserveSpot: React.FC = () => {
     },
     inputContainer: {
       position: 'relative',
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceSecondary,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 12,
@@ -379,7 +388,7 @@ export const ReserveSpot: React.FC = () => {
     vehicleItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceSecondary,
       borderWidth: 2,
       borderColor: colors.border,
       borderRadius: 12,
@@ -393,7 +402,7 @@ export const ReserveSpot: React.FC = () => {
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: colors.background,
+      backgroundColor: `${colors.primary}12`,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
@@ -421,7 +430,7 @@ export const ReserveSpot: React.FC = () => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceSecondary,
       borderWidth: 1,
       borderColor: colors.primary,
       borderRadius: 12,
@@ -599,7 +608,11 @@ export const ReserveSpot: React.FC = () => {
       </SafeAreaView>
 
       <View style={styles.contentArea}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.spotCard}>
           <View style={styles.spotInfo}>
             <View style={styles.spotDetails}>

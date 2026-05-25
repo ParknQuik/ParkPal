@@ -65,16 +65,24 @@ export const ReferralScreen: React.FC = () => {
     safeArea: {
       backgroundColor: colors.appHeaderBackground,
     },
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
     scrollView: {
       flex: 1,
     },
     scrollContent: {
+      padding: spacing.lg,
       paddingBottom: spacing.xl,
+      gap: spacing.md,
     },
     sectionContainer: {
-      backgroundColor: colors.white,
-      marginTop: spacing.md,
+      backgroundColor: colors.surface,
       padding: spacing.lg,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     sectionTitle: {
       ...typography.h5,
@@ -85,7 +93,9 @@ export const ReferralScreen: React.FC = () => {
     stepItem: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      marginBottom: spacing.lg,
+      paddingVertical: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
     },
     stepNumberContainer: {
       width: 28,
@@ -110,7 +120,7 @@ export const ReferralScreen: React.FC = () => {
       width: 48,
       height: 48,
       borderRadius: borderRadius.lg,
-      backgroundColor: 'rgba(16, 183, 127, 0.1)',
+      backgroundColor: `${colors.primary}14`,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: spacing.md,
@@ -130,9 +140,12 @@ export const ReferralScreen: React.FC = () => {
       lineHeight: 20,
     },
     summaryContainer: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.surface,
       marginTop: spacing.md,
       padding: spacing.lg,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     summaryTitle: {
       ...typography.h5,
@@ -148,7 +161,9 @@ export const ReferralScreen: React.FC = () => {
     },
     statCard: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: colors.surfaceSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
       borderRadius: borderRadius.lg,
       padding: spacing.lg,
       alignItems: 'center',
@@ -174,12 +189,13 @@ export const ReferralScreen: React.FC = () => {
   }), [colors]);
 
   return (
-    <>
+    <View style={styles.container}>
       <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <AppHeader title="Referral Program" onBack={handleBack} />
-          <ScrollView style={styles.scrollView}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title="Referral Program" onBack={handleBack} />
+      </SafeAreaView>
+        <View style={styles.contentArea}>
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <View style={styles.scrollContent}>
               <ReferralCodeDisplay />
               <View style={styles.sectionContainer}>
@@ -201,7 +217,7 @@ export const ReferralScreen: React.FC = () => {
                   </View>
                 ))}
               </View>
-              <View style={styles.sectionContainer}>
+              <View style={styles.summaryContainer}>
                 <Text style={styles.summaryTitle}>Your Referral Stats</Text>
                 <View style={styles.statsRow}>
                   <View style={styles.statCard}>
@@ -221,7 +237,6 @@ export const ReferralScreen: React.FC = () => {
             </View>
           </ScrollView>
         </View>
-      </SafeAreaView>
-    </>
+    </View>
   );
 };
