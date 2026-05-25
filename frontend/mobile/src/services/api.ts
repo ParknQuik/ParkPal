@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api.config';
 import type {
   BehaviorStatus,
+  ParkingCandidateDiscoveryPin,
   PointsBalance,
   PointsHistoryResponse,
   ReferralStats,
@@ -139,6 +140,12 @@ export const marketplaceAPI = {
     status?: string;
     q?: string;
   }) => api.get('/marketplace/search', { params }),
+
+  getDiscoveryCandidates: (params: {
+    lat: number;
+    lon: number;
+    radius?: number;
+  }) => api.get<{ data: ParkingCandidateDiscoveryPin[] }>('/marketplace/discovery/candidates', { params }),
 
   // Bookings
   createBookingMarketplace: (data: {

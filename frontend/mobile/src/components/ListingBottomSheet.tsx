@@ -85,6 +85,8 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
   const reviewCount = listing?.reviewCount || 0;
   const pricePerHour = listing?.pricePerHour != null ? `₱${listing.pricePerHour}` : '—';
   const amenities = listing?.amenities || [];
+  const canBook = listing?.canBook !== false;
+  const isPreviewCandidate = listing?.source === 'google_candidate' && listing?.isPreview;
 
   const occupancyPercentage = zoneAvailability?.occupancyPercentage;
   const availableSlots = zoneAvailability?.available;
@@ -110,6 +112,8 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
     collapsedPrice: { alignItems: 'flex-end' },
     collapsedPriceText: { fontSize: 18, fontWeight: '800', color: colors.primary },
     collapsedPriceUnit: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
+    previewBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warning + '20', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+    previewBadgeText: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
     expandedScrollView: { flex: 1 },
     expandedContent: { paddingHorizontal: 16 },
     expandedImage: { width: '100%', height: 180, borderRadius: 12, marginBottom: 16 },
@@ -166,24 +170,33 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
         <View style={styles.collapsedTextContainer}>
           <Text style={styles.collapsedTitle} numberOfLines={1}>{title}</Text>
           <View style={styles.collapsedMeta}>
-            <View style={styles.collapsedRating}>
-              <MaterialCommunityIcons name="star" size={12} color="#FBBF24" />
-              <Text style={styles.collapsedRatingText}>{rating}</Text>
-              <Text style={styles.collapsedReviews}>({reviewCount})</Text>
-            </View>
+            {canBook && (
+              <View style={styles.collapsedRating}>
+                <MaterialCommunityIcons name="star" size={12} color="#FBBF24" />
+                <Text style={styles.collapsedRatingText}>{rating}</Text>
+                <Text style={styles.collapsedReviews}>({reviewCount})</Text>
+              </View>
+            )}
             <View style={styles.collapsedDistance}>
               <MaterialCommunityIcons name="map-marker" size={12} color={colors.textSecondary} />
               <Text style={styles.collapsedDistanceText}>{distance}</Text>
             </View>
           </View>
         </View>
-        <View style={styles.collapsedPrice} accessible accessibilityLabel={`${pricePerHour} per hour`}>
-          <Text style={styles.collapsedPriceText}>{pricePerHour}</Text>
-          <Text style={styles.collapsedPriceUnit}>/hr</Text>
-        </View>
+        {canBook ? (
+          <View style={styles.collapsedPrice} accessible accessibilityLabel={`${pricePerHour} per hour`}>
+            <Text style={styles.collapsedPriceText}>{pricePerHour}</Text>
+            <Text style={styles.collapsedPriceUnit}>/hr</Text>
+          </View>
+        ) : (
+          <View style={styles.previewBadge} accessible accessibilityLabel="Preview parking candidate, not bookable">
+            <MaterialCommunityIcons name="map-marker-question" size={14} color={colors.textPrimary} />
+            <Text style={styles.previewBadgeText}>Preview</Text>
+          </View>
+        )}
       </View>
     </View>
-  ), [title, rating, reviewCount, distance, pricePerHour, colors]);
+  ), [title, rating, reviewCount, distance, pricePerHour, canBook, colors]);
 
   const expandedContent = useMemo(() => {
     if (!listing) return null;
@@ -199,11 +212,19 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             </View>
             {listing?.address && listing.address !== title && <Text style={styles.expandedAddress} numberOfLines={1}>{listing.address}</Text>}
           </View>
-          <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>{pricePerHour}</Text>
-            <Text style={styles.priceBadgeUnit}>/hr</Text>
-          </View>
+          {canBook ? (
+            <View style={styles.priceBadge}>
+              <Text style={styles.priceBadgeText}>{pricePerHour}</Text>
+              <Text style={styles.priceBadgeUnit}>/hr</Text>
+            </View>
+          ) : (
+            <View style={styles.previewBadge} accessible accessibilityLabel="Preview parking candidate, not bookable">
+              <MaterialCommunityIcons name="map-marker-question" size={14} color={colors.textPrimary} />
+              <Text style={styles.previewBadgeText}>{isPreviewCandidate ? 'Preview' : 'Verified'}</Text>
+            </View>
+          )}
         </View>
+        {canBook && (
         <View style={styles.ratingSection}>
           <View style={styles.ratingRow}>
             <MaterialCommunityIcons name="star" size={18} color="#FBBF24" />
@@ -211,6 +232,7 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             <Text style={styles.ratingCount}>({reviewCount} reviews)</Text>
           </View>
         </View>
+        )}
         {amenities.length > 0 && (
           <View style={styles.amenitiesSection}>
             <Text style={styles.amenitiesTitle}>Amenities</Text>
@@ -246,20 +268,24 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
           </View>
         )}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.bookNowButton} onPress={onQuickBook} activeOpacity={0.8} accessibilityLabel="Book this parking spot now" accessibilityRole="button">
-            <MaterialCommunityIcons name="calendar-check" size={20} color={colors.white} />
-            <Text style={styles.bookNowText}>Book Now</Text>
-          </TouchableOpacity>
+          {canBook && (
+            <TouchableOpacity style={styles.bookNowButton} onPress={onQuickBook} activeOpacity={0.8} accessibilityLabel="Book this parking spot now" accessibilityRole="button">
+              <MaterialCommunityIcons name="calendar-check" size={20} color={colors.white} />
+              <Text style={styles.bookNowText}>Book Now</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.directionsButtonExpanded} onPress={onDirections} activeOpacity={0.7} accessibilityLabel="Get directions to this spot" accessibilityRole="button">
             <MaterialCommunityIcons name="navigation" size={20} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.detailsButtonExpanded} onPress={onViewDetails} activeOpacity={0.7} accessibilityLabel="View full details for this spot" accessibilityRole="button">
-            <Text style={styles.detailsTextExpanded}>Details</Text>
-          </TouchableOpacity>
+          {canBook && (
+            <TouchableOpacity style={styles.detailsButtonExpanded} onPress={onViewDetails} activeOpacity={0.7} accessibilityLabel="View full details for this spot" accessibilityRole="button">
+              <Text style={styles.detailsTextExpanded}>Details</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </ScrollView>);
-  }, [photoUri, title, distance, rating, reviewCount, pricePerHour, amenities, zoneAvailability, occupancyPercentage, availableSlots, totalSlots, circlingTime, insets.bottom, onQuickBook, onDirections, onViewDetails, listing, colors]);
+  }, [photoUri, title, distance, rating, reviewCount, pricePerHour, amenities, zoneAvailability, occupancyPercentage, availableSlots, totalSlots, circlingTime, insets.bottom, onQuickBook, onDirections, onViewDetails, listing, canBook, isPreviewCandidate, colors]);
 
   return (
     <BottomSheet

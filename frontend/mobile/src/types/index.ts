@@ -151,7 +151,9 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  Map: undefined;
+  Explore: { candidateId?: number; latitude?: number; longitude?: number; focusSpotId?: number | string } | undefined;
+  Map: { candidateId?: number; latitude?: number; longitude?: number; focusSpotId?: number | string } | undefined;
+  MyBookings: undefined;
   Bookings: undefined;
   Profile: undefined;
 };
@@ -265,6 +267,19 @@ export interface MarketplaceListing {
   distance?: number;
   availability: boolean;
   zoneId?: number;
+}
+
+export interface ParkingCandidateDiscoveryPin {
+  id: number;
+  source: 'google_candidate';
+  canBook: false;
+  canShowAnalytics: boolean;
+  isPreview: boolean;
+  latitude: number;
+  longitude: number;
+  title: string;
+  address: string | null;
+  distance?: number;
 }
 
 export interface MarketplaceBooking {

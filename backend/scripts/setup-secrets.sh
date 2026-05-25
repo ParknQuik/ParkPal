@@ -245,14 +245,27 @@ Create webhook pointing to: https://your-domain.com/api/v1/payments/webhook" \
 # ==============================================================================
 
 create_secret "google-maps-api-key" \
-    "Google Maps API key for location services" \
+    "Google Maps API key for web/mobile map rendering" \
     "Get from: https://console.cloud.google.com/apis/credentials
-Enable: Maps SDK for Android, Maps SDK for iOS, Places API" \
+Enable: Maps SDK for Android, Maps SDK for iOS, Maps JavaScript API
+Restrict this key to allowed apps/referrers." \
     "" \
     true
 
 # ==============================================================================
-# 9. Weather API Key (Optional)
+# 9. Google Places API Key
+# ==============================================================================
+
+create_secret "google-places-api-key" \
+    "Google Places API key for backend parking candidate scans" \
+    "Get from: https://console.cloud.google.com/apis/credentials
+Enable: Places API
+Restrict this key to backend/server IPs." \
+    "" \
+    true
+
+# ==============================================================================
+# 10. Weather API Key (Optional)
 # ==============================================================================
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -291,7 +304,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "Granting Secret Manager Secret Accessor role to $SA_EMAIL..."
 
         # Grant access to all secrets
-        for secret in jwt-secret qr-secret database-url redis-url paymongo-secret-key paymongo-public-key paymongo-webhook-secret google-maps-api-key weather-api-key; do
+        for secret in jwt-secret qr-secret database-url redis-url paymongo-secret-key paymongo-public-key paymongo-webhook-secret google-maps-api-key google-places-api-key weather-api-key; do
             if gcloud secrets describe "$secret" --project="$PROJECT_ID" &>/dev/null; then
                 gcloud secrets add-iam-policy-binding "$secret" \
                     --member="serviceAccount:$SA_EMAIL" \

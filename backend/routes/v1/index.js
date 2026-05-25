@@ -38,6 +38,10 @@ module.exports = (authLimiter) => {
   // Google Auth routes
   googleAuthRoutes(router, authLimiter);
 
+  // Admin routes
+  const adminRoutes = require('../admin');
+  adminRoutes(router);
+
   // Other routes
   parkingRoutes(router);
   paymentRoutes(router);
