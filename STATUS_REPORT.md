@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 25, 2026 | Codex | Ran a fresh `start` smoke test from a clean `origin/dev` worktree at `b27de6e`: `knowledge:rebuild-if-stale` rebuilt the missing local DB, `knowledge:context -- "current project status" --limit 1` returned one compact routing result, and git status/log verification stopped cleanly | 95/100 |
 | May 25, 2026 | Codex | Verified PR #153 merged into `dev` at `dd52d6b`, completing the startup/agent-overhead cleanup after refreshed GitHub backend, web, mobile, security, and quality checks passed; confirmed no open PRs remain against `dev` | 95/100 |
 | May 25, 2026 | Codex | Verified PR #155, PR #156, and PR #157 merged into `dev`, landing renter behavior status/account-standing UX, mobile list-state and dark-mode cleanup, and Google parking candidate discovery scans; refreshed #157 onto `dev`, confirmed GitHub checks passed, and recorded live open PR state | 95/100 |
 | May 23, 2026 | Codex | Verified PR #151 merged into `dev` at `38ae37a`, shipping compact knowledge context, tracked compact JSONL mirrors, and the single automatic startup card; GitHub PR checks passed and no open PRs remain against `dev` | 95/100 |
@@ -110,7 +111,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Backend:** GitHub Backend Tests passed for PR #155, PR #156, and PR #157 on May 25, 2026. Focused local candidate-scan backend tests passed 18/18 on May 25, 2026. Latest local backend full-suite evidence remains 471/473 passing with 2 skipped on May 22, 2026. Cloud Run `/health` rechecks belong to future deployment/beta validation.
 - **Web:** GitHub Frontend Web Tests passed for PR #155, PR #156, and PR #157 on May 25, 2026. Development service was previously deployed on Cloud Run and returned HTTP 200. Latest local web evidence is 85/85 passing on May 22, 2026.
 - **Mobile:** GitHub Frontend Mobile Checks passed for PR #155, PR #156, and PR #157 on May 25, 2026. Focused local mobile checks passed for behavior status, list states, CoreListStates, and TypeScript during the PR split/repair. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
-- **Workflow tooling:** The compact startup card, repo-local knowledge index, tracked compact JSONL mirrors, and archived legacy agent/skill surfaces are intended project tooling; the generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
+- **Workflow tooling:** The compact startup card, repo-local knowledge index, tracked compact JSONL mirrors, and archived legacy agent/skill surfaces are intended project tooling; a fresh `start` smoke test passed on May 25, 2026. The generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
 ### Current State (May 25, 2026)
 
@@ -199,6 +200,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - Backend: GitHub Backend Tests passed for PR #155, PR #156, and PR #157 on May 25, 2026 ✅; focused local candidate-scan backend tests passed 18/18 on May 25, 2026; latest local full-suite evidence remains 471/473 passing with 2 skipped on May 22, 2026
 - Mobile: GitHub Frontend Mobile Checks passed for PR #155, PR #156, and PR #157 on May 25, 2026 ✅; focused local behavior-status, list-state, CoreListStates, and TypeScript checks passed during the May 25 PR split/repair
 - Web: GitHub Frontend Web Tests passed for PR #155, PR #156, and PR #157 on May 25, 2026 ✅; latest local web run remains 85/85 passing on May 22, 2026
+- Startup: Fresh `start` smoke test passed on May 25, 2026 from a clean `origin/dev` worktree at `b27de6e`
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
 **Infrastructure:**
@@ -1118,7 +1120,6 @@ The following March plan is retained for history only. Current status is documen
 
 **Date:** May 26, 2026
 **Agenda:**
-- Fresh `start` smoke test after the merged startup-overhead cleanup
 - Fresh local web/backend/full mobile test evidence if broader release confidence is needed
 - Future Cloud Run health and deployment confidence gates
 - Beta-readiness checklist status
