@@ -1,8 +1,8 @@
 # Beta Readiness Checklist
 
-**Last Updated:** May 22, 2026
+**Last Updated:** May 25, 2026
 **Status:** Future beta/deployment gate, not the active local development plan
-**Baseline:** `dev` at `686f992` after PR #146; no open PRs against `dev` as of May 22, 2026
+**Baseline:** `dev` at `600a7b5` after PR #161; no open PRs against `dev` as of May 25, 2026
 
 This checklist tracks the minimum evidence needed before ParknQuik moves from local-first active development into GCP-backed beta distribution. The existing local development setup remains the proof-of-concept baseline; GCP/Cloud Run validation and app-store submission stay deferred until every required item below is either complete or explicitly waived.
 
@@ -10,12 +10,12 @@ This checklist tracks the minimum evidence needed before ParknQuik moves from lo
 
 | Area | Latest Evidence | Beta Impact |
 |------|-----------------|-------------|
-| PR queue | `gh pr list --base dev --state open --json number,title,headRefName,updatedAt`: no open PRs against `dev` on May 22, 2026 | PR queue is clear for the current local-first baseline |
-| Git hygiene | `git diff --check` passed locally on May 22, 2026 | Formatting whitespace is clean |
-| Web tests | `frontend/web npm test -- --run`: 85/85 passing locally on May 22, 2026; GitHub Frontend Web Tests passed for PR #141, PR #138, PR #137, and PR #139 on May 21, 2026 | Current local and CI web coverage is green |
-| Mobile tests | `frontend/mobile npx tsc --noEmit`: passing locally on May 22, 2026; targeted `npm test -- MyBookingsScreen.test.ts ExtensionModal.test.ts --runInBand --watchman=false`: 9/9 passing locally on May 22, 2026; full local mobile Jest remains 33/33 passing on May 21, 2026 | Current automated mobile coverage is green for the touched booking area |
-| Mobile TypeScript | Previous drift in `src/navigation/types.ts` and `src/screens/MyBookingsScreen.tsx` is resolved locally on May 22, 2026 | No known mobile TypeScript blocker remains for beta |
-| Backend tests | `backend npm test -- --watchman=false`: 21 suites passed, 471/473 tests passed with 2 skipped locally on May 22, 2026; GitHub Backend Tests passed for PR #141, PR #138, PR #137, and PR #139 on May 21, 2026 | Current local backend suite is green against the existing local development setup |
+| PR queue | `gh pr list --base dev --state open --json number,title,headRefName,updatedAt`: no open PRs against `dev` on May 25, 2026 | PR queue is clear for the current local-first baseline |
+| Git hygiene | `git diff --check` passed locally on May 25, 2026 | Formatting whitespace is clean |
+| Web tests | `frontend/web npm test -- --run`: 85/85 passing locally on May 25, 2026 after PR #161 stabilized Vitest timeouts; GitHub Frontend Web Tests passed for PR #161 on May 25, 2026 | Current local and CI web coverage is green |
+| Mobile tests | `frontend/mobile npx tsc --noEmit`: passing locally on May 25, 2026; `npm --prefix frontend/mobile test -- --runInBand --no-watchman`: 56/56 passing locally on May 25, 2026; targeted booking tests remain 9/9 passing on May 22, 2026 | Current automated mobile coverage is green |
+| Mobile TypeScript | Previous drift in `src/navigation/types.ts` and `src/screens/MyBookingsScreen.tsx` is resolved; latest mobile TypeScript passed locally on May 25, 2026 | No known mobile TypeScript blocker remains for beta |
+| Backend tests | `backend GCS_BUCKET_NAME=test-bucket npm test -- --runInBand --no-watchman`: 25 suites passed, 494/496 tests passed with 2 skipped locally on May 25, 2026; GitHub Backend Tests passed for PR #161 on May 25, 2026 | Current local backend suite is green against the existing local development setup |
 | Backend Cloud Run health | Last direct `/health` evidence remains May 17, 2026: HTTP 503 degraded from the database check; Redis and Secret Manager were up | Recheck before GCP deployment/beta evidence is signed off |
 | Web Cloud Run | Web service previously returned HTTP 200 | Recheck before GCP deployment/beta evidence is signed off |
 | API docs | `/api-docs/` previously returned HTTP 200 after redirect | Recheck before GCP deployment/beta evidence is signed off |
