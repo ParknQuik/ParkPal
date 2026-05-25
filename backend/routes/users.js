@@ -14,6 +14,9 @@ module.exports = (app) => {
   // Get current user profile
   app.get('/users/profile', authenticate, asyncHandler(userController.getProfile));
 
+  // Get current user's renter behavior status
+  app.get('/users/behavior-status', authenticate, asyncHandler(userController.getBehaviorStatus));
+
   // Update user profile
   app.patch('/users/profile', authenticate, asyncHandler(userController.updateProfile));
 

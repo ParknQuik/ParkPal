@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { paymentAPI, marketplaceAPI } from '../services/api';
+import { behaviorAPI, paymentAPI, marketplaceAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AccountStanding } from '../components/AccountStanding';
+import { BehaviorStatus } from '../types';
+import {
+  getSuspensionAlertMessage,
+  isAccountSuspendedError,
+} from '../utils/behaviorStatus';
 
 export const PaymentScreen: React.FC = () => {
   const navigation = useNavigation() as any;
@@ -37,6 +43,17 @@ export const PaymentScreen: React.FC = () => {
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [behaviorStatus, setBehaviorStatus] = useState<BehaviorStatus | null>(null);
+
+  const refreshBehaviorStatus = async () => {
+    const response = await behaviorAPI.getStatus();
+    setBehaviorStatus(response.data);
+    return response.data;
+  };
+
+  useEffect(() => {
+    refreshBehaviorStatus().catch(() => undefined);
+  }, []);
 
   const orderData = {
     subtotal: amount || 0,
@@ -81,6 +98,12 @@ export const PaymentScreen: React.FC = () => {
   const handlePayNow = async () => {
     if (!selectedPayment) return;
 
+    const latestBehavior = await refreshBehaviorStatus().catch(() => behaviorStatus);
+    if (latestBehavior?.isSuspended) {
+      Alert.alert('Booking paused', getSuspensionAlertMessage({ response: { data: latestBehavior } }));
+      return;
+    }
+
     if (selectedPayment === 'cash') {
       try {
         setLoading(true);
@@ -118,6 +141,12 @@ export const PaymentScreen: React.FC = () => {
         });
         return;
       } catch (err: any) {
+        if (isAccountSuspendedError(err)) {
+          Alert.alert('Booking paused', getSuspensionAlertMessage(err));
+          refreshBehaviorStatus().catch(() => undefined);
+          return;
+        }
+
         if (err.response?.status === 409) {
           navigation.navigate('PaymentFailed', {
             error: err.response?.data?.error || 'This slot is already booked for the selected time. Please go back and choose different times.',
@@ -171,6 +200,12 @@ export const PaymentScreen: React.FC = () => {
         rentalMode,
       });
     } catch (err: any) {
+      if (isAccountSuspendedError(err)) {
+        Alert.alert('Booking paused', getSuspensionAlertMessage(err));
+        refreshBehaviorStatus().catch(() => undefined);
+        return;
+      }
+
       if (err.response?.status === 409) {
         Alert.alert(
           'Slot Unavailable',
@@ -356,6 +391,10 @@ export const PaymentScreen: React.FC = () => {
       lineHeight: 19,
       color: colors.textSecondary,
     },
+    standingWrap: {
+      marginHorizontal: 16,
+      marginTop: 16,
+    },
     footer: {
       backgroundColor: colors.surface,
       paddingHorizontal: 16,
@@ -388,6 +427,12 @@ export const PaymentScreen: React.FC = () => {
 
       <View style={styles.contentArea}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {behaviorStatus && (behaviorStatus.totalStrikes > 0 || behaviorStatus.isSuspended) && (
+          <View style={styles.standingWrap}>
+            <AccountStanding status={behaviorStatus} surface="banner" testID="payment-account-standing" />
+          </View>
+        )}
+
         {/* Price Breakdown */}
         <View style={styles.priceCard}>
           <Text style={styles.sectionTitle}>Price Details</Text>
@@ -471,10 +516,10 @@ export const PaymentScreen: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.payButton,
-            (!selectedPayment || loading) && styles.payButtonDisabled,
+            (!selectedPayment || loading || behaviorStatus?.isSuspended) && styles.payButtonDisabled,
           ]}
           onPress={handlePayNow}
-          disabled={!selectedPayment || loading}
+          disabled={!selectedPayment || loading || behaviorStatus?.isSuspended}
         >
           {loading ? (
             <ActivityIndicator color={colors.white} />

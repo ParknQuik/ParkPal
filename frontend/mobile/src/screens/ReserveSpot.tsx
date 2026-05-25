@@ -17,10 +17,13 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { marketplaceAPI, vehiclesAPI } from '../services/api';
+import { behaviorAPI, marketplaceAPI, vehiclesAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AccountStanding } from '../components/AccountStanding';
+import { BehaviorStatus } from '../types';
+import { formatSuspensionTime } from '../utils/behaviorStatus';
 
 const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-US', {
@@ -63,6 +66,7 @@ export const ReserveSpot: React.FC = () => {
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>('startDate');
   const [isBooking, setIsBooking] = useState(false);
   const [rentalMode, setRentalMode] = useState<'fixed' | 'open'>('fixed');
+  const [behaviorStatus, setBehaviorStatus] = useState<BehaviorStatus | null>(null);
   const MAX_DURATION_HOURS = 12;
 
   useEffect(() => {
@@ -78,6 +82,7 @@ export const ReserveSpot: React.FC = () => {
         if (vehicleList.length > 0) {
           setSelectedVehicle(String(vehicleList[0].id));
         }
+        behaviorAPI.getStatus().then((res) => setBehaviorStatus(res.data)).catch(() => undefined);
       } catch (err) {
         ;
       } finally {
@@ -158,6 +163,15 @@ export const ReserveSpot: React.FC = () => {
     : 'Cancel at least 1 hour before start to avoid a strike. Cancellations close 30 minutes before start. Check in during your reserved time to keep the spot from expiring.';
 
   const handleProceedToPayment = async () => {
+    const latestBehavior = await behaviorAPI.getStatus().then((res) => res.data).catch(() => behaviorStatus);
+    if (latestBehavior) {
+      setBehaviorStatus(latestBehavior);
+    }
+    if (latestBehavior?.isSuspended) {
+      Alert.alert('Booking paused', `Booking is paused until ${formatSuspensionTime(latestBehavior.suspendedUntil)}.`);
+      return;
+    }
+
     if (startDate <= new Date()) {
       Alert.alert('Invalid Date', 'Start date/time must be in the future.');
       return;
@@ -575,6 +589,9 @@ export const ReserveSpot: React.FC = () => {
       lineHeight: 19,
       color: colors.textSecondary,
     },
+    standingWrap: {
+      marginBottom: 24,
+    },
   }), [colors]);
 
   if (loading) {
@@ -838,14 +855,23 @@ export const ReserveSpot: React.FC = () => {
           </View>
         </View>
 
+        {behaviorStatus && (behaviorStatus.totalStrikes > 0 || behaviorStatus.isSuspended) ? (
+          <View style={styles.standingWrap}>
+            <AccountStanding status={behaviorStatus} surface="banner" testID="reserve-account-standing" />
+          </View>
+        ) : null}
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.confirmButton, isBooking && styles.confirmButtonDisabled]}
+          style={[
+            styles.confirmButton,
+            (isBooking || behaviorStatus?.isSuspended) && styles.confirmButtonDisabled,
+          ]}
           onPress={handleProceedToPayment}
-          disabled={isBooking}
+          disabled={isBooking || behaviorStatus?.isSuspended}
         >
           {isBooking ? (
             <ActivityIndicator size="small" color={colors.white} />
