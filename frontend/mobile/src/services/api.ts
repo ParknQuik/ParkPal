@@ -1,7 +1,13 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api.config';
-import { PointsBalance, PointsHistoryResponse, ReferralStats } from '../types';
+import type {
+  BehaviorStatus,
+  ParkingCandidateDiscoveryPin,
+  PointsBalance,
+  PointsHistoryResponse,
+  ReferralStats,
+} from '../types';
 
 // Create axios instance
 const api = axios.create({
@@ -135,6 +141,12 @@ export const marketplaceAPI = {
     q?: string;
   }) => api.get('/marketplace/search', { params }),
 
+  getDiscoveryCandidates: (params: {
+    lat: number;
+    lon: number;
+    radius?: number;
+  }) => api.get<{ data: ParkingCandidateDiscoveryPin[] }>('/marketplace/discovery/candidates', { params }),
+
   // Bookings
   createBookingMarketplace: (data: {
     slotId: number;
@@ -236,6 +248,10 @@ export const userAPI = {
       phone: string | null;
       profileImageUrl: string | null;
     }>('/users/profile/upload', { fileName }),
+};
+
+export const behaviorAPI = {
+  getStatus: () => api.get<BehaviorStatus>('/users/behavior-status'),
 };
 
 // Payment endpoints (PayMongo integration)

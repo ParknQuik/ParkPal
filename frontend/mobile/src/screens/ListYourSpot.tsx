@@ -11,7 +11,6 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -22,14 +21,15 @@ import { marketplaceAPI } from '../services/api';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { AppHeader } from '../components/AppHeader';
 
 const AMENITIES = [
-  { key: 'covered', label: 'Covered' },
-  { key: 'cctv', label: 'CCTV' },
-  { key: 'security', label: 'Security' },
-  { key: 'ev_charging', label: 'EV Charging' },
-  { key: 'accessible', label: 'Accessible' },
-  { key: '24_7_access', label: '24/7 Access' },
+  { key: 'covered', label: 'Covered', icon: 'garage' },
+  { key: 'cctv', label: 'CCTV', icon: 'cctv' },
+  { key: 'security', label: 'Security', icon: 'shield-check-outline' },
+  { key: 'ev_charging', label: 'EV Charging', icon: 'ev-station' },
+  { key: 'accessible', label: 'Accessible', icon: 'wheelchair-accessibility' },
+  { key: '24_7_access', label: '24/7 Access', icon: 'clock-outline' },
 ];
 
 export const ListYourSpot: React.FC = () => {
@@ -245,52 +245,45 @@ export const ListYourSpot: React.FC = () => {
       flex: 1,
       backgroundColor: colors.background,
     },
-    headerGradient: {
-      paddingTop: spacing.md,
-      paddingBottom: spacing.xl,
-      paddingHorizontal: spacing.lg,
+    safeArea: {
+      backgroundColor: colors.appHeaderBackground,
     },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.headerActionBackground,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: colors.headerActionShadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    headerTitle: {
-      ...typography.h4,
-      color: colors.appHeaderText,
-      fontWeight: '700',
-    },
-    headerPlaceholder: {
-      width: 40,
+    contentArea: {
+      flex: 1,
+      backgroundColor: colors.background,
     },
     progressSection: {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      backgroundColor: colors.white,
+      backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+    },
+    progressTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
     },
     progressText: {
       ...typography.bodySmall,
       color: colors.textSecondary,
-      marginBottom: spacing.sm,
+      fontWeight: '600',
+    },
+    progressBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      backgroundColor: `${colors.primary}14`,
+    },
+    progressBadgeText: {
+      ...typography.tiny,
+      color: colors.primary,
+      fontWeight: '700',
     },
     progressBar: {
       height: 4,
-      backgroundColor: colors.border,
+      backgroundColor: colors.surfaceSecondary,
       borderRadius: 2,
       overflow: 'hidden',
     },
@@ -307,18 +300,35 @@ export const ListYourSpot: React.FC = () => {
       paddingBottom: 100,
     },
     section: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
       marginBottom: spacing.xl,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    sectionIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: `${colors.primary}14`,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     sectionTitle: {
       ...typography.h6,
       color: colors.textPrimary,
       fontWeight: '700',
-      marginBottom: spacing.md,
+      flex: 1,
     },
     photoSection: {
-      backgroundColor: colors.white,
-      borderRadius: borderRadius.lg,
-      padding: spacing.md,
+      gap: spacing.md,
     },
     photosGrid: {
       flexDirection: 'row',
@@ -329,28 +339,22 @@ export const ListYourSpot: React.FC = () => {
       width: 100,
       height: 100,
       borderRadius: borderRadius.md,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceSecondary,
     },
     addPhotoButton: {
       width: 100,
       height: 100,
       borderRadius: borderRadius.md,
       borderWidth: 2,
-      borderColor: colors.primary,
+      borderColor: `${colors.primary}90`,
       borderStyle: 'dashed',
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(16, 183, 127, 0.05)',
-    },
-    addPhotoIcon: {
-      fontSize: 32,
-      color: colors.primary,
-      fontWeight: '300',
+      backgroundColor: `${colors.primary}10`,
     },
     photoCount: {
       ...typography.bodySmall,
       color: colors.textSecondary,
-      marginTop: spacing.md,
       textAlign: 'center',
     },
     inputGroup: {
@@ -363,7 +367,7 @@ export const ListYourSpot: React.FC = () => {
       marginBottom: spacing.sm,
     },
     textInput: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.surfaceSecondary,
       borderRadius: borderRadius.md,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
@@ -382,10 +386,13 @@ export const ListYourSpot: React.FC = () => {
       gap: spacing.sm,
     },
     amenityPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
       borderRadius: borderRadius.xl,
-      backgroundColor: colors.white,
+      backgroundColor: colors.surfaceSecondary,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -403,16 +410,31 @@ export const ListYourSpot: React.FC = () => {
     },
     inputRow: {
       flexDirection: 'row',
+      gap: spacing.md,
     },
     slotTypeContainer: {
       gap: spacing.sm,
     },
     slotTypeOption: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.surfaceSecondary,
       borderRadius: borderRadius.md,
       padding: spacing.md,
       borderWidth: 1,
       borderColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    slotTypeIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: `${colors.primary}12`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    slotTypeCopy: {
+      flex: 1,
     },
     slotTypeOptionSelected: {
       borderColor: colors.primary,
@@ -438,7 +460,7 @@ export const ListYourSpot: React.FC = () => {
       right: 0,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.lg,
-      backgroundColor: colors.white,
+      backgroundColor: colors.surface,
       borderTopWidth: 1,
       borderTopColor: colors.border,
       shadowColor: colors.black,
@@ -464,42 +486,42 @@ export const ListYourSpot: React.FC = () => {
   }), [colors]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <StatusBar
         barStyle={`${statusBarStyle}-content`}
         backgroundColor={colors.appHeaderBackground}
       />
 
-      <LinearGradient
-        colors={colors.listSpotHeaderGradient}
-        style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEditMode ? 'Edit Listing' : 'List Your Spot'}</Text>
-          <View style={styles.headerPlaceholder} />
-        </View>
-      </LinearGradient>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppHeader title={isEditMode ? 'Edit Listing' : 'List Your Spot'} onBack={handleBack} />
+      </SafeAreaView>
 
-      <View style={styles.progressSection}>
-        <Text style={styles.progressText}>Step 2 of 3</Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: '66.67%' }]} />
+      <View style={styles.contentArea}>
+        <View style={styles.progressSection}>
+          <View style={styles.progressTopRow}>
+            <Text style={styles.progressText}>Listing details</Text>
+            <View style={styles.progressBadge}>
+              <Text style={styles.progressBadgeText}>Step 2 of 3</Text>
+            </View>
+          </View>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '66.67%' }]} />
+          </View>
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photos</Text>
-          <View style={styles.photoSection}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionIcon}>
+                <MaterialCommunityIcons name="camera-outline" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Photos</Text>
+            </View>
+            <View style={styles.photoSection}>
             <View style={styles.photosGrid}>
               {photos.map((photo) => (
                 <Image
@@ -513,7 +535,7 @@ export const ListYourSpot: React.FC = () => {
                 style={styles.addPhotoButton}
                 onPress={handleAddMorePhotos}
               >
-                <Text style={styles.addPhotoIcon}>+</Text>
+                <MaterialCommunityIcons name="plus" size={32} color={colors.primary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.photoCount}>{photos.length}/5 photos</Text>
@@ -521,7 +543,12 @@ export const ListYourSpot: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Spot Details</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIcon}>
+              <MaterialCommunityIcons name="parking" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Spot Details</Text>
+          </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Spot Name</Text>
@@ -550,7 +577,12 @@ export const ListYourSpot: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Amenities</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIcon}>
+              <MaterialCommunityIcons name="star-four-points-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Amenities</Text>
+          </View>
           <View style={styles.amenitiesGrid}>
             {AMENITIES.map((amenity) => {
               const isSelected = selectedAmenities.includes(amenity.key);
@@ -563,6 +595,11 @@ export const ListYourSpot: React.FC = () => {
                   ]}
                   onPress={() => toggleAmenity(amenity.key)}
                 >
+                  <MaterialCommunityIcons
+                    name={amenity.icon as any}
+                    size={16}
+                    color={isSelected ? colors.white : colors.primary}
+                  />
                   <Text
                     style={[
                       styles.amenityText,
@@ -578,7 +615,12 @@ export const ListYourSpot: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIcon}>
+              <MaterialCommunityIcons name="map-marker-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Location</Text>
+          </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Address *</Text>
@@ -603,7 +645,6 @@ export const ListYourSpot: React.FC = () => {
                 keyboardType="numeric"
               />
             </View>
-            <View style={{ width: spacing.md }} />
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.inputLabel}>Longitude</Text>
               <TextInput
@@ -619,7 +660,12 @@ export const ListYourSpot: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pricing</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIcon}>
+              <MaterialCommunityIcons name="cash" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Pricing</Text>
+          </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Price per Hour (PHP) *</Text>
@@ -635,39 +681,54 @@ export const ListYourSpot: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Spot Type</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionIcon}>
+              <MaterialCommunityIcons name="shape-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Spot Type</Text>
+          </View>
           <View style={styles.slotTypeContainer}>
             {[
-              { key: 'roadside_qr', label: 'Roadside (QR)', desc: 'Street parking with QR code' },
-              { key: 'commercial_manual', label: 'Commercial', desc: 'Managed lot with manual entry' },
-              { key: 'commercial_iot', label: 'Smart Lot', desc: 'IoT-enabled smart parking' },
+              { key: 'roadside_qr', label: 'Roadside (QR)', desc: 'Street parking with QR code', icon: 'qrcode-scan' },
+              { key: 'commercial_manual', label: 'Commercial', desc: 'Managed lot with manual entry', icon: 'office-building-outline' },
+              { key: 'commercial_iot', label: 'Smart Lot', desc: 'IoT-enabled smart parking', icon: 'access-point-network' },
             ].map((type) => (
               <TouchableOpacity
                 key={type.key}
                 style={[styles.slotTypeOption, slotType === type.key && styles.slotTypeOptionSelected]}
                 onPress={() => setSlotType(type.key as any)}
               >
-                <Text style={[styles.slotTypeLabel, slotType === type.key && styles.slotTypeLabelSelected]}>
-                  {type.label}
-                </Text>
-                <Text style={styles.slotTypeDesc}>{type.desc}</Text>
+                <View style={styles.slotTypeIcon}>
+                  <MaterialCommunityIcons
+                    name={type.icon as any}
+                    size={21}
+                    color={slotType === type.key ? colors.primary : colors.textSecondary}
+                  />
+                </View>
+                <View style={styles.slotTypeCopy}>
+                  <Text style={[styles.slotTypeLabel, slotType === type.key && styles.slotTypeLabelSelected]}>
+                    {type.label}
+                  </Text>
+                  <Text style={styles.slotTypeDesc}>{type.desc}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={[styles.continueButton, loading && styles.continueButtonDisabled]}
-          onPress={handleContinue}
-          disabled={loading}
-        >
-          <Text style={styles.continueButtonText}>
-            {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Continue')}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={[styles.continueButton, loading && styles.continueButtonDisabled]}
+            onPress={handleContinue}
+            disabled={loading}
+          >
+            <Text style={styles.continueButtonText}>
+              {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Continue')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };

@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const logger = require('../config/logger');
 const mediaService = require('../services/mediaService');
+const { getBehaviorStatus } = require('../services/penaltyService');
 
 /**
  * Get current user profile
@@ -142,6 +143,23 @@ exports.getUserStats = async (req, res, next) => {
    } catch (error) {
      next(error);
    }
+};
+
+/**
+ * Get current user's renter behavior status.
+ */
+exports.getBehaviorStatus = async (req, res, next) => {
+  try {
+    const status = await getBehaviorStatus(req.user.id);
+
+    if (!status) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(status);
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**

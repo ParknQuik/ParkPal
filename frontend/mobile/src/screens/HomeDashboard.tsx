@@ -8,7 +8,6 @@ import {
   ScrollView,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
@@ -24,6 +23,9 @@ import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { haptics } from '../utils/haptics';
 import { accessibility } from '../utils/accessibility';
 import { useDebouncedCallback } from '../utils/performance';
+import { ListLoadingState, RetryableFailureState } from '../components/ListState';
+import { marketplaceAPI } from '../services/api';
+import type { MarketplaceListing, ParkingCandidateDiscoveryPin } from '../types';
 
 const getGreeting = (): string => {
   const hour = new Date().getHours();
@@ -32,9 +34,69 @@ const getGreeting = (): string => {
   return 'Good Evening';
 };
 
+type HomeListingItem = MarketplaceListing & {
+  kind: 'listing';
+  canBook: true;
+};
+
+type HomeCandidateItem = ParkingCandidateDiscoveryPin & {
+  kind: 'candidate';
+  canBook: false;
+  pricePerHour: null;
+  rating: null;
+  photos: [];
+};
+
+type HomeParkingItem = HomeListingItem | HomeCandidateItem;
+
+type NearbyLocation = {
+  latitude: number;
+  longitude: number;
+};
+
+const getDistanceKm = (
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number }
+) => {
+  const earthRadiusKm = 6371;
+  const dLat = ((to.latitude - from.latitude) * Math.PI) / 180;
+  const dLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+  const lat1 = (from.latitude * Math.PI) / 180;
+  const lat2 = (to.latitude * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const normalizeHomeListing = (listing: MarketplaceListing): HomeListingItem => ({
+  ...listing,
+  kind: 'listing',
+  canBook: true,
+});
+
+const normalizeHomeCandidate = (
+  candidate: ParkingCandidateDiscoveryPin,
+  origin: { latitude: number; longitude: number }
+): HomeCandidateItem => ({
+  ...candidate,
+  source: 'google_candidate',
+  canBook: false,
+  isPreview: true,
+  kind: 'candidate',
+  distance: candidate.distance ?? getDistanceKm(origin, candidate),
+  pricePerHour: null,
+  rating: null,
+  photos: [],
+});
+
 export const HomeDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [candidateItems, setCandidateItems] = useState<HomeCandidateItem[]>([]);
+  const [resolvedLocation, setResolvedLocation] = useState<NearbyLocation | null>(null);
+  const [resolvingLocation, setResolvingLocation] = useState(false);
   const navigation = useNavigation() as any;
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
@@ -42,6 +104,18 @@ export const HomeDashboard: React.FC = () => {
   const { currentLocation } = useAppSelector((state) => state.location);
   const { listings, bookings, filters, loading, error } = useAppSelector((state) => state.marketplace);
   const userName = user?.name || 'Guest';
+  const nearbyLocation = currentLocation || resolvedLocation;
+  const homeParkingItems = useMemo<HomeParkingItem[]>(() => {
+    const listingItems = listings.map(normalizeHomeListing);
+    const candidates = [...candidateItems].sort(
+      (a, b) => (a.distance ?? Number.POSITIVE_INFINITY) - (b.distance ?? Number.POSITIVE_INFINITY)
+    );
+
+    return [...listingItems, ...candidates];
+  }, [listings, candidateItems]);
+  const needsLocation = !nearbyLocation && !resolvingLocation;
+  const showInitialLoading = (resolvingLocation || loading) && !needsLocation && !refreshing && homeParkingItems.length === 0;
+  const showInitialFailure = Boolean(error) && homeParkingItems.length === 0;
   // Force re-render when user is updated (for profile image changes)
   const [, forceUpdate] = useState(0);
 
@@ -52,18 +126,50 @@ export const HomeDashboard: React.FC = () => {
 
   const statusBarStyle = useStatusBarStyle();
 
+  const fetchDiscoveryCandidates = useCallback(async (lat: number, lon: number) => {
+    try {
+      const response = await marketplaceAPI.getDiscoveryCandidates({ lat, lon, radius: 3 });
+      const origin = { latitude: lat, longitude: lon };
+      const candidates = (response.data?.data || []).map((candidate) =>
+        normalizeHomeCandidate(candidate, origin)
+      );
+      setCandidateItems(candidates);
+    } catch {
+      setCandidateItems([]);
+    }
+  }, []);
+
+  const resolveNearbyLocation = useCallback(async (): Promise<NearbyLocation | null> => {
+    if (currentLocation) {
+      setResolvedLocation(currentLocation);
+      return currentLocation;
+    }
+
+    try {
+      setResolvingLocation(true);
+      const result = await dispatch(getCurrentLocation()).unwrap();
+      const location = {
+        latitude: result.latitude,
+        longitude: result.longitude,
+      };
+      setResolvedLocation(location);
+      return location;
+    } catch {
+      setResolvedLocation(null);
+      setCandidateItems([]);
+      return null;
+    } finally {
+      setResolvingLocation(false);
+    }
+  }, [currentLocation, dispatch]);
+
   useEffect(() => {
     const init = async () => {
-      let lat = 14.5995;
-      let lon = 120.9842;
-      try {
-        const result = await dispatch(getCurrentLocation()).unwrap();
-        lat = result.latitude;
-        lon = result.longitude;
-      } catch {
-        // permission denied or error — fall back to Manila
+      const location = await resolveNearbyLocation();
+      if (location) {
+        dispatch(searchListings({ latitude: location.latitude, longitude: location.longitude, radius: 3 }));
+        fetchDiscoveryCandidates(location.latitude, location.longitude);
       }
-      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 }));
       if (user?.id) {
         dispatch(getMyBookings());
       }
@@ -73,47 +179,57 @@ export const HomeDashboard: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const lat = currentLocation?.latitude || 14.5995;
-      const lon = currentLocation?.longitude || 120.9842;
-      await dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })).unwrap();
+      const location = await resolveNearbyLocation();
+      if (location) {
+        await Promise.allSettled([
+          dispatch(searchListings({ latitude: location.latitude, longitude: location.longitude, radius: 3 })).unwrap(),
+          fetchDiscoveryCandidates(location.latitude, location.longitude),
+        ]);
+      }
       if (user?.id) {
         await dispatch(getMyBookings()).unwrap();
       }
     } catch (err) {
       // silently handle error
     }
-  }, [dispatch, currentLocation, user?.id]);
+  }, [dispatch, fetchDiscoveryCandidates, resolveNearbyLocation, user?.id]);
 
   const handleRefresh = useCallback(() => {
     if (refreshing) return;
     setSearchQuery(''); // Clear search query on refresh
     setRefreshing(true);
-    const lat = currentLocation?.latitude || 14.5995;
-    const lon = currentLocation?.longitude || 120.9842;
-    const fetches: Promise<any>[] = [
-      dispatch(searchListings({ latitude: lat, longitude: lon, radius: 3 })),
-    ];
-    if (user?.id) {
-      fetches.push(dispatch(getMyBookings()));
-    }
-    Promise.allSettled(fetches).finally(() => {
+    const refresh = async () => {
+      const fetches: Promise<any>[] = [];
+      const location = await resolveNearbyLocation();
+      if (location) {
+        fetches.push(dispatch(searchListings({ latitude: location.latitude, longitude: location.longitude, radius: 3 })));
+        fetches.push(fetchDiscoveryCandidates(location.latitude, location.longitude));
+      }
+      if (user?.id) {
+        fetches.push(dispatch(getMyBookings()));
+      }
+      await Promise.allSettled(fetches);
+    };
+    refresh().finally(() => {
       setRefreshing(false);
     });
   }, [dispatch, currentLocation, user?.id, refreshing]);
 
   const debouncedSearch = useDebouncedCallback((query: string) => {
-    if (currentLocation && query.trim()) {
+    if (nearbyLocation && query.trim()) {
       dispatch(
         searchListings({
           q: query.trim(),
-          latitude: currentLocation.latitude,
-          longitude: currentLocation.longitude,
+          latitude: nearbyLocation.latitude,
+          longitude: nearbyLocation.longitude,
           radius: 3,
           sortBy: filters.sortBy,
         })
       );
-    } else if (!query.trim() && currentLocation) {
-      dispatch(searchListings({ latitude: currentLocation.latitude, longitude: currentLocation.longitude, radius: 3 }));
+      fetchDiscoveryCandidates(nearbyLocation.latitude, nearbyLocation.longitude);
+    } else if (!query.trim() && nearbyLocation) {
+      dispatch(searchListings({ latitude: nearbyLocation.latitude, longitude: nearbyLocation.longitude, radius: 3 }));
+      fetchDiscoveryCandidates(nearbyLocation.latitude, nearbyLocation.longitude);
     }
   }, 500);
 
@@ -125,6 +241,15 @@ export const HomeDashboard: React.FC = () => {
   const handleSpotPress = useCallback(async (listingId: string) => {
     await haptics.light();
     navigation.navigate('ParkingDetail', { spotId: listingId });
+  }, [navigation]);
+
+  const handleCandidatePress = useCallback(async (candidate: HomeCandidateItem) => {
+    await haptics.light();
+    navigation.navigate('Explore', {
+      candidateId: candidate.id,
+      latitude: candidate.latitude,
+      longitude: candidate.longitude,
+    });
   }, [navigation]);
 
   const handleNotificationPress = useCallback(async () => {
@@ -158,16 +283,18 @@ export const HomeDashboard: React.FC = () => {
       backgroundColor: colors.background,
     },
     greetingHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       paddingHorizontal: spacing.xl,
       paddingTop: spacing.sm,
       paddingBottom: spacing.sm,
       marginBottom: spacing.md,
     },
     greetingLeft: {
-      gap: spacing.md,
+      gap: spacing.sm,
+    },
+    greetingBrandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
     },
     headerAvatar: {
       width: 44,
@@ -196,6 +323,7 @@ export const HomeDashboard: React.FC = () => {
       ...typography.h4,
       color: colors.primary,
       fontWeight: '800',
+      flexShrink: 1,
     },
     header: {
       backgroundColor: colors.appHeaderBackground,
@@ -383,6 +511,11 @@ export const HomeDashboard: React.FC = () => {
       shadowRadius: 4,
       elevation: 1,
     },
+    candidateCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
     parkingImage: {
       width: 96,
       height: 96,
@@ -392,6 +525,9 @@ export const HomeDashboard: React.FC = () => {
       backgroundColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    candidateImagePlaceholder: {
+      backgroundColor: colors.surfaceSecondary,
     },
     parkingInfo: {
       marginLeft: spacing.md,
@@ -419,6 +555,21 @@ export const HomeDashboard: React.FC = () => {
     ratingText: {
       ...typography.bodySmall,
       color: colors.textSecondary,
+    },
+    previewBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      backgroundColor: 'rgba(245, 158, 11, 0.12)',
+      gap: 4,
+    },
+    previewBadgeText: {
+      ...typography.tiny,
+      color: colors.secondary,
+      fontWeight: '700',
+      textTransform: 'uppercase',
     },
     parkingMiddleRow: {
       flexDirection: 'row',
@@ -448,6 +599,11 @@ export const HomeDashboard: React.FC = () => {
       fontWeight: '400',
       fontSize: 12,
     },
+    previewStatusText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      fontWeight: '600',
+    },
     availabilityBadge: {
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
@@ -469,40 +625,6 @@ export const HomeDashboard: React.FC = () => {
     limitedText: {
       color: colors.secondary,
     },
-    loadingContainer: {
-      paddingVertical: spacing.xxl * 2,
-      alignItems: 'center',
-    },
-    loadingText: {
-      ...typography.body,
-      color: colors.textSecondary,
-      marginTop: spacing.md,
-    },
-    errorContainer: {
-      alignItems: 'center',
-      paddingVertical: spacing.xxl,
-    },
-    errorIcon: {
-      fontSize: 48,
-    },
-    errorText: {
-      ...typography.body,
-      color: colors.textSecondary,
-      marginTop: spacing.md,
-      textAlign: 'center',
-    },
-    retryButton: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.sm,
-      borderRadius: borderRadius.lg,
-      marginTop: spacing.md,
-    },
-    retryText: {
-      ...typography.body,
-      color: colors.white,
-      fontWeight: '600',
-    },
     emptyContainer: {
       alignItems: 'center',
       paddingVertical: spacing.xxl,
@@ -515,6 +637,8 @@ export const HomeDashboard: React.FC = () => {
     emptyText: {
       ...typography.body,
       color: colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: spacing.xl,
     },
   }), [colors]);
 
@@ -531,24 +655,26 @@ export const HomeDashboard: React.FC = () => {
       >
         <View style={styles.greetingHeader}>
           <View style={styles.greetingLeft}>
-            {user?.profileImageUrl ? (
-              <Image
-                source={{ uri: user.profileImageUrl + '?t=' + Date.now() }}
-                style={styles.headerAvatar}
-                contentFit="cover"
-                cachePolicy="none"
-              />
-            ) : (
-              <View style={styles.headerAvatar}>
-                <Text style={styles.headerAvatarText}>{userName.charAt(0).toUpperCase()}</Text>
-              </View>
-            )}
+            <View style={styles.greetingBrandRow}>
+              {user?.profileImageUrl ? (
+                <Image
+                  source={{ uri: user.profileImageUrl + '?t=' + Date.now() }}
+                  style={styles.headerAvatar}
+                  contentFit="cover"
+                  cachePolicy="none"
+                />
+              ) : (
+                <View style={styles.headerAvatar}>
+                  <Text style={styles.headerAvatarText}>{userName.charAt(0).toUpperCase()}</Text>
+                </View>
+              )}
+              <Text style={styles.parkPalTitle}>ParknQuik</Text>
+            </View>
             <View>
               <Text style={styles.greetingTitle}>{getGreeting()}, {userName.split(' ')[0]}</Text>
               <Text style={styles.greetingSubtitle}>Find your perfect parking spot</Text>
             </View>
           </View>
-          <Text style={styles.parkPalTitle}>ParknQuik</Text>
         </View>
 
         <View style={styles.searchContainer}>
@@ -569,7 +695,7 @@ export const HomeDashboard: React.FC = () => {
         </View>
 
         <View style={styles.greetingContainer}>
-          <Text style={styles.greeting}>Parking near {currentLocation ? 'you' : 'Manila'}</Text>
+          <Text style={styles.greeting}>Parking near {nearbyLocation ? 'you' : 'your area'}</Text>
         </View>
 
         <View style={styles.statsGrid}>
@@ -592,7 +718,7 @@ export const HomeDashboard: React.FC = () => {
               <MaterialCommunityIcons name="map-marker-outline" size={24} color={colors.accent} />
             </View>
             <Text style={styles.statLabel}>Nearby</Text>
-            <Text style={styles.statValue}>{listings.length}</Text>
+            <Text style={styles.statValue}>{homeParkingItems.length}</Text>
           </View>
         </View>
 
@@ -603,54 +729,88 @@ export const HomeDashboard: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {loading && !refreshing && listings.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading nearby parking...</Text>
+        {needsLocation ? (
+          <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="map-marker-question-outline" size={48} color={colors.textSecondary} style={styles.emptyIcon} />
+            <Text style={styles.emptyText}>Enable location or search an area to find nearby parking.</Text>
           </View>
-        ) : error && listings.length === 0 ? (
-          <View style={styles.errorContainer}>
-            <MaterialCommunityIcons
-              name="alert-circle-outline"
-              size={48}
-              color={colors.error}
-              style={{ marginBottom: spacing.md }}
+        ) : showInitialLoading ? (
+          <View style={styles.parkingList}>
+            <ListLoadingState
+              variant="parking"
+              accessibilityLabel="Loading nearby parking"
+              testID="home-parking-loading-skeleton"
             />
-            <Text style={styles.errorText}>Failed to load parking spots</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
-              <Text style={styles.retryText}>Retry</Text>
-            </TouchableOpacity>
+          </View>
+        ) : showInitialFailure ? (
+          <View style={styles.parkingList}>
+            <RetryableFailureState
+              title="Unable to load parking spots"
+              message={error || 'Something went wrong while loading nearby parking. Please try again.'}
+              retryLabel="Retry loading parking spots"
+              onRetry={fetchData}
+              testID="home-parking-failure"
+            />
           </View>
         ) : (
           <FlatList
-            data={listings}
+            data={homeParkingItems}
             scrollEnabled={false}
             nestedScrollEnabled={true}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item) => `${item.kind}-${item.id}`}
             renderItem={({ item: parking }) => (
               <TouchableOpacity
-                style={styles.parkingCard}
-                onPress={() => handleSpotPress(String(parking.id))}
-                {...accessibility.button(parking.title || parking.address, `View details for ${parking.title || parking.address}`)}
+                style={[
+                  styles.parkingCard,
+                  parking.kind === 'candidate' && styles.candidateCard,
+                ]}
+                onPress={() => parking.kind === 'listing'
+                  ? handleSpotPress(String(parking.id))
+                  : handleCandidatePress(parking)}
+                {...accessibility.button(
+                  parking.kind === 'candidate'
+                    ? `${parking.title}. Preview parking candidate, not bookable`
+                    : (parking.title || parking.address),
+                  parking.kind === 'candidate'
+                    ? 'Preview parking candidate, not bookable'
+                    : `View details for ${parking.title || parking.address}`
+                )}
               >
-                {parking.photos && parking.photos[0] ? (
+                {parking.kind === 'listing' && parking.photos && parking.photos[0] ? (
                   <Image
                     source={{ uri: parking.photos[0] }}
                     style={styles.parkingImage}
                     contentFit="cover"
                   />
                 ) : (
-                  <View style={[styles.parkingImage, styles.parkingImagePlaceholder]}>
-                    <MaterialCommunityIcons name="car-outline" size={32} color="#94a3b8" />
+                  <View
+                    style={[
+                      styles.parkingImage,
+                      styles.parkingImagePlaceholder,
+                      parking.kind === 'candidate' && styles.candidateImagePlaceholder,
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={parking.kind === 'candidate' ? 'map-marker-question' : 'car-outline'}
+                      size={32}
+                      color={parking.kind === 'candidate' ? colors.secondary : '#94a3b8'}
+                    />
                   </View>
                 )}
                 <View style={styles.parkingInfo}>
                   <View style={styles.parkingTopRow}>
                     <Text style={styles.parkingName} numberOfLines={1}>{parking.title || parking.address}</Text>
-                    <View style={styles.ratingContainer}>
-                      <MaterialCommunityIcons name="star" size={14} color={colors.accent} />
-                      <Text style={styles.ratingText}>{parking.rating?.toFixed(1) || 'N/A'}</Text>
-                    </View>
+                    {parking.kind === 'candidate' ? (
+                      <View style={styles.previewBadge}>
+                        <MaterialCommunityIcons name="eye-outline" size={12} color={colors.secondary} />
+                        <Text style={styles.previewBadgeText}>Preview</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.ratingContainer}>
+                        <MaterialCommunityIcons name="star" size={14} color={colors.accent} />
+                        <Text style={styles.ratingText}>{parking.rating?.toFixed(1) || 'N/A'}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.parkingMiddleRow}>
                     <View style={styles.distanceRow}>
@@ -659,25 +819,31 @@ export const HomeDashboard: React.FC = () => {
                     </View>
                   </View>
                   <View style={styles.parkingBottomRow}>
-                    <Text style={styles.priceText}>
-                      ₱{parking.pricePerHour?.toFixed(2) || '0.00'}
-                      <Text style={styles.priceUnit}>/hr</Text>
-                    </Text>
-                    <View style={[
-                      styles.availabilityBadge,
-                      parking.availability
-                        ? styles.availableBadge
-                        : styles.limitedBadge
-                    ]}>
-                      <Text style={[
-                        styles.availabilityText,
-                        parking.availability
-                          ? styles.availableText
-                          : styles.limitedText
-                      ]}>
-                        {parking.availability ? 'Available' : 'Limited'}
-                      </Text>
-                    </View>
+                    {parking.kind === 'candidate' ? (
+                      <Text style={styles.previewStatusText}>Not bookable yet</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.priceText}>
+                          ₱{parking.pricePerHour?.toFixed(2) || '0.00'}
+                          <Text style={styles.priceUnit}>/hr</Text>
+                        </Text>
+                        <View style={[
+                          styles.availabilityBadge,
+                          parking.availability
+                            ? styles.availableBadge
+                            : styles.limitedBadge
+                        ]}>
+                          <Text style={[
+                            styles.availabilityText,
+                            parking.availability
+                              ? styles.availableText
+                              : styles.limitedText
+                          ]}>
+                            {parking.availability ? 'Available' : 'Limited'}
+                          </Text>
+                        </View>
+                      </>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -686,7 +852,7 @@ export const HomeDashboard: React.FC = () => {
             ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              !loading && listings.length === 0 && error === null ? (
+              !loading && homeParkingItems.length === 0 && error === null ? (
                 <View style={styles.emptyContainer}>
                   <MaterialCommunityIcons
                     name="map-marker-off-outline"

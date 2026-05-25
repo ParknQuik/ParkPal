@@ -22,6 +22,7 @@ import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
 import { useTheme } from '../context/ThemeContext';
 import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
 import { analyticsService } from '../services/analytics';
+import { marketplaceAPI } from '../services/api';
 import { ListingBottomSheet } from '../components/ListingBottomSheet';
 import { FilterModal, FilterConfig } from '../components/FilterModal';
 import { FilterChips, SortOption } from '../components/FilterChips';
@@ -31,10 +32,17 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { clusterMarkers, ClusteredMarker } from '../utils/clusterMarkers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import type { ParkingCandidateDiscoveryPin } from '../types';
 
 const { width, height } = Dimensions.get('window');
 
 const CACHE_KEY = 'parkpal_cached_listings';
+const NEUTRAL_REGION = {
+  latitude: 0,
+  longitude: 0,
+  latitudeDelta: 80,
+  longitudeDelta: 80,
+};
 
 const DARK_MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
@@ -164,10 +172,61 @@ const ClusterMarker = React.memo(({ cluster, onPress }: {
   </Marker>
 ));
 
+const CandidateMarker = React.memo(({ candidate, selected, onPress }: {
+  candidate: ParkingCandidateDiscoveryPin;
+  selected: boolean;
+  onPress: (candidateKey: string) => void;
+}) => {
+  const [tracksChanges, setTracksChanges] = React.useState(true);
+  const markerKey = `candidate-${candidate.id}`;
+  const bg = selected ? '#f59e0b' : '#ffffff';
+  const iconColor = selected ? '#ffffff' : '#f59e0b';
+  const borderColor = candidate.isPreview ? '#f59e0b' : '#10b77f';
+
+  return (
+    <Marker
+      coordinate={{ latitude: candidate.latitude, longitude: candidate.longitude }}
+      onPress={() => onPress(markerKey)}
+      tracksViewChanges={tracksChanges}
+      anchor={{ x: 0.5, y: 0.5 }}
+    >
+      <View
+        accessible
+        accessibilityLabel={`${candidate.title}. Preview parking candidate, not bookable.`}
+        accessibilityRole="button"
+        collapsable={false}
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 21,
+          backgroundColor: bg,
+          borderWidth: 2,
+          borderColor,
+          justifyContent: 'center',
+          alignItems: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          elevation: 4,
+        }}
+        onLayout={() => setTracksChanges(false)}
+      >
+        <MaterialCommunityIcons
+          name={candidate.isPreview ? 'map-marker-question' : 'map-marker-radius'}
+          size={22}
+          color={iconColor}
+        />
+      </View>
+    </Marker>
+  );
+});
+
 export const ExploreMap: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { latitude, longitude, focusSpotId } = route.params || {};
+  const { latitude, longitude, focusSpotId, candidateId } = route.params || {};
+  const hasRouteLocation = typeof latitude === 'number' && typeof longitude === 'number';
   const dispatch = useAppDispatch();
   const { colors, isDark } = useTheme();
   const mapRef = useRef<MapView>(null);
@@ -188,22 +247,19 @@ export const ExploreMap: React.FC = () => {
   const [zoneIndicatorVisible, setZoneIndicatorVisible] = useState(true);
   const [zoneOccupancyMap, setZoneOccupancyMap] = useState<Record<string, number>>({});
   const [cachedListings, setCachedListings] = useState<any[]>([]);
+  const [candidatePins, setCandidatePins] = useState<ParkingCandidateDiscoveryPin[]>([]);
   const insets = useSafeAreaInsets();
   const { history, addToHistory, clearHistory, removeFromHistory } = useSearchHistory();
   const { isConnected } = useNetworkStatus();
 
-  const [region, setRegion] = useState(latitude && longitude ? {
+  const [region, setRegion] = useState(hasRouteLocation ? {
     latitude,
     longitude,
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
-  } : {
-    latitude: 14.5995,
-    longitude: 120.9842,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  });
-  const [locationReady, setLocationReady] = useState(false);
+  } : NEUTRAL_REGION);
+  const [locationReady, setLocationReady] = useState(hasRouteLocation);
+  const [hasLocationContext, setHasLocationContext] = useState(hasRouteLocation);
   const [mapReady, setMapReady] = useState(false);
 
   const { listings, loading } = useAppSelector((state) => state.marketplace);
@@ -280,6 +336,23 @@ export const ExploreMap: React.FC = () => {
   const selectedListing = selectedMarker !== null
     ? (isConnected ? listings : cachedListings).find((l: any) => l.id === selectedMarker)
     : null;
+  const selectedCandidate = typeof selectedMarker === 'string' && selectedMarker.startsWith('candidate-')
+    ? candidatePins.find((candidate) => `candidate-${candidate.id}` === selectedMarker)
+    : null;
+  const selectedMapEntity = selectedListing || (selectedCandidate ? {
+    ...selectedCandidate,
+    id: `candidate-${selectedCandidate.id}`,
+    description: '',
+    photos: [],
+    amenities: [],
+    rating: null,
+    reviewCount: 0,
+    distance: null,
+    pricePerHour: null,
+    canBook: false,
+    title: selectedCandidate.title,
+    address: selectedCandidate.address,
+  } : null);
 
   useEffect(() => {
     if (selectedListing?.zoneId) {
@@ -301,6 +374,31 @@ export const ExploreMap: React.FC = () => {
   }, [zoneOccupancyMap]);
 
   const displayListings = isConnected ? listings : cachedListings;
+
+  const fetchCandidatePins = useCallback(async (lat: number, lon: number) => {
+    if (!isConnected) return;
+    try {
+      const response = await marketplaceAPI.getDiscoveryCandidates({ lat, lon, radius: 3 });
+      setCandidatePins(response.data?.data || []);
+    } catch (err) {
+      setCandidatePins([]);
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (!candidateId) return;
+    const candidateMarkerId = `candidate-${candidateId}`;
+    const focusedCandidate = candidatePins.find((candidate) => candidate.id === Number(candidateId));
+    if (!focusedCandidate) return;
+
+    setSelectedMarker(candidateMarkerId);
+    mapRef.current?.animateToRegion({
+      latitude: focusedCandidate.latitude,
+      longitude: focusedCandidate.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    }, 500);
+  }, [candidateId, candidatePins]);
 
   const sortedListings = useMemo(() => {
     if (!activeSort || !displayListings.length) return displayListings;
@@ -352,6 +450,7 @@ export const ExploreMap: React.FC = () => {
       }
 
       const result = await dispatch(searchListings(params)).unwrap();
+      fetchCandidatePins(lat, lon);
 
       if (result?.length) {
         try {
@@ -368,7 +467,7 @@ export const ExploreMap: React.FC = () => {
     } catch (err) {
       ;
     }
-  }, [dispatch, searchQuery]);
+  }, [dispatch, searchQuery, fetchCandidatePins]);
 
   useEffect(() => {
     if (!isConnected) {
@@ -388,7 +487,7 @@ export const ExploreMap: React.FC = () => {
   }, [isConnected]);
 
   const handleApplyFilters = (filters: FilterConfig) => {
-    if (!isConnected) return;
+    if (!isConnected || !hasLocationContext) return;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
@@ -397,7 +496,7 @@ export const ExploreMap: React.FC = () => {
   };
 
   const centerOnUser = useCallback(async () => {
-    if (latitude && longitude) {
+    if (hasRouteLocation) {
       const newRegion = {
         latitude,
         longitude,
@@ -406,12 +505,15 @@ export const ExploreMap: React.FC = () => {
       };
       setRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 500);
+      setHasLocationContext(true);
 
       if (isConnected) {
         fetchListings(latitude, longitude);
       }
 
-      if (focusSpotId) {
+      if (candidateId) {
+        setTimeout(() => setSelectedMarker(`candidate-${candidateId}`), 1000);
+      } else if (focusSpotId) {
         setTimeout(() => setSelectedMarker(focusSpotId), 1000);
       }
       setLocationReady(true);
@@ -432,22 +534,21 @@ export const ExploreMap: React.FC = () => {
         };
         setRegion(newRegion);
         mapRef.current?.animateToRegion(newRegion, 500);
+        setHasLocationContext(true);
         if (isConnected) {
           fetchListings(location.coords.latitude, location.coords.longitude);
         }
       } else {
-        if (isConnected) {
-          fetchListings(region.latitude, region.longitude);
-        }
+        setCandidatePins([]);
+        setHasLocationContext(false);
       }
     } catch {
-      if (isConnected) {
-        fetchListings(region.latitude, region.longitude);
-      }
+      setCandidatePins([]);
+      setHasLocationContext(false);
     } finally {
       setLocationReady(true);
     }
-  }, [fetchListings, latitude, longitude, focusSpotId, isConnected]);
+  }, [fetchListings, latitude, longitude, candidateId, focusSpotId, isConnected, hasRouteLocation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -456,7 +557,7 @@ export const ExploreMap: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected || !hasLocationContext) return;
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
     }
@@ -468,17 +569,17 @@ export const ExploreMap: React.FC = () => {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchQuery, isConnected]);
+  }, [searchQuery, isConnected, hasLocationContext]);
 
   const handleRefresh = useCallback(async () => {
-    if (!isConnected) {
+    if (!isConnected || !hasLocationContext) {
       setRefreshing(false);
       return;
     }
     setRefreshing(true);
     await fetchListings(region.latitude, region.longitude, activeFilters);
     setRefreshing(false);
-  }, [fetchListings, isConnected]);
+  }, [fetchListings, isConnected, hasLocationContext]);
 
   const handleRecenter = useCallback(() => {
     centerOnUser();
@@ -510,7 +611,9 @@ export const ExploreMap: React.FC = () => {
     } catch {}
     setSelectedMarker(markerId);
     resetZoneIndicatorTimer();
-    const listing = (isConnected ? listings : cachedListings).find((l: any) => l.id === markerId);
+    const listing = typeof markerId === 'string' && markerId.startsWith('candidate-')
+      ? candidatePins.find((candidate) => `candidate-${candidate.id}` === markerId)
+      : (isConnected ? listings : cachedListings).find((l: any) => l.id === markerId);
     if (listing) {
       mapRef.current?.animateToRegion({
         latitude: listing.latitude,
@@ -519,7 +622,7 @@ export const ExploreMap: React.FC = () => {
         longitudeDelta: 0.01,
       }, 500);
     }
-  }, [listings, cachedListings, isConnected, resetZoneIndicatorTimer]);
+  }, [listings, cachedListings, candidatePins, isConnected, resetZoneIndicatorTimer]);
 
   const handleViewDetails = () => {
     if (selectedListing) {
@@ -528,12 +631,12 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleDirections = () => {
-    if (!selectedListing) return;
-    const lat = selectedListing.latitude;
-    const lng = selectedListing.longitude;
+    if (!selectedMapEntity) return;
+    const lat = selectedMapEntity.latitude;
+    const lng = selectedMapEntity.longitude;
     const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
     const latLng = `${lat},${lng}`;
-    const label = selectedListing.title || selectedListing.address;
+    const label = selectedMapEntity.title || selectedMapEntity.address;
     const url = Platform.select({
       ios: `${scheme}${label}@${latLng}`,
       android: `${scheme}${latLng}(${label})`,
@@ -542,12 +645,12 @@ export const ExploreMap: React.FC = () => {
   };
 
   const handleFilterPress = () => {
-    if (!isConnected) return;
+    if (!isConnected || !hasLocationContext) return;
     setFilterModalVisible(true);
   };
 
   const handleClearFilters = () => {
-    if (!isConnected) return;
+    if (!isConnected || !hasLocationContext) return;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
@@ -564,7 +667,9 @@ export const ExploreMap: React.FC = () => {
     setSearchQuery(suggestion);
     addToHistory(suggestion);
     setIsFocused(false);
-    fetchListings(region.latitude, region.longitude, activeFilters);
+    if (hasLocationContext) {
+      fetchListings(region.latitude, region.longitude, activeFilters);
+    }
   };
 
   const handleSubmitEditing = () => {
@@ -593,6 +698,7 @@ export const ExploreMap: React.FC = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch {}
     setHasMovedMap(false);
+    setHasLocationContext(true);
     if (searchQuery.trim()) addToHistory(searchQuery);
     await fetchListings(region.latitude, region.longitude, activeFilters);
   };
@@ -878,17 +984,17 @@ export const ExploreMap: React.FC = () => {
           )}
         </View>
         <TouchableOpacity
-          style={[styles.filterButton, !isConnected && styles.filterButtonDisabled]}
+          style={[styles.filterButton, (!isConnected || !hasLocationContext) && styles.filterButtonDisabled]}
           onPress={handleFilterPress}
           activeOpacity={0.7}
-          disabled={!isConnected}
+          disabled={!isConnected || !hasLocationContext}
           accessibilityLabel={hasActiveFilters ? "Filter parking spots, filters active" : "Filter parking spots"}
           accessibilityRole="button"
         >
           <MaterialCommunityIcons
             name="tune"
             size={20}
-            color={hasActiveFilters && isConnected ? colors.primary : (isConnected ? colors.textSecondary : colors.textTertiary)}
+            color={hasActiveFilters && isConnected && hasLocationContext ? colors.primary : (isConnected && hasLocationContext ? colors.textSecondary : colors.textTertiary)}
           />
         </TouchableOpacity>
       </View>
@@ -1013,16 +1119,26 @@ export const ExploreMap: React.FC = () => {
               />
             );
           })}
-          <Circle
-            center={{
-              latitude: region.latitude,
-              longitude: region.longitude,
-            }}
-            radius={3000}
-            fillColor="rgba(16, 183, 127, 0.1)"
-            strokeColor="rgba(16, 183, 127, 0.5)"
-            strokeWidth={2}
-          />
+          {isConnected && candidatePins.map((candidate) => (
+            <CandidateMarker
+              key={`candidate-${candidate.id}`}
+              candidate={candidate}
+              selected={selectedMarker === `candidate-${candidate.id}`}
+              onPress={handleMarkerPress}
+            />
+          ))}
+          {hasLocationContext && (
+            <Circle
+              center={{
+                latitude: region.latitude,
+                longitude: region.longitude,
+              }}
+              radius={3000}
+              fillColor="rgba(16, 183, 127, 0.1)"
+              strokeColor="rgba(16, 183, 127, 0.5)"
+              strokeWidth={2}
+            />
+          )}
           {showZoneOverlays && analyticsZones.map((zone: any) => {
             const occupancy = zoneOccupancyMap[zone.id] ?? 50;
             const isActive = currentZone?.id === zone.id;
@@ -1091,7 +1207,7 @@ export const ExploreMap: React.FC = () => {
           </View>
         )}
 
-        {loading && isConnected && (
+        {loading && isConnected && hasLocationContext && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
@@ -1104,7 +1220,14 @@ export const ExploreMap: React.FC = () => {
           </View>
         )}
 
-        {!loading && isConnected && listings.length === 0 && (
+        {!loading && locationReady && isConnected && !hasLocationContext && (
+          <View style={styles.emptyState} accessibilityLabel="Location needed to find nearby parking" accessible>
+            <MaterialCommunityIcons name="map-marker-question-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyStateText}>Enable location or search an area to find nearby parking.</Text>
+          </View>
+        )}
+
+        {!loading && isConnected && hasLocationContext && listings.length === 0 && candidatePins.length === 0 && (
           <View style={styles.emptyState} accessibilityLabel="No parking spots found in this area" accessible>
             <MaterialCommunityIcons name="map-marker-off-outline" size={48} color={colors.textSecondary} />
             <Text style={styles.emptyStateText}>No parking spots found</Text>
@@ -1151,11 +1274,12 @@ export const ExploreMap: React.FC = () => {
       </View>
 
       <ListingBottomSheet
-        listing={selectedListing}
-        zoneAvailability={selectedZoneAvail}
+        listing={selectedMapEntity}
+        zoneAvailability={selectedListing ? selectedZoneAvail : null}
         onViewDetails={handleViewDetails}
         onDirections={handleDirections}
         onQuickBook={() => {
+          if (!selectedListing) return;
           try {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch {}

@@ -29,6 +29,7 @@ const SECRETS_TO_UPLOAD = {
   'DATABASE_URL': 'database-url',
   'REDIS_URL': 'redis-url',
   'GOOGLE_MAPS_API_KEY': 'google-maps-api-key',
+  'GOOGLE_PLACES_API_KEY': 'google-places-api-key',
 };
 
 async function uploadSecrets() {

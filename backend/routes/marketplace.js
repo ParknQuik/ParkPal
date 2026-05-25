@@ -11,7 +11,8 @@ const {
   qrCheckinSchema,
   qrCheckoutSchema,
   idParamSchema,
-  hostEarningsQuerySchema
+  hostEarningsQuerySchema,
+  discoveryCandidatesSchema
 } = require('../validators/marketplace');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -613,6 +614,52 @@ app.get(
     '/marketplace/listings/:id/reviews',
     validateParams(idParamSchema),
     asyncHandler(marketplaceController.getListingReviews));
+
+  /**
+   * @swagger
+   * /api/marketplace/discovery/candidates:
+   *   get:
+   *     summary: Get public parking candidate discovery pins
+   *     tags: [Marketplace]
+   *     parameters:
+   *       - in: query
+   *         name: lat
+   *         required: true
+   *         schema:
+   *           type: number
+   *           minimum: -90
+   *           maximum: 90
+   *         description: Centre latitude for the bounding-box search
+   *         example: 14.5995
+   *       - in: query
+   *         name: lon
+   *         required: true
+   *         schema:
+   *           type: number
+   *           minimum: -180
+   *           maximum: 180
+   *         description: Centre longitude for the bounding-box search
+   *         example: 120.9842
+   *       - in: query
+   *         name: radius
+   *         required: false
+   *         schema:
+   *           type: number
+   *           minimum: 0.1
+   *           maximum: 50
+   *         description: Search radius in kilometres
+   *         example: 5
+   *     responses:
+   *       200:
+   *         description: List of parking candidate preview pins
+   *       400:
+   *         description: Missing or invalid query parameters
+   */
+  app.get(
+    '/marketplace/discovery/candidates',
+    validateQuery(discoveryCandidatesSchema),
+    asyncHandler(marketplaceController.getDiscoveryCandidates));
+
 
   /**
    * @swagger

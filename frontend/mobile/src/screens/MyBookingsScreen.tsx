@@ -22,6 +22,7 @@ import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { AppHeader } from '../components/AppHeader';
+import { ListLoadingState, RetryableFailureState } from '../components/ListState';
 
 const PRIMARY = '#10b77f';
 
@@ -107,6 +108,8 @@ export const MyBookingsScreen: React.FC = () => {
   const [extending, setExtending] = useState(false);
 
   const { bookings, loading, error } = useAppSelector((state) => state.marketplace);
+  const showInitialLoading = loading && !refreshing && bookings.length === 0;
+  const showInitialFailure = Boolean(error) && bookings.length === 0;
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -524,33 +527,9 @@ export const MyBookingsScreen: React.FC = () => {
       fontWeight: '500',
       color: colors.textSecondary,
     },
-    loadingContainer: {
+    stateContainer: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    loadingText: {
-      fontSize: typography.sm.fontSize,
-      color: colors.textSecondary,
-      marginTop: spacing.md,
-    },
-    errorContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
       padding: spacing.xl,
-    },
-    retryButton: {
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.sm,
-      backgroundColor: PRIMARY,
-      borderRadius: borderRadius.lg,
-      marginTop: spacing.md,
-    },
-    retryText: {
-      fontSize: typography.sm.fontSize,
-      color: colors.white,
-      fontWeight: '600',
     },
     placeholderImage: {
       backgroundColor: colors.border,
@@ -847,18 +826,23 @@ export const MyBookingsScreen: React.FC = () => {
         ))}
       </View>
 
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={PRIMARY} />
-          <Text style={styles.loadingText}>Loading bookings...</Text>
+      {showInitialLoading ? (
+        <View style={styles.stateContainer}>
+          <ListLoadingState
+            variant="booking"
+            accessibilityLabel="Loading bookings"
+            testID="my-bookings-loading-skeleton"
+          />
         </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} style={{ marginBottom: spacing.md }} />
-          <Text style={styles.emptyText}>Failed to load bookings</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchBookings}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
+      ) : showInitialFailure ? (
+        <View style={styles.stateContainer}>
+          <RetryableFailureState
+            title="Unable to load bookings"
+            message={error || 'Something went wrong while loading your bookings. Please try again.'}
+            retryLabel="Retry loading bookings"
+            onRetry={fetchBookings}
+            testID="my-bookings-failure"
+          />
         </View>
       ) : (
       <FlatList
