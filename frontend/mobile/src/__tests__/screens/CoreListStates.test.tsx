@@ -6,6 +6,7 @@ import { MyVehiclesScreen } from '../../screens/MyVehiclesScreen';
 import { PointsHistoryScreen } from '../../screens/PointsHistoryScreen';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { searchListings, getMyBookings } from '../../store/slices/marketplaceSlice';
+import { fetchBehaviorStatus } from '../../store/slices/behaviorSlice';
 import { getCurrentLocation } from '../../store/slices/locationSlice';
 import { getVehicles, setDefaultVehicle } from '../../store/slices/vehiclesSlice';
 import { fetchHistory } from '../../store/slices/pointsSlice';
@@ -20,6 +21,10 @@ jest.mock('../../store', () => ({
 jest.mock('../../store/slices/marketplaceSlice', () => ({
   searchListings: jest.fn(),
   getMyBookings: jest.fn(),
+}));
+
+jest.mock('../../store/slices/behaviorSlice', () => ({
+  fetchBehaviorStatus: jest.fn(),
 }));
 
 jest.mock('../../store/slices/locationSlice', () => ({
@@ -98,6 +103,7 @@ const mockUseAppDispatch = useAppDispatch as jest.Mock;
 const mockUseAppSelector = useAppSelector as jest.Mock;
 const mockSearchListings = searchListings as unknown as jest.Mock;
 const mockGetMyBookings = getMyBookings as unknown as jest.Mock;
+const mockFetchBehaviorStatus = fetchBehaviorStatus as unknown as jest.Mock;
 const mockGetCurrentLocation = getCurrentLocation as unknown as jest.Mock;
 const mockGetVehicles = getVehicles as unknown as jest.Mock;
 const mockSetDefaultVehicle = setDefaultVehicle as unknown as jest.Mock;
@@ -205,6 +211,7 @@ describe('core mobile list loading and failure states', () => {
 
     mockSearchListings.mockImplementation((payload) => createAction('marketplace/searchListings', payload));
     mockGetMyBookings.mockImplementation(() => createAction('marketplace/getMyBookings'));
+    mockFetchBehaviorStatus.mockImplementation(() => createAction('behavior/fetchStatus'));
     mockGetCurrentLocation.mockImplementation(() => createAction('location/getCurrentLocation', {
       latitude: 14.5995,
       longitude: 120.9842,
@@ -343,6 +350,36 @@ describe('core mobile list loading and failure states', () => {
     expect(getByText('Not bookable yet')).toBeTruthy();
     expect(getAllByText('Preview')).toHaveLength(1);
     expect(getByText('2')).toBeTruthy();
+  });
+
+  it('shows account-standing warning on Home when renter has strikes', () => {
+    setState({
+      behavior: {
+        ...baseState.behavior,
+        status: {
+          noShowCount: 1,
+          lateCancelCount: 0,
+          totalStrikes: 1,
+          isSuspended: false,
+          suspendedUntil: null,
+          lastStrikeAt: '2026-05-25T00:00:00.000Z',
+          strikeResetDays: 30,
+          policySummary: {
+            warning: '1 strike triggers warning status.',
+            suspension: '3 strikes pause booking access.',
+            noShow: 'No-show bookings add one strike.',
+            lateCancellation: 'Late cancellations add one strike.',
+            reset: 'Strikes reset after 30 days.',
+          },
+        },
+      },
+    });
+
+    const { getByTestId, getByText } = render(<HomeDashboard />);
+
+    expect(getByTestId('home-account-standing-banner')).toBeTruthy();
+    expect(getByText('Warning')).toBeTruthy();
+    expect(getByText('1 strike on record. Cancel early and check in on time to avoid booking pauses.')).toBeTruthy();
   });
 
   it('navigates listing rows to detail and candidate rows to Explore focus params', async () => {
