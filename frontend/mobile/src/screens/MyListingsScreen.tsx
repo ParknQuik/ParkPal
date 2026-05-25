@@ -25,6 +25,7 @@ import { haptics } from '../utils/haptics';
 import { accessibility } from '../utils/accessibility';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { AppHeader } from '../components/AppHeader';
+import { ListLoadingState, RetryableFailureState } from '../components/ListState';
 
 export const MyListingsScreen: React.FC = () => {
   const navigation = useNavigation() as any;
@@ -40,6 +41,8 @@ export const MyListingsScreen: React.FC = () => {
   const { myListings, loading, error } = useAppSelector((state) => state.marketplace);
 
   const activeCount = myListings.filter((l: any) => l.availability).length;
+  const showInitialLoading = loading && !refreshing && myListings.length === 0;
+  const showInitialFailure = Boolean(error) && myListings.length === 0;
 
   const fetchData = useCallback(async () => {
     try {
@@ -121,7 +124,7 @@ export const MyListingsScreen: React.FC = () => {
     }
   }, []);
 
-const handleFilterPress = useCallback(async () => {
+  const handleFilterPress = useCallback(async () => {
     await haptics.light();
   }, []);
 
@@ -410,37 +413,6 @@ const handleFilterPress = useCallback(async () => {
       fontWeight: '600',
       color: colors.textPrimary,
     },
-    loadingContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: spacing.xxl * 2,
-    },
-    loadingText: {
-      ...typography.bodySmall,
-      color: colors.textSecondary,
-      marginTop: spacing.md,
-    },
-    errorContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: spacing.xxl * 2,
-    },
-    errorText: {
-      ...typography.body,
-      color: colors.textSecondary,
-      marginBottom: spacing.md,
-    },
-    retryButton: {
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.sm,
-      backgroundColor: colors.primary,
-      borderRadius: borderRadius.lg,
-    },
-    retryText: {
-      ...typography.bodySmall,
-      color: colors.white,
-      fontWeight: '600',
-    },
     emptyContainer: {
       alignItems: 'center',
       justifyContent: 'center',
@@ -525,18 +497,20 @@ const handleFilterPress = useCallback(async () => {
               </TouchableOpacity>
             </View>
 
-          {loading && !refreshing ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading listings...</Text>
-            </View>
-          ) : error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>Failed to load listings</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
-                <Text style={styles.retryText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
+          {showInitialLoading ? (
+            <ListLoadingState
+              variant="listing"
+              accessibilityLabel="Loading listings"
+              testID="my-listings-loading-skeleton"
+            />
+          ) : showInitialFailure ? (
+            <RetryableFailureState
+              title="Unable to load listings"
+              message={error || 'Something went wrong while loading your listings. Please try again.'}
+              retryLabel="Retry loading listings"
+              onRetry={fetchData}
+              testID="my-listings-failure"
+            />
           ) : (
           <FlatList
             data={myListings}

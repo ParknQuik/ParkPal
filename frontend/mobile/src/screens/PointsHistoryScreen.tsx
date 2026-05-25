@@ -1,16 +1,12 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { fetchHistory } from '../store/slices/pointsSlice';
 import { PointsHistoryItem } from '../components/PointsHistoryItem';
@@ -21,6 +17,7 @@ import { PointsTransaction } from '../types';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { StatusBar } from 'expo-status-bar';
 import { AppHeader } from '../components/AppHeader';
+import { ListLoadingState, RetryableFailureState } from '../components/ListState';
 
 export const PointsHistoryScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -36,7 +33,9 @@ export const PointsHistoryScreen: React.FC = () => {
     referralCode: null,
     error: null
   };
-  const { transactions, loading } = pointsState;
+  const { transactions, loading, error } = pointsState;
+  const showInitialLoading = loading && !refreshing && transactions.length === 0;
+  const showInitialFailure = Boolean(error) && transactions.length === 0;
 
   const statusBarStyle = useStatusBarStyle();
 
@@ -76,13 +75,6 @@ export const PointsHistoryScreen: React.FC = () => {
       message="Your points transactions will appear here once you start earning or redeeming points."
       icon="chart-timeline"
     />
-  );
-
-  const renderLoading = () => (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={styles.loadingText}>Loading points history...</Text>
-    </View>
   );
 
   const styles = useMemo(() => StyleSheet.create({
@@ -134,15 +126,8 @@ export const PointsHistoryScreen: React.FC = () => {
       backgroundColor: colors.border,
       marginLeft: spacing.md,
     },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      ...typography.body,
-      color: colors.textSecondary,
-      marginTop: spacing.md,
+    stateContainer: {
+      padding: spacing.md,
     },
   }), [colors]);
 
@@ -152,8 +137,24 @@ export const PointsHistoryScreen: React.FC = () => {
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <AppHeader title="Points History" onBack={handleBack} />
         <View style={styles.contentArea}>
-          {loading && !refreshing && transactions.length === 0 ? (
-            renderLoading()
+          {showInitialLoading ? (
+            <View style={styles.stateContainer}>
+              <ListLoadingState
+                variant="transaction"
+                accessibilityLabel="Loading points history"
+                testID="points-history-loading-skeleton"
+              />
+            </View>
+          ) : showInitialFailure ? (
+            <View style={styles.stateContainer}>
+              <RetryableFailureState
+                title="Unable to load points history"
+                message={error || 'Something went wrong while loading your points history. Please try again.'}
+                retryLabel="Retry loading points history"
+                onRetry={fetchHistoryData}
+                testID="points-history-failure"
+              />
+            </View>
           ) : (
             <FlatList
               data={transactions}
