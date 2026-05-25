@@ -12,10 +12,11 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings, getMyBookings } from '../store/slices/marketplaceSlice';
+import { fetchBehaviorStatus } from '../store/slices/behaviorSlice';
 import { getCurrentLocation } from '../store/slices/locationSlice';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
@@ -24,6 +25,7 @@ import { haptics } from '../utils/haptics';
 import { accessibility } from '../utils/accessibility';
 import { useDebouncedCallback } from '../utils/performance';
 import { ListLoadingState, RetryableFailureState } from '../components/ListState';
+import { AccountStanding } from '../components/AccountStanding';
 import { marketplaceAPI } from '../services/api';
 import type { MarketplaceListing, ParkingCandidateDiscoveryPin } from '../types';
 
@@ -101,6 +103,7 @@ export const HomeDashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const { colors } = useTheme();
   const { user } = useAppSelector((state) => state.auth);
+  const behaviorStatus = useAppSelector((state) => state.behavior.status);
   const { currentLocation } = useAppSelector((state) => state.location);
   const { listings, bookings, filters, loading, error } = useAppSelector((state) => state.marketplace);
   const userName = user?.name || 'Guest';
@@ -175,7 +178,15 @@ export const HomeDashboard: React.FC = () => {
       }
     };
     init();
-  }, [dispatch, user?.id]);
+  }, [dispatch, fetchDiscoveryCandidates, resolveNearbyLocation, user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        dispatch(fetchBehaviorStatus());
+      }
+    }, [dispatch, user?.id])
+  );
 
   const fetchData = useCallback(async () => {
     try {
@@ -187,7 +198,10 @@ export const HomeDashboard: React.FC = () => {
         ]);
       }
       if (user?.id) {
-        await dispatch(getMyBookings()).unwrap();
+        await Promise.allSettled([
+          dispatch(getMyBookings()).unwrap(),
+          dispatch(fetchBehaviorStatus()).unwrap(),
+        ]);
       }
     } catch (err) {
       // silently handle error
@@ -207,13 +221,14 @@ export const HomeDashboard: React.FC = () => {
       }
       if (user?.id) {
         fetches.push(dispatch(getMyBookings()));
+        fetches.push(dispatch(fetchBehaviorStatus()));
       }
       await Promise.allSettled(fetches);
     };
     refresh().finally(() => {
       setRefreshing(false);
     });
-  }, [dispatch, currentLocation, user?.id, refreshing]);
+  }, [dispatch, fetchDiscoveryCandidates, resolveNearbyLocation, user?.id, refreshing]);
 
   const debouncedSearch = useDebouncedCallback((query: string) => {
     if (nearbyLocation && query.trim()) {
@@ -443,6 +458,10 @@ export const HomeDashboard: React.FC = () => {
       paddingHorizontal: spacing.xl,
       marginTop: spacing.sm,
       gap: spacing.sm,
+    },
+    behaviorBannerWrap: {
+      paddingHorizontal: spacing.xl,
+      marginTop: spacing.sm,
     },
     statCard: {
       flex: 1,
@@ -721,6 +740,12 @@ export const HomeDashboard: React.FC = () => {
             <Text style={styles.statValue}>{homeParkingItems.length}</Text>
           </View>
         </View>
+
+        {behaviorStatus && (behaviorStatus.totalStrikes > 0 || behaviorStatus.isSuspended) && (
+          <View style={styles.behaviorBannerWrap}>
+            <AccountStanding status={behaviorStatus} surface="banner" testID="home-account-standing-banner" />
+          </View>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Nearby Parking</Text>
