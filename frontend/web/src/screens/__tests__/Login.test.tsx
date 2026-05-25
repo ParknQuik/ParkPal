@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../../test/utils';
+import { fireEvent, render, screen, waitFor } from '../../test/utils';
 import userEvent from '@testing-library/user-event';
 import Login from '../Login';
 import api from '../../api';
@@ -18,6 +18,10 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('Login Component', () => {
+  const fillInput = (label: RegExp, value: string) => {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -65,8 +69,8 @@ describe('Login Component', () => {
       render(<Login />);
 
       // Fill in form
-      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'Password123');
+      fillInput(/email/i, 'test@example.com');
+      fillInput(/password/i, 'Password123');
 
       // Submit
       await user.click(screen.getByRole('button', { name: /^login$/i }));
@@ -97,8 +101,8 @@ describe('Login Component', () => {
 
       render(<Login />);
 
-      await user.type(screen.getByLabelText(/email/i), 'wrong@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'wrongpass');
+      fillInput(/email/i, 'wrong@example.com');
+      fillInput(/password/i, 'wrongpass');
       await user.click(screen.getByRole('button', { name: /^login$/i }));
 
       await waitFor(() => {
@@ -123,8 +127,8 @@ describe('Login Component', () => {
 
       render(<Login />);
 
-      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'Password123');
+      fillInput(/email/i, 'test@example.com');
+      fillInput(/password/i, 'Password123');
       await user.click(screen.getByRole('button', { name: /^login$/i }));
 
       // Button should be disabled and show loading text
@@ -177,9 +181,9 @@ describe('Login Component', () => {
       await user.click(screen.getByRole('tab', { name: /register/i }));
 
       // Fill in form
-      await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email/i), 'new@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'Password123');
+      fillInput(/name/i, 'New User');
+      fillInput(/email/i, 'new@example.com');
+      fillInput(/password/i, 'Password123');
 
       // Submit
       await user.click(screen.getByRole('button', { name: /^register$/i }));
@@ -211,9 +215,9 @@ describe('Login Component', () => {
       render(<Login />);
 
       await user.click(screen.getByRole('tab', { name: /register/i }));
-      await user.type(screen.getByLabelText(/name/i), 'Test');
-      await user.type(screen.getByLabelText(/email/i), 'existing@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'Password123');
+      fillInput(/name/i, 'Test');
+      fillInput(/email/i, 'existing@example.com');
+      fillInput(/password/i, 'Password123');
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
       await waitFor(() => {
@@ -246,8 +250,8 @@ describe('Login Component', () => {
       render(<Login />);
 
       // Type in login form
-      await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-      await user.type(screen.getByLabelText(/password/i), 'password');
+      fillInput(/email/i, 'test@example.com');
+      fillInput(/password/i, 'password');
 
       // Switch to register
       await user.click(screen.getByRole('tab', { name: /register/i }));
