@@ -1,1 +1,1 @@
-- @.claude/session-start-instructions.md
+- @AGENTS.md
