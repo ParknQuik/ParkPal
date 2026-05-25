@@ -309,3 +309,36 @@ exports.hostEarningsQuerySchema = Joi.object({
       'date.min': 'End date must be after start date'
     })
 });
+
+/**
+ * Query schema for the public discovery endpoint.
+ * Accepts a centre point (lat/lon) and a radius in kilometres.
+ */
+exports.discoveryCandidatesSchema = Joi.object({
+  lat: Joi.number()
+    .min(-90)
+    .max(90)
+    .required()
+    .messages({
+      'number.min': 'Latitude must be between -90 and 90',
+      'number.max': 'Latitude must be between -90 and 90',
+      'any.required': 'Query parameter "lat" is required'
+    }),
+  lon: Joi.number()
+    .min(-180)
+    .max(180)
+    .required()
+    .messages({
+      'number.min': 'Longitude must be between -180 and 180',
+      'number.max': 'Longitude must be between -180 and 180',
+      'any.required': 'Query parameter "lon" is required'
+    }),
+  radius: Joi.number()
+    .min(0.1)
+    .max(50)
+    .optional()
+    .messages({
+      'number.min': 'Radius must be at least 0.1 kilometres',
+      'number.max': 'Radius cannot exceed 50 kilometres'
+    }),
+});

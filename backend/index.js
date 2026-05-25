@@ -238,6 +238,10 @@ if (process.env.NODE_ENV !== 'test') {
   });
   
   logger.info('Booking expiry cron jobs scheduled (expire: every 5min, reminders: every 10min)');
+
+  // Google parking candidate discovery cron job
+  const { scheduleGoogleParkingCandidateScan } = require('./services/parkingCandidateScanScheduler');
+  scheduleGoogleParkingCandidateScan(cron);
 }
 
 // Only start server if not in test mode

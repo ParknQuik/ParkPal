@@ -2330,3 +2330,86 @@ exports.extendBooking = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Public parking-candidate discovery endpoint.
+ *
+ * GET /marketplace/discovery/candidates?lat=<lat>&lon=<lon>&radius=<km>
+ *
+ * Returns ParkingCandidate records whose draftCenterLat/draftCenterLon fall
+ * within `radius` km of the caller's coordinates.  No bearer token is required.
+ *
+ * Output fields per candidate:
+ *   - id, source ('google_candidate'), canBook (false),
+ *     canShowAnalytics (true ⇐ linked zone present),
+ *     isPreview (true ⇐ candidate_preview status, false ⇐ geofence_verified),
+ *     latitude, longitude, title, address
+ */
+exports.getDiscoveryCandidates = async (req, res, next) => {
+  try {
+    const { lat, lon, radius } = req.query;
+    const userLat = parseFloat(lat);
+    const userLon = parseFloat(lon);
+    const radiusKm = parseFloat(radius ?? '5');
+
+    // Fetch preview and verified candidates. Rejected candidates never appear
+    // in public discovery.
+    const candidates = await prisma.parkingCandidate.findMany({
+      where: {
+        candidateStatus: { in: ['candidate_preview', 'geofence_verified', 'commercial_verified'] },
+        draftCenterLat: { not: null },
+        draftCenterLon: { not: null },
+      },
+      select: {
+        id: true,
+        googlePlaceId: true,
+        candidateStatus: true,
+        draftCenterLat: true,
+        draftCenterLon: true,
+        scanArea: true,
+        linkedZoneId: true,
+        linkedZone: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+      },
+    });
+
+    // Post-filter by distance so the Service Workers / database layer
+    // does not need spatial extension support.
+    const filtered = candidates.filter((c) => {
+      if (c.draftCenterLat == null || c.draftCenterLon == null) {
+        return false;
+      }
+      return (
+        calculateDistance(userLat, userLon, c.draftCenterLat, c.draftCenterLon) <= radiusKm
+      );
+    });
+
+    const result = filtered.map((candidate) => {
+      const isPreview = candidate.candidateStatus === 'candidate_preview';
+      const hasLinkedZone = !!candidate.linkedZone;
+
+      return {
+        id: candidate.id,
+        source: 'google_candidate',
+        canBook: false,
+        // Only show analytics for verified candidates that have a linked zone.
+        canShowAnalytics: !isPreview && hasLinkedZone,
+        isPreview,
+        latitude: candidate.draftCenterLat,
+        longitude: candidate.draftCenterLon,
+        title: candidate.linkedZone?.name || `Parking candidate ${candidate.id}`,
+        address: candidate.linkedZone?.address || null,
+      };
+    });
+
+    res.json({ data: result });
+  } catch (error) {
+    logger.error('Public candidate discovery error:', error);
+    next(error);
+  }
+};

@@ -29,6 +29,7 @@ const RECOMMENDED_VARS = [
   'PAYMONGO_SECRET_KEY',
   'PAYMONGO_PUBLIC_KEY',
   'GOOGLE_MAPS_API_KEY',
+  'GOOGLE_PLACES_API_KEY',
   'FRONTEND_URL',
 ];
 
@@ -239,6 +240,8 @@ function printEnvironmentSummary() {
   logger.info(`  JWT Secret: ${process.env.JWT_SECRET ? 'Set (' + process.env.JWT_SECRET.length + ' chars)' : 'Not set'}`);
   logger.info(`  PayMongo: ${process.env.PAYMONGO_SECRET_KEY ? 'Configured' : 'Not configured'}`);
   logger.info(`  Google Maps: ${process.env.GOOGLE_MAPS_API_KEY ? 'Configured' : 'Not configured'}`);
+  logger.info(`  Google Places: ${process.env.GOOGLE_PLACES_API_KEY ? 'Configured' : 'Not configured'}`);
+  logger.info(`  Google Parking Scan: ${process.env.GOOGLE_PARKING_SCAN_ENABLED === 'true' ? 'Enabled' : 'Disabled'}`);
 }
 
 module.exports = {

@@ -1,8 +1,8 @@
 # Service 1: Smart Parking Analytics
 
-**Last Updated:** April 20, 2026
-**Status:** 🚨 URGENT — Must ship in beta (15% complete — database schema only)
-**Timeline:** Revised — 8 weeks to beta MVP (Jun 2026), full launch Sep 2026
+**Last Updated:** May 24, 2026
+**Status:** Local MVP analytics foundation in progress; beta/deployment evidence remains deferred
+**Timeline:** Local validation first, then beta MVP scope and launch gates
 **Launch Target:** Beta MVP: June 2026 | Full B2B Launch: September 2026
 **Investment:** $123,200 (~₱6.8M)
 **Year 2 Revenue Projection:** ₱20M+ (~$364k)
@@ -18,16 +18,22 @@ Service 1 is ParkPal's **B2B/B2G revenue engine**. While Service 2 is the P2P pa
 - Occupancy analytics for parking operators
 - City-wide congestion insights for governments
 
-**Strategy:** 🚨 REVISED — Analytics must ship IN BETA alongside Service 2. This IS the main value proposition. Without analytics, ParkPal is just another booking app.
+**Strategy:** Service 1 remains ParknQuik's B2B/B2G analytics product. The current local MVP should prove the zone, opt-in movement, and metrics loop before production beta commitments.
 
-### Current Completion (April 20, 2026)
+### Current Completion (May 24, 2026)
 
 | Layer | Status | Notes |
 |-------|--------|-------|
 | Database | ✅ 100% | 5 analytics models implemented |
-| Backend | ⚠️ 10% | Zone CRUD only, no analytics logic |
-| Frontend | ❌ 0% | No analytics UI |
-| Integrations | ❌ 0% | No geofencing / activity recognition |
+| Backend | ⚠️ In progress | Zone/session/activity APIs exist; Google-discovered parking candidate scan, review, and public discovery endpoints are implemented locally |
+| Frontend | ⚠️ In progress | ExploreMap supports zone overlays and non-bookable candidate preview pins |
+| Integrations | ⚠️ In progress | Mobile geofencing/opt-in analytics exists for verified zones; Google Places stays server-side for candidate discovery |
+
+### Google Parking Facility Discovery
+
+Google Places is an additive discovery source for known parking facilities, not a source of ParknQuik analytics or live availability. Server-side scans create internal `ParkingCandidate` records keyed by `googlePlaceId` and review metadata. Public Explore can show limited preview pins, but those pins must remain non-bookable and must not show pricing guarantees, occupancy, or circling-time estimates.
+
+Analytics starts only after an admin/operator verifies the candidate geofence and links it to a ParknQuik-owned `Zone`. From that point, the existing opt-in movement loop can create zone-entry, zone-exit, parking-session, circling-time, and `ZoneMetrics` records against the verified zone.
 
 ---
 
@@ -514,6 +520,8 @@ This is the minimum viable analytics that must be in beta.
 - [ ] `POST /api/v1/analytics/zone/exit` — close session
 - [ ] `GET /api/v1/analytics/zones/:id/availability` — serve cached metrics
 - [ ] `GET /api/v1/analytics/zones` — list all zones
+- [x] Admin-only Google parking-candidate scan and review endpoints
+- [x] Public discovery endpoint for non-bookable candidate preview pins
 - [ ] Parking detection scoring logic (hybrid: activity + movement + duration)
 - [ ] Auto-expire sessions older than 2 hours
 
@@ -523,6 +531,7 @@ This is the minimum viable analytics that must be in beta.
 - [ ] Background location tracking (`react-native-background-geolocation`)
 - [ ] Privacy controls UI (opt-in/opt-out for analytics)
 - [ ] Zone overlay on ExploreMap screen (show circling time estimate)
+- [x] ExploreMap candidate pins that are visually distinct and non-bookable
 - [ ] Parking complex detail screen (availability %, estimated time)
 
 **Beta Deliverables (May 28, 2026):**
