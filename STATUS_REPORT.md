@@ -2,7 +2,7 @@
 
 **Last Updated:** May 25, 2026
 **Current Branch:** `dev`
-**Production Readiness:** 95/100 (PR #153 and PR #155-#157 landed, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, and PR #163 stabilized auth form runtime tests with passing GitHub checks and local web-suite evidence; remaining confidence gaps are future deployment health validation and beta distribution gates)
+**Production Readiness:** 95/100 (PR #153 and PR #155-#157 landed, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized auth form runtime tests, and PR #165 added the Home account-standing banner with passing GitHub checks and focused mobile evidence; remaining confidence gaps are future deployment health validation and beta distribution gates)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
 ---
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| May 25, 2026 | Codex | Verified PR #165 merged into `dev` at `4340cde`, adding the Home account-standing banner after focused `CoreListStates` mobile tests passed 13/13, mobile TypeScript passed, `git diff --check` passed, and GitHub mobile environment, backend, web, mobile, security, quality, validation, PR-size, and branch checks passed | 95/100 |
 | May 25, 2026 | Codex | Verified PR #163 merged into `dev` at `68045dc`, stabilizing web auth form runtime tests after local web tests passed 85/85 in 28.37s and GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed | 95/100 |
 | May 25, 2026 | Codex | Verified PR #161 merged into `dev` at `600a7b5`, stabilizing web Vitest timeouts after local web tests passed 85/85, GitHub backend/web/mobile/security/quality checks passed, and broad local regression evidence showed backend 494/496 with 2 skipped and mobile 56/56 passing | 95/100 |
 | May 25, 2026 | Codex | Ran a fresh `start` smoke test from a clean `origin/dev` worktree at `b27de6e`: `knowledge:rebuild-if-stale` rebuilt the missing local DB, `knowledge:context -- "current project status" --limit 1` returned one compact routing result, and git status/log verification stopped cleanly | 95/100 |
@@ -108,11 +109,11 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ### Current Reconciliation (May 25, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 95/100 after PR #153 reduced agent startup overhead, PR #155 added renter behavior status/account-standing UX, PR #156 shipped shared mobile list states plus dark-mode cleanup, PR #157 added Google parking candidate discovery scans, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, and PR #163 stabilized web auth form runtime tests. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
-- **Branch state:** `origin/dev` is at `68045dc` after PR #163; no open PRs remain against `dev` as verified by `gh pr list --base dev --state open` on May 25, 2026.
+- **Production readiness:** 95/100 after PR #153 reduced agent startup overhead, PR #155 added renter behavior status/account-standing UX, PR #156 shipped shared mobile list states plus dark-mode cleanup, PR #157 added Google parking candidate discovery scans, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized web auth form runtime tests, and PR #165 added the Home account-standing banner. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
+- **Branch state:** `origin/dev` is at `4340cde` after PR #165; no open PRs remain against `dev` as verified by `gh pr list --base dev --state open` on May 25, 2026.
 - **Backend:** GitHub Backend Tests passed for PR #161 on May 25, 2026. Latest local backend full-suite evidence is 494/496 passing with 2 skipped on May 25, 2026, run with `GCS_BUCKET_NAME=test-bucket npm test -- --runInBand --no-watchman` against the existing local test setup. Cloud Run `/health` rechecks belong to future deployment/beta validation.
 - **Web:** GitHub Frontend Web Tests passed for PR #163 on May 25, 2026. Latest local web evidence is 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization.
-- **Mobile:** GitHub Frontend Mobile Checks passed for PR #161 on May 25, 2026. Latest local mobile evidence is 56/56 passing on May 25, 2026, and mobile TypeScript passed during the broad regression pass. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
+- **Mobile:** GitHub Frontend Mobile Checks passed for PR #165 on May 25, 2026. Latest local mobile evidence includes focused `CoreListStates` passing 13/13 for the Home account-standing banner, mobile TypeScript passing, and the broader 56/56 mobile Jest run from May 25, 2026. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
 - **Workflow tooling:** The compact startup card, repo-local knowledge index, tracked compact JSONL mirrors, and archived legacy agent/skill surfaces are intended project tooling; a fresh `start` smoke test passed on May 25, 2026 and was recorded by PR #160. The generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
 ### Current State (May 25, 2026)
@@ -200,7 +201,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 **Test Status:**
 - Backend: GitHub Backend Tests passed for PR #161 on May 25, 2026 ✅; latest local backend full-suite evidence is 494/496 passing with 2 skipped on May 25, 2026
-- Mobile: GitHub Frontend Mobile Checks passed for PR #161 on May 25, 2026 ✅; latest local mobile Jest run is 56/56 passing, and mobile TypeScript passed during the broad regression pass
+- Mobile: GitHub Frontend Mobile Checks passed for PR #165 on May 25, 2026 ✅; latest focused mobile `CoreListStates` run is 13/13 passing for the Home account-standing banner, latest local mobile Jest run is 56/56 passing, and mobile TypeScript passed
 - Web: GitHub Frontend Web Tests passed for PR #163 on May 25, 2026 ✅; latest local web run is 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization
 - Startup: Fresh `start` smoke test passed on May 25, 2026 from a clean `origin/dev` worktree and was recorded by PR #160
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
@@ -406,8 +407,10 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
    - GitHub backend, web, and mobile checks passed for PR #155, PR #156, and PR #157 on May 25, 2026.
    - GitHub backend, web, mobile, security, and quality checks passed for PR #161 on May 25, 2026.
    - GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed for PR #163 on May 25, 2026.
+   - GitHub mobile environment, backend, web, mobile, security, quality, validation, PR-size, and branch checks passed for PR #165 on May 25, 2026.
    - Latest local backend full-suite run is 494/496 passing with 2 skipped on May 25, 2026.
    - Latest local mobile Jest run is 56/56 passing on May 25, 2026, and mobile TypeScript passed.
+   - Focused local Home account-standing banner validation passed with `CoreListStates` 13/13 and mobile TypeScript passing on May 25, 2026.
    - Latest local web run is 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization.
    - Focused local candidate-scan backend tests passed 18/18 on May 25, 2026.
    - Focused local mobile behavior-status, list-state, CoreListStates, and TypeScript checks passed during the May 25 PR split/repair.
@@ -441,6 +444,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - None. Verified by `gh pr list --base dev --state open` on May 25, 2026.
 
 **Recently Merged:**
+- #165: Show account standing on Home
 - #163: Stabilize web auth form tests
 - #161: Stabilize web Vitest timeouts
 - #160: Record startup smoke test
