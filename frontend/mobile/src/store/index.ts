@@ -11,6 +11,7 @@ import vehiclesReducer from './slices/vehiclesSlice';
 import analyticsReducer from './slices/analyticsSlice';
 import pointsReducer from './slices/pointsSlice';
 import settingsReducer from './slices/settingsSlice';
+import behaviorReducer from './slices/behaviorSlice';
 import { RootState } from '../types';
 
 const persistConfig = {
@@ -21,6 +22,7 @@ const persistConfig = {
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  behavior: behaviorReducer,
   booking: bookingReducer,
   location: locationReducer,
   marketplace: marketplaceReducer,
