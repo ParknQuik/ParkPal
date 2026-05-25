@@ -40,16 +40,12 @@ const Login: React.FC = () => {
 	}, [tab, resetLogin, resetRegister]);
 
 	const onLoginSubmit = async (data: LoginFormData) => {
-		console.log('handleLogin called!');
 		setError('');
 
 		try {
-			console.log('Attempting login with:', data.email);
 			await login(data.email, data.password);
-			console.log('Login successful, navigating to /search...');
 			navigate('/search');
 		} catch (err) {
-			console.error('Login error:', err);
 			setError(err instanceof Error ? err.message : 'Login failed');
 		}
 	};

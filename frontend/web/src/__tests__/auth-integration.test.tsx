@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../test/utils';
+import { fireEvent, render, screen, waitFor } from '../test/utils';
 import userEvent from '@testing-library/user-event';
 import Login from '../screens/Login';
 import api from '../api';
@@ -18,6 +18,10 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('Auth Integration Flow', () => {
+  const fillInput = (label: RegExp, value: string) => {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
@@ -40,9 +44,9 @@ describe('Auth Integration Flow', () => {
     await user.click(screen.getByRole('tab', { name: /register/i }));
 
     // Fill in registration form
-    await user.type(screen.getByLabelText(/name/i), 'New User');
-    await user.type(screen.getByLabelText(/email/i), 'newuser@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'Password123');
+    fillInput(/name/i, 'New User');
+    fillInput(/email/i, 'newuser@example.com');
+    fillInput(/password/i, 'Password123');
 
     // Mock successful registration
     vi.mocked(api.post).mockResolvedValueOnce(registerResponse);
@@ -80,8 +84,8 @@ describe('Auth Integration Flow', () => {
     render(<Login />);
 
     // Fill login form
-    await user.type(screen.getByLabelText(/email/i), 'newuser@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'Password123');
+    fillInput(/email/i, 'newuser@example.com');
+    fillInput(/password/i, 'Password123');
 
     vi.mocked(api.post).mockResolvedValueOnce(loginResponse);
 
@@ -153,9 +157,9 @@ describe('Auth Integration Flow', () => {
     await user.click(screen.getByRole('tab', { name: /register/i }));
 
     // Fill form with existing email
-    await user.type(screen.getByLabelText(/name/i), 'Test User');
-    await user.type(screen.getByLabelText(/email/i), 'existing@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'Password123');
+    fillInput(/name/i, 'Test User');
+    fillInput(/email/i, 'existing@example.com');
+    fillInput(/password/i, 'Password123');
     await user.click(screen.getByRole('button', { name: /^register$/i }));
 
     // Should display error
@@ -179,8 +183,8 @@ describe('Auth Integration Flow', () => {
     render(<Login />);
 
     // Fill login form
-    await user.type(screen.getByLabelText(/email/i), 'wrong@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
+    fillInput(/email/i, 'wrong@example.com');
+    fillInput(/password/i, 'wrongpassword');
     await user.click(screen.getByRole('button', { name: /^login$/i }));
 
     // Should display error
@@ -194,16 +198,14 @@ describe('Auth Integration Flow', () => {
   });
 
   it('should validate email format', async () => {
-    const user = userEvent.setup();
-
     render(<Login />);
 
     // Type invalid email
     const emailInput = screen.getByLabelText(/email/i);
-    await user.type(emailInput, 'invalidemail');
+    fireEvent.change(emailInput, { target: { value: 'invalidemail' } });
 
     // Blur to trigger validation
-    await user.tab();
+    fireEvent.blur(emailInput);
 
     // Should show email format error
     await waitFor(() => {
@@ -215,16 +217,14 @@ describe('Auth Integration Flow', () => {
   });
 
   it('should validate password length', async () => {
-    const user = userEvent.setup();
-
     render(<Login />);
 
     // Type short password
     const passwordInput = screen.getByLabelText(/password/i);
-    await user.type(passwordInput, '12345');
+    fireEvent.change(passwordInput, { target: { value: '12345' } });
 
     // Blur to trigger validation
-    await user.tab();
+    fireEvent.blur(passwordInput);
 
     // Should show password length error
     await waitFor(() => {
@@ -241,8 +241,8 @@ describe('Auth Integration Flow', () => {
     render(<Login />);
 
     // Fill login form
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'password');
+    fillInput(/email/i, 'test@example.com');
+    fillInput(/password/i, 'password');
 
     // Switch to register
     await user.click(screen.getByRole('tab', { name: /register/i }));
