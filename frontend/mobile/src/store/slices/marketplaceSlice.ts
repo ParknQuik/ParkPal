@@ -24,6 +24,30 @@ const initialState: MarketplaceState = {
   error: null,
 };
 
+const getApiErrorMessage = (error: any, fallback: string) => {
+  const details = error?.response?.data?.details;
+  if (Array.isArray(details) && details[0]?.message) {
+    return details[0].message;
+  }
+
+  return error?.response?.data?.error
+    || error?.response?.data?.message
+    || error?.message
+    || fallback;
+};
+
+const getHostListingAvailability = (listing: any) => {
+  if (typeof listing.availability === 'boolean') {
+    return listing.availability;
+  }
+
+  if (typeof listing.isActive === 'boolean') {
+    return listing.isActive;
+  }
+
+  return listing.status === 'available';
+};
+
 // Async thunks
 export const searchListings = createAsyncThunk(
   'marketplace/searchListings',
@@ -137,7 +161,7 @@ export const createListing = createAsyncThunk(
     photos?: string[];
     amenities?: string[];
     slotType?: string;
-  }) => {
+  }, { rejectWithValue }) => {
     const apiParams = {
       title: params.title,
       description: params.description,
@@ -149,8 +173,12 @@ export const createListing = createAsyncThunk(
       amenities: params.amenities,
       photos: params.photos,
     };
-    const response = await marketplaceAPI.createListing(apiParams);
-    return response.data;
+    try {
+      const response = await marketplaceAPI.createListing(apiParams);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to create listing'));
+    }
   }
 );
 
@@ -277,7 +305,7 @@ export const getMyListings = createAsyncThunk(
       reviewCount: listing.reviews?.length || 0,
       reviews: listing.reviews || [],
       distance: listing.distance,
-      availability: listing.status === 'available',
+      availability: getHostListingAvailability(listing),
       status: listing.status,
     }));
   }
@@ -351,7 +379,7 @@ const marketplaceSlice = createSlice({
     });
     builder.addCase(createListing.rejected, (state, action) => {
       state.loading = false;
-      state.error = action.error.message || 'Failed to create listing';
+      state.error = (action.payload as string) || action.error.message || 'Failed to create listing';
     });
 
     // Update listing

@@ -99,6 +99,7 @@ export const bookingAPI = {
 export const marketplaceAPI = {
   // Listings
   createListing: (data: {
+    title: string;
     lat: number;
     lon: number;
     price: number;
