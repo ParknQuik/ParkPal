@@ -500,6 +500,69 @@ describe('core mobile list loading and failure states', () => {
     expect(mockGetMyBookings).toHaveBeenCalled();
   });
 
+  it('groups expired bookings under completed without completed-only actions', () => {
+    setState({
+      marketplace: {
+        ...baseState.marketplace,
+        bookings: [
+          {
+            id: 42,
+            slotId: 7,
+            listingTitle: 'Expired Garage',
+            listingAddress: '42 Past St',
+            listingPhoto: null,
+            startTime: '2026-05-25T08:00:00.000Z',
+            endTime: '2026-05-25T10:00:00.000Z',
+            rentalMode: 'fixed',
+            status: 'expired',
+            totalAmount: 150,
+          },
+        ],
+      },
+    });
+
+    const { getByText, queryByText } = render(<MyBookingsScreen />);
+
+    fireEvent.press(getByText('Completed'));
+
+    expect(getByText('Expired Garage')).toBeTruthy();
+    expect(getByText('Expired')).toBeTruthy();
+    expect(getByText('View Details')).toBeTruthy();
+    expect(queryByText('Rate')).toBeNull();
+    expect(queryByText('Extend')).toBeNull();
+    expect(queryByText('Cancel Booking')).toBeNull();
+    expect(queryByText(/Cancellation unavailable/)).toBeNull();
+  });
+
+  it('does not show expired bookings under cancelled', () => {
+    setState({
+      marketplace: {
+        ...baseState.marketplace,
+        bookings: [
+          {
+            id: 42,
+            slotId: 7,
+            listingTitle: 'Expired Garage',
+            listingAddress: '42 Past St',
+            listingPhoto: null,
+            startTime: '2026-05-25T08:00:00.000Z',
+            endTime: '2026-05-25T10:00:00.000Z',
+            rentalMode: 'fixed',
+            status: 'expired',
+            totalAmount: 150,
+          },
+        ],
+      },
+    });
+
+    const { getByText, queryByText } = render(<MyBookingsScreen />);
+
+    fireEvent.press(getByText('Cancelled'));
+
+    expect(queryByText('Expired Garage')).toBeNull();
+    expect(queryByText('Expired')).toBeNull();
+  });
+
   it('shows vehicle skeletons and retries loading vehicles', () => {
     setState({
       vehicles: {

@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, CommonActions } from '@react-navigation/native';
@@ -24,7 +23,6 @@ import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { validateEmail, validatePassword } from '../utils/helpers';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
@@ -199,19 +197,8 @@ export const AuthScreen: React.FC = () => {
     );
   };
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    safeArea: {
-      backgroundColor: colors.appHeaderBackground,
-    },
-    contentArea: {
       flex: 1,
       backgroundColor: colors.background,
     },
@@ -220,94 +207,81 @@ export const AuthScreen: React.FC = () => {
     },
     scrollContent: {
       flexGrow: 1,
-    },
-    imageSection: {
-      width: '100%',
-      minHeight: 200,
-      backgroundColor: colors.authTabBackground,
-    },
-    imageOverlay: {
-      flex: 1,
-      minHeight: 200,
-      justifyContent: 'flex-end',
-      padding: spacing.lg,
-    },
-    imageGradient: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    orangeOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: colors.authImageOverlay,
-    },
-    badgeContainer: {
-      position: 'relative',
-      zIndex: 10,
-    },
-    badge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.accent,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs,
-      borderRadius: 999,
-      alignSelf: 'flex-start',
-      marginBottom: spacing.sm,
-    },
-    badgeIcon: {
-      marginRight: spacing.xs,
-    },
-    badgeText: {
-      ...typography.small,
-      fontWeight: '700',
-      color: colors.backgroundDark,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-    },
-    imageTitle: {
-      ...typography.h2,
-      fontWeight: '700',
-      color: colors.white,
-      position: 'relative',
-      zIndex: 10,
+      paddingHorizontal: spacing.lg,
+      paddingTop: Platform.OS === 'ios' ? spacing.xxl : spacing.xl,
+      paddingBottom: spacing.xxl,
     },
     formSection: {
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.xxl,
-      paddingBottom: spacing.xxxl,
+      flex: 1,
+      width: '100%',
+      maxWidth: 430,
+      alignSelf: 'center',
+      justifyContent: 'center',
+    },
+    introSection: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    brandLockup: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    brandMark: {
+      width: 52,
+      height: 52,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.md,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.16,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    brandAccent: {
+      position: 'absolute',
+      right: -2,
+      bottom: 4,
+      width: 14,
+      height: 14,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.secondary,
+      borderWidth: 2,
+      borderColor: colors.background,
     },
     formTitle: {
-      ...typography.h3,
+      ...typography.h4,
       fontWeight: '700',
       color: colors.textPrimary,
       textAlign: 'center',
-      marginBottom: spacing.sm,
+      marginBottom: spacing.xs,
     },
     formDescription: {
-      ...typography.body,
+      ...typography.bodySmall,
       color: colors.textSecondary,
       textAlign: 'center',
-      marginBottom: spacing.xl,
+      maxWidth: 320,
     },
     tabContainer: {
       flexDirection: 'row',
       backgroundColor: colors.authTabBackground,
-      borderRadius: borderRadius.lg,
+      borderRadius: borderRadius.xl,
+      borderWidth: 1,
+      borderColor: colors.authInputBorder,
       padding: spacing.xs,
-      marginBottom: spacing.xl,
+      marginBottom: spacing.lg,
     },
     tab: {
       flex: 1,
-      paddingVertical: spacing.md,
+      minHeight: 44,
       alignItems: 'center',
-      borderRadius: borderRadius.md,
+      justifyContent: 'center',
+      borderRadius: borderRadius.lg,
     },
     activeTab: {
-      backgroundColor: colors.surface,
-      shadowColor: colors.headerActionShadow,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
+      backgroundColor: colors.primary,
     },
     tabText: {
       ...typography.bodySmall,
@@ -315,10 +289,10 @@ export const AuthScreen: React.FC = () => {
       color: colors.textSecondary,
     },
     activeTabText: {
-      color: colors.primary,
+      color: colors.white,
     },
     inputGroup: {
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
     },
     inputLabel: {
       ...typography.bodySmall,
@@ -332,8 +306,9 @@ export const AuthScreen: React.FC = () => {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.authInputBorder,
-      borderRadius: borderRadius.lg,
-      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.xl,
+      minHeight: 54,
+      paddingHorizontal: spacing.lg,
     },
     inputError: {
       borderColor: colors.error,
@@ -343,10 +318,17 @@ export const AuthScreen: React.FC = () => {
       flex: 1,
       ...typography.body,
       color: colors.textPrimary,
-      paddingVertical: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    inputIcon: {
+      marginRight: spacing.md,
     },
     eyeButton: {
-      padding: spacing.xs,
+      minWidth: 36,
+      minHeight: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: -spacing.xs,
     },
     errorText: {
       ...typography.small,
@@ -357,6 +339,8 @@ export const AuthScreen: React.FC = () => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      flexWrap: 'wrap',
+      rowGap: spacing.sm,
       marginBottom: spacing.lg,
     },
     checkboxContainer: {
@@ -387,18 +371,20 @@ export const AuthScreen: React.FC = () => {
       color: colors.secondary,
     },
     continueButton: {
-      marginBottom: spacing.xl,
+      marginBottom: spacing.lg,
     },
     gradientButton: {
-      paddingVertical: spacing.lg,
+      minHeight: 54,
+      justifyContent: 'center',
+      paddingVertical: spacing.md,
       paddingHorizontal: spacing.xl,
       borderRadius: borderRadius.xl,
       alignItems: 'center',
       shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      elevation: 3,
     },
     continueButtonText: {
       ...typography.button,
@@ -408,7 +394,7 @@ export const AuthScreen: React.FC = () => {
     divider: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: spacing.xl,
+      marginBottom: spacing.lg,
     },
     dividerLine: {
       flex: 1,
@@ -421,17 +407,17 @@ export const AuthScreen: React.FC = () => {
       marginHorizontal: spacing.lg,
     },
     socialButtons: {
-      flexDirection: 'row',
-      gap: spacing.md,
+      width: '100%',
     },
     socialButton: {
-      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
+      minHeight: 52,
       paddingVertical: spacing.md,
-      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.lg,
+      borderRadius: borderRadius.xl,
       borderWidth: 1,
       borderColor: colors.authInputBorder,
     },
@@ -443,16 +429,6 @@ export const AuthScreen: React.FC = () => {
       ...typography.bodySmall,
       fontWeight: '600',
       color: colors.textPrimary,
-    },
-    socialButtonDisabled: {
-      opacity: 0.5,
-      backgroundColor: colors.surfaceSecondary,
-    },
-    socialButtonTextDisabled: {
-      color: colors.textTertiary,
-    },
-    bottomBar: {
-      height: 8,
     },
     gradientButtonDisabled: {
       opacity: 0.7,
@@ -474,87 +450,75 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <AppHeader title="Welcome Back" onBack={handleBack} />
-      </SafeAreaView>
+      <StatusBar style={statusBarStyle} backgroundColor={colors.background} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.contentArea, styles.keyboardView]}
+        style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.imageSection}>
-            <View style={styles.imageOverlay}>
-              <LinearGradient
-                colors={colors.authHeroGradient}
-                style={styles.imageGradient}
-              >
-                <View style={styles.orangeOverlay} />
-              </LinearGradient>
-              <View style={styles.badgeContainer}>
-                <View style={styles.badge}>
-                  <MaterialCommunityIcons
-                    name="lightning-bolt"
-                    size={14}
-                    color={colors.backgroundDark}
-                    style={styles.badgeIcon}
-                  />
-                  <Text style={styles.badgeText}>New Update</Text>
-                </View>
-              </View>
-              <Text style={styles.imageTitle}>Start Your Journey</Text>
-            </View>
-          </View>
-
           <View style={styles.formSection}>
-            <Text style={styles.formTitle}>Login or Sign Up</Text>
-            <Text style={styles.formDescription}>
-              Enter your details to explore our vibrant new ecosystem
-            </Text>
+            <View style={styles.introSection}>
+              <View style={styles.brandLockup}>
+                <View style={styles.brandMark}>
+                  <MaterialCommunityIcons name="parking" size={26} color={colors.white} />
+                  <View style={styles.brandAccent} />
+                </View>
+                <Text style={styles.formTitle}>ParknQuik</Text>
+                <Text style={styles.formDescription}>
+                  Sign in or create an account to manage parking in minutes.
+                </Text>
+              </View>
 
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  activeTab === 'login' && styles.activeTab,
-                ]}
-                onPress={() => setActiveTab('login')}
-              >
-                <Text
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
                   style={[
-                    styles.tabText,
-                    activeTab === 'login' && styles.activeTabText,
+                    styles.tab,
+                    activeTab === 'login' && styles.activeTab,
                   ]}
+                  onPress={() => setActiveTab('login')}
                 >
-                  Login
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  activeTab === 'signup' && styles.activeTab,
-                ]}
-                onPress={() => setActiveTab('signup')}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === 'login' && styles.activeTabText,
+                    ]}
+                  >
+                    Login
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[
-                    styles.tabText,
-                    activeTab === 'signup' && styles.activeTabText,
+                    styles.tab,
+                    activeTab === 'signup' && styles.activeTab,
                   ]}
+                  onPress={() => setActiveTab('signup')}
                 >
-                  Sign Up
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === 'signup' && styles.activeTabText,
+                    ]}
+                  >
+                    Sign Up
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {activeTab === 'signup' && (
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Full Name</Text>
                 <View style={[styles.inputContainer, errors.name && styles.inputError]}>
+                  <MaterialCommunityIcons
+                    name="account-outline"
+                    size={20}
+                    color={colors.textSecondary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     value={name}
@@ -570,7 +534,12 @@ export const AuthScreen: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <View style={[styles.inputContainer, errors.email && styles.inputError]}>
-                <MaterialCommunityIcons name="email-outline" size={20} color={colors.textSecondary} />
+                <MaterialCommunityIcons
+                  name="email-outline"
+                  size={20}
+                  color={colors.textSecondary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
                   value={email}
@@ -587,7 +556,12 @@ export const AuthScreen: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Password</Text>
               <View style={[styles.inputContainer, errors.password && styles.inputError]}>
-                <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />
+                <MaterialCommunityIcons
+                  name="lock-outline"
+                  size={20}
+                  color={colors.textSecondary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
                   value={password}
@@ -610,7 +584,12 @@ export const AuthScreen: React.FC = () => {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Confirm Password</Text>
                 <View style={[styles.inputContainer, errors.confirmPassword && styles.inputError]}>
-                  <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textSecondary} />
+                  <MaterialCommunityIcons
+                    name="lock-outline"
+                    size={20}
+                    color={colors.textSecondary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     value={confirmPassword}
@@ -627,20 +606,22 @@ export const AuthScreen: React.FC = () => {
               </View>
             )}
 
-            <View style={styles.rememberRow}>
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <MaterialCommunityIcons name="check" size={16} color={colors.white} />}
-                </View>
-                <Text style={styles.checkboxLabel}>Remember me</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleForgotPassword}>
-                <Text style={styles.forgotPassword}>Forgot password?</Text>
-              </TouchableOpacity>
-            </View>
+            {activeTab === 'login' && (
+              <View style={styles.rememberRow}>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
+                >
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                    {rememberMe && <MaterialCommunityIcons name="check" size={16} color={colors.white} />}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Remember me</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleForgotPassword}>
+                  <Text style={styles.forgotPassword}>Forgot password?</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <TouchableOpacity
               style={styles.continueButton}
@@ -691,34 +672,13 @@ export const AuthScreen: React.FC = () => {
                   style={styles.socialIcon}
                 />
                 <Text style={styles.socialButtonText}>
-                  {googleLoading ? 'Signing in...' : 'Google'}
+                  {googleLoading ? 'Signing in...' : 'Continue with Google'}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.socialButtonDisabled]}
-                disabled={true}
-                accessibilityRole="button"
-                accessibilityLabel="Apple sign in coming soon"
-                accessibilityState={{ disabled: true }}
-              >
-                <MaterialCommunityIcons
-                  name="apple"
-                  size={20}
-                  color={colors.textTertiary}
-                  style={styles.socialIcon}
-                />
-                <Text style={[styles.socialButtonText, styles.socialButtonTextDisabled]}>Apple (Soon)</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <LinearGradient
-        colors={[colors.primary, colors.accent, colors.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.bottomBar}
-      />
     </View>
   );
 };

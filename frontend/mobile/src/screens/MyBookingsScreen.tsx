@@ -288,12 +288,14 @@ export const MyBookingsScreen: React.FC = () => {
     }
     if (activeTab === 'completed') {
       // Completed: status is completed
+      //          OR status is expired
       //          OR (status is active AND endTime has passed - session ended)
       return booking.status === 'completed' ||
+             booking.status === 'expired' ||
              (booking.status === 'active' && endTime <= now);
     }
     if (activeTab === 'cancelled') {
-      return booking.status === 'cancelled' || booking.status === 'expired';
+      return booking.status === 'cancelled';
     }
     return true;
   });
@@ -948,7 +950,12 @@ export const MyBookingsScreen: React.FC = () => {
                 )}
               </View>
               {(() => {
-                if (booking.status === 'active' || booking.status === 'completed' || booking.status === 'cancelled') return null;
+                if (
+                  booking.status === 'active' ||
+                  booking.status === 'completed' ||
+                  booking.status === 'cancelled' ||
+                  booking.status === 'expired'
+                ) return null;
 
                 const now = new Date();
                 const startTime = new Date(booking.startTime);
