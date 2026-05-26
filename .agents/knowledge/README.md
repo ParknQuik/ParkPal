@@ -9,10 +9,12 @@ database is only a fast retrieval layer.
 ```bash
 npm run knowledge:build
 npm run knowledge:compact
+npm run knowledge:compact -- --check
 npm run knowledge:check
 npm run knowledge:rebuild-if-stale
 npm run knowledge:context -- "current project status" --limit 1
 npm run knowledge:context -- "current project status" --limit 3 --verbose
+npm run knowledge:model-routing -- "fix My Listings upload feature"
 npm run knowledge:query -- "mobile header dark mode"
 npm run knowledge:add-learning -- --title "Short learning title" --lesson "Concrete lesson"
 npm run knowledge:query -- "current project status" --json
@@ -36,9 +38,9 @@ so multiple checkouts do not share an index.
 
 - `sources.json` lists the deliberately indexed compact, markdown, and curated
   JSON sources.
-- `compact/*.jsonl` stores generated-plus-curated compact mirrors for status,
-  roadmap, and workflow routing. Each record keeps a canonical `src` citation
-  back to human-readable docs.
+- `compact/*.jsonl` stores tracked generated-plus-curated compact mirrors for
+  status, roadmap, and workflow routing. Each record keeps a canonical `src`
+  citation back to human-readable docs.
 - `source-map.json` lists curated source ownership, route keywords, validation
   commands, and known failure patterns for high-traffic implementation areas.
 - `docs/agent-knowledge/SESSION_LEARNINGS.md` stores durable curated lessons
@@ -72,6 +74,11 @@ remains the escape hatch for deeper investigation.
 - Keep Markdown as canonical, human-reviewable storage.
 - Keep compact JSONL mirrors agent-facing and cite their canonical `src` ranges
   before using them as verified status.
+- Runtime `knowledge:build` builds the database from generated compact records
+  in memory. It does not rewrite tracked `compact/*.jsonl` files.
+- Use `npm run knowledge:compact -- --check` as the tracked mirror freshness
+  guard. Run `npm run knowledge:compact` only when intentionally regenerating
+  tracked compact mirrors and reviewing their diff.
 - Treat SQLite as generated retrieval/cache data, not canonical content.
 - Treat `needs-verification`, `planned`, and `historical` results as leads.
 - During plain startup, verify only git state after the one-result context pass.
@@ -82,13 +89,47 @@ remains the escape hatch for deeper investigation.
 ## Freshness
 
 `knowledge:build` records the HEAD commit plus a hash and mtime for each indexed
-source file. `knowledge:query` compares that stored metadata with the current
-workspace.
+source file. For compact JSONL sources, the stored hash is computed from the
+generated records used for the runtime build, not from tracked mirror files.
+`knowledge:query` compares that stored metadata with the current workspace.
 
 If HEAD moved or an indexed source changed, text output prints a short
 `Freshness warnings` block and `--json` includes a `warnings` array. Warnings do
 not make the query unusable; they mean the index should be treated as routing
 metadata until `npm run knowledge:build` is run again.
+
+## Model Routing Metadata
+
+`knowledge:query` and `knowledge:context` include advisory model-routing
+metadata from the shared `scripts/lib/modelRouter.js` module. The backend keeps
+`backend/services/modelRouter.js` as a compatibility re-export for existing
+service imports and tests.
+
+Implementation `<proposed_plan>` blocks should copy this metadata into a short
+`Model Routing` line so the implementation agent or operator knows which model
+class and reasoning effort to use. Substantial handoffs should include:
+
+- `Recommended model: <model>`
+- `Reasoning effort: <effort>`
+- `Tier: <tier>`
+- `Confidence: <conf>`
+- `Reason: <top router reason>`
+
+Use `npm run knowledge:model-routing -- "<implementation intent>"` when a
+copyable block is easier than manually translating the compact context line.
+Map tiers as advisory defaults: `trivial` and `simple` use nano with none or low
+reasoning, `standard` uses mini with low reasoning, `complex` uses the full
+model with medium reasoning, and `critical` uses the full model with high
+reasoning.
+
+Routing metadata is informational only. It must not change result limits, widen
+plain startup context, or auto-load extra docs; plain startup remains
+`knowledge:rebuild-if-stale`, `knowledge:context --limit 1`, git verification,
+then stop.
+
+Do not add app-runtime OpenAI routing from this metadata. ParkPal currently has
+no backend or frontend runtime LLM call sites, and Codex cannot self-switch
+models from repo code.
 
 Use `npm run knowledge:check` when a workflow needs a pure freshness check. It
 exits with status `0` for a fresh database and non-zero when the database is
@@ -114,8 +155,11 @@ default ignored database untouched. It covers:
 - historical roadmap labels for old launch/next-step sections
 - `needs-verification` routing for deployment status
 - payment, QR hook-order, and mobile icon source-map/session-learning queries
+- mobile list states, Google parking candidates, backend local DB recovery, and
+  startup-token tooling source-map/session-learning queries
 - `.json` and `.tsx` reference extraction without truncated extensions
 - lean context output with Branch/HEAD, cited line ranges, and no suggested broad reads
+- advisory model-routing metadata in query JSON and compact context output
 - compact mirrors parse and their canonical `src` ranges exist
 - startup `--limit 1` context staying below 500 estimated tokens
 - compact follow-up context plus compact JSONL records staying below 800

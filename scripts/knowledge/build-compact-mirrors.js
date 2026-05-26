@@ -331,7 +331,7 @@ function workflowRecords() {
       st: 'current',
       pri: 'high',
       d: '2026-05-23',
-      txt: 'Knowledge validation covers freshness, ranking, compact context budgets, source ranges, and routing for status, beta readiness, payments, QR, and mobile theme queries.',
+      txt: 'Knowledge validation covers freshness, ranking, compact context budgets, source ranges, and routing for status, beta readiness, payments, QR, mobile theme, and hot-path queries.',
       refs: ['.agents/knowledge/README.md', 'scripts/knowledge/query.js'],
       src: { path: '.agents/knowledge/README.md', start: validationStart, end: manualLearningStart - 2 },
       tags: ['knowledge validate', 'regression', 'compact', 'routing']
@@ -359,7 +359,7 @@ function readOverrideRecords(name) {
 function writeJsonl(name, records) {
   const merged = [...records, ...readOverrideRecords(name)];
   const outputPath = path.join(COMPACT_DIR, `${name}.jsonl`);
-  const content = `${merged.map((item) => JSON.stringify(item)).join('\n')}\n`;
+  const content = serializeRecords(merged);
   fs.mkdirSync(COMPACT_DIR, { recursive: true });
   if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf8') === content) {
     return { name, count: merged.length, path: outputPath, changed: false };
@@ -368,19 +368,70 @@ function writeJsonl(name, records) {
   return { name, count: merged.length, path: outputPath, changed: true };
 }
 
+function serializeRecords(records) {
+  return `${records.map((item) => JSON.stringify(item)).join('\n')}\n`;
+}
+
+function compactRecordSets() {
+  return {
+    status: [...statusRecords(), ...readOverrideRecords('status')],
+    roadmap: [...roadmapRecords(), ...readOverrideRecords('roadmap')],
+    workflow: [...workflowRecords(), ...readOverrideRecords('workflow')]
+  };
+}
+
+function compactSourcePath(name) {
+  return `.agents/knowledge/compact/${name}.jsonl`;
+}
+
+function compactContentBySourcePath() {
+  return Object.fromEntries(
+    Object.entries(compactRecordSets()).map(([name, records]) => [
+      compactSourcePath(name),
+      serializeRecords(records)
+    ])
+  );
+}
+
+function checkJsonl(name, records) {
+  const outputPath = path.join(COMPACT_DIR, `${name}.jsonl`);
+  const expected = serializeRecords(records);
+  const actual = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : null;
+
+  if (actual === expected) {
+    return { name, count: records.length, path: outputPath, stale: false };
+  }
+
+  return { name, count: records.length, path: outputPath, stale: true };
+}
+
 function main() {
-  const outputs = [
-    writeJsonl('status', statusRecords()),
-    writeJsonl('roadmap', roadmapRecords()),
-    writeJsonl('workflow', workflowRecords())
-  ];
+  const checkOnly = process.argv.includes('--check');
+  const recordSets = compactRecordSets();
+  const outputs = Object.entries(recordSets).map(([name, records]) => (
+    checkOnly ? checkJsonl(name, records) : writeJsonl(name, records)
+  ));
 
   for (const output of outputs) {
-    const action = output.changed ? 'Wrote' : 'Verified';
+    const action = checkOnly
+      ? (output.stale ? 'Stale' : 'Verified')
+      : (output.changed ? 'Wrote' : 'Verified');
     console.log(`${action} ${output.count} compact ${output.name} records at ${path.relative(ROOT, output.path)}.`);
+  }
+
+  if (checkOnly && outputs.some((output) => output.stale)) {
+    console.error('Tracked compact mirrors are stale. Run `npm run knowledge:compact` and inspect the diff.');
+    process.exitCode = 1;
   }
 }
 
 if (require.main === module) {
   main();
 }
+
+module.exports = {
+  compactContentBySourcePath,
+  compactRecordSets,
+  compactSourcePath,
+  serializeRecords
+};

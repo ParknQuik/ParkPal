@@ -7,6 +7,8 @@ const crypto = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 const { execFileSync, spawnSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
+const { compactContentBySourcePath } = require('./build-compact-mirrors');
+const { selectModelForTask } = require('../lib/modelRouter');
 
 const ROOT = path.resolve(__dirname, '../..');
 const STARTUP_TOKEN_BUDGET = 500;
@@ -21,6 +23,7 @@ const DEFAULT_DB_PATH = path.join(
 const DB_PATH = process.env.KNOWLEDGE_DB_PATH
   ? path.resolve(ROOT, process.env.KNOWLEDGE_DB_PATH)
   : DEFAULT_DB_PATH;
+const generatedCompactContent = compactContentBySourcePath();
 
 const SCORE_WEIGHTS = {
   sourcePathToken: 1.2,
@@ -115,6 +118,13 @@ function getShortSha() {
 }
 
 function getSourceMetadata(sourcePath) {
+  if (generatedCompactContent[sourcePath]) {
+    return {
+      sourceHash: crypto.createHash('sha256').update(generatedCompactContent[sourcePath]).digest('hex'),
+      sourceMtimeMs: 0
+    };
+  }
+
   const absolutePath = path.join(ROOT, sourcePath);
   if (!fs.existsSync(absolutePath)) return null;
 
@@ -132,6 +142,13 @@ function asksForHistory(query) {
 
 function hasCurrentIntent(query) {
   return /\b(continue|next|roadmap|current|gaps?|blockers?|status|today|now)\b/i.test(query);
+}
+
+function hasImplementationIntent(query) {
+  return (
+    /\b(ListYourSpot|createListing|photos?|file|400|image picker|add listing|listing create|photo upload)\b/i.test(query) ||
+    /marketplace\/listings/i.test(query)
+  );
 }
 
 function compactIntentSource(query) {
@@ -154,6 +171,7 @@ function calculateScore(row, query) {
   const references = row.references.join(' ');
   const wantsHistory = asksForHistory(query);
   const currentIntent = hasCurrentIntent(query);
+  const implementationIntent = hasImplementationIntent(query);
   let score = 0;
 
   for (const token of tokens) {
@@ -172,8 +190,9 @@ function calculateScore(row, query) {
   if (currentIntent && row.sourcePath === 'STATUS_REPORT.md') score += SCORE_WEIGHTS.currentIntentStatusReport;
   if (currentIntent && row.sourcePath === 'docs/BETA_READINESS_CHECKLIST.md') score += SCORE_WEIGHTS.currentIntentBetaReadiness;
   if (currentIntent && !wantsHistory && row.sourcePath === 'ROADMAP.md') score += SCORE_WEIGHTS.currentIntentRoadmapPenalty;
-  if (row.sourcePath.startsWith(COMPACT_SOURCE_PREFIX)) score += 2.0;
-  if (row.sourcePath === compactIntentSource(query)) score += 5.0;
+  if (row.sourcePath.startsWith(COMPACT_SOURCE_PREFIX)) score += implementationIntent ? -2.0 : 2.0;
+  if (row.sourcePath === compactIntentSource(query)) score += implementationIntent ? 0 : 5.0;
+  if (implementationIntent && row.sourcePath === '.agents/knowledge/source-map.json') score += 10.0;
   if (!wantsHistory && ['historical', 'deprecated'].includes(row.knowledgeStatus)) score += SCORE_WEIGHTS.staleStatusPenalty;
   if (!wantsHistory && row.isStale) score += SCORE_WEIGHTS.staleChunkPenalty;
   if (wantsHistory && ['historical', 'deprecated'].includes(row.knowledgeStatus)) score += SCORE_WEIGHTS.historicalIntentBoost;
@@ -342,7 +361,7 @@ function queryIndex(db, query, options = {}) {
     }
   }
 
-  if (!diversified.some((row) => row.knowledgeStatus === 'needs-verification')) {
+  if (!hasImplementationIntent(query) && !diversified.some((row) => row.knowledgeStatus === 'needs-verification')) {
     const needsVerification = sortedRows.find((row) => row.knowledgeStatus === 'needs-verification');
     if (needsVerification) {
       addRow(needsVerification);
@@ -374,8 +393,13 @@ function formatWarnings(warnings) {
   ];
 }
 
-function formatResults(query, rows, warnings = []) {
+function formatModelRoutingLine(modelRouting) {
+  return `Model routing: ${modelRouting.model} (${modelRouting.reasoningEffort}, ${modelRouting.complexity}, confidence ${modelRouting.confidence}) - advisory only.`;
+}
+
+function formatResults(query, rows, warnings = [], modelRouting = selectModelForTask(query)) {
   const lines = [`Query: ${query}`, ''];
+  lines.push(formatModelRoutingLine(modelRouting), '');
   lines.push(...formatWarnings(warnings));
 
   if (rows.length === 0) {
@@ -445,6 +469,27 @@ function runJsonQuery(query, env, limit = 8) {
     }
   );
   return JSON.parse(output);
+}
+
+function assertModelRoutingPayload() {
+  withTempKnowledgeDb((_tempDbPath, env) => {
+    const simplePayload = runJsonQuery('Format this title in title case.', env, 3);
+    if (!simplePayload.modelRouting) {
+      throw new Error('Self-test expected knowledge:query --json to include modelRouting.');
+    }
+    if (!['trivial', 'simple'].includes(simplePayload.modelRouting.complexity)) {
+      throw new Error('Self-test expected simple formatting query to route to trivial/simple tier.');
+    }
+
+    const complexPayload = runJsonQuery(
+      'Implement knowledge:query model routing metadata in scripts/knowledge/query.js and update tests.',
+      env,
+      3
+    );
+    if (complexPayload.modelRouting.complexity !== 'complex') {
+      throw new Error('Self-test expected implementation-heavy knowledge query to route to complex tier.');
+    }
+  });
 }
 
 function corruptSourceHash(dbPath) {
@@ -587,6 +632,9 @@ function assertContextOutput() {
     if (!output.includes('git=')) {
       throw new Error('Self-test expected context output to include compact git state.');
     }
+    if (!output.includes('model=')) {
+      throw new Error('Self-test expected context output to include compact model routing metadata.');
+    }
     if (!/STATUS_REPORT\.md:\d+-\d+/.test(output)) {
       throw new Error('Self-test expected context output to include cited STATUS_REPORT.md line range.');
     }
@@ -704,6 +752,113 @@ function runQueryChecks(db) {
       expectedReferences: [
         'frontend/mobile/src/screens/PaymentScreen.tsx'
       ]
+    },
+    {
+      query: 'mobile list loading retry failure MyListings MyBookings',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/components/ListState.tsx',
+        'frontend/mobile/src/screens/MyListingsScreen.tsx',
+        'frontend/mobile/src/screens/MyBookingsScreen.tsx'
+      ]
+    },
+    {
+      query: 'Google parking candidate scan scheduler admin routes',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'backend/services/parkingCandidateScanService.js',
+        'backend/services/parkingCandidateScanScheduler.js',
+        'backend/routes/admin.js'
+      ]
+    },
+    {
+      query: 'backend Invalid credentials seed local Postgres tests',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'backend/prisma/seed.js',
+        'backend/test/setup.js',
+        'backend/tests/auth.test.js'
+      ]
+    },
+    {
+      query: 'startup token knowledge rebuild compact context EPERM stale',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'scripts/knowledge/build-index.js',
+        'scripts/knowledge/build-compact-mirrors.js',
+        'scripts/knowledge/context.js'
+      ]
+    },
+    {
+      query: 'my listings add listing 400 error',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/ListYourSpot.tsx',
+        'frontend/mobile/src/utils/listingForm.ts',
+        'frontend/mobile/src/store/slices/marketplaceSlice.ts',
+        'frontend/mobile/src/services/api.ts',
+        'backend/validators/marketplace.js',
+        'backend/controllers/marketplaceController.js'
+      ],
+      expectedBeforeSources: [
+        '.agents/knowledge/compact/workflow.jsonl',
+        'STATUS_REPORT.md',
+        'frontend/mobile/TESTING.md'
+      ],
+      rejectedFirstPath: '.agents/knowledge/compact/workflow.jsonl'
+    },
+    {
+      query: 'ListYourSpot createListing photos file URI validation 400',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/ListYourSpot.tsx',
+        'frontend/mobile/src/utils/listingForm.ts',
+        'backend/validators/marketplace.js',
+        'backend/controllers/marketplaceController.js'
+      ],
+      expectedBeforeSources: [
+        '.agents/knowledge/compact/workflow.jsonl',
+        'STATUS_REPORT.md',
+        'frontend/mobile/TESTING.md'
+      ],
+      rejectedFirstPath: '.agents/knowledge/compact/workflow.jsonl'
+    },
+    {
+      query: 'host listing create photo upload 400',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/ListYourSpot.tsx',
+        'frontend/mobile/src/utils/listingForm.ts',
+        'frontend/mobile/src/services/api.ts',
+        'backend/validators/marketplace.js'
+      ],
+      expectedBeforeSources: [
+        '.agents/knowledge/compact/workflow.jsonl',
+        'STATUS_REPORT.md',
+        'frontend/mobile/TESTING.md'
+      ],
+      rejectedFirstPath: '.agents/knowledge/compact/workflow.jsonl'
     }
   ];
 
@@ -766,6 +921,20 @@ function runQueryChecks(db) {
       throw new Error(`Self-test found rejected first result ${check.rejectedFirstPath} for query: ${check.query}`);
     }
 
+    if (check.expectedBeforeSources) {
+      const expectedIndexes = (check.expectedPaths || [])
+        .map((expectedPath) => rows.findIndex((row) => row.sourcePath === expectedPath))
+        .filter((index) => index !== -1);
+      const firstRejectedIndex = rows.findIndex((row) => check.expectedBeforeSources.includes(row.sourcePath));
+
+      if (firstRejectedIndex !== -1 && expectedIndexes.some((index) => index > firstRejectedIndex)) {
+        throw new Error(
+          `Self-test expected ${check.expectedPaths.join(', ')} before ` +
+          `${check.expectedBeforeSources.join(', ')} for query: ${check.query}`
+        );
+      }
+    }
+
     if (check.expectedPathStatus) {
       const matchingRows = rows.filter((row) => row.sourcePath === check.expectedPathStatus.sourcePath);
       if (matchingRows.length === 0) {
@@ -802,6 +971,7 @@ function runQueryChecks(db) {
 function runSelfTest() {
   assertFreshnessWarnings();
   assertFreshnessCommands();
+  assertModelRoutingPayload();
   assertContextOutput();
   assertRealStartupPayload();
 
@@ -834,12 +1004,13 @@ function main() {
   try {
     const rows = queryIndex(db, query, options);
     const warnings = collectWarnings(db);
+    const modelRouting = selectModelForTask(query);
     if (options.json) {
-      console.log(JSON.stringify({ query, warnings, results: rows }, null, 2));
+      console.log(JSON.stringify({ query, modelRouting, warnings, results: rows }, null, 2));
       return;
     }
 
-    console.log(formatResults(query, rows, warnings));
+    console.log(formatResults(query, rows, warnings, modelRouting));
   } finally {
     db.close();
   }
@@ -851,7 +1022,9 @@ if (require.main === module) {
 
 module.exports = {
   collectWarnings,
+  formatModelRoutingLine,
   formatWarnings,
+  formatResults,
   openDatabase,
   queryIndex
 };

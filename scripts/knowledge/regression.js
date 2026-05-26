@@ -13,6 +13,12 @@ const TASK_CONTEXT_LIMIT = 3;
 const STARTUP_TOKEN_BUDGET = 500;
 const FOLLOW_UP_TOKEN_BUDGET = 800;
 const REAL_STARTUP_FILE = 'AGENTS.md';
+const BRANCH_DELTA_SCENARIOS = [
+  'startup:agents-md',
+  'startup:limit-1',
+  'follow-up:compact-context-plus-records',
+  'follow-up:markdown-context-plus-cited'
+];
 
 const QUERY_SPECS = [
   {
@@ -60,6 +66,131 @@ const QUERY_SPECS = [
     ],
     expectedReferences: [
       'frontend/mobile/src/screens/PaymentScreen.tsx'
+    ]
+  },
+  {
+    query: 'mobile list loading retry failure MyListings MyBookings',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'frontend/mobile/src/components/ListState.tsx',
+      'frontend/mobile/src/screens/MyListingsScreen.tsx',
+      'frontend/mobile/src/screens/MyBookingsScreen.tsx'
+    ]
+  },
+  {
+    query: 'Google parking candidate scan scheduler admin routes',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'backend/services/parkingCandidateScanService.js',
+      'backend/services/parkingCandidateScanScheduler.js',
+      'backend/routes/admin.js'
+    ]
+  },
+  {
+    query: 'backend Invalid credentials seed local Postgres tests',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'backend/prisma/seed.js',
+      'backend/test/setup.js',
+      'backend/tests/auth.test.js'
+    ]
+  },
+  {
+    query: 'startup token knowledge rebuild compact context EPERM stale',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md',
+      '.agents/knowledge/compact/workflow.jsonl'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'scripts/knowledge/build-index.js',
+      'scripts/knowledge/build-compact-mirrors.js',
+      'scripts/knowledge/context.js'
+    ]
+  },
+  {
+    query: 'my listings add listing 400 error',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'frontend/mobile/src/screens/ListYourSpot.tsx',
+      'frontend/mobile/src/utils/listingForm.ts',
+      'frontend/mobile/src/store/slices/marketplaceSlice.ts',
+      'frontend/mobile/src/services/api.ts',
+      'backend/validators/marketplace.js',
+      'backend/controllers/marketplaceController.js'
+    ]
+  },
+  {
+    query: 'ListYourSpot createListing photos file URI validation 400',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'frontend/mobile/src/screens/ListYourSpot.tsx',
+      'frontend/mobile/src/utils/listingForm.ts',
+      'backend/validators/marketplace.js',
+      'backend/controllers/marketplaceController.js'
+    ]
+  },
+  {
+    query: 'host listing create photo upload 400',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'frontend/mobile/src/screens/ListYourSpot.tsx',
+      'frontend/mobile/src/utils/listingForm.ts',
+      'frontend/mobile/src/services/api.ts',
+      'backend/validators/marketplace.js'
     ]
   },
   {
@@ -336,8 +467,18 @@ function signedPct(value) {
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
+function signedPercent(value) {
+  const formatted = `${Math.abs(value * 100).toFixed(1)}%`;
+  return value >= 0 ? `+${formatted}` : `-${formatted}`;
+}
+
 function signedNumber(value) {
   const formatted = Math.abs(value).toFixed(3);
+  return value >= 0 ? `+${formatted}` : `-${formatted}`;
+}
+
+function signedInteger(value) {
+  const formatted = Math.abs(value).toLocaleString('en-US');
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
@@ -442,6 +583,38 @@ function measurePayload(name, command, payload) {
 
 function savingsPercent(oldBaseline, comparisonBaseline) {
   return ((oldBaseline.estimatedTokens - comparisonBaseline.estimatedTokens) / oldBaseline.estimatedTokens) * 100;
+}
+
+function compareTokenSavings(baselineScenarios, currentScenarios) {
+  const baselineByName = new Map(baselineScenarios.map((scenario) => [scenario.name, scenario]));
+  const currentByName = new Map(currentScenarios.map((scenario) => [scenario.name, scenario]));
+
+  return BRANCH_DELTA_SCENARIOS.map((name) => {
+    const baseline = baselineByName.get(name) || null;
+    const current = currentByName.get(name) || null;
+
+    if (!baseline || !current) {
+      return {
+        name,
+        baselineTokens: baseline ? baseline.estimatedTokens : null,
+        currentTokens: current ? current.estimatedTokens : null,
+        deltaTokens: null,
+        deltaPercent: null
+      };
+    }
+
+    const deltaTokens = current.estimatedTokens - baseline.estimatedTokens;
+
+    return {
+      name,
+      baselineTokens: baseline.estimatedTokens,
+      currentTokens: current.estimatedTokens,
+      deltaTokens,
+      deltaPercent: baseline.estimatedTokens === 0
+        ? null
+        : deltaTokens / baseline.estimatedTokens
+    };
+  });
 }
 
 function measureTokenSavings(root, dbPath) {
@@ -612,12 +785,22 @@ function formatReport(report) {
     `${rankLabel(item.baseline.primaryRank)} -> ${rankLabel(item.current.primaryRank)}`
   ]);
 
-  const tokenRows = report.tokenSavings.map((scenario) => [
+  const tokenDeltaRows = report.tokenDeltaVsBaseline.map((scenario) => [
     scenario.name,
-    scenario.estimatedTokens.toLocaleString('en-US'),
-    scenario.words.toLocaleString('en-US'),
-    scenario.bytes.toLocaleString('en-US'),
-    scenario.savingsVsContextCited === null ? '-' : `${scenario.savingsVsContextCited.toFixed(1)}%`
+    scenario.baselineTokens === null ? 'n/a' : scenario.baselineTokens.toLocaleString('en-US'),
+    scenario.currentTokens === null ? 'n/a' : scenario.currentTokens.toLocaleString('en-US'),
+    scenario.deltaTokens === null ? 'n/a' : signedInteger(scenario.deltaTokens),
+    scenario.deltaPercent === null ? 'n/a' : signedPercent(scenario.deltaPercent)
+  ]);
+
+  const oldWorkflowRows = report.current.tokenSavings
+    .filter((scenario) => scenario.name === 'follow-up:compact-context-plus-records' || scenario.name.startsWith('old:'))
+    .map((scenario) => [
+      scenario.name,
+      scenario.estimatedTokens.toLocaleString('en-US'),
+      scenario.words.toLocaleString('en-US'),
+      scenario.bytes.toLocaleString('en-US'),
+      scenario.savingsVsContextCited === null ? '-' : `${scenario.savingsVsContextCited.toFixed(1)}%`
   ]);
 
   const lines = [
@@ -649,15 +832,22 @@ function formatReport(report) {
       detailRows
     ),
     '',
-    '## Token Savings',
+    '## Token Delta vs Previous Build',
     '',
     `Startup budget: startup:agents-md and startup:limit-1 must stay below ${STARTUP_TOKEN_BUDGET} estimated tokens`,
     `Compact follow-up budget: follow-up:compact-context-plus-records must stay below ${FOLLOW_UP_TOKEN_BUDGET} estimated tokens`,
     'Token estimate: Math.ceil(characterCount / 4)',
     '',
     markdownTable(
+      ['Scenario', 'Baseline tokens', 'Current tokens', 'Delta tokens', 'Delta percent'],
+      tokenDeltaRows
+    ),
+    '',
+    '## Savings vs Old Workflow',
+    '',
+    markdownTable(
       ['Scenario', 'Est. tokens', 'Words', 'Bytes', 'Savings vs compact follow-up'],
-      tokenRows
+      oldWorkflowRows
     ),
     '',
     '## Checks',
@@ -702,14 +892,18 @@ function main() {
 
     const baselineSummary = summarizeScores(queries, 'baseline');
     const currentSummary = summarizeScores(queries, 'current');
-    const tokenSavings = measureTokenSavings(ROOT, currentDb.dbPath);
+    const baselineTokenSavings = measureTokenSavings(baselineRoot, baselineDb.dbPath);
+    const currentTokenSavings = measureTokenSavings(ROOT, currentDb.dbPath);
+    const tokenDeltaVsBaseline = compareTokenSavings(baselineTokenSavings, currentTokenSavings);
     const report = {
       baseline: {
         ref: options.baselineRef,
-        buildSummary: firstLine(baselineDb.buildOutput)
+        buildSummary: firstLine(baselineDb.buildOutput),
+        tokenSavings: baselineTokenSavings
       },
       current: {
-        buildSummary: firstLine(currentDb.buildOutput)
+        buildSummary: firstLine(currentDb.buildOutput),
+        tokenSavings: currentTokenSavings
       },
       limit: options.limit,
       queries,
@@ -722,8 +916,9 @@ function main() {
           meanReciprocalRank: currentSummary.meanReciprocalRank - baselineSummary.meanReciprocalRank
         }
       },
-      tokenSavings,
-      failures: validate(queries, tokenSavings)
+      tokenSavings: currentTokenSavings,
+      tokenDeltaVsBaseline,
+      failures: validate(queries, currentTokenSavings)
     };
 
     if (options.json) {
