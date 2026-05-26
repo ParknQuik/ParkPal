@@ -23,6 +23,25 @@ export interface Photo {
   updatedAt: string;
 }
 
+const getImageUploadMetadata = (imageUri: string) => {
+  const path = imageUri.split(/[?#]/)[0] || '';
+  const rawExtension = path.includes('.') ? path.split('.').pop()?.toLowerCase() : undefined;
+  const extension = rawExtension && /^[a-z0-9]+$/.test(rawExtension) ? rawExtension : 'jpg';
+  const mimeTypeByExtension: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+  };
+
+  return {
+    extension,
+    contentType: mimeTypeByExtension[extension] || 'image/jpeg',
+  };
+};
+
 /**
  * Media API service for photo uploads
  */
@@ -113,15 +132,15 @@ export const mediaAPI = {
    */
   async uploadListingPhoto(listingId: number, imageUri: string): Promise<any> {
     try {
-      const fileExtension = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `photo-${Date.now()}.${fileExtension}`;
+      const { extension, contentType } = getImageUploadMetadata(imageUri);
+      const fileName = `photo-${Date.now()}.${extension}`;
 
       const { uploadUrl, fileName: gcsFileName } = await this.getListingPhotoUploadUrl(
         listingId,
         fileName
       );
 
-      await this.uploadToGCS(uploadUrl, imageUri, `image/${fileExtension}`);
+      await this.uploadToGCS(uploadUrl, imageUri, contentType);
 
       const token = await AsyncStorage.getItem('token');
       const response = await axios.post(

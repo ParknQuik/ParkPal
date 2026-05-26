@@ -20,6 +20,11 @@ jest.mock('../services/paymongo', () => ({
   })),
 }));
 
+jest.mock('../services/mediaService', () => ({
+  generateListingPhotoUploadUrl: jest.fn(),
+  processListingPhoto: jest.fn(),
+}));
+
 // Create test app
 const app = express();
 app.use(cors());
@@ -36,6 +41,7 @@ const authLimiter = rateLimit({
 // Import v1 router
 const v1Router = require('../routes/v1');
 app.use('/api/v1', v1Router(authLimiter));
+const mediaService = require('../services/mediaService');
 
 let testData = {};
 let authTokens = {};
@@ -67,6 +73,19 @@ afterAll(async () => {
 
 describe('Marketplace API Tests', () => {
   beforeEach(async () => {
+    jest.clearAllMocks();
+    mediaService.generateListingPhotoUploadUrl.mockResolvedValue({
+      uploadUrl: 'https://storage.googleapis.com/upload-url',
+      fileName: 'listings/1/original_123.jpg',
+      expiresAt: new Date('2026-05-26T00:00:00.000Z'),
+    });
+    mediaService.processListingPhoto.mockResolvedValue({
+      original: 'https://storage.googleapis.com/parkpal/listings/1/original_123.jpg',
+      large: 'https://storage.googleapis.com/parkpal/listings/1/large_123.jpg',
+      medium: 'https://storage.googleapis.com/parkpal/listings/1/medium_123.jpg',
+      thumbnail: 'https://storage.googleapis.com/parkpal/listings/1/thumbnail_123.jpg',
+    });
+
     await prisma.payment.deleteMany({
       where: {
         booking: {
@@ -84,7 +103,7 @@ describe('Marketplace API Tests', () => {
     });
     await prisma.parkingSlot.update({
       where: { id: testData.slot.id },
-      data: { status: 'available' },
+      data: { isActive: true, status: 'available' },
     });
   });
 
@@ -140,6 +159,139 @@ describe('Marketplace API Tests', () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('error');
+    });
+  });
+
+  describe('Listing photo upload contract', () => {
+    describe('GET /api/v1/marketplace/listings/:id/photos/upload-url', () => {
+      it('uses the route listing id and query fileName to generate an upload URL', async () => {
+        const response = await request(app)
+          .get(`/api/v1/marketplace/listings/${testData.slot.id}/photos/upload-url`)
+          .query({ fileName: 'space.jpg' })
+          .set('Authorization', `Bearer ${authTokens.host}`);
+
+        expect(response.status).toBe(200);
+        expect(mediaService.generateListingPhotoUploadUrl).toHaveBeenCalledWith(
+          testData.slot.id,
+          'space.jpg'
+        );
+        expect(response.body).toHaveProperty('uploadUrl');
+      });
+
+      it('returns 400 when fileName is missing', async () => {
+        const response = await request(app)
+          .get(`/api/v1/marketplace/listings/${testData.slot.id}/photos/upload-url`)
+          .set('Authorization', `Bearer ${authTokens.host}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('fileName is required');
+        expect(mediaService.generateListingPhotoUploadUrl).not.toHaveBeenCalled();
+      });
+
+      it('returns 403 when the authenticated user does not own the listing', async () => {
+        const response = await request(app)
+          .get(`/api/v1/marketplace/listings/${testData.slot.id}/photos/upload-url`)
+          .query({ fileName: 'space.jpg' })
+          .set('Authorization', `Bearer ${authTokens.driver}`);
+
+        expect(response.status).toBe(403);
+        expect(mediaService.generateListingPhotoUploadUrl).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('POST /api/v1/marketplace/listings/:id/photos/confirm', () => {
+      it('uses the route listing id and body fileName to confirm upload', async () => {
+        const response = await request(app)
+          .post(`/api/v1/marketplace/listings/${testData.slot.id}/photos/confirm`)
+          .set('Authorization', `Bearer ${authTokens.host}`)
+          .send({
+            listingId: 99999,
+            fileName: 'listings/1/original_123.jpg',
+          });
+
+        expect(response.status).toBe(200);
+        expect(mediaService.processListingPhoto).toHaveBeenCalledWith(
+          'listings/1/original_123.jpg',
+          testData.slot.id
+        );
+        expect(response.body).toHaveProperty('original');
+      });
+
+      it('returns 400 when fileName is missing', async () => {
+        const response = await request(app)
+          .post(`/api/v1/marketplace/listings/${testData.slot.id}/photos/confirm`)
+          .set('Authorization', `Bearer ${authTokens.host}`)
+          .send({ listingId: testData.slot.id });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('fileName is required');
+        expect(mediaService.processListingPhoto).not.toHaveBeenCalled();
+      });
+
+      it('returns 403 when the authenticated user does not own the listing', async () => {
+        const response = await request(app)
+          .post(`/api/v1/marketplace/listings/${testData.slot.id}/photos/confirm`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({ fileName: 'listings/1/original_123.jpg' });
+
+        expect(response.status).toBe(403);
+        expect(mediaService.processListingPhoto).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('PATCH /api/v1/marketplace/listings/:id/toggle', () => {
+    it('sets a listing inactive when isActive is false', async () => {
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/listings/${testData.slot.id}/toggle`)
+        .set('Authorization', `Bearer ${authTokens.host}`)
+        .send({ isActive: false });
+
+      expect(response.status).toBe(200);
+      expect(response.body.listing.isActive).toBe(false);
+      expect(response.body.listing.availability).toBe(false);
+
+      const updatedSlot = await prisma.parkingSlot.findUnique({
+        where: { id: testData.slot.id },
+      });
+      expect(updatedSlot.isActive).toBe(false);
+    });
+
+    it('sets a listing active when isActive is true', async () => {
+      await prisma.parkingSlot.update({
+        where: { id: testData.slot.id },
+        data: { isActive: false },
+      });
+
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/listings/${testData.slot.id}/toggle`)
+        .set('Authorization', `Bearer ${authTokens.host}`)
+        .send({ isActive: true });
+
+      expect(response.status).toBe(200);
+      expect(response.body.listing.isActive).toBe(true);
+      expect(response.body.listing.availability).toBe(true);
+    });
+
+    it('flips the current active state when isActive is omitted', async () => {
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/listings/${testData.slot.id}/toggle`)
+        .set('Authorization', `Bearer ${authTokens.host}`)
+        .send({});
+
+      expect(response.status).toBe(200);
+      expect(response.body.listing.isActive).toBe(false);
+      expect(response.body.listing.availability).toBe(false);
+    });
+
+    it('returns 400 when isActive is not boolean', async () => {
+      const response = await request(app)
+        .patch(`/api/v1/marketplace/listings/${testData.slot.id}/toggle`)
+        .set('Authorization', `Bearer ${authTokens.host}`)
+        .send({ isActive: 'false' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('isActive must be a boolean');
     });
   });
 

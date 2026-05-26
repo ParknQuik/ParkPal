@@ -22,6 +22,12 @@ import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { AppHeader } from '../components/AppHeader';
+import {
+  buildListingCreateData,
+  getListingValidationMessage,
+  getSubmitErrorMessage,
+  uploadAndAttachListingPhotos,
+} from '../utils/listingForm';
 
 const AMENITIES = [
   { key: 'covered', label: 'Covered', icon: 'garage' },
@@ -137,104 +143,127 @@ export const ListYourSpot: React.FC = () => {
     }
   }, []);
 
-   const handleContinue = useCallback(async () => {
-     if (!spotName.trim()) {
-       Alert.alert('Required', 'Please enter a spot name.');
-       return;
-     }
-     if (!address.trim()) {
-       Alert.alert('Required', 'Please enter an address.');
-       return;
-     }
-     if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
-       Alert.alert('Required', 'Please enter a valid price.');
-       return;
-     }
+  const handleContinue = useCallback(async () => {
+    const priceNumber = Number(price);
+    const latitude = Number(lat);
+    const longitude = Number(lon);
+    const validationMessage = getListingValidationMessage({
+      title: spotName,
+      address,
+      price,
+      latitude,
+      longitude,
+    });
 
-     setLoading(true);
-     try {
-       const listingData = {
-         title: spotName.trim(),
-         description: description.trim(),
-         address: address.trim(),
-         latitude: Number(lat) || 14.5995,
-         longitude: Number(lon) || 120.9822,
-         pricePerHour: Number(price),
-         slotType,
-         amenities: selectedAmenities,
-         photos: photos.filter(p => !p.includes('unsplash')),
-       };
+    if (validationMessage) {
+      Alert.alert('Required', validationMessage);
+      return;
+    }
 
-        let result: any;
-        if (isEditMode && listingId) {
-          // Update existing listing via API - convert to backend field names
-          const updateData = {
-            title: spotName.trim(),
-            description: description.trim(),
-            address: address.trim(),
-            lat: Number(lat) || 14.5995,
-            lon: Number(lon) || 120.9822,
-            price: Number(price),
-            slotType,
-            amenities: selectedAmenities,
-            photos: photos.filter(p => !p.includes('unsplash')),
-          };
-          result = await marketplaceAPI.updateListing(listingId, updateData);
+    setLoading(true);
+    try {
+      const { listingData, remotePhotos, localPhotos } = buildListingCreateData({
+        title: spotName,
+        description,
+        address,
+        latitude,
+        longitude,
+        price,
+        slotType,
+        amenities: selectedAmenities,
+        photos,
+      });
+
+      let result: any;
+      if (isEditMode && listingId) {
+        // Update existing listing via API - convert to backend field names
+        const updateData = {
+          title: listingData.title,
+          description: listingData.description,
+          address: listingData.address,
+          lat: latitude,
+          lon: longitude,
+          price: priceNumber,
+          slotType,
+          amenities: selectedAmenities,
+          photos: remotePhotos,
+        };
+        result = await marketplaceAPI.updateListing(listingId, updateData);
+
+        let photoResult = { hasFailures: false };
+        if (localPhotos.length > 0) {
+          photoResult = await uploadAndAttachListingPhotos({
+            listingId,
+            localPhotos,
+            remotePhotos,
+            uploadListingPhoto: mediaAPI.uploadListingPhoto.bind(mediaAPI),
+            updateListing: marketplaceAPI.updateListing,
+            logError: __DEV__
+              ? (message, error) => console.warn(message, error)
+              : undefined,
+          });
+        }
+
+        if (photoResult.hasFailures) {
+          Alert.alert(
+            'Updated without photos',
+            'Your parking spot was updated, but one or more new photos did not upload. You can try adding them again.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        } else {
           Alert.alert(
             'Updated! 🎉',
             'Your parking spot has been updated.',
             [{ text: 'OK', onPress: () => navigation.goBack() }]
           );
-        } else {
-         // Create new listing via Redux
-         result = await dispatch(createListing(listingData)).unwrap();
+        }
+      } else {
+        // Create new listing via Redux
+        result = await dispatch(createListing(listingData)).unwrap();
 
-// Upload local photos if any (only file:// URIs, not existing GCS URLs)
-          const newListingId = result.id || result.data?.id;
-          const localPhotos = photos.filter(p => p.startsWith('file://'));
+        // Upload local photos after the backend returns a listing id.
+        const newListingId = result.id || result.data?.id;
 
-          ;
-
-          if (localPhotos.length > 0 && newListingId) {
-            const uploadedUrls: string[] = [];
-            for (const photoUri of localPhotos) {
-              try {
-                ;
-                const uploadResult = await mediaAPI.uploadListingPhoto(newListingId, photoUri);
-                ;
-                // Store the original URL from the result
-                if (uploadResult.original) {
-                  uploadedUrls.push(uploadResult.original);
-                }
-              } catch (uploadError: any) {
-                ;
-              }
-            }
-
-            // Update listing with photo URLs if any uploaded
-            if (uploadedUrls.length > 0) {
-              try {
-                await marketplaceAPI.updateListing(newListingId, { photos: uploadedUrls });
-                ;
-              } catch (updateError) {
-                ;
-              }
-            }
+        let photoResult = { hasFailures: false };
+        if (localPhotos.length > 0 && newListingId) {
+          photoResult = await uploadAndAttachListingPhotos({
+            listingId: newListingId,
+            localPhotos,
+            remotePhotos,
+            uploadListingPhoto: mediaAPI.uploadListingPhoto.bind(mediaAPI),
+            updateListing: marketplaceAPI.updateListing,
+            logError: __DEV__
+              ? (message, error) => console.warn(message, error)
+              : undefined,
+          });
+        } else if (localPhotos.length > 0) {
+          if (__DEV__) {
+            console.warn('Listing was created without an id; local photos could not be uploaded');
           }
+          photoResult = { hasFailures: true };
+        }
 
-         Alert.alert(
-           'Success! 🎉',
-           'Your parking spot has been listed.',
-           [{ text: 'OK', onPress: () => navigation.goBack() }]
-         );
-       }
-     } catch (error: any) {
-       ;
-       Alert.alert('Error', error?.message || 'Failed to save listing. Please try again.');
-     } finally {
-       setLoading(false);
-     }
-   }, [spotName, address, price, lat, lon, slotType, description, selectedAmenities, photos, dispatch, navigation, isEditMode, listingId]);
+        if (photoResult.hasFailures) {
+          Alert.alert(
+            'Listed without photos',
+            'Your parking spot was created, but one or more photos did not upload. You can add them by editing the listing.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        } else {
+          Alert.alert(
+            'Success! 🎉',
+            'Your parking spot has been listed.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        }
+      }
+    } catch (error: any) {
+      ;
+      Alert.alert('Error', getSubmitErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }, [spotName, address, price, lat, lon, slotType, description, selectedAmenities, photos, dispatch, navigation, isEditMode, listingId]);
 
   const handleBack = useCallback(() => {
     navigation.goBack();

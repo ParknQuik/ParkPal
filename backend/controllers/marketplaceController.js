@@ -137,15 +137,16 @@ exports.createListing = async (req, res, next) => {
  */
 exports.getListingPhotoUploadUrl = async (req, res, next) => {
   try {
-    const { listingId, fileName } = req.query;
+    const listingId = parseInt(req.params.id);
+    const { fileName } = req.query;
     
-    if (!listingId || !fileName) {
-      return res.status(400).json({ error: 'listingId and fileName are required' });
+    if (!fileName) {
+      return res.status(400).json({ error: 'fileName is required' });
     }
 
     // Verify slot exists and user owns it
     const slot = await prisma.parkingSlot.findUnique({
-      where: { id: parseInt(listingId) },
+      where: { id: listingId },
     });
 
     if (!slot) {
@@ -157,7 +158,7 @@ exports.getListingPhotoUploadUrl = async (req, res, next) => {
     }
 
     const result = await mediaService.generateListingPhotoUploadUrl(
-      parseInt(listingId),
+      listingId,
       fileName
     );
 
@@ -172,15 +173,16 @@ exports.getListingPhotoUploadUrl = async (req, res, next) => {
  */
 exports.confirmListingPhotoUpload = async (req, res, next) => {
   try {
-    const { listingId, fileName } = req.body;
+    const listingId = parseInt(req.params.id);
+    const { fileName } = req.body;
     
-    if (!listingId || !fileName) {
-      return res.status(400).json({ error: 'listingId and fileName are required' });
+    if (!fileName) {
+      return res.status(400).json({ error: 'fileName is required' });
     }
 
     // Verify slot exists and user owns it
     const slot = await prisma.parkingSlot.findUnique({
-      where: { id: parseInt(listingId) },
+      where: { id: listingId },
     });
 
     if (!slot) {
@@ -193,7 +195,7 @@ exports.confirmListingPhotoUpload = async (req, res, next) => {
 
     const result = await mediaService.processListingPhoto(
       fileName,
-      parseInt(listingId)
+      listingId
     );
 
     res.json(result);
@@ -1906,11 +1908,17 @@ exports.toggleListingAvailability = async (req, res, next) => {
       return res.status(403).json({ error: 'You do not own this listing' });
     }
 
-    // Toggle isActive
+    const hasRequestedState = Object.prototype.hasOwnProperty.call(req.body || {}, 'isActive');
+    if (hasRequestedState && typeof req.body.isActive !== 'boolean') {
+      return res.status(400).json({ error: 'isActive must be a boolean' });
+    }
+
+    const nextIsActive = hasRequestedState ? req.body.isActive : !listing.isActive;
+
     const updatedListing = await prisma.parkingSlot.update({
       where: { id: listingId },
       data: {
-        isActive: !listing.isActive,
+        isActive: nextIsActive,
       },
     });
 
@@ -1919,7 +1927,10 @@ exports.toggleListingAvailability = async (req, res, next) => {
 
     res.json({
       message: `Listing ${updatedListing.isActive ? 'activated' : 'paused'} successfully`,
-      listing: updatedListing,
+      listing: {
+        ...updatedListing,
+        availability: updatedListing.isActive,
+      },
     });
   } catch (error) {
     logger.error('Toggle listing availability error:', error);

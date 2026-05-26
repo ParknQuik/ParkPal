@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Modal,
   View,
   Text,
@@ -37,6 +37,8 @@ export const MyListingsScreen: React.FC = () => {
   const [qrData, setQrData] = useState<string>('');
   const [qrLoading, setQrLoading] = useState(false);
   const [qrListingName, setQrListingName] = useState<string>('');
+  const pendingToggleIdsRef = useRef<Set<number>>(new Set());
+  const [pendingToggleIds, setPendingToggleIds] = useState<Record<number, boolean>>({});
 
   const { myListings, loading, error } = useAppSelector((state) => state.marketplace);
 
@@ -73,14 +75,26 @@ export const MyListingsScreen: React.FC = () => {
   }, [navigation]);
 
   const handleToggleAvailability = useCallback(async (listingId: number, currentStatus: boolean) => {
+    if (pendingToggleIdsRef.current.has(listingId)) {
+      return;
+    }
+
+    pendingToggleIdsRef.current.add(listingId);
+    setPendingToggleIds((current) => ({ ...current, [listingId]: true }));
+
     try {
-      ;
-      const response = await marketplaceAPI.toggleListingAvailability(listingId, !currentStatus);
-      ;
-      fetchData();
+      await haptics.light();
+      await marketplaceAPI.toggleListingAvailability(listingId, !currentStatus);
+      await fetchData();
     } catch (err: any) {
-      ;
       Alert.alert('Error', err?.response?.data?.error || 'Failed to toggle availability');
+    } finally {
+      pendingToggleIdsRef.current.delete(listingId);
+      setPendingToggleIds((current) => {
+        const next = { ...current };
+        delete next[listingId];
+        return next;
+      });
     }
   }, [fetchData]);
 
@@ -519,6 +533,7 @@ export const MyListingsScreen: React.FC = () => {
             nestedScrollEnabled={true}
             renderItem={({ item: listing }) => {
               const isActive = listing.availability;
+              const isTogglePending = Boolean(pendingToggleIds[listing.id]);
               return (
                 <View style={styles.listingCard}>
                   <Image source={{ uri: listing.photos?.[0] || 'https://via.placeholder.com/180' }} style={styles.listingImage} contentFit="cover" transition={200} />
@@ -558,6 +573,7 @@ export const MyListingsScreen: React.FC = () => {
                           styles.actionButton,
                           isActive ? styles.editButton : styles.activateButton
                         ]}
+                        disabled={!isActive && isTogglePending}
                         onPress={() => isActive ? handleEditPress(listing.id) : handleToggleAvailability(listing.id, listing.availability)}
                         {...accessibility.button(
                           isActive ? 'Edit Listing' : 'Activate Listing',
@@ -573,6 +589,7 @@ export const MyListingsScreen: React.FC = () => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.moreButton}
+                        disabled={isTogglePending}
                         onPress={() => {
                           if (isActive) {
                             Alert.alert('Listing Options', listing.title || listing.address, [
