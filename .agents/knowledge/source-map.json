@@ -191,6 +191,155 @@
       ]
     },
     {
+      "id": "mobile-list-loading-failure-states",
+      "title": "Mobile list loading, empty, and retryable failure states",
+      "subsystem": "mobile",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/components/ListState.tsx",
+        "frontend/mobile/src/screens/MyListingsScreen.tsx",
+        "frontend/mobile/src/screens/MyBookingsScreen.tsx",
+        "frontend/mobile/src/screens/MyVehiclesScreen.tsx",
+        "frontend/mobile/src/screens/PointsHistoryScreen.tsx",
+        "frontend/mobile/src/screens/HomeDashboard.tsx",
+        "frontend/mobile/src/__tests__/components/ListState.test.tsx",
+        "frontend/mobile/src/__tests__/screens/MyListingsScreen.states.test.tsx",
+        "frontend/mobile/src/__tests__/screens/CoreListStates.test.tsx"
+      ],
+      "routeKeywords": [
+        "ListState",
+        "ListLoadingState",
+        "RetryableFailureState",
+        "mobile list loading",
+        "first load empty",
+        "retry failure",
+        "MyListings",
+        "MyBookings",
+        "MyVehicles",
+        "PointsHistory",
+        "HomeDashboard",
+        "CoreListStates"
+      ],
+      "relatedApis": [
+        "ListState",
+        "ListLoadingState",
+        "RetryableFailureState",
+        "refresh controls",
+        "core mobile list screens"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npm test -- --runTestsByPath src/__tests__/components/ListState.test.tsx src/__tests__/screens/MyListingsScreen.states.test.tsx src/__tests__/screens/CoreListStates.test.tsx --no-watchman",
+        "cd frontend/mobile && npx tsc --noEmit"
+      ],
+      "knownFailurePatterns": [
+        "Skeletons and full-screen retry states should only replace content on first-load-empty states.",
+        "Refresh behavior should stay available when stale list content already exists.",
+        "Shared list states can regress multiple screens if labels, testIDs, or retry handlers drift."
+      ]
+    },
+    {
+      "id": "google-parking-candidate-scan",
+      "title": "Google parking candidate discovery, admin review, and scan scheduler",
+      "subsystem": "backend",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "backend/controllers/adminController.js",
+        "backend/routes/admin.js",
+        "backend/validators/admin.js",
+        "backend/controllers/marketplaceController.js",
+        "backend/routes/marketplace.js",
+        "backend/services/parkingCandidateScanService.js",
+        "backend/services/parkingCandidateScanScheduler.js",
+        "backend/prisma/schema.prisma",
+        "backend/prisma/migrations/20260524000000_add_parking_candidates/migration.sql",
+        "backend/tests/parkingCandidates.routes.test.js",
+        "backend/tests/parkingCandidates.unit.test.js",
+        "backend/tests/parkingCandidateScheduler.test.js",
+        "docs/future-phases/SERVICE_1_ANALYTICS.md"
+      ],
+      "routeKeywords": [
+        "Google parking candidate",
+        "parking candidates",
+        "candidate scan",
+        "Google Places",
+        "parkingCandidateScanService",
+        "parkingCandidateScanScheduler",
+        "admin parking candidates",
+        "manual admin scan",
+        "scheduled scan",
+        "candidate preview pins",
+        "ParkingCandidate"
+      ],
+      "relatedApis": [
+        "POST /admin/parking-candidates/google/scan",
+        "GET /admin/parking-candidates",
+        "POST /admin/parking-candidates/:id/verify-geofence",
+        "GET marketplace candidate previews",
+        "ParkingCandidate and ParkingCandidateScanRun Prisma models"
+      ],
+      "validationCommands": [
+        "cd backend && npm test -- parkingCandidates.routes.test.js parkingCandidates.unit.test.js parkingCandidateScheduler.test.js",
+        "rtk npm run knowledge:query -- \"Google parking candidate scan scheduler admin routes\" --json"
+      ],
+      "knownFailurePatterns": [
+        "Scheduled Google parking scans should stay disabled unless the user explicitly broadens quota and operations scope.",
+        "Candidate preview pins are non-bookable and must not imply pricing, occupancy, or ParkPal availability.",
+        "Admin scan routes must stay under the /admin prefix and validate scan input before controller logic."
+      ]
+    },
+    {
+      "id": "host-listing-create-media-upload",
+      "title": "Host listing create flow, image picker photos, and post-create upload",
+      "subsystem": "mobile",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/screens/MyListingsScreen.tsx",
+        "frontend/mobile/src/screens/ListYourSpot.tsx",
+        "frontend/mobile/src/utils/listingForm.ts",
+        "frontend/mobile/src/store/slices/marketplaceSlice.ts",
+        "frontend/mobile/src/services/api.ts",
+        "backend/validators/marketplace.js",
+        "backend/controllers/marketplaceController.js",
+        "frontend/mobile/src/__tests__/screens/ListYourSpot.helpers.test.ts",
+        "frontend/mobile/src/__tests__/store/marketplaceSlice.test.ts"
+      ],
+      "routeKeywords": [
+        "My Listings add listing",
+        "Add Listing",
+        "ListSpot",
+        "ListYourSpot",
+        "List Your Spot",
+        "createListing",
+        "marketplace/listings",
+        "400",
+        "photos",
+        "file URI",
+        "file://",
+        "image picker",
+        "local photo upload",
+        "host listing create photo upload"
+      ],
+      "relatedApis": [
+        "POST /api/v1/marketplace/listings",
+        "marketplaceAPI.createListing",
+        "mediaAPI.uploadListingPhoto",
+        "marketplaceAPI.updateListing",
+        "createListingSchema photos URL validation"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npm test -- --runTestsByPath src/__tests__/screens/ListYourSpot.helpers.test.ts src/__tests__/store/marketplaceSlice.test.ts --no-watchman",
+        "cd frontend/mobile && npx tsc --noEmit"
+      ],
+      "knownFailurePatterns": [
+        "Local file:// photos from the mobile image picker in the create payload trigger backend 400 because photos must be URL strings.",
+        "Create listing should send no local photos, then upload local files after the backend returns a listing id.",
+        "Joi validation details should be surfaced so create failures identify the invalid photos field instead of a generic save error."
+      ]
+    },
+    {
       "id": "backend-authentication-flow",
       "title": "Backend authentication, JWT, and password reset flow",
       "subsystem": "backend",
@@ -232,6 +381,111 @@
         "Local 401s can come from missing seeded users or stale tokens before app code is at fault.",
         "Password-reset token tests depend on database state and token expiry semantics.",
         "WebSocket clients must provide a valid JWT token during connection setup."
+      ]
+    },
+    {
+      "id": "backend-local-db-test-recovery",
+      "title": "Backend local database, seeded users, and test recovery",
+      "subsystem": "backend",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "backend/prisma/seed.js",
+        "backend/prisma/schema.prisma",
+        "backend/test/setup.js",
+        "backend/test/helpers.js",
+        "backend/tests/setup.js",
+        "backend/tests/testConfig.js",
+        "backend/tests/auth.test.js",
+        "backend/tests/password-reset.test.js",
+        "backend/tests/googleAuth.test.js",
+        "backend/tests/README.md",
+        "backend/PRISMA_STUDIO_GUIDE.md"
+      ],
+      "routeKeywords": [
+        "Invalid credentials",
+        "seeded users",
+        "backend local Postgres",
+        "backend test setup",
+        "Prisma seed",
+        "test database",
+        "juan@example.com",
+        "auth test troubleshooting",
+        "local database recovery"
+      ],
+      "relatedApis": [
+        "POST /api/v1/auth/login",
+        "npm run seed",
+        "Prisma test setup",
+        "backend Jest helpers"
+      ],
+      "validationCommands": [
+        "cd backend && npm test -- auth.test.js password-reset.test.js googleAuth.test.js",
+        "cd backend && npm run seed"
+      ],
+      "knownFailurePatterns": [
+        "401 Invalid credentials can mean local seeded users are missing or the app is pointed at the wrong Postgres database.",
+        "Backend Jest failures may come from test database setup, migrations, or helper fixture drift before app behavior is wrong.",
+        "Seed and test recovery should verify the active DATABASE_URL before changing auth code."
+      ]
+    },
+    {
+      "id": "startup-token-knowledge-tooling",
+      "title": "Startup token budget and knowledge tooling",
+      "subsystem": "agent-workflow",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "AGENTS.md",
+        "package.json",
+        ".agents/knowledge/README.md",
+        ".agents/knowledge/sources.json",
+        "scripts/knowledge/build-compact-mirrors.js",
+        "scripts/knowledge/build-index.js",
+        "scripts/knowledge/context.js",
+        "scripts/knowledge/query.js",
+        "scripts/knowledge/check.js",
+        "scripts/knowledge/rebuild-if-stale.js",
+        "scripts/knowledge/measure-savings.js",
+        "scripts/knowledge/regression.js",
+        "scripts/lib/modelRouter.js",
+        "backend/services/modelRouter.js"
+      ],
+      "routeKeywords": [
+        "startup token",
+        "knowledge rebuild",
+        "compact context",
+        "compact mirrors",
+        "knowledge:build",
+        "knowledge:compact --check",
+        "knowledge:rebuild-if-stale",
+        "knowledge:measure-savings",
+        "knowledge:regression",
+        "model routing",
+        "modelRouting",
+        "selectModelForTask",
+        "EPERM",
+        "stale knowledge DB"
+      ],
+      "relatedApis": [
+        "npm run knowledge:build",
+        "npm run knowledge:compact -- --check",
+        "npm run knowledge:context -- \"current project status\" --limit 1",
+        "npm run knowledge:context -- \"current project status\" --limit 3",
+        "npm run knowledge:measure-savings",
+        "npm run knowledge:regression"
+      ],
+      "validationCommands": [
+        "rtk npm run knowledge:validate",
+        "rtk npm run knowledge:regression",
+        "rtk npm run knowledge:measure-savings",
+        "rtk npm run knowledge:compact -- --check"
+      ],
+      "knownFailurePatterns": [
+        "Plain startup must stay routing-only through AGENTS.md and context --limit 1.",
+        "Model routing metadata is advisory only and must not widen startup context or auto-load extra docs.",
+        "Runtime rebuilds should refresh the SQLite DB without rewriting tracked compact JSONL mirrors.",
+        "Tracked compact mirror freshness is guarded by knowledge:compact -- --check, not normal startup rebuilds."
       ]
     },
     {

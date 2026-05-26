@@ -2,6 +2,7 @@
 
 const { execFileSync } = require('node:child_process');
 const { collectWarnings, formatWarnings, openDatabase, queryIndex } = require('./query');
+const { selectModelForTask } = require('../lib/modelRouter');
 
 const COMPACT_SOURCE_PREFIX = '.agents/knowledge/compact/';
 
@@ -52,13 +53,25 @@ function citationEnd(row) {
   return row.citationEndLine || row.endLine;
 }
 
-function formatCompactContext(query, rows, warnings) {
+function modelRoutingReason(modelRouting) {
+  return modelRouting.reasons && modelRouting.reasons.length > 0
+    ? modelRouting.reasons[0]
+    : 'No strong complexity signals were detected.';
+}
+
+function formatCompactModelRouting(modelRouting) {
+  const reason = modelRoutingReason(modelRouting);
+  return `model=${modelRouting.model} effort=${modelRouting.reasoningEffort} tier=${modelRouting.complexity} conf=${modelRouting.confidence} reason=${reason} advisory=only`;
+}
+
+function formatCompactContext(query, rows, warnings, modelRouting = selectModelForTask(query)) {
   const branch = gitValue(['branch', '--show-current'], 'detached HEAD');
   const head = gitValue(['log', '-1', '--oneline', '--decorate']);
   const lines = [
     'ParkPal Compact Context',
     `intent=${query}`,
-    `git=${branch} | ${head}`
+    `git=${branch} | ${head}`,
+    formatCompactModelRouting(modelRouting)
   ];
 
   if (warnings.length > 0) {
@@ -87,7 +100,7 @@ function formatCompactContext(query, rows, warnings) {
   return lines.join('\n').trimEnd();
 }
 
-function formatVerboseContext(query, rows, warnings) {
+function formatVerboseContext(query, rows, warnings, modelRouting = selectModelForTask(query)) {
   const branch = gitValue(['branch', '--show-current'], 'detached HEAD');
   const head = gitValue(['log', '-1', '--oneline', '--decorate']);
   const lines = [
@@ -95,6 +108,7 @@ function formatVerboseContext(query, rows, warnings) {
     `Intent: ${query}`,
     `Branch: ${branch}`,
     `HEAD: ${head}`,
+    `Model routing: ${modelRouting.model} (${modelRouting.reasoningEffort}, ${modelRouting.complexity}, confidence ${modelRouting.confidence}) - ${modelRoutingReason(modelRouting)} Advisory only.`,
     ''
   ];
 
@@ -135,10 +149,11 @@ function formatVerboseContext(query, rows, warnings) {
 }
 
 function formatContext(query, rows, warnings, options = {}) {
+  const modelRouting = selectModelForTask(query);
   if (options.compact === false) {
-    return formatVerboseContext(query, rows, warnings);
+    return formatVerboseContext(query, rows, warnings, modelRouting);
   }
-  return formatCompactContext(query, rows, warnings);
+  return formatCompactContext(query, rows, warnings, modelRouting);
 }
 
 function preferCompactRows(rows, limit) {
@@ -178,5 +193,6 @@ if (require.main === module) {
 }
 
 module.exports = {
+  formatCompactModelRouting,
   formatContext
 };

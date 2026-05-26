@@ -76,6 +76,8 @@
 
 - For startup, run `npm run knowledge:rebuild-if-stale`, then `npm run knowledge:context -- "<intent>" --limit 1`, verify live git state, and stop to ask what to work on.
 - For planning, implementation, current-status follow-up, continue, and handoff prompts after task selection, run `npm run knowledge:context -- "<intent>" --limit 3`.
+- Every implementation `<proposed_plan>` should include a short `Model Routing` line copied from `knowledge:context` or `selectModelForTask`.
+- Substantial implementation handoffs should include `Recommended model`, `Reasoning effort`, `Tier`, `Confidence`, and `Reason`; `npm run knowledge:model-routing -- "<intent>"` prints this advisory block.
 - Use cited line ranges as the default read boundary after task selection; do not open full Markdown files unless implementation detail is genuinely needed.
 - Run `npm run knowledge:query -- "<topic>"` only for deeper investigation.
 - Rebuild with `npm run knowledge:build` when indexed sources change.

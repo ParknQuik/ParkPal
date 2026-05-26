@@ -24,4 +24,19 @@ specific task. After a task is selected, use
 needed. Use `rtk git status --short --branch --untracked-files=all` only for
 task-specific diagnostics that need every untracked path.
 
+For implementation plans and cross-agent handoffs after task selection, copy the
+routing metadata from `knowledge:context` into the `<proposed_plan>` as a short
+`Model Routing` line. For substantial implementation handoffs, include:
+
+- `Recommended model: <model>`
+- `Reasoning effort: <effort>`
+- `Tier: <tier>`
+- `Confidence: <conf>`
+- `Reason: <top router reason>`
+
+You can generate this block with
+`rtk npm run knowledge:model-routing -- "<implementation intent>"`. Treat it as
+advisory only: Codex cannot self-switch models from repo code, and ParkPal has
+no runtime LLM routing in the app/server layer.
+
 Before committing or pushing, summarize the changes and ask for approval.

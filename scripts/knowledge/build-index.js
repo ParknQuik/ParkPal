@@ -6,6 +6,7 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
+const { compactContentBySourcePath } = require('./build-compact-mirrors');
 
 const ROOT = path.resolve(__dirname, '../..');
 const KNOWLEDGE_DIR = path.join(ROOT, '.agents/knowledge');
@@ -19,6 +20,7 @@ const DEFAULT_DB_PATH = path.join(
 const DB_PATH = process.env.KNOWLEDGE_DB_PATH
   ? path.resolve(ROOT, process.env.KNOWLEDGE_DB_PATH)
   : DEFAULT_DB_PATH;
+const generatedCompactContent = compactContentBySourcePath();
 
 const VALID_STATUSES = new Set([
   'current',
@@ -71,6 +73,13 @@ function getShortSha() {
 }
 
 function getSourceMetadata(sourcePath) {
+  if (generatedCompactContent[sourcePath]) {
+    return {
+      sourceHash: crypto.createHash('sha256').update(generatedCompactContent[sourcePath]).digest('hex'),
+      sourceMtimeMs: 0
+    };
+  }
+
   const absolutePath = repoPath(sourcePath);
   const content = fs.readFileSync(absolutePath, 'utf8');
   const stat = fs.statSync(absolutePath);
@@ -389,8 +398,8 @@ function validateCompactRecord(record, sourcePath, lineNumber) {
 }
 
 function parseCompactJsonl(sourcePath, sourceConfig) {
-  const absolutePath = repoPath(sourcePath);
-  const lines = fs.readFileSync(absolutePath, 'utf8').split(/\r?\n/);
+  const content = generatedCompactContent[sourcePath] || fs.readFileSync(repoPath(sourcePath), 'utf8');
+  const lines = content.split(/\r?\n/);
   const chunks = [];
 
   lines.forEach((line, index) => {
@@ -653,7 +662,7 @@ function main() {
     }
 
     const absolutePath = repoPath(source.path);
-    if (!fs.existsSync(absolutePath)) {
+    if (!generatedCompactContent[source.path] && !fs.existsSync(absolutePath)) {
       throw new Error(`Configured knowledge source does not exist: ${source.path}`);
     }
 
