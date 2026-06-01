@@ -69,6 +69,9 @@ export const validatePassword = (password: string): {
   if (password.length < 8) {
     return { valid: false, message: 'Password must be at least 8 characters' };
   }
+  if (password.length > 72) {
+    return { valid: false, message: 'Password must be less than 72 characters' };
+  }
   if (!/(?=.*[a-z])/.test(password)) {
     return {
       valid: false,
