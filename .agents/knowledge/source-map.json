@@ -489,7 +489,11 @@
         "AGENTS.md",
         "package.json",
         ".agents/knowledge/README.md",
+        ".agents/knowledge/schema.md",
         ".agents/knowledge/sources.json",
+        ".agents/knowledge/source-map.json",
+        "docs/agent-knowledge/SESSION_LEARNINGS.md",
+        "scripts/knowledge/add-learning.js",
         "scripts/knowledge/build-compact-mirrors.js",
         "scripts/knowledge/build-index.js",
         "scripts/knowledge/context.js",
@@ -511,6 +515,17 @@
         "knowledge:rebuild-if-stale",
         "knowledge:measure-savings",
         "knowledge:regression",
+        "retrieval miss",
+        "wrong top result",
+        "missing expected source file",
+        "broad docs returned",
+        "source-map routing",
+        "session learnings",
+        "expected references",
+        "rejected first path",
+        "vector database",
+        "SQLite FTS",
+        "semantic search",
         "model routing",
         "modelRouting",
         "selectModelForTask",
@@ -523,11 +538,12 @@
         "npm run knowledge:context -- \"current project status\" --limit 1",
         "npm run knowledge:context -- \"current project status\" --limit 3",
         "npm run knowledge:measure-savings",
-        "npm run knowledge:regression"
+        "npm run knowledge:regression",
+        "npm run knowledge:add-learning"
       ],
       "validationCommands": [
         "rtk npm run knowledge:validate",
-        "rtk npm run knowledge:regression",
+        "rtk npm run knowledge:regression -- --json",
         "rtk npm run knowledge:measure-savings",
         "rtk npm run knowledge:compact -- --check"
       ],
@@ -535,7 +551,10 @@
         "Plain startup must stay routing-only through AGENTS.md and context --limit 1.",
         "Model routing metadata is advisory only and must not widen startup context or auto-load extra docs.",
         "Runtime rebuilds should refresh the SQLite DB without rewriting tracked compact JSONL mirrors.",
-        "Tracked compact mirror freshness is guarded by knowledge:compact -- --check, not normal startup rebuilds."
+        "Tracked compact mirror freshness is guarded by knowledge:compact -- --check, not normal startup rebuilds.",
+        "A retrieval miss should be fixed in source-map routing, session learnings, compact mirrors, or status overrides before adding broader docs.",
+        "Regression specs for misses should include expected paths, expected references, and rejected first paths or references when broad docs must not outrank source routes.",
+        "Vector search should wait for repeated regression-backed lexical misses or a new cross-repo/user-facing search requirement."
       ]
     },
     {
