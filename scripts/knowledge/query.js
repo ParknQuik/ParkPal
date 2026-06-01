@@ -146,7 +146,15 @@ function hasCurrentIntent(query) {
 
 function hasImplementationIntent(query) {
   return (
-    /\b(ListYourSpot|createListing|photos?|file|400|image picker|add listing|listing create|photo upload)\b/i.test(query) ||
+    /\b(ListYourSpot|createListing|photos?|file|image picker|add listing|listing create|photo upload)\b/i.test(query) ||
+    /\b[45]\d{2}\b/.test(query) ||
+    /\b(GET|POST|PUT|PATCH|DELETE)\s+\/[a-z0-9_./:-]+/i.test(query) ||
+    /\/api\/v\d+\/[a-z0-9_./:-]+/i.test(query) ||
+    /\b[a-z0-9_-]+\/[a-z0-9_./:-]+/i.test(query) ||
+    /\b[A-Za-z][A-Za-z0-9_-]*\.(?:test|spec)?\.(?:tsx?|jsx?|json)\b/.test(query) ||
+    /\b[A-Z][A-Za-z0-9]*(?:Screen|Controller|Service|Route|Routes|Validator|Schema|Slice|Test)\b/.test(query) ||
+    /\b[a-z][A-Za-z0-9]*(?:API|Api|Slice|Controller|Service|Route|Routes|Validator|Schema|Test)\b/.test(query) ||
+    /\b(fix|bug|failed|failure|error|reject|rejected|validation|signup|sign-up|login|register|endpoint|payload|axios)\b/i.test(query) ||
     /marketplace\/listings/i.test(query)
   );
 }
@@ -652,6 +660,16 @@ function assertContextOutput() {
     if (Math.ceil(startupOutput.length / 4) >= STARTUP_TOKEN_BUDGET) {
       throw new Error('Self-test expected compact startup context below 500 estimated tokens.');
     }
+
+    const implementationOutput = runContextOutput('mobile signup 400 authSlice AuthScreen', env, 3);
+    const sourceMapIndex = implementationOutput.indexOf('.agents/knowledge/source-map.json:');
+    const compactStatusIndex = implementationOutput.indexOf('.agents/knowledge/compact/status.jsonl:');
+    if (sourceMapIndex === -1) {
+      throw new Error('Self-test expected implementation context to cite source-map.');
+    }
+    if (compactStatusIndex !== -1 && compactStatusIndex < sourceMapIndex) {
+      throw new Error('Self-test expected implementation context to rank source-map before compact status.');
+    }
   });
 }
 
@@ -859,6 +877,63 @@ function runQueryChecks(db) {
         'frontend/mobile/TESTING.md'
       ],
       rejectedFirstPath: '.agents/knowledge/compact/workflow.jsonl'
+    },
+    {
+      query: 'mobile signup 400 authSlice AuthScreen',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/AuthScreen.tsx',
+        'frontend/mobile/src/store/slices/authSlice.ts',
+        'frontend/mobile/src/services/api.ts',
+        'backend/controllers/authController.js',
+        'backend/validators/auth.js',
+        'frontend/mobile/src/__tests__/screens/AuthScreen.test.tsx',
+        'frontend/mobile/src/store/slices/__tests__/authSlice.test.ts'
+      ],
+      expectedBeforeSources: [
+        '.agents/knowledge/compact/workflow.jsonl',
+        '.agents/knowledge/compact/status.jsonl',
+        'STATUS_REPORT.md'
+      ],
+      rejectedFirstPath: '.agents/knowledge/compact/workflow.jsonl'
+    },
+    {
+      query: 'auth register signup 400 backend mobile',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/screens/AuthScreen.tsx',
+        'frontend/mobile/src/store/slices/authSlice.ts',
+        'backend/controllers/authController.js',
+        'backend/validators/auth.js',
+        'backend/tests/auth.test.js'
+      ],
+      expectedBeforeSources: [
+        '.agents/knowledge/compact/workflow.jsonl',
+        '.agents/knowledge/compact/status.jsonl',
+        'STATUS_REPORT.md'
+      ]
+    },
+    {
+      query: 'POST /api/v1/auth/register validation details role driver',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json'
+      ],
+      expectedReferences: [
+        'frontend/mobile/src/store/slices/authSlice.ts',
+        'backend/controllers/authController.js',
+        'backend/validators/auth.js',
+        'backend/routes/auth.js',
+        'backend/tests/auth.test.js'
+      ],
+      expectedBeforeSources: [
+        '.agents/knowledge/compact/workflow.jsonl',
+        '.agents/knowledge/compact/status.jsonl',
+        'STATUS_REPORT.md'
+      ]
     }
   ];
 
@@ -1025,6 +1100,7 @@ module.exports = {
   formatModelRoutingLine,
   formatWarnings,
   formatResults,
+  hasImplementationIntent,
   openDatabase,
   queryIndex
 };

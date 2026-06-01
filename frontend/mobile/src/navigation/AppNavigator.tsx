@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer, DarkTheme as NavigationDarkTheme, DefaultTheme } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppDispatch, useAppSelector } from '../store';
 import { checkAuth } from '../store/slices/authSlice';
 import { loadAnalyticsOptIn, setAnalyticsOptIn } from '../store/slices/analyticsSlice';
@@ -8,7 +9,7 @@ import GeofenceService from '../services/analyticsGeofenceService';
 import { AnalyticsOptInModal } from '../components/AnalyticsOptInModal';
 import { MainStack } from './MainStack';
 import { AuthStack } from "./AuthStack";
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { AuthTransitionScreen } from '../components/AuthTransitionScreen';
 import { Zone } from '../types';
 import { useTheme } from '../context/ThemeContext';
 
@@ -24,13 +25,18 @@ const linking = {
 };
 
 const OPT_IN_PROMPTED_KEY = 'analytics_opt_in_prompted';
+const AUTH_SUCCESS_TRANSITION_MS = 700;
 
 export const AppNavigator: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { isAuthenticated, loading, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, checkingAuth, user } = useAppSelector((state) => state.auth);
   const { optedIn } = useAppSelector((state) => state.analytics);
   const { colors, isDark } = useTheme();
   const [showOptIn, setShowOptIn] = useState(false);
+  const [hasRequestedInitialAuthCheck, setHasRequestedInitialAuthCheck] = useState(false);
+  const [hasResolvedInitialAuthCheck, setHasResolvedInitialAuthCheck] = useState(false);
+  const [showAuthTransition, setShowAuthTransition] = useState(false);
+  const previousAuthState = useRef(isAuthenticated);
 
   const navTheme = {
     ...DefaultTheme,
@@ -59,14 +65,47 @@ export const AppNavigator: React.FC = () => {
   useEffect(() => {
     dispatch(checkAuth());
     dispatch(loadAnalyticsOptIn());
+    setHasRequestedInitialAuthCheck(true);
   }, []);
+
+  useEffect(() => {
+    if (!hasRequestedInitialAuthCheck || checkingAuth || hasResolvedInitialAuthCheck) {
+      return;
+    }
+
+    previousAuthState.current = isAuthenticated;
+    setHasResolvedInitialAuthCheck(true);
+  }, [
+    checkingAuth,
+    hasRequestedInitialAuthCheck,
+    hasResolvedInitialAuthCheck,
+    isAuthenticated,
+  ]);
+
+  useEffect(() => {
+    if (!hasResolvedInitialAuthCheck || checkingAuth) {
+      previousAuthState.current = isAuthenticated;
+      return;
+    }
+
+    if (!previousAuthState.current && isAuthenticated) {
+      setShowAuthTransition(true);
+      const timeout = setTimeout(() => {
+        setShowAuthTransition(false);
+      }, AUTH_SUCCESS_TRANSITION_MS);
+
+      previousAuthState.current = isAuthenticated;
+      return () => clearTimeout(timeout);
+    }
+
+    previousAuthState.current = isAuthenticated;
+  }, [checkingAuth, hasResolvedInitialAuthCheck, isAuthenticated]);
 
   // When user logs in: check if we've shown the opt-in prompt before
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const checkOptInPrompt = async () => {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const prompted = await AsyncStorage.getItem(OPT_IN_PROMPTED_KEY);
       if (!prompted) {
         setShowOptIn(true);
@@ -107,21 +146,26 @@ export const AppNavigator: React.FC = () => {
   }, [isAuthenticated, optedIn, user?.id]);
 
   const handleOptInAccept = async () => {
-    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
     await AsyncStorage.setItem(OPT_IN_PROMPTED_KEY, 'true');
     dispatch(setAnalyticsOptIn(true));
     setShowOptIn(false);
   };
 
   const handleOptInDecline = async () => {
-    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
     await AsyncStorage.setItem(OPT_IN_PROMPTED_KEY, 'true');
     dispatch(setAnalyticsOptIn(false));
     setShowOptIn(false);
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
+  const shouldShowAuthTransition =
+    showAuthTransition ||
+    (hasResolvedInitialAuthCheck &&
+      !checkingAuth &&
+      !previousAuthState.current &&
+      isAuthenticated);
+
+  if (!hasRequestedInitialAuthCheck || checkingAuth || shouldShowAuthTransition) {
+    return <AuthTransitionScreen />;
   }
 
   return (

@@ -1,7 +1,9 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { AuthScreen } from '../../screens/AuthScreen';
 import { useAppDispatch, useAppSelector } from '../../store';
+import { signup } from '../../store/slices/authSlice';
 
 const mockNavigationDispatch = jest.fn();
 
@@ -71,6 +73,7 @@ jest.mock('@expo/vector-icons', () => {
 
 const mockUseAppDispatch = useAppDispatch as jest.Mock;
 const mockUseAppSelector = useAppSelector as jest.Mock;
+const mockSignup = signup as unknown as jest.Mock;
 
 describe('AuthScreen', () => {
   beforeEach(() => {
@@ -129,5 +132,124 @@ describe('AuthScreen', () => {
       type: 'NAVIGATE',
       payload: { name: 'ForgotPassword' },
     });
+  });
+
+  it('keeps login form visible and shows a busy CTA while auth submits', () => {
+    mockUseAppSelector.mockImplementation((selector) =>
+      selector({
+        auth: {
+          loading: true,
+          error: null,
+        },
+      })
+    );
+
+    const { getByLabelText, getByPlaceholderText, queryByText } = render(<AuthScreen />);
+    const cta = getByLabelText('Login');
+
+    expect(getByPlaceholderText('name@example.com')).toBeTruthy();
+    expect(cta.props.accessibilityState).toEqual({ disabled: true, busy: true });
+    expect(queryByText('Logging in...')).toBeNull();
+  });
+
+  it('disables alternate auth actions while auth submits', () => {
+    mockUseAppSelector.mockImplementation((selector) =>
+      selector({
+        auth: {
+          loading: true,
+          error: null,
+        },
+      })
+    );
+
+    const { getByLabelText, getByPlaceholderText } = render(<AuthScreen />);
+
+    expect(getByLabelText('Sign Up tab').props.accessibilityState.disabled).toBe(true);
+    expect(getByLabelText('Forgot password?').props.accessibilityState.disabled).toBe(true);
+    expect(getByLabelText('Continue with Google').props.accessibilityState.disabled).toBe(true);
+    expect(getByPlaceholderText('name@example.com').props.editable).toBe(false);
+  });
+
+  it('shows a validation error and does not submit signup with a one-character name', () => {
+    const dispatch = jest.fn(() => ({ unwrap: jest.fn() }));
+    mockUseAppDispatch.mockReturnValue(dispatch);
+
+    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = render(<AuthScreen />);
+
+    fireEvent.press(getByText('Sign Up'));
+    fireEvent.changeText(getByPlaceholderText('John Doe'), 'A');
+    fireEvent.changeText(getByPlaceholderText('name@example.com'), 'new@example.com');
+    fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
+    fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
+    fireEvent.press(getByLabelText('Sign Up'));
+
+    expect(getByText('Name must be at least 2 characters')).toBeTruthy();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(mockSignup).not.toHaveBeenCalled();
+  });
+
+  it('trims signup name and lowercases trimmed email before dispatching', () => {
+    const unwrap = jest.fn().mockResolvedValue(undefined);
+    const dispatch = jest.fn(() => ({ unwrap }));
+    mockUseAppDispatch.mockReturnValue(dispatch);
+
+    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = render(<AuthScreen />);
+
+    fireEvent.press(getByText('Sign Up'));
+    fireEvent.changeText(getByPlaceholderText('John Doe'), '  New User  ');
+    fireEvent.changeText(getByPlaceholderText('name@example.com'), '  New.User@Example.COM  ');
+    fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
+    fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
+    fireEvent.press(getByLabelText('Sign Up'));
+
+    expect(mockSignup).toHaveBeenCalledWith({
+      name: 'New User',
+      email: 'new.user@example.com',
+      password: 'Password1',
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'auth/signup',
+      payload: {
+        name: 'New User',
+        email: 'new.user@example.com',
+        password: 'Password1',
+      },
+    });
+  });
+
+  it('alerts with the backend signup error message from a rejected thunk', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const dispatch = jest.fn(() => ({
+      unwrap: jest.fn().mockRejectedValue('User already exists'),
+    }));
+    mockUseAppDispatch.mockReturnValue(dispatch);
+
+    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = render(<AuthScreen />);
+
+    fireEvent.press(getByText('Sign Up'));
+    fireEvent.changeText(getByPlaceholderText('John Doe'), 'New User');
+    fireEvent.changeText(getByPlaceholderText('name@example.com'), 'new@example.com');
+    fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
+    fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
+    fireEvent.press(getByLabelText('Sign Up'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Signup Failed', 'User already exists');
+    });
+  });
+
+  it('renders normalized backend auth errors from state inline', () => {
+    mockUseAppSelector.mockImplementation((selector) =>
+      selector({
+        auth: {
+          loading: false,
+          error: 'User already exists',
+        },
+      })
+    );
+
+    const { getByText } = render(<AuthScreen />);
+
+    expect(getByText('User already exists')).toBeTruthy();
   });
 });

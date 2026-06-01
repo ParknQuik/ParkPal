@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const { execFileSync } = require('node:child_process');
-const { collectWarnings, formatWarnings, openDatabase, queryIndex } = require('./query');
+const { collectWarnings, formatWarnings, hasImplementationIntent, openDatabase, queryIndex } = require('./query');
 const { selectModelForTask } = require('../lib/modelRouter');
 
 const COMPACT_SOURCE_PREFIX = '.agents/knowledge/compact/';
@@ -156,7 +156,11 @@ function formatContext(query, rows, warnings, options = {}) {
   return formatCompactContext(query, rows, warnings, modelRouting);
 }
 
-function preferCompactRows(rows, limit) {
+function preferCompactRows(rows, limit, query = '') {
+  if (hasImplementationIntent(query)) {
+    return rows.slice(0, limit);
+  }
+
   const compactRows = rows.filter((row) => row.sourcePath.startsWith(COMPACT_SOURCE_PREFIX));
   const selected = compactRows.slice(0, limit);
 
@@ -179,7 +183,7 @@ function main() {
   try {
     const candidateRows = queryIndex(db, query, { limit: Math.max(options.limit * 5, options.limit) });
     const rows = options.compact
-      ? preferCompactRows(candidateRows, options.limit)
+      ? preferCompactRows(candidateRows, options.limit, query)
       : candidateRows.slice(0, options.limit);
     const warnings = collectWarnings(db);
     console.log(formatContext(query, rows, warnings, options));

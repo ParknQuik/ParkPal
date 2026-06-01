@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -67,13 +68,8 @@ export const AuthScreen: React.FC = () => {
   const statusBarStyle = useStatusBarStyle();
   const authLoading = useAppSelector((state) => state.auth.loading);
   const authError = useAppSelector((state) => state.auth.error);
-  const submitButtonLabel = authLoading
-    ? activeTab === 'login'
-      ? 'Logging in...'
-      : 'Signing up...'
-    : activeTab === 'login'
-      ? 'Login'
-      : 'Sign Up';
+  const authBusy = authLoading || googleLoading;
+  const submitButtonLabel = activeTab === 'login' ? 'Login' : 'Sign Up';
 
   const [request, response, promptAsync] = Google.useAuthRequest(
     {
@@ -140,14 +136,20 @@ export const AuthScreen: React.FC = () => {
 
   const handleSubmit = async () => {
     const newErrors: typeof errors = {};
+    const normalizedName = name.trim();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (activeTab === 'signup' && !name.trim()) {
-      newErrors.name = 'Name is required';
+    if (activeTab === 'signup') {
+      if (!normalizedName) {
+        newErrors.name = 'Name is required';
+      } else if (normalizedName.length < 2) {
+        newErrors.name = 'Name must be at least 2 characters';
+      }
     }
 
-    if (!email.trim()) {
+    if (!normalizedEmail) {
       newErrors.email = 'Email is required';
-    } else if (!validateEmail(email)) {
+    } else if (!validateEmail(normalizedEmail)) {
       newErrors.email = 'Invalid email address';
     }
 
@@ -177,9 +179,9 @@ export const AuthScreen: React.FC = () => {
 
     try {
       if (activeTab === 'login') {
-        await dispatch(login({ email, password })).unwrap();
+        await dispatch(login({ email: normalizedEmail, password })).unwrap();
       } else {
-        await dispatch(signup({ name, email, password })).unwrap();
+        await dispatch(signup({ name: normalizedName, email: normalizedEmail, password })).unwrap();
       }
     } catch (err: any) {
       Alert.alert(
@@ -480,6 +482,10 @@ export const AuthScreen: React.FC = () => {
                     activeTab === 'login' && styles.activeTab,
                   ]}
                   onPress={() => setActiveTab('login')}
+                  disabled={authBusy}
+                  accessibilityRole="tab"
+                  accessibilityLabel="Login tab"
+                  accessibilityState={{ selected: activeTab === 'login', disabled: authBusy }}
                 >
                   <Text
                     style={[
@@ -496,6 +502,10 @@ export const AuthScreen: React.FC = () => {
                     activeTab === 'signup' && styles.activeTab,
                   ]}
                   onPress={() => setActiveTab('signup')}
+                  disabled={authBusy}
+                  accessibilityRole="tab"
+                  accessibilityLabel="Sign Up tab"
+                  accessibilityState={{ selected: activeTab === 'signup', disabled: authBusy }}
                 >
                   <Text
                     style={[
@@ -525,6 +535,7 @@ export const AuthScreen: React.FC = () => {
                     onChangeText={setName}
                     placeholder="John Doe"
                     placeholderTextColor={colors.textTertiary}
+                    editable={!authBusy}
                   />
                 </View>
                 {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
@@ -548,6 +559,7 @@ export const AuthScreen: React.FC = () => {
                   placeholderTextColor={colors.textTertiary}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  editable={!authBusy}
                 />
               </View>
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -569,10 +581,15 @@ export const AuthScreen: React.FC = () => {
                   placeholder="••••••••"
                   placeholderTextColor={colors.textTertiary}
                   secureTextEntry={!showPassword}
+                  editable={!authBusy}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
+                  disabled={authBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  accessibilityState={{ disabled: authBusy }}
                 >
                   <MaterialCommunityIcons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -600,6 +617,7 @@ export const AuthScreen: React.FC = () => {
                     placeholder="••••••••"
                     placeholderTextColor={colors.textTertiary}
                     secureTextEntry={!showPassword}
+                    editable={!authBusy}
                   />
                 </View>
                 {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
@@ -611,13 +629,22 @@ export const AuthScreen: React.FC = () => {
                 <TouchableOpacity
                   style={styles.checkboxContainer}
                   onPress={() => setRememberMe(!rememberMe)}
+                  disabled={authBusy}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: rememberMe, disabled: authBusy }}
                 >
                   <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                     {rememberMe && <MaterialCommunityIcons name="check" size={16} color={colors.white} />}
                   </View>
                   <Text style={styles.checkboxLabel}>Remember me</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleForgotPassword}>
+                <TouchableOpacity
+                  onPress={handleForgotPassword}
+                  disabled={authBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Forgot password?"
+                  accessibilityState={{ disabled: authBusy }}
+                >
                   <Text style={styles.forgotPassword}>Forgot password?</Text>
                 </TouchableOpacity>
               </View>
@@ -627,20 +654,24 @@ export const AuthScreen: React.FC = () => {
               style={styles.continueButton}
               onPress={handleSubmit}
               activeOpacity={0.8}
-              disabled={authLoading}
+              disabled={authBusy}
               accessibilityRole="button"
               accessibilityLabel={submitButtonLabel}
-              accessibilityState={{ disabled: authLoading, busy: authLoading }}
+              accessibilityState={{ disabled: authBusy, busy: authBusy }}
             >
               <LinearGradient
                 colors={[colors.primary, colors.secondary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={[styles.gradientButton, authLoading && styles.gradientButtonDisabled]}
+                style={[styles.gradientButton, authBusy && styles.gradientButtonDisabled]}
               >
-                <Text style={styles.continueButtonText}>
-                  {submitButtonLabel}
-                </Text>
+                {authLoading ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Text style={styles.continueButtonText}>
+                    {submitButtonLabel}
+                  </Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
 
@@ -660,10 +691,10 @@ export const AuthScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleGooglePress}
-                disabled={!request || googleLoading}
+                disabled={!request || authBusy}
                 accessibilityRole="button"
                 accessibilityLabel={googleLoading ? 'Signing in with Google' : 'Continue with Google'}
-                accessibilityState={{ disabled: !request || googleLoading, busy: googleLoading }}
+                accessibilityState={{ disabled: !request || authBusy, busy: googleLoading }}
               >
                 <MaterialCommunityIcons
                   name="google"

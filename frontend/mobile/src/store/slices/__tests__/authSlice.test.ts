@@ -42,6 +42,7 @@ describe('authSlice', () => {
         token: null,
         isAuthenticated: false,
         loading: false,
+        checkingAuth: false,
         error: null,
       });
     });
@@ -153,6 +154,59 @@ describe('authSlice', () => {
       expect(state.isAuthenticated).toBe(false);
       expect(state.error).toBe(errorMessage);
     });
+
+    it('should use backend signup error messages from 400 responses', async () => {
+      (authAPI.signup as jest.Mock).mockRejectedValue({
+        response: {
+          status: 400,
+          data: {
+            error: 'User already exists',
+          },
+        },
+        message: 'Request failed with status code 400',
+      });
+
+      await store.dispatch(
+        signup({
+          name: 'New User',
+          email: 'existing@example.com',
+          password: 'Password1',
+        })
+      );
+
+      const state = store.getState().auth;
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.error).toBe('User already exists');
+    });
+
+    it('should use backend signup validation detail messages from 400 responses', async () => {
+      (authAPI.signup as jest.Mock).mockRejectedValue({
+        response: {
+          status: 400,
+          data: {
+            details: [
+              { message: 'Name must be at least 2 characters' },
+              { message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' },
+            ],
+          },
+        },
+        message: 'Request failed with status code 400',
+      });
+
+      await store.dispatch(
+        signup({
+          name: 'A',
+          email: 'new@example.com',
+          password: 'password123',
+        })
+      );
+
+      const state = store.getState().auth;
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.error).toBe(
+        'Name must be at least 2 characters\nPassword must contain at least one uppercase letter, one lowercase letter, and one number'
+      );
+    });
   });
 
   describe('logout', () => {
@@ -209,6 +263,7 @@ describe('authSlice', () => {
       expect(state.isAuthenticated).toBe(true);
       expect(state.user).toEqual(mockUser);
       expect(state.token).toBe(mockToken);
+      expect(state.checkingAuth).toBe(false);
     });
 
     it('should handle missing auth data', async () => {
@@ -220,6 +275,18 @@ describe('authSlice', () => {
       expect(state.isAuthenticated).toBe(false);
       expect(state.user).toBe(null);
       expect(state.token).toBe(null);
+      expect(state.checkingAuth).toBe(false);
+    });
+
+    it('should set checkingAuth while restoring auth state', () => {
+      (AsyncStorage.getItem as jest.Mock).mockReturnValue(new Promise(() => {}));
+
+      store.dispatch(checkAuth());
+
+      const state = store.getState().auth;
+      expect(state.checkingAuth).toBe(true);
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe(null);
     });
   });
 

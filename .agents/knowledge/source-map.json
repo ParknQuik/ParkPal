@@ -384,6 +384,56 @@
       ]
     },
     {
+      "id": "mobile-auth-signup-register",
+      "title": "Mobile auth signup and register validation flow",
+      "subsystem": "mobile",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "frontend/mobile/src/screens/AuthScreen.tsx",
+        "frontend/mobile/src/store/slices/authSlice.ts",
+        "frontend/mobile/src/services/api.ts",
+        "backend/controllers/authController.js",
+        "backend/validators/auth.js",
+        "backend/routes/auth.js",
+        "backend/tests/auth.test.js",
+        "frontend/mobile/src/__tests__/screens/AuthScreen.test.tsx",
+        "frontend/mobile/src/store/slices/__tests__/authSlice.test.ts"
+      ],
+      "routeKeywords": [
+        "mobile signup",
+        "authSlice",
+        "AuthScreen",
+        "register endpoint",
+        "POST /api/v1/auth/register",
+        "400",
+        "validation details",
+        "role driver",
+        "User already exists",
+        "signup 400",
+        "auth register",
+        "backend mobile auth"
+      ],
+      "relatedApis": [
+        "POST /api/v1/auth/register",
+        "authAPI.register",
+        "authSlice.signup",
+        "registerSchema",
+        "validatePassword",
+        "backend auth register controller"
+      ],
+      "validationCommands": [
+        "cd frontend/mobile && npm test -- --runTestsByPath src/__tests__/screens/AuthScreen.test.tsx src/store/slices/__tests__/authSlice.test.ts --no-watchman",
+        "cd backend && npm test -- auth.test.js"
+      ],
+      "knownFailurePatterns": [
+        "Generic Axios 400 messages can hide backend register validation details from the mobile signup alert.",
+        "Backend validation failures include details[].message that should be preserved through rejectWithValue.",
+        "Name and password contract drift between AuthScreen payloads and backend validators can make signup fail before controller logic.",
+        "Mobile payload normalization should keep role as driver and align register field names with backend/validators/auth.js."
+      ]
+    },
+    {
       "id": "backend-local-db-test-recovery",
       "title": "Backend local database, seeded users, and test recovery",
       "subsystem": "backend",

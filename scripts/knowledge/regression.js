@@ -194,6 +194,60 @@ const QUERY_SPECS = [
     ]
   },
   {
+    query: 'mobile signup 400 authSlice AuthScreen',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedReferences: [
+      'frontend/mobile/src/screens/AuthScreen.tsx',
+      'frontend/mobile/src/store/slices/authSlice.ts',
+      'frontend/mobile/src/services/api.ts',
+      'backend/controllers/authController.js',
+      'backend/validators/auth.js',
+      'backend/tests/auth.test.js',
+      'frontend/mobile/src/__tests__/screens/AuthScreen.test.tsx',
+      'frontend/mobile/src/store/slices/__tests__/authSlice.test.ts'
+    ]
+  },
+  {
+    query: 'auth register signup 400 backend mobile',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedReferences: [
+      'frontend/mobile/src/screens/AuthScreen.tsx',
+      'frontend/mobile/src/store/slices/authSlice.ts',
+      'backend/controllers/authController.js',
+      'backend/validators/auth.js',
+      'backend/tests/auth.test.js'
+    ]
+  },
+  {
+    query: 'POST /api/v1/auth/register validation details role driver',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedReferences: [
+      'frontend/mobile/src/store/slices/authSlice.ts',
+      'backend/controllers/authController.js',
+      'backend/validators/auth.js',
+      'backend/routes/auth.js',
+      'backend/tests/auth.test.js'
+    ]
+  },
+  {
     query: 'current project status',
     group: 'current-status',
     expectedPaths: [
@@ -252,6 +306,18 @@ const QUERY_SPECS = [
       'src/screens/MyBookingsScreen.ts'
     ],
     requireTopPath: '.agents/knowledge/compact/status.jsonl'
+  }
+];
+
+const CONTEXT_SPECS = [
+  {
+    query: 'mobile signup 400 authSlice AuthScreen',
+    requiredFirstPath: '.agents/knowledge/source-map.json',
+    rejectedBeforeFirstPath: [
+      '.agents/knowledge/compact/status.jsonl',
+      '.agents/knowledge/compact/workflow.jsonl',
+      'STATUS_REPORT.md'
+    ]
   }
 ];
 
@@ -533,6 +599,26 @@ function parseCitations(contextOutput) {
   return citations;
 }
 
+function checkContextRouting(root, dbPath, spec) {
+  const output = runNodeScript(root, 'scripts/knowledge/context.js', [
+    spec.query,
+    '--limit',
+    String(TASK_CONTEXT_LIMIT)
+  ], {
+    KNOWLEDGE_DB_PATH: dbPath
+  });
+  const citations = parseCitations(output);
+  const paths = citations.map((citation) => citation.sourcePath);
+
+  return {
+    query: spec.query,
+    paths,
+    firstPath: paths[0] || null,
+    requiredFirstPath: spec.requiredFirstPath,
+    rejectedBeforeFirstPath: spec.rejectedBeforeFirstPath || []
+  };
+}
+
 function buildCompactRecordPayload(root, dbPath, intent) {
   const payload = queryKnowledge(root, dbPath, intent, TASK_CONTEXT_LIMIT * 5);
   const rows = (payload.results || [])
@@ -744,6 +830,30 @@ function validate(scoredQueries, tokenSavings) {
   return failures;
 }
 
+function validateContextChecks(contextChecks) {
+  const failures = [];
+
+  for (const check of contextChecks) {
+    if (check.firstPath !== check.requiredFirstPath) {
+      failures.push(
+        `${check.query}: compact context first citation is ${check.firstPath || 'none'}, expected ${check.requiredFirstPath}.`
+      );
+    }
+
+    const requiredIndex = check.paths.indexOf(check.requiredFirstPath);
+    for (const rejectedPath of check.rejectedBeforeFirstPath) {
+      const rejectedIndex = check.paths.indexOf(rejectedPath);
+      if (rejectedIndex !== -1 && (requiredIndex === -1 || rejectedIndex < requiredIndex)) {
+        failures.push(
+          `${check.query}: compact context cited ${rejectedPath} before ${check.requiredFirstPath}.`
+        );
+      }
+    }
+  }
+
+  return failures;
+}
+
 function formatReport(report) {
   const topRows = report.queries.map((item) => [
     shortQuery(item.query),
@@ -803,6 +913,12 @@ function formatReport(report) {
       scenario.savingsVsContextCited === null ? '-' : `${scenario.savingsVsContextCited.toFixed(1)}%`
   ]);
 
+  const contextRows = report.contextChecks.map((check) => [
+    shortQuery(check.query),
+    check.firstPath || 'none',
+    check.requiredFirstPath
+  ]);
+
   const lines = [
     '# ParkPal Knowledge Index Regression Benchmark',
     '',
@@ -850,6 +966,13 @@ function formatReport(report) {
       oldWorkflowRows
     ),
     '',
+    '## Compact Context Routing',
+    '',
+    markdownTable(
+      ['Query', 'First citation', 'Expected first'],
+      contextRows
+    ),
+    '',
     '## Checks',
     ''
   ];
@@ -895,6 +1018,11 @@ function main() {
     const baselineTokenSavings = measureTokenSavings(baselineRoot, baselineDb.dbPath);
     const currentTokenSavings = measureTokenSavings(ROOT, currentDb.dbPath);
     const tokenDeltaVsBaseline = compareTokenSavings(baselineTokenSavings, currentTokenSavings);
+    const contextChecks = CONTEXT_SPECS.map((spec) => checkContextRouting(ROOT, currentDb.dbPath, spec));
+    const failures = [
+      ...validate(queries, currentTokenSavings),
+      ...validateContextChecks(contextChecks)
+    ];
     const report = {
       baseline: {
         ref: options.baselineRef,
@@ -918,7 +1046,8 @@ function main() {
       },
       tokenSavings: currentTokenSavings,
       tokenDeltaVsBaseline,
-      failures: validate(queries, currentTokenSavings)
+      contextChecks,
+      failures
     };
 
     if (options.json) {
