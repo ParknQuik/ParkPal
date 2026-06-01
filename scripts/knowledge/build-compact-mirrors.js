@@ -83,7 +83,7 @@ function statusRecords() {
       st: 'current',
       pri: 'always',
       d: '2026-06-01',
-      txt: 'Readiness 95/100. PR #175 refreshed compact status mirrors with passing GitHub checks. Evidence: web 85/85, backend 494/496 (2 skipped), mobile 90/90, mobile TypeScript passing. Gaps: beta/deployment evidence and deployment health recheck.',
+      txt: 'Readiness 95/100. PR #177 added retrieval-miss routing coverage with passing GitHub checks. Evidence: web 85/85, backend 494/496 (2 skipped), mobile 90/90, mobile TypeScript passing. Gaps: beta/deployment evidence and deployment health recheck.',
       refs: ['STATUS_REPORT.md', 'docs/BETA_READINESS_CHECKLIST.md'],
       src: { path: 'STATUS_REPORT.md', start: readinessLine, end: phaseLine },
       tags: ['current', 'project status', 'readiness', 'startup', 'continue']
@@ -95,7 +95,7 @@ function statusRecords() {
       st: 'current',
       pri: 'always',
       d: '2026-06-01',
-      txt: 'Local-first dev remains active. PR #173 added hit-rate scanning and PR #175 refreshed compact status mirrors. Backend Cloud Run health recheck is a future deployment gate, not current stabilization.',
+      txt: 'Local-first dev remains active. PR #173 added hit-rate scanning, PR #175 refreshed compact status mirrors, and PR #177 added retrieval-miss routing coverage. Backend Cloud Run health recheck is a future deployment gate, not current stabilization.',
       refs: ['STATUS_REPORT.md', 'frontend/mobile/src/navigation/types.ts', 'frontend/mobile/src/screens/MyBookingsScreen.tsx'],
       src: { path: 'STATUS_REPORT.md', start: reconciliationStart, end: reconciliationStart + 1 },
       tags: ['current', 'local-first', 'blockers', 'next steps', 'continue roadmap']
@@ -119,7 +119,7 @@ function statusRecords() {
       st: 'current',
       pri: 'always',
       d: '2026-06-01',
-      txt: 'GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed for PR #175. Local evidence: mobile Jest 90/90 and TypeScript passed on June 1; backend 494/496 and web 85/85 remain the latest broader local suites.',
+      txt: 'GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed for PR #177. Local evidence: mobile Jest 90/90 and TypeScript passed on June 1; backend 494/496 and web 85/85 remain the latest broader local suites.',
       refs: ['STATUS_REPORT.md', 'docs/BETA_READINESS_CHECKLIST.md', 'frontend/mobile/src/screens/MyBookingsScreen.tsx'],
       src: { path: 'STATUS_REPORT.md', start: testStart, end: testStart + 1 },
       tags: ['validation', 'tests', 'web', 'backend', 'mobile', 'beta readiness']
@@ -143,7 +143,7 @@ function statusRecords() {
       st: 'current',
       pri: 'always',
       d: '2026-06-01',
-      txt: 'Testing: compact mirror freshness is green after PR #175. Redis remains deferred. Backend Cloud Run and web health need re-verification before production. Mobile app-store distribution waits for beta scope.',
+      txt: 'Testing: compact mirror freshness is green after PR #175 and retrieval-miss routing coverage landed in PR #177. Redis remains deferred. Backend Cloud Run and web health need re-verification before production. Mobile app-store distribution waits for beta scope.',
       refs: ['STATUS_REPORT.md', 'docs/BETA_READINESS_CHECKLIST.md'],
       src: { path: 'STATUS_REPORT.md', start: gapsStart, end: gapsStart + 3 },
       tags: ['gaps', 'blockers', 'redis', 'deployment', 'mobile distribution', 'continue']
@@ -155,7 +155,7 @@ function statusRecords() {
       st: 'current',
       pri: 'high',
       d: '2026-06-01',
-      txt: 'No open PRs against dev as verified on June 1. Recently merged: #175 compact status mirrors, #174 status reconciliation, #173 knowledge hit-rate scanner, #171 mobile signup validation, #165 account standing, #163 web auth tests.',
+      txt: 'No open PRs against dev as verified on June 1. Recently merged: #177 retrieval-miss routing coverage, #175 compact status mirrors, #174 status reconciliation, #173 knowledge hit-rate scanner, #171 mobile signup validation, #165 account standing.',
       refs: ['STATUS_REPORT.md'],
       src: { path: 'STATUS_REPORT.md', start: prStart, end: prStart + 3 },
       tags: ['pr', 'branch', 'dev', 'workflow', 'current']
@@ -179,7 +179,7 @@ function statusRecords() {
       st: 'current',
       pri: 'high',
       d: '2026-06-01',
-      txt: 'No current P0 local blocker documented. Key items: backend local suite refreshed (494/496), compact mirror freshness green after PR #175, Redis deferred, and mobile distribution waits for beta scope.',
+      txt: 'No current P0 local blocker documented. Key items: backend local suite refreshed (494/496), compact mirror freshness green after PR #175, retrieval-miss routing coverage landed in PR #177, Redis deferred, and mobile distribution waits for beta scope.',
       refs: ['STATUS_REPORT.md'],
       src: { path: 'STATUS_REPORT.md', start: blockersStart, end: blockersStart + 6 },
       tags: ['blockers', 'p0', 'backend', 'redis', 'mobile distribution']
