@@ -15,6 +15,7 @@
     "knowledge:measure-savings": "node --no-warnings scripts/knowledge/measure-savings.js",
     "knowledge:query": "node --no-warnings scripts/knowledge/query.js",
     "knowledge:regression": "node --no-warnings scripts/knowledge/regression.js",
+    "knowledge:scan-hit-rate": "node --no-warnings scripts/knowledge/scan-hit-rate.js",
     "knowledge:refresh": "npm run knowledge:build",
     "knowledge:rebuild-if-stale": "node --no-warnings scripts/knowledge/rebuild-if-stale.js",
     "knowledge:validate": "node --no-warnings scripts/knowledge/query.js --self-test",
