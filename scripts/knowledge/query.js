@@ -155,6 +155,7 @@ function hasImplementationIntent(query) {
     /\b[A-Z][A-Za-z0-9]*(?:Screen|Controller|Service|Route|Routes|Validator|Schema|Slice|Test)\b/.test(query) ||
     /\b[a-z][A-Za-z0-9]*(?:API|Api|Slice|Controller|Service|Route|Routes|Validator|Schema|Test)\b/.test(query) ||
     /\b(fix|bug|failed|failure|error|reject|rejected|validation|signup|sign-up|login|register|endpoint|payload|axios)\b/i.test(query) ||
+    /\b(retrieval miss|wrong top result|missing expected source|broad docs|source-map route|source-map routing|expected references|rejected first path|vector database|semantic search)\b/i.test(query) ||
     /marketplace\/listings/i.test(query)
   );
 }
@@ -818,6 +819,27 @@ function runQueryChecks(db) {
         'scripts/knowledge/build-compact-mirrors.js',
         'scripts/knowledge/context.js'
       ]
+    },
+    {
+      query: 'retrieval miss wrong top result broad docs source-map vector database',
+      expectedPaths: [
+        '.agents/knowledge/source-map.json'
+      ],
+      expectedReferences: [
+        '.agents/knowledge/README.md',
+        '.agents/knowledge/source-map.json',
+        'docs/agent-knowledge/SESSION_LEARNINGS.md',
+        'scripts/knowledge/regression.js',
+        'scripts/knowledge/context.js'
+      ],
+      expectedBeforeSources: [
+        '.agents/knowledge/compact/status.jsonl',
+        '.agents/knowledge/compact/workflow.jsonl',
+        'STATUS_REPORT.md',
+        'ROADMAP.md',
+        'DOCUMENTATION.md'
+      ],
+      rejectedFirstPath: '.agents/knowledge/compact/workflow.jsonl'
     },
     {
       query: 'my listings add listing 400 error',

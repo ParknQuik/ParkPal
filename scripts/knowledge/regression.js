@@ -138,6 +138,30 @@ const QUERY_SPECS = [
     ]
   },
   {
+    query: 'retrieval miss wrong top result broad docs source-map vector database',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json'
+    ],
+    expectedReferences: [
+      '.agents/knowledge/README.md',
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md',
+      'scripts/knowledge/regression.js',
+      'scripts/knowledge/context.js'
+    ],
+    rejectedFirstPaths: [
+      'STATUS_REPORT.md',
+      'ROADMAP.md',
+      'DOCUMENTATION.md',
+      '.agents/knowledge/compact/status.jsonl',
+      '.agents/knowledge/compact/workflow.jsonl'
+    ]
+  },
+  {
     query: 'my listings add listing 400 error',
     group: 'session-aware',
     expectedPaths: [
@@ -318,6 +342,17 @@ const CONTEXT_SPECS = [
       '.agents/knowledge/compact/workflow.jsonl',
       'STATUS_REPORT.md'
     ]
+  },
+  {
+    query: 'retrieval miss broad docs source-map route vector database',
+    requiredFirstPath: '.agents/knowledge/source-map.json',
+    rejectedBeforeFirstPath: [
+      '.agents/knowledge/compact/status.jsonl',
+      '.agents/knowledge/compact/workflow.jsonl',
+      'STATUS_REPORT.md',
+      'ROADMAP.md',
+      'DOCUMENTATION.md'
+    ]
   }
 ];
 
@@ -474,6 +509,7 @@ function scoreQuery(spec, payload) {
   const expectedPaths = spec.expectedPaths || [];
   const expectedReferences = spec.expectedReferences || [];
   const rejectedReferences = spec.rejectedReferences || [];
+  const rejectedFirstPaths = spec.rejectedFirstPaths || [];
   const primaryRank = rankOfFirstPath(results, expectedPaths.slice(0, 1));
   const anyExpectedRank = rankOfFirstPath(results, expectedPaths);
   const pathHitCount = expectedPaths.filter((sourcePath) => resultPaths.has(sourcePath)).length;
@@ -497,6 +533,7 @@ function scoreQuery(spec, payload) {
     anyExpectedRank,
     mrr: primaryRank ? 1 / primaryRank : 0,
     expectedAnyHit,
+    rejectedFirstPathHit: rejectedFirstPaths.includes(results[0]?.sourcePath || null),
     rejectedReferenceHits,
     warnings: payload.warnings || []
   };
@@ -774,6 +811,9 @@ function validate(scoredQueries, tokenSavings) {
     if (item.spec.group === 'session-aware') {
       if (!item.current.expectedAnyHit) {
         failures.push(`${item.spec.query}: current build missed session-aware source-map/session-learning routes.`);
+      }
+      if (item.current.rejectedFirstPathHit) {
+        failures.push(`${item.spec.query}: current first result is rejected path ${item.current.topPath}.`);
       }
       if (item.current.pathHitCount < item.baseline.pathHitCount) {
         failures.push(`${item.spec.query}: current expected-path hits regressed against baseline.`);

@@ -85,6 +85,56 @@ remains the escape hatch for deeper investigation.
 - For explicit current-status follow-up, verify with git, cited
   `STATUS_REPORT.md` ranges, and source files before making implementation
   claims.
+- Record retrieval misses only when they are observed in real work or cover a
+  high-risk startup/status/implementation flow. Do not add speculative query
+  cases just to improve a benchmark number.
+
+## Retrieval Miss Review
+
+A retrieval miss is worth capturing when any of these happen:
+
+- The top result is wrong for the user's intent.
+- The expected implementation source file is missing from references.
+- A stale status or roadmap result outranks current docs for current-state work.
+- Broad documentation appears before a curated `source-map.json` route for an
+  implementation-shaped query.
+
+Choose the smallest canonical fix:
+
+- Add or update `.agents/knowledge/source-map.json` when the miss is a durable
+  source-routing map: files to inspect, route keywords, related APIs, validation
+  commands, or known failure patterns.
+- Add a short entry to `docs/agent-knowledge/SESSION_LEARNINGS.md` when the miss
+  is a reusable lesson from completed work.
+- Update compact mirrors or their generators only when the miss is status,
+  roadmap, or workflow routing that belongs in compact startup/follow-up output.
+- Tune status override rules only when current docs, beta-readiness evidence, or
+  stale historical sections rank in the wrong order.
+
+After a fix, add `knowledge:regression` coverage only for the observed miss or a
+high-risk flow. Regression specs should include expected source paths, expected
+references, and rejected first paths or references when a broad/status result
+must not outrank implementation routing. Preserve the current budgets: startup
+context below 500 estimated tokens and compact follow-up context plus records
+below 800 estimated tokens.
+
+Review checklist:
+
+1. Run `npm run knowledge:context -- "<intent>" --limit 3` before broad doc
+   reads.
+2. If the output is wrong, classify the fix as source-map, session learning,
+   compact mirror, or status override.
+3. Rebuild only if stale, then run `npm run knowledge:validate`,
+   `npm run knowledge:regression -- --json`, and
+   `npm run knowledge:measure-savings`.
+
+Do not introduce embeddings, a hosted vector database, or a separate semantic
+search service for these misses. Reconsider vector search only after repeated
+regression-backed lexical misses, source-map curation becoming too costly,
+cross-repo retrieval becoming a requirement, or user-facing semantic search
+entering scope. Any prototype must be local-first, benchmarked against the
+current SQLite FTS layer, and rejected unless it improves retrieval quality
+without breaking token budgets.
 
 ## Freshness
 
@@ -157,6 +207,7 @@ default ignored database untouched. It covers:
 - payment, QR hook-order, and mobile icon source-map/session-learning queries
 - mobile list states, Google parking candidates, backend local DB recovery, and
   startup-token tooling source-map/session-learning queries
+- retrieval-miss review routing, source-map curation, and vector-revisit gates
 - `.json` and `.tsx` reference extraction without truncated extensions
 - lean context output with Branch/HEAD, cited line ranges, and no suggested broad reads
 - advisory model-routing metadata in query JSON and compact context output
