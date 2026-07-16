@@ -104,6 +104,24 @@ setup_environment() {
         return 1
     fi
 
+    read -p "Enter Google Web OAuth Client ID for $env: " google_web_client_id
+    if [ -z "$google_web_client_id" ]; then
+        print_error "Google Web OAuth Client ID cannot be empty"
+        return 1
+    fi
+
+    read -p "Enter Google iOS OAuth Client ID for $env: " google_ios_client_id
+    if [ -z "$google_ios_client_id" ]; then
+        print_error "Google iOS OAuth Client ID cannot be empty"
+        return 1
+    fi
+
+    read -p "Enter Google iOS reversed URL scheme for $env: " google_ios_url_scheme
+    if [ -z "$google_ios_url_scheme" ]; then
+        print_error "Google iOS URL scheme cannot be empty"
+        return 1
+    fi
+
     print_info "Creating secrets in EAS..."
 
     # Create or update secrets
@@ -132,6 +150,24 @@ setup_environment() {
         --value "$android_key" \
         --type string \
         --force || print_warning "Failed to set Android API key secret"
+
+    eas secret:create --scope project \
+        --name "EXPO_PUBLIC_GOOGLE_CLIENT_ID${suffix}" \
+        --value "$google_web_client_id" \
+        --type string \
+        --force || print_warning "Failed to set Google Web OAuth client ID secret"
+
+    eas secret:create --scope project \
+        --name "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID${suffix}" \
+        --value "$google_ios_client_id" \
+        --type string \
+        --force || print_warning "Failed to set Google iOS OAuth client ID secret"
+
+    eas secret:create --scope project \
+        --name "GOOGLE_IOS_URL_SCHEME${suffix}" \
+        --value "$google_ios_url_scheme" \
+        --type string \
+        --force || print_warning "Failed to set Google iOS URL scheme secret"
 
     print_success "Secrets configured for $env environment"
 }
@@ -163,6 +199,9 @@ delete_environment_secrets() {
     eas secret:delete --name "EXPO_PUBLIC_API_URL${suffix}" || true
     eas secret:delete --name "GOOGLE_MAPS_API_KEY_IOS${suffix}" || true
     eas secret:delete --name "GOOGLE_MAPS_API_KEY_ANDROID${suffix}" || true
+    eas secret:delete --name "EXPO_PUBLIC_GOOGLE_CLIENT_ID${suffix}" || true
+    eas secret:delete --name "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID${suffix}" || true
+    eas secret:delete --name "GOOGLE_IOS_URL_SCHEME${suffix}" || true
 
     print_success "Deleted secrets for $env environment"
 }

@@ -14,8 +14,12 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, CommonActions } from '@react-navigation/native';
-import * as Google from 'expo-auth-session';
-import { makeRedirectUri } from 'expo-auth-session';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  isSuccessResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { useAppDispatch, useAppSelector } from '../store';
 import { login, signup, setUser, setToken } from '../store/slices/authSlice';
 import { authAPI } from '../services/api';
@@ -26,25 +30,11 @@ import { validateEmail, validatePassword } from '../utils/helpers';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '';
-
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-};
-
-// Production: Use native URI scheme (works in standalone builds)
-// Development: Falls back to exp:// (won't work, use email/password for testing)
-const redirectUri = makeRedirectUri({
-  scheme: 'parknquik',
-  // No path needed for production
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  scopes: ['openid', 'profile', 'email'],
 });
-
-// Debug: Log the redirect URI being used
-;
-if (__DEV__) {
-  ;
-}
 
 export const AuthScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
@@ -71,38 +61,10 @@ export const AuthScreen: React.FC = () => {
   const authBusy = authLoading || googleLoading;
   const submitButtonLabel = activeTab === 'login' ? 'Login' : 'Sign Up';
 
-  const [request, response, promptAsync] = Google.useAuthRequest(
-    {
-      clientId: GOOGLE_CLIENT_ID,
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri,
-      responseType: 'code',
-      usePKCE: false,
-      prompt: Google.Prompt.SelectAccount, // Force account selection
-    },
-    discovery
-  );
-
-  React.useEffect(() => {
-    ;
-
-    if (response?.type === 'success') {
-      const { code } = response.params;
-      ;
-      handleGoogleSignIn(code);
-    } else if (response?.type === 'error') {
-      ;
-      Alert.alert('OAuth Error', response.error?.message || 'Authentication failed');
-    } else if (response?.type === 'cancel') {
-      ;
-    }
-  }, [response]);
-
-  const handleGoogleSignIn = async (code: string) => {
+  const handleGoogleSignIn = async (idToken: string) => {
     try {
       setGoogleLoading(true);
-      // Send code to backend - backend exchanges it for tokens securely
-      const userResponse = await authAPI.googleSignIn(code);
+      const userResponse = await authAPI.googleSignIn(idToken);
       const { token, user } = userResponse.data;
 
       await AsyncStorage.setItem('token', token);
@@ -120,18 +82,40 @@ export const AuthScreen: React.FC = () => {
   };
 
   const handleGooglePress = async () => {
-    // In development, warn user that Google OAuth requires production build
-    if (__DEV__) {
-      Alert.alert(
-        'Development Mode',
-        'Google Sign-In requires a production build (EAS Build).\n\nFor development testing, please use email/password login.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+    try {
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
 
-    // Production: Launch Google OAuth
-    promptAsync({ showInRecents: true });
+      const signInResponse = await GoogleSignin.signIn();
+
+      if (!isSuccessResponse(signInResponse)) {
+        return;
+      }
+
+      const idToken = signInResponse.data.idToken || (await GoogleSignin.getTokens()).idToken;
+
+      if (!idToken) {
+        Alert.alert(
+          'Google Sign In Failed',
+          'Google did not return an ID token. Check the OAuth client configuration and try again.'
+        );
+        return;
+      }
+
+      await handleGoogleSignIn(idToken);
+    } catch (error) {
+      if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
+        return;
+      }
+
+      Alert.alert(
+        'Google Sign In Failed',
+        isErrorWithCode(error) && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE
+          ? 'Google Play Services is not available or needs to be updated.'
+          : 'Please try again.'
+      );
+    }
   };
 
   const handleSubmit = async () => {
@@ -691,10 +675,10 @@ export const AuthScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleGooglePress}
-                disabled={!request || authBusy}
+                disabled={authBusy}
                 accessibilityRole="button"
                 accessibilityLabel={googleLoading ? 'Signing in with Google' : 'Continue with Google'}
-                accessibilityState={{ disabled: !request || authBusy, busy: googleLoading }}
+                accessibilityState={{ disabled: authBusy, busy: googleLoading }}
               >
                 <MaterialCommunityIcons
                   name="google"
