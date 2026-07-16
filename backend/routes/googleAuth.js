@@ -19,8 +19,11 @@ module.exports = (app, authLimiter) => {
    *             properties:
    *               googleToken:
    *                 type: string
-   *                 description: The Google OAuth id_token
+   *                 description: Canonical mobile path. The Google OAuth id_token returned by native Google Sign-In.
    *                 example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+   *               code:
+   *                 type: string
+   *                 description: Legacy browser OAuth authorization code. Prefer googleToken for mobile.
    *     responses:
    *       200:
    *         description: Login successful

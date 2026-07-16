@@ -179,6 +179,10 @@ function validateEnvironment() {
     }
   });
 
+  if (env !== 'test' && process.env.GOOGLE_AUTH_ENABLED !== 'false' && !process.env.GOOGLE_CLIENT_ID) {
+    warnings.push('GOOGLE_CLIENT_ID is required for Google Sign-In id_token audience verification');
+  }
+
   // Check for weak secrets in production
   if (env === 'production') {
     SECRET_VARS.forEach(varName => {
@@ -241,6 +245,7 @@ function printEnvironmentSummary() {
   logger.info(`  PayMongo: ${process.env.PAYMONGO_SECRET_KEY ? 'Configured' : 'Not configured'}`);
   logger.info(`  Google Maps: ${process.env.GOOGLE_MAPS_API_KEY ? 'Configured' : 'Not configured'}`);
   logger.info(`  Google Places: ${process.env.GOOGLE_PLACES_API_KEY ? 'Configured' : 'Not configured'}`);
+  logger.info(`  Google Auth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
   logger.info(`  Google Parking Scan: ${process.env.GOOGLE_PARKING_SCAN_ENABLED === 'true' ? 'Enabled' : 'Disabled'}`);
 }
 

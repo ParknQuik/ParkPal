@@ -12,7 +12,17 @@ exports.googleAuth = async (req, res, next) => {
 
     let googleUser;
 
-    if (code) {
+    if (googleToken) {
+      try {
+        const ticket = await client.verifyIdToken({
+          idToken: googleToken,
+          audience: process.env.GOOGLE_CLIENT_ID
+        });
+        googleUser = ticket.getPayload();
+      } catch (error) {
+        return res.status(401).json({ error: 'Invalid Google token' });
+      }
+    } else if (code) {
       // Exchange authorization code for tokens server-side
       const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
         code,
@@ -37,17 +47,6 @@ exports.googleAuth = async (req, res, next) => {
       } catch (error) {
         return res.status(401).json({ error: 'Invalid Google token' });
       }
-     } else if (googleToken) {
-       // Legacy: accept pre-exchanged token
-       try {
-         const ticket = await client.verifyIdToken({
-           idToken: googleToken,
-           audience: process.env.GOOGLE_CLIENT_ID
-         });
-         googleUser = ticket.getPayload();
-       } catch (error) {
-         return res.status(401).json({ error: 'Invalid Google token' });
-       }
     } else {
       return res.status(400).json({ error: 'Authorization code or Google token is required' });
     }
@@ -86,7 +85,7 @@ exports.googleAuth = async (req, res, next) => {
             email,
             googleId,
             password: await hashPassword(randomPassword),
-            role: 'user',
+            role: 'driver',
             profileImageUrl: picture
           }
         });

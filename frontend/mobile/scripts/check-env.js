@@ -7,9 +7,20 @@
  * Run with: npm run env:check
  */
 
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
+
+const loadEnvFile = (file, override = true) => {
+  const envPath = path.join(process.cwd(), file);
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override });
+  }
+};
+
+loadEnvFile('.env');
+loadEnvFile(`.env.${process.env.EXPO_PUBLIC_ENV || 'development'}`);
+loadEnvFile('.env.local');
 
 // ANSI color codes
 const colors = {
@@ -36,20 +47,6 @@ const print = {
 
 // Required environment variables
 const requiredVars = [
-  {
-    name: 'EXPO_PUBLIC_API_URL',
-    description: 'Backend API URL',
-    example: 'http://192.168.1.100:3001/api/v1',
-    validator: (value) => {
-      if (!value.startsWith('http://') && !value.startsWith('https://')) {
-        return 'Must start with http:// or https://';
-      }
-      if (value.includes('localhost') || value.includes('127.0.0.1')) {
-        return 'Warning: localhost won\'t work on physical devices. Use local IP (e.g., 192.168.x.x)';
-      }
-      return true;
-    },
-  },
   {
     name: 'GOOGLE_MAPS_API_KEY_IOS',
     description: 'Google Maps API key for iOS',
@@ -92,6 +89,48 @@ const requiredVars = [
       const validEnvs = ['development', 'staging', 'production'];
       if (!validEnvs.includes(value)) {
         return `Must be one of: ${validEnvs.join(', ')}`;
+      }
+      return true;
+    },
+  },
+  {
+    name: 'EXPO_PUBLIC_GOOGLE_CLIENT_ID',
+    description: 'Web OAuth client ID for Google Sign-In audience verification',
+    example: '1234567890-example.apps.googleusercontent.com',
+    validator: (value) => {
+      if (value.includes('YOUR_WEB_OAUTH_CLIENT_ID')) {
+        return 'Still using placeholder value';
+      }
+      if (!value.endsWith('.apps.googleusercontent.com')) {
+        return 'Google OAuth client IDs should end with ".apps.googleusercontent.com"';
+      }
+      return true;
+    },
+  },
+  {
+    name: 'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
+    description: 'iOS OAuth client ID for Google Sign-In',
+    example: '1234567890-ios-example.apps.googleusercontent.com',
+    validator: (value) => {
+      if (value.includes('YOUR_IOS_OAUTH_CLIENT_ID')) {
+        return 'Still using placeholder value';
+      }
+      if (!value.endsWith('.apps.googleusercontent.com')) {
+        return 'Google OAuth client IDs should end with ".apps.googleusercontent.com"';
+      }
+      return true;
+    },
+  },
+  {
+    name: 'GOOGLE_IOS_URL_SCHEME',
+    description: 'Reversed iOS OAuth client ID URL scheme',
+    example: 'com.googleusercontent.apps.1234567890-ios-example',
+    validator: (value) => {
+      if (value.includes('YOUR_REVERSED_IOS_CLIENT_ID')) {
+        return 'Still using placeholder value';
+      }
+      if (!value.startsWith('com.googleusercontent.apps.')) {
+        return 'Must start with "com.googleusercontent.apps."';
       }
       return true;
     },

@@ -4,6 +4,8 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { AuthScreen } from '../../screens/AuthScreen';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { signup } from '../../store/slices/authSlice';
+import { authAPI } from '../../services/api';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const mockNavigationDispatch = jest.fn();
 
@@ -37,12 +39,19 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-jest.mock('expo-auth-session', () => ({
-  Prompt: {
-    SelectAccount: 'select_account',
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    getTokens: jest.fn(),
+    hasPlayServices: jest.fn(),
+    signIn: jest.fn(),
   },
-  makeRedirectUri: jest.fn(() => 'parknquik://redirect'),
-  useAuthRequest: jest.fn(() => [{}, null, jest.fn()]),
+  isErrorWithCode: jest.fn((error) => Boolean(error?.code)),
+  isSuccessResponse: jest.fn((response) => response?.type === 'success'),
+  statusCodes: {
+    PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE',
+    SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+  },
 }));
 
 jest.mock('expo-status-bar', () => ({
@@ -74,10 +83,43 @@ jest.mock('@expo/vector-icons', () => {
 const mockUseAppDispatch = useAppDispatch as jest.Mock;
 const mockUseAppSelector = useAppSelector as jest.Mock;
 const mockSignup = signup as unknown as jest.Mock;
+const mockGoogleSignIn = authAPI.googleSignIn as jest.Mock;
+const mockNativeGoogleSignin = GoogleSignin as jest.Mocked<typeof GoogleSignin>;
 
 describe('AuthScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNativeGoogleSignin.signIn.mockResolvedValue({
+      type: 'success',
+      data: {
+        idToken: 'native-google-id-token',
+        user: {
+          id: 'google-user-id',
+          name: 'Google User',
+          email: 'google@example.com',
+          photo: null,
+          familyName: null,
+          givenName: null,
+        },
+        scopes: ['openid', 'profile', 'email'],
+        serverAuthCode: null,
+      },
+    });
+    mockNativeGoogleSignin.getTokens.mockResolvedValue({
+      idToken: 'fallback-google-id-token',
+      accessToken: 'google-access-token',
+    });
+    mockGoogleSignIn.mockResolvedValue({
+      data: {
+        token: 'parkpal-jwt',
+        user: {
+          id: 'user-id',
+          name: 'Google User',
+          email: 'google@example.com',
+          role: 'driver',
+        },
+      },
+    });
     mockUseAppDispatch.mockReturnValue(jest.fn());
     mockUseAppSelector.mockImplementation((selector) =>
       selector({
@@ -108,6 +150,54 @@ describe('AuthScreen', () => {
     expect(getByText('Forgot password?')).toBeTruthy();
     expect(getByLabelText('Continue with Google')).toBeTruthy();
     expect(getByLabelText('Login')).toBeTruthy();
+  });
+
+  it('signs in with native Google idToken and stores backend auth state', async () => {
+    const dispatch = jest.fn();
+    mockUseAppDispatch.mockReturnValue(dispatch);
+
+    const { getByLabelText } = render(<AuthScreen />);
+
+    fireEvent.press(getByLabelText('Continue with Google'));
+
+    await waitFor(() => {
+      expect(mockGoogleSignIn).toHaveBeenCalledWith('native-google-id-token');
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'auth/setUser',
+      payload: expect.objectContaining({ email: 'google@example.com' }),
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'auth/setToken',
+      payload: 'parkpal-jwt',
+    });
+  });
+
+  it('falls back to getTokens when native Google response omits idToken', async () => {
+    mockNativeGoogleSignin.signIn.mockResolvedValueOnce({
+      type: 'success',
+      data: {
+        idToken: null,
+        user: {
+          id: 'google-user-id',
+          name: 'Google User',
+          email: 'google@example.com',
+          photo: null,
+          familyName: null,
+          givenName: null,
+        },
+        scopes: ['openid', 'profile', 'email'],
+        serverAuthCode: null,
+      },
+    });
+
+    const { getByLabelText } = render(<AuthScreen />);
+
+    fireEvent.press(getByLabelText('Continue with Google'));
+
+    await waitFor(() => {
+      expect(mockGoogleSignIn).toHaveBeenCalledWith('fallback-google-id-token');
+    });
   });
 
   it('switches to signup fields', () => {

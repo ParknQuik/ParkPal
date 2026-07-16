@@ -89,7 +89,7 @@ describe('Google Auth API', () => {
       expect(response.body.user.email).toBe('googleuser@example.com');
       expect(response.body.user.name).toBe('Google User');
       expect(response.body.user).toHaveProperty('id');
-      expect(response.body.user).toHaveProperty('role');
+      expect(response.body.user.role).toBe('driver');
     });
 
     it('should link google account to existing user by email', async () => {
@@ -155,6 +155,27 @@ describe('Google Auth API', () => {
       expect(axios.post).toHaveBeenCalledTimes(1);
       expect(mockVerifyIdToken).toHaveBeenCalledWith(
         expect.objectContaining({ idToken: 'server-id-token' })
+      );
+    });
+
+    it('should prefer googleToken when both googleToken and legacy code are provided', async () => {
+      mockVerifyIdToken.mockResolvedValueOnce({
+        getPayload: () => ({
+          sub: 'google-token-primary-id',
+          email: 'token-primary@example.com',
+          name: 'Token Primary User',
+        }),
+      });
+
+      const response = await request(app)
+        .post('/api/v1/auth/google')
+        .send({ googleToken: 'primary-id-token', code: 'legacy-auth-code' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.email).toBe('token-primary@example.com');
+      expect(axios.post).not.toHaveBeenCalled();
+      expect(mockVerifyIdToken).toHaveBeenCalledWith(
+        expect.objectContaining({ idToken: 'primary-id-token' })
       );
     });
 

@@ -1,216 +1,113 @@
-# Google OAuth Setup for ParkPal Mobile
+# Google Sign-In Setup for ParkPal Mobile
 
-**Last Updated:** April 3, 2026
-**Status:** ✅ Code ready, ⏳ Google Console config pending production build
-
----
+**Last Updated:** June 1, 2026
+**Status:** Native Google Sign-In for Expo development builds and standalone builds.
 
 ## Current State
 
-- ✅ **Code implemented** in `src/screens/AuthScreen.tsx`
-- ✅ **Backend endpoint** ready at `/auth/google`
-- ✅ **Client ID configured** in `.env.local`
-- ⚠️ **Development:** Disabled (requires production build)
-- ⏳ **Production:** Ready to configure
+- Mobile uses `@react-native-google-signin/google-signin`.
+- Expo Go is not supported for Google sign-in because this is a native module.
+- The mobile app sends Google's `idToken` to `POST /api/v1/auth/google`.
+- The backend verifies the token audience with `GOOGLE_CLIENT_ID`.
+- Legacy `{ code }` requests remain supported by the backend for backward compatibility.
 
----
+## Required Environment Variables
 
-## Development vs Production
+### Mobile
 
-### Development (Expo Go)
-- **Google Sign-In:** Disabled
-- **Reason:** Google doesn't accept `exp://` redirect URIs
-- **Alternative:** Use email/password login for testing
-- **Message:** User sees "Development Mode" alert when clicking Google button
-
-### Production (Standalone App)
-- **Google Sign-In:** Enabled
-- **Redirect URI:** `parknquik://` (native URL scheme)
-- **Works on:** iOS and Android standalone builds (EAS Build)
-
----
-
-## Production Setup Steps
-
-### 1. Add Redirect URIs to Google Cloud Console
-
-When you build the standalone app with EAS, add these URIs to Google Cloud Console:
-
-**For Android:**
-```
-parknquik://
-com.parknquik.mobile://
-```
-
-**For iOS:**
-```
-parknquik://
-com.parknquik.mobile://
-```
-
-**Steps:**
-1. Go to https://console.cloud.google.com/apis/credentials
-2. Click OAuth Client ID: `242395665565-ip24vg4sd8mcb5vhqihrf6728jvskjg5`
-3. Under "Authorized redirect URIs", click **+ ADD URI**
-4. Add both URIs above
-5. Click **Save**
-
----
-
-### 2. Create Android OAuth Client
-
-You'll need a separate Android OAuth client:
-
-1. In Google Cloud Console → Credentials → **+ CREATE CREDENTIALS** → OAuth Client ID
-2. Application type: **Android**
-3. Package name: `com.parknquik.mobile`
-4. SHA-1 certificate fingerprint: Get this from EAS:
-   ```bash
-   eas credentials
-   ```
-   Select: "Android" → "Production keystore" → Copy SHA-1 fingerprint
-5. Click **CREATE**
-
----
-
-### 3. Create iOS OAuth Client
-
-And an iOS OAuth client:
-
-1. In Google Cloud Console → Credentials → **+ CREATE CREDENTIALS** → OAuth Client ID
-2. Application type: **iOS**
-3. Bundle ID: `com.parknquik.mobile`
-4. Click **CREATE**
-
----
-
-### 4. Update Client IDs in Code
-
-After creating Android/iOS clients, you'll have 3 client IDs total:
-- Web client (current): `242395665565-ip24vg4sd8mcb5vhqihrf6728jvskjg5.apps.googleusercontent.com`
-- Android client: `YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com`
-- iOS client: `YOUR_IOS_CLIENT_ID.apps.googleusercontent.com`
-
-**Update `.env.local`:**
 ```bash
-# Web OAuth client (used by backend)
-EXPO_PUBLIC_GOOGLE_CLIENT_ID=242395665565-ip24vg4sd8mcb5vhqihrf6728jvskjg5.apps.googleusercontent.com
+# Web OAuth client ID used by mobile and backend audience verification.
+EXPO_PUBLIC_GOOGLE_CLIENT_ID=YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com
 
-# Android OAuth client (used by mobile app on Android)
-EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com
+# iOS OAuth client ID for bundle ID com.parknquik.mobile.
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=YOUR_IOS_OAUTH_CLIENT_ID.apps.googleusercontent.com
 
-# iOS OAuth client (used by mobile app on iOS)
-EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=YOUR_IOS_CLIENT_ID.apps.googleusercontent.com
+# Reversed iOS client ID URL scheme.
+GOOGLE_IOS_URL_SCHEME=com.googleusercontent.apps.YOUR_REVERSED_IOS_CLIENT_ID
 ```
 
-**Update `AuthScreen.tsx`:**
-```typescript
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+### Backend
 
-const GOOGLE_CLIENT_ID = Platform.select({
-  android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-  ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  default: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-}) || '';
-```
-
----
-
-## Testing Google OAuth
-
-### In Development (Expo Go)
-- ❌ **Cannot test** - Google OAuth disabled
-- ✅ Use email/password login instead
-
-### In Production Preview (EAS Build)
 ```bash
-# Build for Android
-eas build --platform android --profile preview
+# Must match frontend/mobile EXPO_PUBLIC_GOOGLE_CLIENT_ID.
+GOOGLE_CLIENT_ID=YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com
 
-# Build for iOS
-eas build --platform ios --profile preview
-
-# Install on physical device and test
+# Legacy browser OAuth code exchange compatibility only.
+GOOGLE_CLIENT_SECRET=YOUR_WEB_OAUTH_CLIENT_SECRET
+GOOGLE_REDIRECT_URI=parknquik://
 ```
 
-### In Production (App Stores)
-- Google OAuth will work automatically once:
-  1. Redirect URIs added to Google Console
-  2. Android/iOS OAuth clients created
-  3. App built with EAS and installed
+## Google Cloud OAuth Clients
 
----
+Create or verify these OAuth clients in Google Cloud Console:
 
-## OAuth Flow (Production)
+1. Web client
+   - Used by the backend as the accepted token audience.
+   - Copy this client ID into mobile `EXPO_PUBLIC_GOOGLE_CLIENT_ID` and backend `GOOGLE_CLIENT_ID`.
 
+2. iOS client
+   - Bundle ID: `com.parknquik.mobile`
+   - Copy the client ID into `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
+   - Copy the reversed client ID URL scheme into `GOOGLE_IOS_URL_SCHEME`.
+
+3. Android client
+   - Package name: `com.parknquik.mobile`
+   - SHA-1: use the Expo development-build or release keystore SHA-1 for the build being tested.
+   - Android does not need an app config entry beyond the package name and the native module setup.
+
+## Build and Test
+
+Build a development client after changing native configuration:
+
+```bash
+npm run build:dev:ios
+npm run build:dev:android
 ```
-1. User taps "Continue with Google"
-2. App opens Google Sign-In in browser
-3. User selects Google account
-4. Google redirects to: parknquik://
-5. App receives authorization code
-6. App sends code to backend: POST /auth/google
-7. Backend exchanges code for Google tokens
-8. Backend creates/finds user in database
-9. Backend returns JWT token + user data
-10. App stores token and navigates to Home
+
+For local backend testing, start the backend on the default local API target:
+
+```bash
+cd ../../backend
+npm run dev
 ```
 
----
+Then run the installed Expo development build, tap **Continue with Google**, choose an account, and confirm the app lands in the authenticated experience. Relaunch the app to confirm session restoration.
 
-## Current Configuration
+## Request Contract
 
-**Environment Variables:**
-- `EXPO_PUBLIC_GOOGLE_CLIENT_ID`: Web client (for backend)
-- OAuth Client: `242395665565-ip24vg4sd8mcb5vhqihrf6728jvskjg5`
+Canonical mobile request:
 
-**Redirect URI (Production):**
-- `parknquik://` (generated by `makeRedirectUri({ scheme: 'parknquik' })`)
+```json
+{
+  "googleToken": "<Google id_token>"
+}
+```
 
-**App Scheme:**
-- Configured in `app.config.js`: `scheme: 'parknquik'`
+Legacy backend-compatible request:
 
-**Backend Endpoint:**
-- `POST /api/v1/auth/google`
-- Request: `{ code: string }`
-- Response: `{ token: string, user: User }`
+```json
+{
+  "code": "<authorization_code>"
+}
+```
 
----
+Successful response:
+
+```json
+{
+  "token": "<ParkPal JWT>",
+  "user": {
+    "id": "user-id",
+    "name": "Google User",
+    "email": "google@example.com",
+    "role": "driver"
+  }
+}
+```
 
 ## Troubleshooting
 
-### Issue: "Development Mode" alert shows
-**Cause:** Running in Expo Go (development)
-**Fix:** Use email/password for dev testing, or build with EAS
-
-### Issue: "Invalid Redirect URI" error in production
-**Cause:** Redirect URI not added to Google Console
-**Fix:** Add `parknquik://` to authorized redirect URIs
-
-### Issue: "Invalid Client" error on Android
-**Cause:** Android OAuth client not created or SHA-1 mismatch
-**Fix:** Create Android client with correct SHA-1 from EAS credentials
-
-### Issue: "Invalid Client" error on iOS
-**Cause:** iOS OAuth client not created or wrong Bundle ID
-**Fix:** Create iOS client with Bundle ID `com.parknquik.mobile`
-
----
-
-## Next Steps (Before Production Launch)
-
-- [ ] Build app with EAS (`eas build`)
-- [ ] Get SHA-1 fingerprint from EAS credentials
-- [ ] Create Android OAuth client in Google Console
-- [ ] Create iOS OAuth client in Google Console
-- [ ] Add `parknquik://` and `com.parknquik.mobile://` to web client redirect URIs
-- [ ] Update `.env.local` with Android/iOS client IDs
-- [ ] Update `AuthScreen.tsx` to use platform-specific client IDs
-- [ ] Test on physical devices (Android + iOS)
-- [ ] Submit to app stores
-
----
-
-**Status:** Ready for production build
-**Estimated Setup Time:** 30 minutes (after EAS build completes)
+- **Native module missing:** rebuild and reinstall the Expo development client. Expo Go cannot load this module.
+- **Invalid Google token:** confirm backend `GOOGLE_CLIENT_ID` matches mobile `EXPO_PUBLIC_GOOGLE_CLIENT_ID`.
+- **iOS callback fails:** confirm `GOOGLE_IOS_URL_SCHEME` is the reversed iOS client ID and appears in the built app.
+- **Android sign-in fails:** confirm the Android OAuth client uses package `com.parknquik.mobile` and the SHA-1 for the installed build.

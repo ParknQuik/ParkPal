@@ -56,7 +56,7 @@ cd frontend/mobile && npm test
 | Successful login | Valid credentials | Navigates to Home |
 | Successful signup | All fields filled | Navigates to Home |
 | Forgot password | Tap link | ForgotPassword screen |
-| Google sign-in | Tap Google | OAuth flow (production builds only) |
+| Google sign-in | Tap Google in an Expo development build or standalone build | Native Google account picker returns to app and authenticates with backend |
 | Password visibility | Tap eye icon | Password reveals/hides |
 
 ### Home Dashboard — `HomeDashboard.tsx`
@@ -245,7 +245,7 @@ cd frontend/mobile && npm test
 
 | Issue | Status | Workaround |
 |-------|--------|-----------|
-| Google OAuth broken in Expo Go | Expected | Works in EAS production builds only |
+| Google sign-in unavailable in Expo Go | Expected | Use an Expo development build or standalone build |
 | Push notifications in Expo Go | Expected | Graceful fallback, no crash |
 | Apple Sign-In | Not implemented | Button removed from UI |
 

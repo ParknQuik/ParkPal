@@ -333,7 +333,12 @@ Create a `.env` file in the root directory:
 ```
 API_BASE_URL=http://localhost:3000/api
 GOOGLE_MAPS_API_KEY=your_api_key_here
+EXPO_PUBLIC_GOOGLE_CLIENT_ID=YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=YOUR_IOS_OAUTH_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_IOS_URL_SCHEME=com.googleusercontent.apps.YOUR_REVERSED_IOS_CLIENT_ID
 ```
+
+Google sign-in uses `@react-native-google-signin/google-signin` and requires an Expo development build or standalone build. Expo Go is not supported. The mobile app sends `{ "googleToken": "<Google id_token>" }` to the backend `/api/v1/auth/google` endpoint.
 
 ## Testing Credentials
 
