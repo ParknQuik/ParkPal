@@ -1,8 +1,8 @@
 # ParkPal Project Status Report
 
-**Last Updated:** June 1, 2026
+**Last Updated:** July 16, 2026
 **Current Branch:** `dev`
-**Production Readiness:** 95/100 (PR #153 and PR #155-#157 landed, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, and PR #177 added retrieval-miss routing coverage with passing GitHub checks; remaining confidence gaps are future deployment health validation and beta distribution gates)
+**Production Readiness:** 95/100 (PR #153 and PR #155-#157 landed, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, and PR #179 stabilized mobile Google Sign-In with passing GitHub checks; remaining confidence gaps are future deployment health validation and beta distribution gates)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
 ---
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| July 16, 2026 | Codex | Verified PR #179 merged into `dev` at `ff6d192`, stabilizing native mobile Google Sign-In by sending backend `{ googleToken }`, preserving legacy backend `code` compatibility, and refreshing Google OAuth/env/EAS setup docs. GitHub backend, web, mobile, security, quality, validation, PR-size, branch, and mobile env checks passed after the PR title was corrected and the PR was reopened for fresh checks. Local validation on the feature branch passed for `backend` Google auth Jest 9/9 with Docker Postgres/Redis access, focused mobile AuthScreen Jest 12/12, mobile TypeScript, mobile `env:check`, and `git diff --check` | 95/100 |
 | June 1, 2026 | Codex | Verified PR #177 merged into `dev` at `8de960e`, adding retrieval-miss routing guidance and regression coverage so observed broad-doc/status outranking cases route through source-map guidance first. GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed; local validation on the feature branch passed for `knowledge:validate`, `knowledge:regression -- --json`, `knowledge:compact -- --check`, `knowledge:rebuild-if-stale`, `knowledge:measure-savings`, `knowledge:context -- "retrieval miss broad docs source-map route vector database" --limit 3`, and `git diff --check` | 95/100 |
 | June 1, 2026 | Codex | Verified PR #175 merged into `dev` at `793ec60`, refreshing compact status mirrors and source records so the tracked mirror freshness gate is green again. GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed; local validation on the feature branch passed for `knowledge:compact -- --check`, `knowledge:rebuild-if-stale`, `knowledge:validate`, `knowledge:regression -- --json`, `knowledge:measure-savings`, `knowledge:context -- "current project status" --limit 1`, `knowledge:scan-hit-rate`, and `git diff --check` | 95/100 |
 | June 1, 2026 | Codex | Verified PR #173 merged into `dev` at `58fc46c`, adding `knowledge:scan-hit-rate` and the knowledge hit-rate scanner. GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed; clean-worktree local validation passed for `knowledge:scan-hit-rate`, `knowledge:scan-hit-rate -- --json`, `knowledge:validate`, `knowledge:regression -- --json`, `knowledge:measure-savings`, two `knowledge:context` smoke checks, and `git diff --check`; `knowledge:compact -- --check` still reports stale tracked compact status records and remains a tooling follow-up | 95/100 |
@@ -110,17 +111,17 @@ This is the **primary project status log**. Keep historical sections labeled cle
 
 This is a **living document** that tracks ParkPal's actual state based on deployment data and test results. It gets updated with every significant progress milestone.
 
-### Current Reconciliation (June 1, 2026)
+### Current Reconciliation (July 16, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 95/100 after PR #153 reduced agent startup overhead, PR #155 added renter behavior status/account-standing UX, PR #156 shipped shared mobile list states plus dark-mode cleanup, PR #157 added Google parking candidate discovery scans, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized web auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, and PR #177 added retrieval-miss routing coverage. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
-- **Branch state:** `origin/dev` is at `8de960e` after PR #177; no open PRs remain against `dev` as verified by `gh pr list --base dev --state open` on June 1, 2026.
-- **Backend:** GitHub Backend Tests passed for PR #177 on June 1, 2026. Latest local backend full-suite evidence is 494/496 passing with 2 skipped on May 25, 2026, run with `GCS_BUCKET_NAME=test-bucket npm test -- --runInBand --no-watchman` against the existing local test setup. Cloud Run `/health` rechecks belong to future deployment/beta validation.
-- **Web:** GitHub Frontend Web Tests passed for PR #177 on June 1, 2026. Latest local web evidence is 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization.
-- **Mobile:** GitHub Frontend Mobile Checks passed for PR #177 on June 1, 2026. Latest local mobile evidence is mobile TypeScript passing and mobile Jest 90/90 passing on June 1, 2026. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
+- **Production readiness:** 95/100 after PR #153 reduced agent startup overhead, PR #155 added renter behavior status/account-standing UX, PR #156 shipped shared mobile list states plus dark-mode cleanup, PR #157 added Google parking candidate discovery scans, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized web auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, and PR #179 stabilized native mobile Google Sign-In. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
+- **Branch state:** `origin/dev` is at `ff6d192` after PR #179; no open PRs remain against `dev` as verified by `gh pr list --base dev --state open` on July 16, 2026.
+- **Backend:** GitHub Backend Tests passed for PR #179 on July 16, 2026. Focused local Google auth validation passed 9/9 on the feature branch with Docker Postgres/Redis access. Latest local backend full-suite evidence remains 494/496 passing with 2 skipped on May 25, 2026, run with `GCS_BUCKET_NAME=test-bucket npm test -- --runInBand --no-watchman` against the existing local test setup. Cloud Run `/health` rechecks belong to future deployment/beta validation.
+- **Web:** GitHub Frontend Web Tests passed for PR #179 on July 16, 2026. Latest local web evidence remains 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization.
+- **Mobile:** GitHub Frontend Mobile Checks and Mobile Environment Check passed for PR #179 on July 16, 2026. Focused local AuthScreen Jest passed 12/12, mobile TypeScript passed, and mobile `env:check` passed on the feature branch. Latest broader local mobile evidence remains Jest 90/90 passing on June 1, 2026. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
 - **Workflow tooling:** The compact startup card, repo-local knowledge index, tracked compact JSONL mirrors, and archived legacy agent/skill surfaces are intended project tooling; PR #171 added signup/register 400 routing coverage, PR #173 added `knowledge:scan-hit-rate` for scanner-derived coverage/gap reporting, PR #175 refreshed the tracked compact status mirrors, and PR #177 added retrieval-miss review guidance plus regression coverage for broad-doc/status outranking. Knowledge validation/regression, scanner checks, and `knowledge:compact -- --check` passed on June 1, 2026 after rebuilding the ignored local DB in clean validation worktrees. The generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
-### Current State (June 1, 2026)
+### Current State (July 16, 2026)
 
 **Deployed:**
 - Backend API: Development Cloud Run service is deployed via automated CD pipeline ✅
@@ -204,9 +205,9 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ **Database Migrations:** Vehicle and Notification tables added
 
 **Test Status:**
-- Backend: GitHub Backend Tests passed for PR #177 on June 1, 2026 ✅; latest local backend full-suite evidence is 494/496 passing with 2 skipped on May 25, 2026
-- Mobile: GitHub Frontend Mobile Checks passed for PR #177 on June 1, 2026 ✅; latest local mobile Jest run is 90/90 passing on June 1, 2026, and mobile TypeScript passed
-- Web: GitHub Frontend Web Tests passed for PR #177 on June 1, 2026 ✅; latest local web run is 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization
+- Backend: GitHub Backend Tests passed for PR #179 on July 16, 2026 ✅; focused local Google auth Jest passed 9/9 on the feature branch with Docker Postgres/Redis access; latest local backend full-suite evidence remains 494/496 passing with 2 skipped on May 25, 2026
+- Mobile: GitHub Frontend Mobile Checks and Mobile Environment Check passed for PR #179 on July 16, 2026 ✅; focused local AuthScreen Jest passed 12/12, mobile TypeScript passed, and mobile `env:check` passed on the feature branch; latest broader local mobile Jest run remains 90/90 passing on June 1, 2026
+- Web: GitHub Frontend Web Tests passed for PR #179 on July 16, 2026 ✅; latest local web run remains 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization
 - Startup: Fresh `start` smoke test passed on May 25, 2026 from a clean `origin/dev` worktree and was recorded by PR #160
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
@@ -408,6 +409,8 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 **Testing:**
 1. **Local test evidence refreshed**
+   - GitHub backend, web, mobile, security, quality, validation, PR-size, branch, and mobile env checks passed for PR #179 on July 16, 2026.
+   - Local Google Sign-In validation on the PR #179 feature branch passed for backend Google auth Jest 9/9 with Docker Postgres/Redis access, focused mobile AuthScreen Jest 12/12, mobile TypeScript, mobile `env:check`, and `git diff --check`.
    - GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed for PR #177 on June 1, 2026.
    - Local retrieval-miss routing validation on the PR #177 feature branch passed for `knowledge:validate`, `knowledge:regression -- --json`, `knowledge:compact -- --check`, `knowledge:rebuild-if-stale`, `knowledge:measure-savings`, `knowledge:context -- "retrieval miss broad docs source-map route vector database" --limit 3`, and `git diff --check`.
    - GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed for PR #175 on June 1, 2026.
@@ -454,9 +457,10 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ## Open Pull Requests
 
 **Currently Open Against `dev`:**
-- None. Verified by `gh pr list --base dev --state open` on June 1, 2026.
+- None. Verified by `gh pr list --base dev --state open` on July 16, 2026.
 
 **Recently Merged:**
+- #179: Stabilize mobile Google Sign-In
 - #177: Add retrieval-miss routing coverage
 - #175: Refresh compact status mirrors
 - #174: Update status report after PR #173 merge
@@ -511,7 +515,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **Previous (Mar 10 AM):** 82/100
 **Previous (Mar 10 PM):** 84/100
 **Previous (Mar 12 PM):** 89 (historical)
-**Current Reality (June 1):** 95/100
+**Current Reality (July 16):** 95/100
 **Progress:** +48 points since Feb 24
 
 ---
@@ -524,7 +528,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Impact:** Backend test confidence improved after PR #155-#157 and the local full-suite evidence was refreshed during the PR #161 regression pass
 - **Initial:** 50/271 passing (18.5%)
 - **Previous:** 235/271 passing (86.7%)
-- **Current:** GitHub Backend Tests passed for PR #175 on June 1, 2026 ✅; local backend full suite passed 494/496 with 2 skipped on May 25, 2026; focused local candidate-scan backend tests passed 18/18 on May 25, 2026
+- **Current:** GitHub Backend Tests passed for PR #179 on July 16, 2026 ✅; focused local Google auth Jest passed 9/9 on the PR #179 feature branch with Docker Postgres/Redis access; local backend full suite passed 494/496 with 2 skipped on May 25, 2026; focused local candidate-scan backend tests passed 18/18 on May 25, 2026
 - **Target:** 95%+ (273+/288 passing)
 - **What Was Fixed (Feb 24 - Mar 10, 2026):**
   - ✅ Installed PostgreSQL 16 locally (Feb 24)
@@ -1132,12 +1136,12 @@ The following March plan is retained for history only. Current status is documen
 
 ## Next Steps
 
-### Immediate (June 1, 2026)
+### Immediate (July 16, 2026)
 
 1. Keep `docs/BETA_READINESS_CHECKLIST.md` as the future beta/deployment gate before GCP deployment validation or app-store submission work resumes.
-2. Recheck Cloud Run health only when beta/deployment validation resumes; do not provision new PostgreSQL or Redis resources for the current local-first stabilization pass.
-3. Run a broader local backend or web regression only if the next product task needs confidence beyond the passing PR #177 GitHub checks and the refreshed mobile/knowledge validation recorded above.
-4. Choose the next product-facing stabilization task before opening more repo-local tooling work; compact mirror freshness is green after PR #175 and retrieval-miss routing coverage is in place after PR #177.
+2. Recheck deployment/beta health evidence next: backend Cloud Run `/health`, web Cloud Run health, API docs availability, and required beta env/secrets for Google Maps, Google Sign-In, payments, and email.
+3. Produce a separate deployment/beta evidence plan before changing deployment config or secrets.
+4. Run a broader local backend or web regression only if the next product task needs confidence beyond the passing PR #179 GitHub checks and the focused local Google Sign-In validation recorded above.
 
 ### This Week
 
