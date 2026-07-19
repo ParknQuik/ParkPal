@@ -15,11 +15,42 @@ const initialState: VehiclesState = {
   error: null,
 };
 
+const getVehicleErrorMessage = (error: any, fallback: string): string => {
+  const responseData = error?.response?.data;
+  const responseCandidates = [responseData?.error, responseData?.message];
+
+  const stringResponseError = responseCandidates.find((candidate) => typeof candidate === 'string');
+  if (stringResponseError) {
+    return stringResponseError;
+  }
+
+  const objectResponseError = responseCandidates.find(
+    (candidate) => candidate && typeof candidate === 'object' && 'message' in candidate
+  );
+  if (objectResponseError) {
+    return String((objectResponseError as { message?: unknown }).message);
+  }
+
+  if (error?.response) {
+    return `HTTP ${error.response.status}: ${error.response.statusText || fallback}`;
+  }
+
+  if (error?.request) {
+    return 'No response from server';
+  }
+
+  return typeof error?.message === 'string' ? error.message : fallback;
+};
+
 export const getVehicles = createAsyncThunk(
   'vehicles/getVehicles',
-  async () => {
-    const response = await vehiclesAPI.getVehicles();
-    return response.data as Vehicle[];
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await vehiclesAPI.getVehicles();
+      return response.data as Vehicle[];
+    } catch (error: any) {
+      return rejectWithValue(getVehicleErrorMessage(error, 'Failed to fetch vehicles'));
+    }
   }
 );
 
@@ -38,16 +69,7 @@ export const createVehicle = createAsyncThunk(
       const response = await vehiclesAPI.createVehicle(data);
       return response.data as Vehicle;
     } catch (error: any) {
-      if (error.response) {
-        const errorMessage = error.response.data?.error || 
-                           error.response.data?.message || 
-                           `HTTP ${error.response.status}: ${error.response.statusText}`;
-        return rejectWithValue({ message: errorMessage, status: error.response.status, data: error.response.data });
-      } else if (error.request) {
-        return rejectWithValue({ message: 'No response from server', status: null });
-      } else {
-        return rejectWithValue({ message: error.message, status: null });
-      }
+      return rejectWithValue(getVehicleErrorMessage(error, 'Failed to create vehicle'));
     }
   }
 );
@@ -67,30 +89,32 @@ export const updateVehicle = createAsyncThunk(
       const response = await vehiclesAPI.updateVehicle(id, data);
       return response.data as Vehicle;
     } catch (error: any) {
-      if (error.response) {
-        const errorMessage = error.response.data?.error || 
-                           error.response.data?.message || 
-                           `HTTP ${error.response.status}: ${error.response.statusText}`;
-        return rejectWithValue({ message: errorMessage, status: error.response.status });
-      }
-      return rejectWithValue({ message: error.message, status: null });
+      return rejectWithValue(getVehicleErrorMessage(error, 'Failed to update vehicle'));
     }
   }
 );
 
 export const deleteVehicle = createAsyncThunk(
   'vehicles/deleteVehicle',
-  async (id: number) => {
-    await vehiclesAPI.deleteVehicle(id);
-    return id;
+  async (id: number, { rejectWithValue }) => {
+    try {
+      await vehiclesAPI.deleteVehicle(id);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(getVehicleErrorMessage(error, 'Failed to delete vehicle'));
+    }
   }
 );
 
 export const setDefaultVehicle = createAsyncThunk(
   'vehicles/setDefaultVehicle',
-  async (id: number) => {
-    const response = await vehiclesAPI.setDefaultVehicle(id);
-    return response.data as Vehicle;
+  async (id: number, { rejectWithValue }) => {
+    try {
+      const response = await vehiclesAPI.setDefaultVehicle(id);
+      return response.data as Vehicle;
+    } catch (error: any) {
+      return rejectWithValue(getVehicleErrorMessage(error, 'Failed to set default vehicle'));
+    }
   }
 );
 
@@ -115,7 +139,7 @@ const vehiclesSlice = createSlice({
       })
       .addCase(getVehicles.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch vehicles';
+        state.error = (action.payload as string) || action.error.message || 'Failed to fetch vehicles';
       })
       // Create vehicle
       .addCase(createVehicle.pending, (state) => {
@@ -128,8 +152,7 @@ const vehiclesSlice = createSlice({
       })
       .addCase(createVehicle.rejected, (state, action) => {
         state.loading = false;
-        const errorPayload = action.payload as any;
-        state.error = errorPayload?.message || action.error.message || 'Failed to create vehicle';
+        state.error = (action.payload as string) || action.error.message || 'Failed to create vehicle';
       })
       // Update vehicle
       .addCase(updateVehicle.pending, (state) => {
@@ -145,7 +168,7 @@ const vehiclesSlice = createSlice({
       })
       .addCase(updateVehicle.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to update vehicle';
+        state.error = (action.payload as string) || action.error.message || 'Failed to update vehicle';
       })
       // Delete vehicle
       .addCase(deleteVehicle.pending, (state) => {
@@ -158,9 +181,12 @@ const vehiclesSlice = createSlice({
       })
       .addCase(deleteVehicle.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to delete vehicle';
+        state.error = (action.payload as string) || action.error.message || 'Failed to delete vehicle';
       })
       // Set default vehicle
+      .addCase(setDefaultVehicle.rejected, (state, action) => {
+        state.error = (action.payload as string) || action.error.message || 'Failed to set default vehicle';
+      })
       .addCase(setDefaultVehicle.fulfilled, (state, action) => {
         state.vehicles = state.vehicles.map(v => ({
           ...v,

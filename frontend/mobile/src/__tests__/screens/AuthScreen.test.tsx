@@ -8,6 +8,8 @@ import { authAPI } from '../../services/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const mockNavigationDispatch = jest.fn();
+const mockFacebookLogInWithPermissions = jest.fn();
+const mockFacebookGetCurrentAccessToken = jest.fn();
 
 jest.mock('../../store', () => ({
   useAppDispatch: jest.fn(),
@@ -24,6 +26,7 @@ jest.mock('../../store/slices/authSlice', () => ({
 jest.mock('../../services/api', () => ({
   authAPI: {
     googleSignIn: jest.fn(),
+    facebookSignIn: jest.fn(),
   },
 }));
 
@@ -38,6 +41,15 @@ jest.mock('@react-navigation/native', () => ({
     dispatch: mockNavigationDispatch,
   }),
 }));
+
+jest.mock('react-native-fbsdk-next', () => ({
+  AccessToken: {
+    getCurrentAccessToken: mockFacebookGetCurrentAccessToken,
+  },
+  LoginManager: {
+    logInWithPermissions: mockFacebookLogInWithPermissions,
+  },
+}), { virtual: true });
 
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
@@ -84,6 +96,7 @@ const mockUseAppDispatch = useAppDispatch as jest.Mock;
 const mockUseAppSelector = useAppSelector as jest.Mock;
 const mockSignup = signup as unknown as jest.Mock;
 const mockGoogleSignIn = authAPI.googleSignIn as jest.Mock;
+const mockFacebookSignIn = authAPI.facebookSignIn as jest.Mock;
 const mockNativeGoogleSignin = GoogleSignin as jest.Mocked<typeof GoogleSignin>;
 
 describe('AuthScreen', () => {
@@ -109,6 +122,10 @@ describe('AuthScreen', () => {
       idToken: 'fallback-google-id-token',
       accessToken: 'google-access-token',
     });
+    delete process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
+    delete process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN;
+    delete process.env.FACEBOOK_APP_ID;
+    delete process.env.FACEBOOK_CLIENT_TOKEN;
     mockGoogleSignIn.mockResolvedValue({
       data: {
         token: 'parkpal-jwt',
@@ -116,6 +133,19 @@ describe('AuthScreen', () => {
           id: 'user-id',
           name: 'Google User',
           email: 'google@example.com',
+          role: 'driver',
+        },
+      },
+    });
+    mockFacebookLogInWithPermissions.mockResolvedValue({ isCancelled: false });
+    mockFacebookGetCurrentAccessToken.mockResolvedValue({ accessToken: 'native-facebook-token' });
+    mockFacebookSignIn.mockResolvedValue({
+      data: {
+        token: 'parkpal-facebook-jwt',
+        user: {
+          id: 'facebook-user-id',
+          name: 'Facebook User',
+          email: 'facebook@example.com',
           role: 'driver',
         },
       },
@@ -149,6 +179,7 @@ describe('AuthScreen', () => {
     expect(getByText('Remember me')).toBeTruthy();
     expect(getByText('Forgot password?')).toBeTruthy();
     expect(getByLabelText('Continue with Google')).toBeTruthy();
+    expect(getByLabelText('Continue with Facebook')).toBeTruthy();
     expect(getByLabelText('Login')).toBeTruthy();
   });
 
@@ -197,6 +228,79 @@ describe('AuthScreen', () => {
 
     await waitFor(() => {
       expect(mockGoogleSignIn).toHaveBeenCalledWith('fallback-google-id-token');
+    });
+  });
+
+  it('alerts instead of invoking Facebook SDK when Facebook is not configured', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const { getByLabelText } = render(<AuthScreen />);
+
+    fireEvent.press(getByLabelText('Continue with Facebook'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Facebook Sign In Unavailable',
+        expect.stringContaining('Facebook Sign-In is not configured in this build')
+      );
+    });
+    expect(mockFacebookLogInWithPermissions).not.toHaveBeenCalled();
+  });
+
+  it('treats cancelled Facebook login as a no-op', async () => {
+    process.env.EXPO_PUBLIC_FACEBOOK_APP_ID = '123456789';
+    process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN = 'facebook-client-token';
+    mockFacebookLogInWithPermissions.mockResolvedValueOnce({ isCancelled: true });
+
+    const { getByLabelText } = render(<AuthScreen />);
+
+    fireEvent.press(getByLabelText('Continue with Facebook'));
+
+    await waitFor(() => {
+      expect(mockFacebookLogInWithPermissions).toHaveBeenCalledWith(['public_profile', 'email']);
+    });
+    expect(mockFacebookGetCurrentAccessToken).not.toHaveBeenCalled();
+    expect(mockFacebookSignIn).not.toHaveBeenCalled();
+  });
+
+  it('alerts when Facebook does not return an access token', async () => {
+    process.env.EXPO_PUBLIC_FACEBOOK_APP_ID = '123456789';
+    process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN = 'facebook-client-token';
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    mockFacebookGetCurrentAccessToken.mockResolvedValueOnce(null);
+
+    const { getByLabelText } = render(<AuthScreen />);
+
+    fireEvent.press(getByLabelText('Continue with Facebook'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Facebook Sign In Failed',
+        'Facebook did not return an access token.'
+      );
+    });
+    expect(mockFacebookSignIn).not.toHaveBeenCalled();
+  });
+
+  it('signs in with Facebook access token and stores backend auth state', async () => {
+    process.env.EXPO_PUBLIC_FACEBOOK_APP_ID = '123456789';
+    process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN = 'facebook-client-token';
+    const dispatch = jest.fn();
+    mockUseAppDispatch.mockReturnValue(dispatch);
+
+    const { getByLabelText } = render(<AuthScreen />);
+
+    fireEvent.press(getByLabelText('Continue with Facebook'));
+
+    await waitFor(() => {
+      expect(mockFacebookSignIn).toHaveBeenCalledWith('native-facebook-token');
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'auth/setUser',
+      payload: expect.objectContaining({ email: 'facebook@example.com' }),
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'auth/setToken',
+      payload: 'parkpal-facebook-jwt',
     });
   });
 
@@ -257,6 +361,7 @@ describe('AuthScreen', () => {
     expect(getByLabelText('Sign Up tab').props.accessibilityState.disabled).toBe(true);
     expect(getByLabelText('Forgot password?').props.accessibilityState.disabled).toBe(true);
     expect(getByLabelText('Continue with Google').props.accessibilityState.disabled).toBe(true);
+    expect(getByLabelText('Continue with Facebook').props.accessibilityState.disabled).toBe(true);
     expect(getByPlaceholderText('name@example.com').props.editable).toBe(false);
   });
 

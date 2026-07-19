@@ -62,6 +62,10 @@ export const authAPI = {
     api.post('/auth/reset-password', { token, newPassword }),
   googleSignIn: (googleToken: string) =>
     api.post('/auth/google', { googleToken }),
+  appleSignIn: (appleToken: string, profile?: { fullName?: string; email?: string | null }) =>
+    api.post('/auth/apple', { appleToken, fullName: profile?.fullName, email: profile?.email }),
+  facebookSignIn: (facebookToken: string) =>
+    api.post('/auth/facebook', { facebookToken }),
 };
 
 // Parking endpoints (using /slots to match backend)

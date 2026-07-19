@@ -7,7 +7,7 @@ import Constants from 'expo-constants';
  * Automatic backend detection with zero configuration:
  * - iOS Simulator: localhost (auto-works)
  * - Android Emulator: 10.0.2.2 (auto-works)
- * - Physical Devices: mDNS .local hostname (works across IP changes)
+ * - Physical Devices: EXPO_PUBLIC_API_URL override, backend IP/hostname, or Metro host IP
  *
  * Override with EXPO_PUBLIC_API_URL in .env.local if needed
  */
@@ -49,8 +49,7 @@ const getLocalBackendPhysicalDevice = (): string => {
     }
   }
 
-  // Fallback to localhost (won't work but better than crashing)
-  ;
+  // Fallback to localhost (won't work on physical devices but keeps the app bootable)
   return 'http://localhost:3001/api/v1';
 };
 export const LOCAL_BACKEND_PHYSICAL_DEVICE = getLocalBackendPhysicalDevice();
@@ -82,7 +81,13 @@ const getApiBaseUrl = (): string => {
 
   // 4. Development mode - smart platform detection
   if (Platform.OS === 'ios') {
-    return LOCAL_BACKEND_IOS_SIMULATOR;
+    const isSimulator = Constants.isDevice === false;
+
+    if (isSimulator) {
+      return LOCAL_BACKEND_IOS_SIMULATOR;
+    }
+
+    return LOCAL_BACKEND_PHYSICAL_DEVICE;
   }
 
   if (Platform.OS === 'android') {
@@ -110,10 +115,13 @@ export const API_BASE_URL = getApiBaseUrl();
  * Check if using local backend
  */
 export const isLocalBackend = (): boolean => {
+  const privateLanUrlPattern = /^https?:\/\/(10\.|172\.(1[6-9]|2\d|3[0-1])\.|192\.168\.)/;
+
   return (
     API_BASE_URL.includes('localhost') ||
     API_BASE_URL.includes('10.0.2.2') ||
-    API_BASE_URL.includes('192.168')
+    API_BASE_URL.includes('.local') ||
+    privateLanUrlPattern.test(API_BASE_URL)
   );
 };
 

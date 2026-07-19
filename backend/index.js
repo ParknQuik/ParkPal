@@ -34,13 +34,29 @@ logger.logStartup();
 printEnvironmentSummary();
 
 // Rate limiting configuration
-const globalLimiter = rateLimit({
+const apiReadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per IP
-  message: { error: 'Too many requests from this IP, please try again later.' },
+  max: 600, // Map and marketplace screens can issue repeated read bursts
+  message: { error: 'Too many read requests from this IP, please try again later.' },
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
 });
+
+const apiWriteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Keep write traffic tighter than read-only API browsing
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiMethodLimiter = (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return apiReadLimiter(req, res, next);
+  }
+
+  return apiWriteLimiter(req, res, next);
+};
 
 // Bypass rate limiter in test environment to allow comprehensive testing
 const authLimiter = process.env.NODE_ENV === 'test'
@@ -125,8 +141,8 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-// Apply global rate limiter to all API routes
-app.use('/api/', globalLimiter);
+// Apply method-aware rate limiting to API routes
+app.use('/api/', apiMethodLimiter);
 
 // Routes
 const healthRoutes = require('./routes/health');

@@ -1162,12 +1162,15 @@ export const AddVehicleWizardScreen: React.FC = () => {
 
       navigation.goBack();
     } catch (err: any) {
-      ;
+      const responseError = err?.response?.data?.error || err?.response?.data?.message;
       const errorMessage =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to save vehicle. Please try again.';
+        typeof err === 'string'
+          ? err
+          : typeof responseError === 'string'
+            ? responseError
+            : responseError?.message
+              ? String(responseError.message)
+              : err?.message || 'Failed to save vehicle. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
