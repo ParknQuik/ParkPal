@@ -37,6 +37,7 @@ import type { ParkingCandidateDiscoveryPin } from '../types';
 const { width, height } = Dimensions.get('window');
 
 const CACHE_KEY = 'parkpal_cached_listings';
+const MAP_REFRESH_COOLDOWN_MS = 1500;
 const NEUTRAL_REGION = {
   latitude: 0,
   longitude: 0,
@@ -234,6 +235,9 @@ export const ExploreMap: React.FC = () => {
   const inputRef = useRef<TextInput>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regionChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const routeLocationHandledRef = useRef(false);
+  const listingFetchesRef = useRef(new Map<string, Promise<void>>());
+  const lastListingFetchRef = useRef<{ key: string; timestamp: number } | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<string | number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -258,6 +262,10 @@ export const ExploreMap: React.FC = () => {
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   } : NEUTRAL_REGION);
+
+  useEffect(() => {
+    routeLocationHandledRef.current = false;
+  }, [latitude, longitude, focusSpotId, candidateId]);
   const [locationReady, setLocationReady] = useState(hasRouteLocation);
   const [hasLocationContext, setHasLocationContext] = useState(hasRouteLocation);
   const [mapReady, setMapReady] = useState(false);
@@ -433,40 +441,61 @@ export const ExploreMap: React.FC = () => {
   }, [sortedListings, regionKey]);
 
   const fetchListings = useCallback(async (lat: number, lon: number, filters?: FilterConfig) => {
-    try {
-      const params: any = {
-        latitude: lat,
-        longitude: lon,
-        radius: 3,
-        ...(searchQuery ? { q: searchQuery } : {}),
-      };
+    const params: any = {
+      latitude: lat,
+      longitude: lon,
+      radius: 3,
+      ...(searchQuery ? { q: searchQuery } : {}),
+    };
 
-      if (filters) {
-        if (filters.minPrice != null) params.minPrice = filters.minPrice;
-        if (filters.maxPrice != null) params.maxPrice = filters.maxPrice;
-        if (filters.slotTypes?.length) params.slotType = filters.slotTypes.join(',');
-        if (filters.amenities?.length) params.amenities = filters.amenities.join(',');
-        if (filters.availableNow) params.status = 'available';
-      }
-
-      const result = await dispatch(searchListings(params)).unwrap();
-      fetchCandidatePins(lat, lon);
-
-      if (result?.length) {
-        try {
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
-            listings: result,
-            timestamp: Date.now(),
-            lat,
-            lon,
-          }));
-        } catch (e) {
-          ;
-        }
-      }
-    } catch (err) {
-      ;
+    if (filters) {
+      if (filters.minPrice != null) params.minPrice = filters.minPrice;
+      if (filters.maxPrice != null) params.maxPrice = filters.maxPrice;
+      if (filters.slotTypes?.length) params.slotType = filters.slotTypes.join(',');
+      if (filters.amenities?.length) params.amenities = filters.amenities.join(',');
+      if (filters.availableNow) params.status = 'available';
     }
+
+    const requestKey = JSON.stringify(params);
+    const now = Date.now();
+    const lastFetch = lastListingFetchRef.current;
+    const inFlight = listingFetchesRef.current.get(requestKey);
+
+    if (inFlight) {
+      return inFlight;
+    }
+
+    if (lastFetch?.key === requestKey && now - lastFetch.timestamp < MAP_REFRESH_COOLDOWN_MS) {
+      return;
+    }
+
+    const request = (async () => {
+      try {
+        lastListingFetchRef.current = { key: requestKey, timestamp: Date.now() };
+        const result = await dispatch(searchListings(params)).unwrap();
+        await fetchCandidatePins(lat, lon);
+
+        if (result?.length) {
+          try {
+            await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
+              listings: result,
+              timestamp: Date.now(),
+              lat,
+              lon,
+            }));
+          } catch (e) {
+            ;
+          }
+        }
+      } catch (err) {
+        ;
+      } finally {
+        listingFetchesRef.current.delete(requestKey);
+      }
+    })();
+
+    listingFetchesRef.current.set(requestKey, request);
+    return request;
   }, [dispatch, searchQuery, fetchCandidatePins]);
 
   useEffect(() => {
@@ -496,7 +525,8 @@ export const ExploreMap: React.FC = () => {
   };
 
   const centerOnUser = useCallback(async () => {
-    if (hasRouteLocation) {
+    if (hasRouteLocation && !routeLocationHandledRef.current) {
+      routeLocationHandledRef.current = true;
       const newRegion = {
         latitude,
         longitude,
@@ -569,7 +599,7 @@ export const ExploreMap: React.FC = () => {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchQuery, isConnected, hasLocationContext]);
+  }, [searchQuery, isConnected, hasLocationContext, fetchListings, activeFilters, region.latitude, region.longitude]);
 
   const handleRefresh = useCallback(async () => {
     if (!isConnected || !hasLocationContext) {
@@ -579,7 +609,7 @@ export const ExploreMap: React.FC = () => {
     setRefreshing(true);
     await fetchListings(region.latitude, region.longitude, activeFilters);
     setRefreshing(false);
-  }, [fetchListings, isConnected, hasLocationContext]);
+  }, [fetchListings, isConnected, hasLocationContext, activeFilters, region.latitude, region.longitude]);
 
   const handleRecenter = useCallback(() => {
     centerOnUser();

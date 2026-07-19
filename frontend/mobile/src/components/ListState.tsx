@@ -21,7 +21,7 @@ type ListLoadingStateProps = {
 
 type RetryableFailureStateProps = {
   title: string;
-  message: string;
+  message: unknown;
   retryLabel: string;
   onRetry: () => void;
   testID?: string;
@@ -33,6 +33,18 @@ const SKELETON_COUNTS: Record<ListLoadingVariant, number> = {
   vehicle: 3,
   transaction: 3,
   listing: 3,
+};
+
+const formatFailureMessage = (message: unknown): string => {
+  if (typeof message === 'string') {
+    return message;
+  }
+
+  if (message && typeof message === 'object' && 'message' in message) {
+    return String((message as { message?: unknown }).message);
+  }
+
+  return 'Something went wrong. Please try again.';
 };
 
 export const ListLoadingState: React.FC<ListLoadingStateProps> = ({
@@ -202,6 +214,7 @@ export const RetryableFailureState: React.FC<RetryableFailureStateProps> = ({
   testID,
 }) => {
   const { colors } = useTheme();
+  const safeMessage = formatFailureMessage(message);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -265,7 +278,7 @@ export const RetryableFailureState: React.FC<RetryableFailureStateProps> = ({
         <MaterialCommunityIcons name="alert-circle-outline" size={34} color={colors.error} />
       </View>
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.message}>{safeMessage}</Text>
       <TouchableOpacity
         style={styles.retryButton}
         onPress={onRetry}

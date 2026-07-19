@@ -8,6 +8,7 @@ import authReducer, {
   clearError,
 } from '../authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { REHYDRATE } from 'redux-persist';
 import { authAPI } from '../../../services/api';
 
 // Mock AsyncStorage
@@ -276,6 +277,30 @@ describe('authSlice', () => {
       expect(state.user).toBe(null);
       expect(state.token).toBe(null);
       expect(state.checkingAuth).toBe(false);
+    });
+
+    it('should reset transient auth flags when persisted state rehydrates', () => {
+      store.dispatch(
+        {
+          type: REHYDRATE,
+          key: 'root',
+          payload: {
+            auth: {
+              user: null,
+              token: null,
+              isAuthenticated: false,
+              loading: true,
+              checkingAuth: true,
+              error: 'stale error',
+            },
+          },
+        } as any
+      );
+
+      const state = store.getState().auth;
+      expect(state.loading).toBe(false);
+      expect(state.checkingAuth).toBe(false);
+      expect(state.error).toBe(null);
     });
 
     it('should set checkingAuth while restoring auth state', () => {

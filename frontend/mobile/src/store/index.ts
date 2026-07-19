@@ -1,7 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import { combineReducers } from 'redux';
-import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
+import {
+  persistStore,
+  persistReducer,
+  createTransform,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authReducer from './slices/authSlice';
 import bookingReducer from './slices/bookingSlice';
@@ -13,11 +23,19 @@ import pointsReducer from './slices/pointsSlice';
 import settingsReducer from './slices/settingsSlice';
 import behaviorReducer from './slices/behaviorSlice';
 import { RootState } from '../types';
+import { sanitizePersistedAuthState } from './persistence';
+
+const authPersistTransform = createTransform(
+  (inboundState: unknown) => sanitizePersistedAuthState(inboundState),
+  (outboundState: unknown) => sanitizePersistedAuthState(outboundState),
+  { whitelist: ['auth'] }
+);
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
   whitelist: ['settings', 'auth'],
+  transforms: [authPersistTransform],
 };
 
 const rootReducer = combineReducers({
@@ -32,7 +50,7 @@ const rootReducer = combineReducers({
   settings: settingsReducer,
 });
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+const persistedReducer = persistReducer<ReturnType<typeof rootReducer>>(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,

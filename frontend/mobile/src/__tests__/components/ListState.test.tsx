@@ -58,4 +58,17 @@ describe('ListState components', () => {
 
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  it('renders object-shaped failure messages as text', () => {
+    const { getByText } = render(
+      <RetryableFailureState
+        title="Unable to load vehicles"
+        message={{ message: 'License plate already exists' }}
+        retryLabel="Retry loading vehicles"
+        onRetry={jest.fn()}
+      />,
+    );
+
+    expect(getByText('License plate already exists')).toBeTruthy();
+  });
 });
