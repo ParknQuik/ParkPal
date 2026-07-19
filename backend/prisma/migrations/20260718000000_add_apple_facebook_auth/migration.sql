@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "apple_id" TEXT UNIQUE;
+ALTER TABLE "users" ADD COLUMN "facebook_id" TEXT UNIQUE;

@@ -13,6 +13,9 @@
  * - GOOGLE_MAPS_API_KEY_IOS: Google Maps API key for iOS
  * - GOOGLE_MAPS_API_KEY_ANDROID: Google Maps API key for Android
  * - EXPO_PUBLIC_ENV: Environment name (development, staging, production)
+ * - FACEBOOK_APP_ID: Facebook app ID for native Facebook Login
+ * - FACEBOOK_CLIENT_TOKEN: Facebook client token for native Facebook Login
+ * - FACEBOOK_DISPLAY_NAME: Facebook display name
  */
 
 // Load environment variables from .env.local (priority) then .env
@@ -23,6 +26,40 @@ const ENV = process.env.EXPO_PUBLIC_ENV || 'development';
 const GOOGLE_IOS_URL_SCHEME =
   process.env.GOOGLE_IOS_URL_SCHEME ||
   'com.googleusercontent.apps.YOUR_REVERSED_IOS_CLIENT_ID';
+const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID || 'YOUR_FACEBOOK_APP_ID';
+const FACEBOOK_CLIENT_TOKEN = process.env.FACEBOOK_CLIENT_TOKEN || 'YOUR_FACEBOOK_CLIENT_TOKEN';
+const FACEBOOK_DISPLAY_NAME = process.env.FACEBOOK_DISPLAY_NAME || 'ParknQuik';
+
+const hasModule = (moduleName) => {
+  try {
+    require.resolve(moduleName);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const hasConfiguredFacebook =
+  FACEBOOK_APP_ID &&
+  FACEBOOK_CLIENT_TOKEN &&
+  !FACEBOOK_APP_ID.includes('YOUR_FACEBOOK_APP_ID') &&
+  !FACEBOOK_CLIENT_TOKEN.includes('YOUR_FACEBOOK_CLIENT_TOKEN');
+
+const nativeAuthPlugins = [];
+if (hasModule('expo-apple-authentication')) {
+  nativeAuthPlugins.push('expo-apple-authentication');
+}
+if (hasModule('react-native-fbsdk-next') && hasConfiguredFacebook) {
+  nativeAuthPlugins.push([
+    'react-native-fbsdk-next',
+    {
+      appID: FACEBOOK_APP_ID,
+      clientToken: FACEBOOK_CLIENT_TOKEN,
+      displayName: FACEBOOK_DISPLAY_NAME,
+      scheme: `fb${FACEBOOK_APP_ID}`,
+    },
+  ]);
+}
 
 // Validate required environment variables (only Google Maps keys)
 // EXPO_PUBLIC_API_URL is optional - will use platform defaults if not set
@@ -95,7 +132,7 @@ module.exports = {
       environment: ENV,
       // EAS Build will provide this automatically
       eas: {
-        projectId: process.env.EAS_PROJECT_ID || undefined,
+        projectId: process.env.EAS_PROJECT_ID || '9d33320e-1433-4dbb-a8a9-247ab2a84f6f',
       },
     },
 
@@ -108,6 +145,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.parknquik.mobile',
+      usesAppleSignIn: true,
       config: {
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY_IOS || 'YOUR_IOS_API_KEY_HERE',
       },
@@ -156,6 +194,7 @@ module.exports = {
           iosUrlScheme: GOOGLE_IOS_URL_SCHEME,
         },
       ],
+      ...nativeAuthPlugins,
     ],
   },
 };

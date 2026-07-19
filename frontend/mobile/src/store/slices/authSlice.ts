@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { REHYDRATE } from 'redux-persist';
 import { AuthState, User } from '../../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../services/api';
@@ -122,6 +123,12 @@ const authSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    builder.addCase(REHYDRATE, (state) => {
+      state.loading = false;
+      state.checkingAuth = false;
+      state.error = null;
+    });
+
     // Login
     builder.addCase(login.pending, (state) => {
       state.loading = true;

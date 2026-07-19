@@ -14,12 +14,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, CommonActions } from '@react-navigation/native';
-import {
-  GoogleSignin,
-  isErrorWithCode,
-  isSuccessResponse,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
+import type * as GoogleSignInModule from '@react-native-google-signin/google-signin';
 import { useAppDispatch, useAppSelector } from '../store';
 import { login, signup, setUser, setToken } from '../store/slices/authSlice';
 import { authAPI } from '../services/api';
@@ -30,11 +25,62 @@ import { validateEmail, validatePassword } from '../utils/helpers';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  scopes: ['openid', 'profile', 'email'],
-});
+let googleSignInModule: typeof GoogleSignInModule | null | undefined;
+let appleAuthenticationModule: any | null | undefined;
+let facebookSdkModule: any | null | undefined;
+
+const getGoogleSignInModule = (): typeof GoogleSignInModule | null => {
+  if (googleSignInModule !== undefined) {
+    return googleSignInModule;
+  }
+
+  try {
+    const nativeModule = require('@react-native-google-signin/google-signin') as typeof GoogleSignInModule;
+    nativeModule.GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+      scopes: ['openid', 'profile', 'email'],
+    });
+    googleSignInModule = nativeModule;
+  } catch {
+    googleSignInModule = null;
+  }
+
+  return googleSignInModule ?? null;
+};
+
+const getAppleAuthenticationModule = () => {
+  if (appleAuthenticationModule !== undefined) {
+    return appleAuthenticationModule;
+  }
+
+  try {
+    appleAuthenticationModule = require('expo-apple-authentication');
+  } catch {
+    appleAuthenticationModule = null;
+  }
+
+  return appleAuthenticationModule;
+};
+
+const getFacebookSdkModule = () => {
+  if (facebookSdkModule !== undefined) {
+    return facebookSdkModule;
+  }
+
+  try {
+    facebookSdkModule = require('react-native-fbsdk-next');
+  } catch {
+    facebookSdkModule = null;
+  }
+
+  return facebookSdkModule;
+};
+
+const getAppleFullName = (fullName: any): string | undefined => {
+  const nameParts = [fullName?.givenName, fullName?.familyName].filter(Boolean);
+  return nameParts.length > 0 ? nameParts.join(' ') : undefined;
+};
 
 export const AuthScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
@@ -51,6 +97,8 @@ export const AuthScreen: React.FC = () => {
     confirmPassword?: string;
   }>({});
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [facebookLoading, setFacebookLoading] = useState(false);
 
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
@@ -58,30 +106,64 @@ export const AuthScreen: React.FC = () => {
   const statusBarStyle = useStatusBarStyle();
   const authLoading = useAppSelector((state) => state.auth.loading);
   const authError = useAppSelector((state) => state.auth.error);
-  const authBusy = authLoading || googleLoading;
+  const authBusy = authLoading || googleLoading || appleLoading || facebookLoading;
   const submitButtonLabel = activeTab === 'login' ? 'Login' : 'Sign Up';
+
+  const getGoogleSignInErrorMessage = (error: any): string => {
+    const responseError = error?.response?.data?.error;
+    if (responseError) {
+      return responseError;
+    }
+
+    if (__DEV__) {
+      const details = [
+        error?.code && `Code: ${error.code}`,
+        error?.message && `Message: ${error.message}`,
+        error?.request && !error?.response && 'No response from backend',
+      ].filter(Boolean);
+
+      if (details.length > 0) {
+        return details.join('\n');
+      }
+    }
+
+    return 'Please try again.';
+  };
+
+  const storeSocialAuthResponse = async (userResponse: any) => {
+    const { token, user } = userResponse.data;
+
+    await AsyncStorage.setItem('token', token);
+    await AsyncStorage.setItem('user', JSON.stringify(user));
+    dispatch(setUser(user));
+    dispatch(setToken(token));
+  };
 
   const handleGoogleSignIn = async (idToken: string) => {
     try {
       setGoogleLoading(true);
-      const userResponse = await authAPI.googleSignIn(idToken);
-      const { token, user } = userResponse.data;
-
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      dispatch(setUser(user));
-      dispatch(setToken(token));
+      await storeSocialAuthResponse(await authAPI.googleSignIn(idToken));
     } catch (error: any) {
-      Alert.alert(
-        'Google Sign In Failed',
-        error.response?.data?.error || 'Please try again.'
-      );
+      console.warn('Google backend sign-in failed', error);
+      Alert.alert('Google Sign In Failed', getGoogleSignInErrorMessage(error));
     } finally {
       setGoogleLoading(false);
     }
   };
 
   const handleGooglePress = async () => {
+    const googleModule = getGoogleSignInModule();
+
+    if (!googleModule) {
+      Alert.alert(
+        'Google Sign In Unavailable',
+        'Google Sign-In requires an Expo development build or standalone build. Use email and password while running in Expo Go.'
+      );
+      return;
+    }
+
+    const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = googleModule;
+
     try {
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -109,12 +191,101 @@ export const AuthScreen: React.FC = () => {
         return;
       }
 
+      console.warn('Native Google Sign-In failed', error);
       Alert.alert(
         'Google Sign In Failed',
         isErrorWithCode(error) && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE
           ? 'Google Play Services is not available or needs to be updated.'
-          : 'Please try again.'
+          : getGoogleSignInErrorMessage(error)
       );
+    }
+  };
+
+
+  const handleApplePress = async () => {
+    if (Platform.OS !== 'ios') {
+      Alert.alert('Apple Sign In Unavailable', 'Apple Sign-In is only available on iOS devices.');
+      return;
+    }
+
+    const AppleAuthentication = getAppleAuthenticationModule();
+
+    if (!AppleAuthentication) {
+      Alert.alert(
+        'Apple Sign In Unavailable',
+        'Apple Sign-In requires expo-apple-authentication in an Expo development build or standalone build.'
+      );
+      return;
+    }
+
+    try {
+      const available = await AppleAuthentication.isAvailableAsync();
+      if (!available) {
+        Alert.alert('Apple Sign In Unavailable', 'Apple Sign-In is not available on this device.');
+        return;
+      }
+
+      setAppleLoading(true);
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        Alert.alert('Apple Sign In Failed', 'Apple did not return an identity token.');
+        return;
+      }
+
+      await storeSocialAuthResponse(await authAPI.appleSignIn(credential.identityToken, {
+        fullName: getAppleFullName(credential.fullName),
+        email: credential.email,
+      }));
+    } catch (error: any) {
+      if (error?.code === 'ERR_REQUEST_CANCELED') {
+        return;
+      }
+
+      console.warn('Apple Sign-In failed', error);
+      Alert.alert('Apple Sign In Failed', getGoogleSignInErrorMessage(error));
+    } finally {
+      setAppleLoading(false);
+    }
+  };
+
+  const handleFacebookPress = async () => {
+    const FacebookSdk = getFacebookSdkModule();
+
+    if (!FacebookSdk) {
+      Alert.alert(
+        'Facebook Sign In Unavailable',
+        'Facebook Sign-In requires react-native-fbsdk-next in an Expo development build or standalone build.'
+      );
+      return;
+    }
+
+    const { AccessToken, LoginManager } = FacebookSdk;
+
+    try {
+      setFacebookLoading(true);
+      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+      if (result.isCancelled) {
+        return;
+      }
+
+      const tokenData = await AccessToken.getCurrentAccessToken();
+      if (!tokenData?.accessToken) {
+        Alert.alert('Facebook Sign In Failed', 'Facebook did not return an access token.');
+        return;
+      }
+
+      await storeSocialAuthResponse(await authAPI.facebookSignIn(tokenData.accessToken));
+    } catch (error: any) {
+      console.warn('Facebook Sign-In failed', error);
+      Alert.alert('Facebook Sign In Failed', getGoogleSignInErrorMessage(error));
+    } finally {
+      setFacebookLoading(false);
     }
   };
 
@@ -688,6 +859,46 @@ export const AuthScreen: React.FC = () => {
                 />
                 <Text style={styles.socialButtonText}>
                   {googleLoading ? 'Signing in...' : 'Continue with Google'}
+                </Text>
+              </TouchableOpacity>
+
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={handleApplePress}
+                  disabled={authBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel={appleLoading ? 'Signing in with Apple' : 'Continue with Apple'}
+                  accessibilityState={{ disabled: authBusy, busy: appleLoading }}
+                >
+                  <MaterialCommunityIcons
+                    name="apple"
+                    size={20}
+                    color={colors.textPrimary}
+                    style={styles.socialIcon}
+                  />
+                  <Text style={styles.socialButtonText}>
+                    {appleLoading ? 'Signing in...' : 'Continue with Apple'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleFacebookPress}
+                disabled={authBusy}
+                accessibilityRole="button"
+                accessibilityLabel={facebookLoading ? 'Signing in with Facebook' : 'Continue with Facebook'}
+                accessibilityState={{ disabled: authBusy, busy: facebookLoading }}
+              >
+                <MaterialCommunityIcons
+                  name="facebook"
+                  size={18}
+                  color={colors.textPrimary}
+                  style={styles.socialIcon}
+                />
+                <Text style={styles.socialButtonText}>
+                  {facebookLoading ? 'Signing in...' : 'Continue with Facebook'}
                 </Text>
               </TouchableOpacity>
             </View>

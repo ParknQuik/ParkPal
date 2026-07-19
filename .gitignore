@@ -18,6 +18,7 @@ node_modules
 !package-lock.json
 !tsconfig.json
 !app.json
+!frontend/mobile/eas.json
 !.agents/knowledge/sources.json
 !.agents/knowledge/source-map.json
 

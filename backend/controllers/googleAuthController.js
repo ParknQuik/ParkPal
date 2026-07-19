@@ -1,8 +1,6 @@
 const axios = require('axios');
-const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
-const prisma = require('../config/prisma');
-const { generateToken, hashPassword } = require('../services/auth');
+const { signInWithSocialProfile } = require('../services/socialAuthService');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -56,60 +54,20 @@ exports.googleAuth = async (req, res, next) => {
     }
 
     const { sub: googleId, email, name, picture } = googleUser;
-
-    let user = await prisma.user.findUnique({
-      where: { googleId }
+    const result = await signInWithSocialProfile({
+      providerIdField: 'googleId',
+      providerId: googleId,
+      email,
+      name,
+      profileImageUrl: picture,
     });
 
-    if (!user) {
-      user = await prisma.user.findUnique({
-        where: { email }
-      });
-
-      if (user) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            googleId,
-            profileImageUrl: picture
-          }
-        });
-        user = await prisma.user.findUnique({
-          where: { id: user.id }
-        });
-      } else {
-        const randomPassword = crypto.randomBytes(32).toString('hex');
-        user = await prisma.user.create({
-          data: {
-            name,
-            email,
-            googleId,
-            password: await hashPassword(randomPassword),
-            role: 'driver',
-            profileImageUrl: picture
-          }
-        });
-      }
-    }
-
-    if (!user.isActive) {
-      return res.status(403).json({ error: 'Account is deactivated' });
-    }
-
-    const token = await generateToken(user);
-
-    res.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        profileImageUrl: user.profileImageUrl
-      },
-      token
-    });
+    res.json(result);
    } catch (error) {
+     if (error.statusCode) {
+       return res.status(error.statusCode).json({ error: error.message });
+     }
+
      next(error);
    }
 };

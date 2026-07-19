@@ -1,56 +1,102 @@
-import * as Notifications from 'expo-notifications';
-import type { NotificationBehavior } from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isRunningInExpoGo } from 'expo';
+import Constants from 'expo-constants';
+import type {
+  Subscription,
+  Notification,
+  NotificationBehavior,
+  NotificationResponse,
+} from 'expo-notifications';
 
-// Check if running in Expo Go (not development build)
-const IS_EXPO_GO = !process.env.EXPO_RUNTIME_VERSION?.startsWith('expo');
+type ExpoNotificationsModule = typeof import('expo-notifications');
 
-Notifications.setNotificationHandler({
-  handleNotification: async (): Promise<NotificationBehavior> => {
-    return {
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    };
-  },
-});
+declare const require: (moduleName: string) => ExpoNotificationsModule;
+
+const noopSubscription: Subscription = {
+  remove: () => {},
+};
+
+let notificationsModule: ExpoNotificationsModule | null = null;
+
+const isExpoGo = (): boolean => {
+  const constants = Constants as typeof Constants & {
+    appOwnership?: string | null;
+    executionEnvironment?: string | null;
+  };
+
+  return (
+    isRunningInExpoGo() ||
+    constants.appOwnership === 'expo' ||
+    constants.executionEnvironment === 'storeClient'
+  );
+};
+
+const getNotifications = (): ExpoNotificationsModule | null => {
+  if (isExpoGo()) {
+    return null;
+  }
+
+  notificationsModule ??= require('expo-notifications');
+  return notificationsModule;
+};
+
+const getProjectId = (): string | undefined => {
+  const constants = Constants as typeof Constants & {
+    easConfig?: { projectId?: string };
+  };
+
+  return constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
+};
 
 export const notificationService = {
+  isExpoGo,
+
+  async configureNotificationHandler(): Promise<void> {
+    const Notifications = getNotifications();
+    if (!Notifications) {
+      return;
+    }
+
+    Notifications.setNotificationHandler({
+      handleNotification: async (): Promise<NotificationBehavior> => {
+        return {
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        };
+      },
+    });
+  },
+
   async getPushToken(): Promise<string | null> {
-    // Skip push token in Expo Go (not supported in SDK 53+)
-    if (IS_EXPO_GO) {
-      ;
+    const Notifications = getNotifications();
+    if (!Notifications) {
       return null;
     }
-    
+
     try {
-      // First request permission (not just check)
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      
       let finalStatus = existingStatus;
-      
+
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-      
+
       if (finalStatus !== 'granted') {
-        ;
         return null;
       }
-      
-      // Try to get push token
-      const token = await Notifications.getExpoPushTokenAsync();
+
+      const projectId = getProjectId();
+      const token = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
       return token.data;
     } catch (error: any) {
-      // Check if it's the projectId error - silently fail
       if (error?.message?.includes('projectId') || error?.code === 'VALIDATION_ERROR') {
-        ;
         return null;
       }
-      ;
       return null;
     }
   },
@@ -68,6 +114,11 @@ export const notificationService = {
     body: string,
     data?: Record<string, unknown>
   ): Promise<string> {
+    const Notifications = getNotifications();
+    if (!Notifications) {
+      return '';
+    }
+
     const id = await Notifications.scheduleNotificationAsync({
       content: { title, body, data },
       trigger: null,
@@ -76,18 +127,29 @@ export const notificationService = {
   },
 
   async cancelAllNotifications(): Promise<void> {
+    const Notifications = getNotifications();
+    if (!Notifications) {
+      return;
+    }
+
     await Notifications.cancelAllScheduledNotificationsAsync();
   },
 
-  addNotificationReceivedListener(
-    callback: (notification: Notifications.Notification) => void
-  ): Notifications.EventSubscription {
+  addNotificationReceivedListener(callback: (notification: Notification) => void): Subscription {
+    const Notifications = getNotifications();
+    if (!Notifications) {
+      return noopSubscription;
+    }
+
     return Notifications.addNotificationReceivedListener(callback);
   },
 
-  addNotificationResponseListener(
-    callback: (response: Notifications.NotificationResponse) => void
-  ): Notifications.EventSubscription {
+  addNotificationResponseListener(callback: (response: NotificationResponse) => void): Subscription {
+    const Notifications = getNotifications();
+    if (!Notifications) {
+      return noopSubscription;
+    }
+
     return Notifications.addNotificationResponseReceivedListener(callback);
   },
 };

@@ -15,6 +15,8 @@ const router = express.Router();
 module.exports = (authLimiter) => {
   const authRoutes = require('../auth');
   const googleAuthRoutes = require('../googleAuth');
+  const appleAuthRoutes = require('../appleAuth');
+  const facebookAuthRoutes = require('../facebookAuth');
   const parkingRoutes = require('../parking');
   const paymentRoutes = require('../payments');
   const alertRoutes = require('../alerts');
@@ -35,8 +37,10 @@ module.exports = (authLimiter) => {
   // Auth routes get stricter rate limiting
   authRoutes(router, authLimiter);
 
-  // Google Auth routes
+  // Social Auth routes
   googleAuthRoutes(router, authLimiter);
+  appleAuthRoutes(router, authLimiter);
+  facebookAuthRoutes(router, authLimiter);
 
   // Admin routes
   const adminRoutes = require('../admin');
