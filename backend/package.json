@@ -11,7 +11,9 @@
     "seed": "node prisma/seed.js",
     "test": "NODE_ENV=test jest --detectOpenHandles --forceExit",
     "test:watch": "NODE_ENV=test jest --watch",
-    "test:coverage": "NODE_ENV=test jest --coverage --detectOpenHandles --forceExit"
+    "test:coverage": "NODE_ENV=test jest --coverage --detectOpenHandles --forceExit",
+    "knowledge:index": "node scripts/knowledge-index.js",
+    "knowledge:evaluate": "node scripts/knowledge-eval.js"
   },
   "jest": {
     "testEnvironment": "node",

@@ -92,6 +92,37 @@ const activeListings = new promClient.Gauge({
   registers: [register],
 });
 
+// Knowledge indexing duration histogram
+const knowledgeIndexingDuration = new promClient.Histogram({
+  name: 'parkpal_knowledge_indexing_duration_seconds',
+  help: 'Duration of knowledge indexing runs in seconds',
+  labelNames: ['status'],
+  buckets: [1, 5, 15, 30, 60, 120, 300, 600],
+  registers: [register],
+});
+
+const knowledgeRetrievalLatency = new promClient.Histogram({
+  name: 'parkpal_knowledge_retrieval_latency_seconds',
+  help: 'Latency of knowledge retrieval phases in seconds',
+  labelNames: ['phase'],
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+  registers: [register],
+});
+
+const knowledgeCacheOperations = new promClient.Counter({
+  name: 'parkpal_knowledge_cache_operations_total',
+  help: 'Knowledge cache operations by layer and status',
+  labelNames: ['layer', 'status'],
+  registers: [register],
+});
+
+const knowledgeNoAnswerTotal = new promClient.Counter({
+  name: 'parkpal_knowledge_no_answer_total',
+  help: 'Knowledge retrieval no-answer outcomes',
+  labelNames: ['reason'],
+  registers: [register],
+});
+
 // Authentication attempts counter
 const authAttempts = new promClient.Counter({
   name: 'parkpal_auth_attempts_total',
@@ -173,6 +204,22 @@ function updateWsConnections(count) {
   wsConnections.set(count);
 }
 
+function recordKnowledgeIndexingDuration(duration, status) {
+  knowledgeIndexingDuration.labels(status).observe(duration);
+}
+
+function recordKnowledgeRetrievalLatency(phase, duration) {
+  knowledgeRetrievalLatency.labels(phase).observe(duration);
+}
+
+function recordKnowledgeCache(layer, status) {
+  knowledgeCacheOperations.labels(layer, status).inc();
+}
+
+function recordKnowledgeNoAnswer(reason) {
+  knowledgeNoAnswerTotal.labels(reason).inc();
+}
+
 // Metrics endpoint handler
 async function getMetrics(req, res) {
   try {
@@ -197,4 +244,8 @@ module.exports = {
   recordDbQuery,
   recordCacheOperation,
   updateWsConnections,
+  recordKnowledgeIndexingDuration,
+  recordKnowledgeRetrievalLatency,
+  recordKnowledgeCache,
+  recordKnowledgeNoAnswer,
 };

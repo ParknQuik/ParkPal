@@ -497,3 +497,75 @@ model ParkingCandidateScanRun {
   @@index([startedAt])
   @@map("parking_candidate_scan_runs")
 }
+
+model KnowledgeDocument {
+  id              Int              @id @default(autoincrement())
+  source          String
+  sourceId        String           @map("source_id")
+  title           String
+  path            String?
+  section         String?
+  uri             String?
+  version         String
+  status          String           @default("active")
+  hash            String
+  metadata        Json?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  indexedAt       DateTime?        @map("indexed_at")
+  chunks          KnowledgeChunk[]
+
+  @@unique([source, sourceId, version])
+  @@index([status, version])
+  @@index([source, hash])
+  @@index([path])
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id          Int               @id @default(autoincrement())
+  documentId  Int               @map("document_id")
+  version     String
+  ordinal     Int
+  section     String?
+  content     String
+  contentHash String            @map("content_hash")
+  tokenCount  Int               @map("token_count")
+  metadata    Json?
+  embedding   Unsupported("vector(1536)")?
+  isActive    Boolean           @default(true) @map("is_active")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  document    KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, contentHash, version])
+  @@index([version, isActive])
+  @@index([contentHash])
+  @@index([documentId, ordinal])
+  @@map("knowledge_chunks")
+}
+
+model KnowledgeIndexingRun {
+  id               Int       @id @default(autoincrement())
+  version          String
+  source           String?
+  trigger          String
+  status           String    @default("running")
+  discoveredCount  Int       @default(0) @map("discovered_count")
+  indexedCount     Int       @default(0) @map("indexed_count")
+  skippedCount     Int       @default(0) @map("skipped_count")
+  chunkCount       Int       @default(0) @map("chunk_count")
+  embeddedCount    Int       @default(0) @map("embedded_count")
+  failedCount      Int       @default(0) @map("failed_count")
+  errorSummary     String?   @map("error_summary")
+  metadata         Json?
+  startedAt        DateTime  @default(now()) @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, version])
+  @@index([source])
+  @@index([startedAt])
+  @@map("knowledge_indexing_runs")
+}

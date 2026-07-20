@@ -34,12 +34,34 @@ logger.logStartup();
 printEnvironmentSummary();
 
 // Rate limiting configuration
+const mapDiscoveryReadPaths = new Set([
+  '/v1/marketplace/search',
+  '/v1/marketplace/discovery/candidates',
+  '/marketplace/search',
+  '/marketplace/discovery/candidates',
+  '/api/v1/marketplace/search',
+  '/api/v1/marketplace/discovery/candidates',
+  '/api/marketplace/search',
+  '/api/marketplace/discovery/candidates',
+]);
+
+const isMapDiscoveryRead = (req) =>
+  ['GET', 'HEAD', 'OPTIONS'].includes(req.method) && mapDiscoveryReadPaths.has(req.path);
+
 const apiReadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 600, // Map and marketplace screens can issue repeated read bursts
+  max: 1200, // Normal browsing can issue repeated read bursts across screens
   message: { error: 'Too many read requests from this IP, please try again later.' },
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
+});
+
+const apiMapDiscoveryReadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 2400,
+  message: { error: 'Map refreshes are busy. Please wait a moment and try again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 const apiWriteLimiter = rateLimit({
@@ -51,6 +73,10 @@ const apiWriteLimiter = rateLimit({
 });
 
 const apiMethodLimiter = (req, res, next) => {
+  if (isMapDiscoveryRead(req)) {
+    return apiMapDiscoveryReadLimiter(req, res, next);
+  }
+
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     return apiReadLimiter(req, res, next);
   }

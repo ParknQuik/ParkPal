@@ -12,6 +12,8 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
+let fallbackMessageCounter = 0;
+
 // Fallback logger if no API key configured
 const fallbackLogger = {
   emails: {
@@ -20,7 +22,8 @@ const fallbackLogger = {
       console.log('  To:', mailOptions.to);
       console.log('  Subject:', mailOptions.subject);
       console.log('  From:', mailOptions.from);
-      return { data: { id: 'test-' + Date.now() } };
+      fallbackMessageCounter += 1;
+      return { data: { id: 'test-' + Date.now() + '-' + fallbackMessageCounter } };
     }
   }
 };
