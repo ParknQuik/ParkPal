@@ -1,0 +1,22 @@
+{
+  "sources": [
+    {
+      "name": "product-docs",
+      "type": "markdown",
+      "include": [
+        "../README.md",
+        "../ROADMAP.md",
+        "backend/API_VERSIONING_GUIDE.md",
+        "docs/**/*.md",
+        "backend/docs/**/*.md"
+      ],
+      "exclude": [
+        "node_modules/**",
+        ".git/**",
+        ".agents/**",
+        "docs/plans/**",
+        "docs/agent-knowledge/**"
+      ]
+    }
+  ]
+}

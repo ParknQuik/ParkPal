@@ -30,6 +30,7 @@ module.exports = (authLimiter) => {
   const notificationsRoutes = require('../notifications');
   const earningsRoutes = require('../earnings');
   const pointsRoutes = require('../points');
+  const knowledgeAdminRoutes = require('../knowledgeAdmin');
 
   // Health routes (no auth required)
   healthRoutes(router);
@@ -45,6 +46,7 @@ module.exports = (authLimiter) => {
   // Admin routes
   const adminRoutes = require('../admin');
   adminRoutes(router);
+  knowledgeAdminRoutes(router);
 
   // Other routes
   parkingRoutes(router);
