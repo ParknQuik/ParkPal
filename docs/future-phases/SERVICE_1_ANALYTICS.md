@@ -33,7 +33,9 @@ Service 1 is ParkPal's **B2B/B2G revenue engine**. While Service 2 is the P2P pa
 
 Google Places is an additive discovery source for known parking facilities, not a source of ParknQuik analytics or live availability. Server-side scans create internal `ParkingCandidate` records keyed by `googlePlaceId` and review metadata. Public Explore can show limited preview pins, but those pins must remain non-bookable and must not show pricing guarantees, occupancy, or circling-time estimates.
 
-Analytics starts only after an admin/operator verifies the candidate geofence and links it to a ParknQuik-owned `Zone`. From that point, the existing opt-in movement loop can create zone-entry, zone-exit, parking-session, circling-time, and `ZoneMetrics` records against the verified zone.
+Analytics starts only after an admin/operator verifies the candidate geofence and links it to a ParknQuik-owned `Zone`.
+
+After verification, the existing opt-in movement loop can create zone-entry, zone-exit, parking-session, circling-time, and `ZoneMetrics` records against the verified zone.
 
 ---
 
@@ -217,7 +219,7 @@ if (
 
 ### Step 4: Hourly Aggregation (Databricks)
 
-Runs at :05 past every hour.
+Runs at:05 past every hour.
 
 ```python
 from pyspark.sql import functions as F

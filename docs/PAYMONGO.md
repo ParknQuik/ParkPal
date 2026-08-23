@@ -72,7 +72,7 @@ PAYMONGO_WEBHOOK_SECRET="<your_live_webhook_secret>"
 FRONTEND_URL="https://app.parkpal.com"
 ```
 
-Keys are stored in GCP Secret Manager. The backend fetches them on startup and falls back to `.env` if Secret Manager is unavailable.
+Store keys in GCP Secret Manager. The backend fetches them on startup. It falls back to `.env` if Secret Manager is unavailable.
 
 ---
 

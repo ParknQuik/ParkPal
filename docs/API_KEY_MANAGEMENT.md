@@ -1,7 +1,7 @@
 # API Key Management Guide - ParkPal
 
 **Last Updated:** December 16, 2025
-**System:** Dual-mode (Local .env + GCP Secret Manager)
+**System:** Dual-mode (Local.env + GCP Secret Manager)
 
 ---
 
@@ -517,23 +517,23 @@ const weatherApiKey = await secretManager.getSecret('weather-api-key');
 
 ### Priority 0 (Critical)
 - [ ] **JWT Secret** - `services/auth.js`
-  - Current: `process.env.JWT_SECRET`
-  - Target: `secretManager.getSecret('jwt-secret')`
+   - Current: `process.env.JWT_SECRET`
+   - Target: `secretManager.getSecret('jwt-secret')`
 
 ### Priority 1 (High)
 - [ ] **Database URL** - `prisma/schema.prisma`, `index.js`
-  - Current: `process.env.DATABASE_URL`
-  - Target: `secretManager.getSecret('database-url')`
+   - Current: `process.env.DATABASE_URL`
+   - Target: `secretManager.getSecret('database-url')`
 
 ### Priority 2 (Medium)
 - [ ] **Redis URL** - `config/redis.js`
-  - Current: `process.env.REDIS_URL`
-  - Target: `secretManager.getSecret('redis-url')`
+   - Current: `process.env.REDIS_URL`
+   - Target: `secretManager.getSecret('redis-url')`
 
 ### Optional
 - [ ] **Weather API** - `controllers/alertsController.js`
-  - Current: `process.env.WEATHER_API_KEY`
-  - Target: `secretManager.getSecret('weather-api-key')`
+   - Current: `process.env.WEATHER_API_KEY`
+   - Target: `secretManager.getSecret('weather-api-key')`
 
 ---
 

@@ -1,7 +1,7 @@
 # Explore Page Revamp Roadmap
 
 > **Target:** `frontend/mobile/src/screens/ExploreMap.tsx`
-> **Goal:** Transform the Explore page from a functional-but-rough map view into a polished, performant, and user-friendly parking discovery experience.
+> **Goal:** Make the Explore page a clear and fast parking discovery view.
 
 ---
 
@@ -11,8 +11,8 @@
 |---|-------|----------|--------|
 | 1 | Emoji icons everywhere (`🔍`, `⚙️`, `📍`, `⭐`, `🧭`) | High | Low |
 | 2 | Non-functional filter button (shows "coming soon" alert) | High | Medium |
-| 3 | Empty state has no icon (just text) | Medium | Low |
-| 4 | `handleDirections()` is a no-op (just console.log) | High | Low |
+| 3 | Empty state has text only and no icon | Medium | Low |
+| 4 | `handleDirections()` is a no-op (`console.log` only) | High | Low |
 | 5 | Map controls use text (`+`, `−`, `📍`) | Medium | Low |
 | 6 | Search bar `top: 50` not safe for all devices | High | Low |
 | 7 | "Search this area" button hardcoded `top: 190` | High | Low |

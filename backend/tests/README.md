@@ -54,4 +54,4 @@ When v2 is released, tests can be run against it:
 API_VERSION=v2 npm test
 ```
 
-Tests will automatically use `/api/v2` prefix without code changes.
+Tests use the `/api/v2` prefix without code changes.

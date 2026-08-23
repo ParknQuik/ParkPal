@@ -1,7 +1,7 @@
 # Mobile App Testing Guide
 
-**Stack:** React Native (Expo 54), Redux Toolkit, React Navigation 6, Axios, TypeScript  
-**Theme:** Stitch green `#10b77f` primary, orange `#f59e0b`, yellow `#facc15`  
+**Stack:** React Native (Expo 54), Redux Toolkit, React Navigation 6, Axios, TypeScript
+**Theme:** Stitch green `#10b77f` primary, orange `#f59e0b`, yellow `#facc15`
 **Start command:** `cd frontend/mobile && npm run start`
 
 ---

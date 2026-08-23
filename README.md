@@ -3,7 +3,7 @@
 **Status:** ✅ Production Ready (Phases 1-4 Complete)
 **Updated:** December 31, 2025
 
-A full-stack parking management solution with enterprise-grade security, performance, and accessibility. Users can find, book, and manage parking spots while hosts can list their available spaces.
+ParkPal is a full-stack parking management app. Users find, book, and manage parking spots. Hosts list available spaces.
 
 ## 📄 Research Background
 

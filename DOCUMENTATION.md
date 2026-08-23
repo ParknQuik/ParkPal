@@ -78,7 +78,7 @@
 - For planning, implementation, current-status follow-up, continue, and handoff prompts after task selection, run `npm run knowledge:context -- "<intent>" --limit 3`.
 - Every implementation `<proposed_plan>` should include a short `Model Routing` line copied from `knowledge:context` or `selectModelForTask`.
 - Substantial implementation handoffs should include `Recommended model`, `Reasoning effort`, `Tier`, `Confidence`, and `Reason`; `npm run knowledge:model-routing -- "<intent>"` prints this advisory block.
-- Use cited line ranges as the default read boundary after task selection; do not open full Markdown files unless implementation detail is genuinely needed.
+- Use cited line ranges as the default read boundary after task selection. Do not open full Markdown files unless implementation detail is genuinely needed.
 - Run `npm run knowledge:query -- "<topic>"` only for deeper investigation.
 - Rebuild with `npm run knowledge:build` when indexed sources change.
 - Markdown remains canonical storage. The SQLite database is a generated retrieval/cache layer, and token savings come from bounded retrieval rather than deleting Markdown.

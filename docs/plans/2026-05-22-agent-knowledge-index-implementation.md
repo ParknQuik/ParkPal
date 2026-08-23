@@ -8,6 +8,8 @@
 
 ## Goal
 
+Build the local knowledge index in small steps. Keep generated data out of git.
+
 Create a lightweight repo-local knowledge index so Codex, VS Code agents, and other developers can retrieve ParkPal project context quickly without scanning every markdown file on each session.
 
 This is not a hosted vector database project. The first implementation should be a boring, inspectable, local system using structured metadata and SQLite full-text search.

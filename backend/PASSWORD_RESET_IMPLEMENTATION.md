@@ -27,19 +27,19 @@ resetPasswordExpires DateTime? @map("reset_password_expires")
 #### **POST `/api/auth/forgot-password`**
 - **Input:** `{ email: string }`
 - **Action:**
-  - Generates 64-character crypto token
-  - Stores token + 1-hour expiry in database
-  - Sends password reset email
+   - Generates 64-character crypto token
+   - Stores token + 1-hour expiry in database
+   - Sends password reset email
 - **Response:** `{ message: "If an account exists..." }` (security: no email enumeration)
 - **Rate Limited:** Yes (via `authLimiter`)
 
 #### **POST `/api/auth/reset-password`**
 - **Input:** `{ token: string, newPassword: string }`
 - **Action:**
-  - Validates token exists & not expired
-  - Validates new password (HIBP breach check, OWASP policy)
-  - Updates password
-  - Clears reset token
+   - Validates token exists & not expired
+   - Validates new password (HIBP breach check, OWASP policy)
+   - Updates password
+   - Clears reset token
 - **Response:** `{ message: "Password reset successfully" }`
 - **Rate Limited:** Yes
 

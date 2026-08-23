@@ -178,7 +178,7 @@ k6 run k6/load-test.js
 - Time to Interactive: <3.8s
 - Speed Index: <3.4s
 
-#### .lighthouserc-mobile.json
+####.lighthouserc-mobile.json
 **Purpose:** Mobile performance budgets
 
 **Thresholds:**

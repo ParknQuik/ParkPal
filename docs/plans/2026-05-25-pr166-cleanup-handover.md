@@ -1,5 +1,7 @@
 # 2026-05-25 PR 166 Cleanup Handover
 
+Use this handover to continue the PR #166 cleanup without reopening stale work.
+
 ## Current State
 
 - Repo: `/Users/bryanangeloyaneza/Documents/GitHub/ParkPal`
@@ -17,7 +19,7 @@ Before cleanup, a safety patch of the remaining dirty diff was saved at:
 
 `/private/tmp/parkpal-main-dirty-before-clean-20260525.patch`
 
-The reset removed stale accumulated work that would have rolled back newer status docs, RTK startup instructions, archived-tooling cleanup, web test stabilization, and PR #165 mobile test coverage.
+The reset removed stale accumulated work. That work would have rolled back newer status docs, RTK startup instructions, archived-tooling cleanup, web test stabilization, and PR #165 mobile test coverage.
 
 ## Remaining Local State
 

@@ -27,9 +27,9 @@ A complete management interface for parking spot hosts.
 - Quick status overview (Available, Occupied, Reserved)
 - Ratings display with star icons
 - Action buttons:
-  - **View**: See full listing details
-  - **Edit**: Modify listing information
-  - **Delete**: Remove listing (with confirmation)
+   - **View**: See full listing details
+   - **Edit**: Modify listing information
+   - **Delete**: Remove listing (with confirmation)
 
 #### Features
 - Responsive Material-UI design
@@ -54,12 +54,12 @@ Platform administration interface for managing the marketplace.
 **1. All Listings Tab**
 - Complete view of all parking listings
 - Filterable table with:
-  - Listing ID
-  - Address
-  - Slot Type (Roadside QR, Commercial Manual, Commercial IoT)
-  - Price per hour
-  - Status (Available/Occupied/Reserved)
-  - Active status (Yes/No)
+   - Listing ID
+   - Address
+   - Slot Type (Roadside QR, Commercial Manual, Commercial IoT)
+   - Price per hour
+   - Status (Available/Occupied/Reserved)
+   - Active status (Yes/No)
 - Approve/Reject actions for inactive listings
 
 **2. Pending Approval Tab**
@@ -95,9 +95,9 @@ Enhanced marketplace listing creation interface.
 
 **Listing Details**
 - **Slot Type** dropdown:
-  - Roadside (QR)
-  - Commercial (Manual)
-  - Commercial (IoT)
+   - Roadside (QR)
+   - Commercial (Manual)
+   - Commercial (IoT)
 - **Price per Hour** (₱) with platform fee note (5%)
 - **Description** text area for detailed info
 

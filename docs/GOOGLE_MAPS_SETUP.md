@@ -49,7 +49,7 @@ import mapsConfig from './services/mapsConfig';
 const apiKey = await mapsConfig.getApiKey(); // cached 24 hours
 ```
 
-Backend endpoint: `GET /api/v1/config/maps-api-key` (requires auth)  
+Backend endpoint: `GET /api/v1/config/maps-api-key` (requires auth)
 The backend retrieves the key from GCP Secret Manager (secret name: `google-maps-api-key`).
 
 ### EAS Build Configuration

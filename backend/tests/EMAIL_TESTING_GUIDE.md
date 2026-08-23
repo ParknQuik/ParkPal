@@ -113,11 +113,11 @@ it('should accept valid email and return success message')
 ```
 - **Tests:** Full API endpoint → email send flow
 - **Verifies:**
-  - HTTP 200 response
-  - Reset token saved in database
-  - Token length is 64 characters
-  - Token expiration is set
-  - Email service was called
+   - HTTP 200 response
+   - Reset token saved in database
+   - Token length is 64 characters
+   - Token expiration is set
+   - Email service was called
 
 #### 2. **Security Measures**
 ```javascript

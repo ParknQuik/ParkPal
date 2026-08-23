@@ -90,7 +90,7 @@ GOOGLE_MAPS_API_KEY_IOS=YOUR_IOS_API_KEY_HERE
 GOOGLE_MAPS_API_KEY_ANDROID=YOUR_ANDROID_API_KEY_HERE
 ```
 
-**Priority:** Low (used if .env.local doesn't exist)
+**Priority:** Low (used if.env.local doesn't exist)
 **Git:** Committed
 
 ### `.env.staging` (Committed)

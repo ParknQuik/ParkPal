@@ -62,7 +62,7 @@ All endpoints require JWT auth and `role=admin`:
 - `POST /api/v1/admin/knowledge/rag-test`
 - `GET /api/v1/admin/knowledge/sources`
 
-`rag-test` accepts `query`, optional `role`, `locale`, `tenant`, `version`, and `generate`. `generate` defaults to `false`; when `true`, the route sends the grounded prompt to the configured provider only after retrieval passes the confidence threshold.
+`rag-test` accepts `query`, optional `role`, `locale`, `tenant`, `version`, and `generate`. `generate` defaults to `false`. When `true`, the route sends the grounded prompt to the configured provider only after retrieval passes the confidence threshold.
 
 ## Environment
 

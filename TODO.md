@@ -32,28 +32,28 @@
 
 #### 3. Points & Loyalty System ✅
 - [x] Validation schemas in `backend/validators/points.js`
-  - [x] `earnPointsSchema` - bookingId, amount
-  - [x] `redeemPointsSchema` - amount, bookingId
-  - [x] `validateReferralCodeSchema` - referralCode
-  - [x] `processReferralRewardSchema` - referredUserId
+   - [x] `earnPointsSchema` - bookingId, amount
+   - [x] `redeemPointsSchema` - amount, bookingId
+   - [x] `validateReferralCodeSchema` - referralCode
+   - [x] `processReferralRewardSchema` - referredUserId
 - [x] Points controller (`backend/controllers/pointsController.js`)
-  - [x] `getBalance()` - Get user points balance
-  - [x] `earnPoints()` - Earn points for booking completion
-  - [x] `redeemPoints()` - Redeem points for discounts
-  - [x] `getHistory()` - Get transaction history with pagination
-  - [x] `generateReferralCode()` - Generate unique referral codes
-  - [x] `validateReferralCode()` - Validate and check referral codes
-  - [x] `getReferralStats()` - Get referral statistics
-  - [x] `processReferralReward()` - Process referral rewards on first booking
+   - [x] `getBalance()` - Get user points balance
+   - [x] `earnPoints()` - Earn points for booking completion
+   - [x] `redeemPoints()` - Redeem points for discounts
+   - [x] `getHistory()` - Get transaction history with pagination
+   - [x] `generateReferralCode()` - Generate unique referral codes
+   - [x] `validateReferralCode()` - Validate and check referral codes
+   - [x] `getReferralStats()` - Get referral statistics
+   - [x] `processReferralReward()` - Process referral rewards on first booking
 - [x] Points routes in `backend/routes/points.js`
-  - [x] GET /points/balance
-  - [x] POST /points/earn
-  - [x] POST /points/redeem
-  - [x] GET /points/history
-  - [x] POST /referrals/validate
-  - [x] GET /referrals/stats
-  - [x] POST /referrals/generate
-  - [x] POST /referrals/process
+   - [x] GET /points/balance
+   - [x] POST /points/earn
+   - [x] POST /points/redeem
+   - [x] GET /points/history
+   - [x] POST /referrals/validate
+   - [x] GET /referrals/stats
+   - [x] POST /referrals/generate
+   - [x] POST /referrals/process
 
 #### 4. Parking Management ✅
 - [x] List all parking slots with filtering
@@ -85,9 +85,9 @@
 - [x] Get user payments
 - [x] Get payment by ID
 - [x] PayMongo webhook handler
-  - [x] payment.paid event handler
-  - [x] payment.failed event handler
-  - [x] source.chargeable event handler
+   - [x] payment.paid event handler
+   - [x] payment.failed event handler
+   - [x] source.chargeable event handler
 - [x] Webhook signature verification
 - [x] Legacy payment processing (backward compatibility)
 

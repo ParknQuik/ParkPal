@@ -150,7 +150,7 @@ frontend/mobile/
    npm install
    ```
 
-   If you encounter npm cache issues, run:
+ If you encounter npm cache issues, run:
    ```bash
    npm cache clean --force
    npm install

@@ -4,7 +4,7 @@
 **Status:** Future beta/deployment gate, not the active local development plan
 **Baseline:** `dev` at `600a7b5` after PR #161; no open PRs against `dev` as of May 25, 2026
 
-This checklist tracks the minimum evidence needed before ParknQuik moves from local-first active development into GCP-backed beta distribution. The existing local development setup remains the proof-of-concept baseline; GCP/Cloud Run validation and app-store submission stay deferred until every required item below is either complete or explicitly waived.
+This checklist tracks the minimum evidence needed before ParknQuik moves from local-first active development into GCP-backed beta distribution. The existing local development setup remains the proof-of-concept baseline. GCP/Cloud Run validation and app-store submission stay deferred until every required item below is either complete or explicitly waived.
 
 ## Current Validation Evidence
 

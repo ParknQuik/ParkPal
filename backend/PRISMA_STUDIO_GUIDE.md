@@ -8,7 +8,7 @@
 
 ## What is Prisma Studio?
 
-Prisma Studio is a visual database browser that lets you:
+Prisma Studio is a visual database browser. Use it to:
 - View all database tables and records
 - Edit data directly in the browser
 - Explore relationships between models
@@ -442,7 +442,7 @@ npx prisma studio
 
 ### Can't See Recent Records
 
-**Issue:** Just created record via API, not in Studio
+**Issue:** Record created via API does not appear in Studio
 - Click refresh icon (🔄) in top right
 - Or close and reopen Prisma Studio
 - Changes via API are immediate, UI needs refresh

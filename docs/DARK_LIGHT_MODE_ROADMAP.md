@@ -1,7 +1,7 @@
 # Light / Dark Mode — Implementation Roadmap
 
-**Created:** 2026-05-04  
-**Scope:** React Native (Expo) mobile app  
+**Created:** 2026-05-04
+**Scope:** React Native (Expo) mobile app
 **Effort estimate:** ~3–4 days of focused work
 
 ---
@@ -103,7 +103,7 @@ Persist this key via AsyncStorage so it survives app restarts.
 
 Priority order: shared components first, then high-traffic screens.
 
-### 2.1 Shared components (highest leverage — used everywhere)
+### 2.1 Shared components (highest use — used everywhere)
 
 | File | Key change |
 |------|-----------|
@@ -245,6 +245,6 @@ Wrap theme switch in a short fade/crossfade so it doesn't snap harshly.
 
 ## What's Already Done (No Work Needed)
 
-- Dark color tokens exist in `colors.ts` (`backgroundDark`, `surfaceDark`, `borderDark`) — just need mapping into a palette
+- Dark color tokens exist in `colors.ts` (`backgroundDark`, `surfaceDark`, `borderDark`) — map them into a palette
 - Brand green (`#10b77f`) works well on both light and dark backgrounds — no primary color changes needed
 - `android.edgeToEdgeEnabled: true` already set in `app.config.js` — dark mode system UI will render correctly on Android

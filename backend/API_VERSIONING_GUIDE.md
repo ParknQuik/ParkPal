@@ -2,7 +2,7 @@
 
 ## Overview
 
-ParknQuik API uses URL-based versioning to ensure backward compatibility and enable safe API evolution.
+ParknQuik API uses URL-based versioning. This keeps old clients working while the API changes safely.
 
 ## Current Status
 

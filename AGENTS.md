@@ -1,8 +1,8 @@
 # ParkPal Startup Card
 
-Use this file as the only automatic repo startup instruction surface.
+Use this file as the only automatic repo startup instruction source.
 Detailed startup guidance remains available on demand in
-`.claude/session-start-instructions.md`; do not auto-load that file for plain
+`.claude/session-start-instructions.md`. Do not auto-load that file for plain
 startup.
 
 When the user says `start` or gives a compact startup intent:

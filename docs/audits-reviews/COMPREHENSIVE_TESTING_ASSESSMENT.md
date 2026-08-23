@@ -345,7 +345,7 @@ transformIgnorePatterns: [
 
 3. **Lighthouse CI** (3 files)
    - lighthouserc.json - Desktop budgets
-   - .lighthouserc-mobile.json - Mobile budgets
+ -.lighthouserc-mobile.json - Mobile budgets
    - budget.json - Resource budgets
 
 4. **Documentation** (1 file)

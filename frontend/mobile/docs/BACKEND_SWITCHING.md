@@ -1,5 +1,7 @@
 # Backend Configuration - Hybrid Approach
 
+Use this guide to point the mobile app at the correct backend.
+
 **Last Updated:** March 15, 2026
 
 **🎯 Zero-configuration backend connection** using smart platform detection + mDNS for physical devices.

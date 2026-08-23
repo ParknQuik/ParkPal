@@ -2,7 +2,7 @@
 
 - Cache available parking slots
 - Store session tokens
-- Real-time updates via Pub/Sub
+- Send real-time updates with Pub/Sub
 
 Example keys:
 - `slots:available`

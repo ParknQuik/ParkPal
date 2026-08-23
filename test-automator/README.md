@@ -506,19 +506,19 @@ describe('UserProfile', () => {
 ### 4. Coverage Goals
 
 - **Priority 1 (Must have 90%+):**
-  - Authentication logic
-  - Payment processing
-  - Critical business logic
+   - Authentication logic
+   - Payment processing
+   - Critical business logic
 
 - **Priority 2 (Must have 80%+):**
-  - API endpoints
-  - Database operations
-  - State management
+   - API endpoints
+   - Database operations
+   - State management
 
 - **Priority 3 (Target 70%+):**
-  - UI components
-  - Utility functions
-  - Helper modules
+   - UI components
+   - Utility functions
+   - Helper modules
 
 ### 5. Performance Testing
 

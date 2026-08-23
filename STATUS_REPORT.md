@@ -1,9 +1,9 @@
 # ParkPal Project Status Report
 
-**Last Updated:** July 16, 2026
+**Last Updated:** July 19, 2026
 **Current Branch:** `dev`
-**Production Readiness:** 95/100 (PR #153 and PR #155-#157 landed, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, and PR #179 stabilized mobile Google Sign-In with passing GitHub checks; remaining confidence gaps are future deployment health validation and beta distribution gates)
-**Phase:** Phase 6A: Mobile Analytics Integration — complete; Explore Page Revamp — all 5 phases complete; Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()); Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
+**Production Readiness:** 95/100 (PR #153 and PR #155-#157 landed, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, PR #179 stabilized mobile Google Sign-In, and PR #181 integrated native Apple/Facebook auth plus map stability with passing GitHub checks. Remaining confidence gaps are future deployment health validation, native dev-build smoke evidence, and beta distribution gates)
+**Phase:** Phase 6A: Mobile Analytics Integration — complete. Explore Page Revamp — all 5 phases complete. Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()). Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
 ---
 
@@ -11,6 +11,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| July 19, 2026 | Codex | Verified PR #181 merged into `dev` at `6ebe61e`, integrating native Apple/Facebook auth with the existing Google auth contract, preserving tracked EAS/native map configuration, relaxing backend read-rate limits while keeping stricter auth/write limits, deduplicating Explore Map refreshes, and fixing GPS recenter after route focus. GitHub Mobile Environment Check plus backend, web, mobile, security, code quality, PR validation, PR-size, and branch checks passed. Local validation before merge passed for mobile `npm ci`, `env:check`, TypeScript, mobile Jest 104/104, Prisma validate, Expo config, backend syntax checks, `git diff --check`, and focused backend auth/googleAuth/marketplace/parkingCandidates/rateLimit Jest 110/110 after applying the social-auth migration to local dev and test databases | 95/100 |
 | July 16, 2026 | Codex | Verified PR #179 merged into `dev` at `ff6d192`, stabilizing native mobile Google Sign-In by sending backend `{ googleToken }`, preserving legacy backend `code` compatibility, and refreshing Google OAuth/env/EAS setup docs. GitHub backend, web, mobile, security, quality, validation, PR-size, branch, and mobile env checks passed after the PR title was corrected and the PR was reopened for fresh checks. Local validation on the feature branch passed for `backend` Google auth Jest 9/9 with Docker Postgres/Redis access, focused mobile AuthScreen Jest 12/12, mobile TypeScript, mobile `env:check`, and `git diff --check` | 95/100 |
 | June 1, 2026 | Codex | Verified PR #177 merged into `dev` at `8de960e`, adding retrieval-miss routing guidance and regression coverage so observed broad-doc/status outranking cases route through source-map guidance first. GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed; local validation on the feature branch passed for `knowledge:validate`, `knowledge:regression -- --json`, `knowledge:compact -- --check`, `knowledge:rebuild-if-stale`, `knowledge:measure-savings`, `knowledge:context -- "retrieval miss broad docs source-map route vector database" --limit 3`, and `git diff --check` | 95/100 |
 | June 1, 2026 | Codex | Verified PR #175 merged into `dev` at `793ec60`, refreshing compact status mirrors and source records so the tracked mirror freshness gate is green again. GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed; local validation on the feature branch passed for `knowledge:compact -- --check`, `knowledge:rebuild-if-stale`, `knowledge:validate`, `knowledge:regression -- --json`, `knowledge:measure-savings`, `knowledge:context -- "current project status" --limit 1`, `knowledge:scan-hit-rate`, and `git diff --check` | 95/100 |
@@ -37,7 +38,7 @@
 | May 16, 2026 | Codex | Reconciled status report against current project claims: aligned scorecard to 96/100, kept web/backend dev services deployed and mobile EAS-ready but app-store deployment deferred during active development, updated web test evidence to 85/85 passing, documented curated agent workflow tooling and kept GCloud MCP config disabled for future use | 96/100 |
 | May 4, 2026 | Kilo Code | Dark/Light Mode Phase 2 in progress: Fixed NotificationsScreen.tsx (useTheme import, moved styles inside component with useMemo), migrated ReferralScreen.tsx and PointsHistoryScreen.tsx to use useTheme() hook with dynamic styles, StatusBar fixes applied to MyBookingsScreen, QRScannerScreen, EarningsScreen, ListYourSpot, MyListingsScreen, PointsHistoryScreen, ReferralScreen | 93/100 |
 | May 4, 2026 | Kilo Code | Dark/Light Mode COMPLETE: Migrated all remaining components (Chip, PhotoUploader, YearSelector, MakeModelSelector, ColorPicker, CarPreview, SkeletonLoader, Avatar, BottomSheet) to useTheme() hook. Verified all 27 screens and 28 components now use useTheme() with useMemo for dynamic styles. No remaining direct `colors` imports from theme in any screen or component. | 95/100 |
-  | May 4, 2026 | Kilo Code | Fixed ReferralScreen and PointsHistoryScreen: useStatusBarStyle hook integration with expo-status-bar, moved useStatusBarStyle() calls to top of components (Rules of Hooks compliance), fixed StatusBar style values from 'light-content'/'dark-content' to proper 'light'/'dark', improved PointsHistoryItem with formatType function at file top | 95/100 |
+ | May 4, 2026 | Kilo Code | Fixed ReferralScreen and PointsHistoryScreen: useStatusBarStyle hook integration with expo-status-bar, moved useStatusBarStyle() calls to top of components (Rules of Hooks compliance), fixed StatusBar style values from 'light-content'/'dark-content' to proper 'light'/'dark', improved PointsHistoryItem with formatType function at file top | 95/100 |
 | May 11, 2026 | Kilo Code | Implemented penalty system for late returns and rule violations: added penalty fields to User schema, created penalty service, updated marketplace controller and points system, enhanced booking expiry service, updated 20+ mobile screens to display penalty information and warnings, improved navigation and header components | 96/100 |
 | May 4, 2026 | Kilo Code | Fixed HomeDashboard.tsx syntax errors (broken hooks, missing brackets, useStatusBarStyle hook placement), removed console.log statements from PointsHistoryScreen.tsx and api.ts, cleaned up unused imports, added missing /points/history backend route for PointsHistoryScreen API calls | 95/100 |
  | May 4, 2026 | Kilo Code | Explore Page Revamp Phase 5 complete (marker clustering, offline fallback, LoadingSkeleton, haptics, a11y, perf), fixed network detection false-positives (useNetworkStatus hook: Google HEAD→generate_204 GET) | 93/100 |
@@ -49,11 +50,11 @@
 | May 2, 2026 | Kilo Code | Removed payment methods stub endpoints (M1) - no PaymentMethod model in schema | 75/100 |
 | May 2, 2026 | Kilo Code | Updated KILO_OPINION_REQUEST.md: Added error handling & host booking prevention to Already Clean, marked Sprint 4 item 18 as fixed, updated M2 earnings controller status | 75/100 |
 | May 2, 2026 | Kilo Code | MyVehiclesScreen redesign: 3-step wizard for adding vehicles (Year/Make/Model → Color → License Plate), visual car preview, color swatches, country license plate formats | 75/100 |
-|   | May 2, 2026 | Kilo Code | Backend fix: isActive boolean parsing in /analytics/zones, prisma seed updates for ZoneMetrics, non-destructive zone seeding script created | 75/100 |
+| | May 2, 2026 | Kilo Code | Backend fix: isActive boolean parsing in /analytics/zones, prisma seed updates for ZoneMetrics, non-destructive zone seeding script created | 75/100 |
 | May 2, 2026 | Kilo Code | Auto-release feature for open-time bookings: implemented backend logic to automatically release parking slots after grace period, added 8 new test cases | 75/100 |
 | May 2, 2026 | Kilo Code | Fixed HIGH priority issues: H1 Google OAuth token verification, H2 Maps API key authentication, H3 geofencePolygon parsing, H4 geofence race condition fix, H6 GCS upload error checking, H9 duplicate geofencing hook removed | 75/100 |
-|   | May 1, 2026 | Kilo Code | Phase 6A Analytics: All 7 backend endpoints tested and verified, mobile API layer + orchestration service + geofencing hook created, zone overlay on ExploreMap, PRs #126/#127 ready | 75/100 |
-|  | May 1, 2026 | Kilo Code | Backend fix: GET /analytics/zones response renamed centerLat/centerLon → centroidLat/centroidLon to match mobile Zone type | 71/100 |
+| | May 1, 2026 | Kilo Code | Phase 6A Analytics: All 7 backend endpoints tested and verified, mobile API layer + orchestration service + geofencing hook created, zone overlay on ExploreMap, PRs #126/#127 ready | 75/100 |
+| | May 1, 2026 | Kilo Code | Backend fix: GET /analytics/zones response renamed centerLat/centerLon → centroidLat/centroidLon to match mobile Zone type | 71/100 |
 | May 1, 2026 | Claude | Phase 6A analytics: Redux slice, geofence service, opt-in modal, ExploreMap zone availability badges, analyticsAPI (6 endpoints), types | 70/100 |
 | Apr 18, 2026 | Claude | Mobile fixes: booking tabs by date, booking details in ParkingDetail, map→Explore navigation, push notif fallback | 65/100 |
 | Apr 9, 2026 | Claude | Booking system overhaul: rental modes, extensions, cash payment, expiry protocol, tests | 85/100 |
@@ -74,11 +75,11 @@
 | May 2, 2026 | Kilo Code | Removed payment methods stub endpoints (M1) - no PaymentMethod model in schema | 75/100 |
 | May 2, 2026 | Kilo Code | Updated KILO_OPINION_REQUEST.md: Added error handling & host booking prevention to Already Clean, marked Sprint 4 item 18 as fixed, updated M2 earnings controller status | 75/100 |
 | May 2, 2026 | Kilo Code | MyVehiclesScreen redesign: 3-step wizard for adding vehicles (Year/Make/Model → Color → License Plate), visual car preview, color swatches, country license plate formats | 75/100 |
-|   | May 2, 2026 | Kilo Code | Backend fix: isActive boolean parsing in /analytics/zones, prisma seed updates for ZoneMetrics, non-destructive zone seeding script created | 75/100 |
+| | May 2, 2026 | Kilo Code | Backend fix: isActive boolean parsing in /analytics/zones, prisma seed updates for ZoneMetrics, non-destructive zone seeding script created | 75/100 |
 | May 2, 2026 | Kilo Code | Auto-release feature for open-time bookings: implemented backend logic to automatically release parking slots after grace period, added 8 new test cases | 75/100 |
 | May 2, 2026 | Kilo Code | Fixed HIGH priority issues: H1 Google OAuth token verification, H2 Maps API key authentication, H3 geofencePolygon parsing, H4 geofence race condition fix, H6 GCS upload error checking, H9 duplicate geofencing hook removed | 75/100 |
-|   | May 1, 2026 | Kilo Code | Phase 6A Analytics: All 7 backend endpoints tested and verified, mobile API layer + orchestration service + geofencing hook created, zone overlay on ExploreMap, PRs #126/#127 ready | 75/100 |
-|  | May 1, 2026 | Kilo Code | Backend fix: GET /analytics/zones response renamed centerLat/centerLon → centroidLat/centroidLon to match mobile Zone type | 71/100 |
+| | May 1, 2026 | Kilo Code | Phase 6A Analytics: All 7 backend endpoints tested and verified, mobile API layer + orchestration service + geofencing hook created, zone overlay on ExploreMap, PRs #126/#127 ready | 75/100 |
+| | May 1, 2026 | Kilo Code | Backend fix: GET /analytics/zones response renamed centerLat/centerLon → centroidLat/centroidLon to match mobile Zone type | 71/100 |
 | May 1, 2026 | Claude | Phase 6A analytics: Redux slice, geofence service, opt-in modal, ExploreMap zone availability badges, analyticsAPI (6 endpoints), types | 70/100 |
 | Apr 18, 2026 | Claude | Mobile fixes: booking tabs by date, booking details in ParkingDetail, map→Explore navigation, push notif fallback | 65/100 |
 | Apr 9, 2026 | Claude | Booking system overhaul: rental modes, extensions, cash payment, expiry protocol, tests | 85/100 |
@@ -111,15 +112,15 @@ This is the **primary project status log**. Keep historical sections labeled cle
 
 This is a **living document** that tracks ParkPal's actual state based on deployment data and test results. It gets updated with every significant progress milestone.
 
-### Current Reconciliation (July 16, 2026)
+### Current Reconciliation (July 19, 2026)
 
 **Current Claims vs Supporting Evidence:**
-- **Production readiness:** 95/100 after PR #153 reduced agent startup overhead, PR #155 added renter behavior status/account-standing UX, PR #156 shipped shared mobile list states plus dark-mode cleanup, PR #157 added Google parking candidate discovery scans, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized web auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, and PR #179 stabilized native mobile Google Sign-In. Future deployment health validation is still needed before beta/deployment readiness claims are raised.
-- **Branch state:** `origin/dev` is at `ff6d192` after PR #179; no open PRs remain against `dev` as verified by `gh pr list --base dev --state open` on July 16, 2026.
-- **Backend:** GitHub Backend Tests passed for PR #179 on July 16, 2026. Focused local Google auth validation passed 9/9 on the feature branch with Docker Postgres/Redis access. Latest local backend full-suite evidence remains 494/496 passing with 2 skipped on May 25, 2026, run with `GCS_BUCKET_NAME=test-bucket npm test -- --runInBand --no-watchman` against the existing local test setup. Cloud Run `/health` rechecks belong to future deployment/beta validation.
-- **Web:** GitHub Frontend Web Tests passed for PR #179 on July 16, 2026. Latest local web evidence remains 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization.
-- **Mobile:** GitHub Frontend Mobile Checks and Mobile Environment Check passed for PR #179 on July 16, 2026. Focused local AuthScreen Jest passed 12/12, mobile TypeScript passed, and mobile `env:check` passed on the feature branch. Latest broader local mobile evidence remains Jest 90/90 passing on June 1, 2026. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development.
-- **Workflow tooling:** The compact startup card, repo-local knowledge index, tracked compact JSONL mirrors, and archived legacy agent/skill surfaces are intended project tooling; PR #171 added signup/register 400 routing coverage, PR #173 added `knowledge:scan-hit-rate` for scanner-derived coverage/gap reporting, PR #175 refreshed the tracked compact status mirrors, and PR #177 added retrieval-miss review guidance plus regression coverage for broad-doc/status outranking. Knowledge validation/regression, scanner checks, and `knowledge:compact -- --check` passed on June 1, 2026 after rebuilding the ignored local DB in clean validation worktrees. The generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
+- **Production readiness:** 95/100 after PR #153 reduced agent startup overhead, PR #155 added renter behavior status/account-standing UX, PR #156 shipped shared mobile list states plus dark-mode cleanup, PR #157 added Google parking candidate discovery scans, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized web auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, PR #179 stabilized native mobile Google Sign-In, and PR #181 integrated native Apple/Facebook auth plus map stability. Future deployment health validation, native dev-build smoke evidence, and beta distribution gates are still needed before beta/deployment readiness claims are raised.
+- **Branch state:** `origin/dev` is at `6ebe61e` after PR #181; no open PRs remain against `dev` as verified by `gh pr list --base dev --state open` on July 19, 2026.
+- **Backend:** GitHub Backend Tests passed for PR #181 on July 19, 2026. Focused local backend validation for the PR #181 integration passed 110/110 across `auth`, `googleAuth`, `marketplace`, `parkingCandidates.routes`, and `rateLimit` Jest after applying the social-auth migration to local dev and test databases. Latest local backend full-suite evidence remains 494/496 passing with 2 skipped on May 25, 2026, run with `GCS_BUCKET_NAME=test-bucket npm test -- --runInBand --no-watchman` against the existing local test setup. Cloud Run `/health` rechecks belong to future deployment/beta validation.
+- **Web:** GitHub Frontend Web Tests passed for PR #181 on July 19, 2026. Latest local web evidence remains 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization.
+- **Mobile:** GitHub Frontend Mobile Checks and Mobile Environment Check passed for PR #181 on July 19, 2026. Local PR #181 integration validation passed for mobile `npm ci`, `env:check`, TypeScript, and Jest 104/104 before merge. Latest broader pre-PR #181 mobile evidence remains Jest 90/90 passing on June 1, 2026. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development. Native Apple/Facebook auth and map config still need a rebuilt dev-client smoke pass.
+- **Workflow tooling:** The compact startup card, repo-local knowledge index, tracked compact JSONL mirrors, and archived legacy agent/skill surfaces are intended project tooling. PR #171 added signup/register 400 routing coverage, PR #173 added `knowledge:scan-hit-rate` for scanner-derived coverage/gap reporting, PR #175 refreshed the tracked compact status mirrors, and PR #177 added retrieval-miss review guidance plus regression coverage for broad-doc/status outranking. Knowledge validation/regression, scanner checks, and `knowledge:compact -- --check` passed on June 1, 2026 after rebuilding the ignored local DB in clean validation worktrees. The generated SQLite DB is ignored, GCloud MCP config is retained but disabled for future use, and auto-commit hooks are excluded from commit.
 
 ### Current State (July 16, 2026)
 
@@ -205,9 +206,9 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ **Database Migrations:** Vehicle and Notification tables added
 
 **Test Status:**
-- Backend: GitHub Backend Tests passed for PR #179 on July 16, 2026 ✅; focused local Google auth Jest passed 9/9 on the feature branch with Docker Postgres/Redis access; latest local backend full-suite evidence remains 494/496 passing with 2 skipped on May 25, 2026
-- Mobile: GitHub Frontend Mobile Checks and Mobile Environment Check passed for PR #179 on July 16, 2026 ✅; focused local AuthScreen Jest passed 12/12, mobile TypeScript passed, and mobile `env:check` passed on the feature branch; latest broader local mobile Jest run remains 90/90 passing on June 1, 2026
-- Web: GitHub Frontend Web Tests passed for PR #179 on July 16, 2026 ✅; latest local web run remains 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization
+- Backend: GitHub Backend Tests passed for PR #179 on July 16, 2026 ✅. Focused local Google auth Jest passed 9/9 on the feature branch with Docker Postgres/Redis access. Latest local backend full-suite evidence remains 494/496 passing with 2 skipped on May 25, 2026
+- Mobile: GitHub Frontend Mobile Checks and Mobile Environment Check passed for PR #179 on July 16, 2026 ✅. Focused local AuthScreen Jest passed 12/12, mobile TypeScript passed, and mobile `env:check` passed on the feature branch. Latest broader local mobile Jest run remains 90/90 passing on June 1, 2026
+- Web: GitHub Frontend Web Tests passed for PR #179 on July 16, 2026 ✅. Latest local web run remains 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization
 - Startup: Fresh `start` smoke test passed on May 25, 2026 from a clean `origin/dev` worktree and was recorded by PR #160
 - **Note:** Mobile integration fixes applied (booking tabs, ParkingDetail, push notifications)
 
@@ -409,6 +410,8 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 **Testing:**
 1. **Local test evidence refreshed**
+   - GitHub Mobile Environment Check plus backend, web, mobile, security, code quality, PR validation, PR-size, and branch checks passed for PR #181 on July 19, 2026.
+   - Local PR #181 integration validation passed before merge for mobile `npm ci`, mobile `env:check`, mobile TypeScript, mobile Jest 104/104, Prisma validate, Expo config, backend syntax checks, `git diff --check`, and focused backend auth/googleAuth/marketplace/parkingCandidates/rateLimit Jest 110/110 after applying the social-auth migration to local dev and test databases.
    - GitHub backend, web, mobile, security, quality, validation, PR-size, branch, and mobile env checks passed for PR #179 on July 16, 2026.
    - Local Google Sign-In validation on the PR #179 feature branch passed for backend Google auth Jest 9/9 with Docker Postgres/Redis access, focused mobile AuthScreen Jest 12/12, mobile TypeScript, mobile `env:check`, and `git diff --check`.
    - GitHub backend, web, mobile, security, quality, validation, PR-size, and branch checks passed for PR #177 on June 1, 2026.
@@ -457,9 +460,10 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 ## Open Pull Requests
 
 **Currently Open Against `dev`:**
-- None. Verified by `gh pr list --base dev --state open` on July 16, 2026.
+- None. Verified by `gh pr list --base dev --state open` on July 19, 2026.
 
 **Recently Merged:**
+- #181: Integrate native auth and map stability
 - #179: Stabilize mobile Google Sign-In
 - #177: Add retrieval-miss routing coverage
 - #175: Refresh compact status mirrors
@@ -499,10 +503,10 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 | Category | Score | Status | Reality Check |
 |----------|-------|--------|---------------|
-| **Backend Functionality** | 94/100 | GOOD | Deployed but `/health` is degraded while the database check is down |
-| **Frontend Deployment** | 90/100 | GOOD | Web dev service deployed; mobile EAS-ready, app-store deployment deferred during development |
-| **Infrastructure** | 92/100 | GOOD | Cloud Run reachable; Secret Manager and Redis health checks passed; database health check failed |
-| **Testing** | 92/100 | GOOD | Latest local evidence: web 85/85 passing in 28.37s, backend 494/496 passing with 2 skipped, mobile 90/90 passing, mobile TypeScript passing, and targeted mobile booking tests 9/9 passing |
+| **Backend Functionality** | 94/100 | GOOD | Deployed historically; native social auth and map read-rate behavior are integrated, with Cloud Run `/health` recheck still pending for beta/deployment readiness |
+| **Frontend Deployment** | 90/100 | GOOD | Web dev service deployed; mobile EAS/dev-client config is tracked, app-store deployment deferred during development |
+| **Infrastructure** | 92/100 | GOOD | Cloud Run deployment evidence exists historically; Secret Manager remains documented as operational; Redis remains deferred; fresh health recheck pending |
+| **Testing** | 93/100 | GOOD | Latest evidence: PR #181 GitHub checks passed, focused backend 110/110 passing, mobile Jest 104/104 passing, mobile TypeScript/env check passing, Prisma validate passing; older full-suite evidence remains web 85/85 and backend 494/496 with 2 skipped |
 | **Security** | 95/100 | EXCELLENT | Secret Manager operational, auth tested, no current critical blocker documented |
 | **Performance** | 92/100 | GOOD | Cost-optimized Cloud Run; Redis deferred until scale requires it |
 | **Monitoring** | 97/100 | EXCELLENT | Automated health checks, logging, deployment status skills |
@@ -515,7 +519,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 **Previous (Mar 10 AM):** 82/100
 **Previous (Mar 10 PM):** 84/100
 **Previous (Mar 12 PM):** 89 (historical)
-**Current Reality (July 16):** 95/100
+**Current Reality (July 19):** 95/100
 **Progress:** +48 points since Feb 24
 
 ---
@@ -528,17 +532,17 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Impact:** Backend test confidence improved after PR #155-#157 and the local full-suite evidence was refreshed during the PR #161 regression pass
 - **Initial:** 50/271 passing (18.5%)
 - **Previous:** 235/271 passing (86.7%)
-- **Current:** GitHub Backend Tests passed for PR #179 on July 16, 2026 ✅; focused local Google auth Jest passed 9/9 on the PR #179 feature branch with Docker Postgres/Redis access; local backend full suite passed 494/496 with 2 skipped on May 25, 2026; focused local candidate-scan backend tests passed 18/18 on May 25, 2026
+- **Current:** GitHub Backend Tests passed for PR #181 on July 19, 2026 ✅. Focused local backend validation for PR #181 passed 110/110 across auth, Google auth, marketplace, parking candidates, and rate-limit behavior after applying the social-auth migration locally. Local backend full suite passed 494/496 with 2 skipped on May 25, 2026. Focused local candidate-scan backend tests passed 18/18 on May 25, 2026
 - **Target:** 95%+ (273+/288 passing)
 - **What Was Fixed (Feb 24 - Mar 10, 2026):**
-  - ✅ Installed PostgreSQL 16 locally (Feb 24)
-  - ✅ Created test database (parknquik_test) (Feb 24)
-  - ✅ Ran Prisma migrations on test DB (Feb 24)
-  - ✅ Fixed test fixture password fields (Mar 10) **+34 tests!**
-  - ✅ Fixed parking slot creation fields (Mar 10)
-  - ✅ Added email service tests (Mar 10) **+18 tests!**
-  - **Total Progress:** +219 tests passing (+78% improvement)
-- **Remaining:** Keep full-suite backend regression as the standard pre-release confidence gate; no immediate backend test-status blocker remains for the current local-first stabilization pass
+   - ✅ Installed PostgreSQL 16 locally (Feb 24)
+   - ✅ Created test database (parknquik_test) (Feb 24)
+   - ✅ Ran Prisma migrations on test DB (Feb 24)
+   - ✅ Fixed test fixture password fields (Mar 10) **+34 tests!**
+   - ✅ Fixed parking slot creation fields (Mar 10)
+   - ✅ Added email service tests (Mar 10) **+18 tests!**
+   - **Total Progress:** +219 tests passing (+78% improvement)
+- **Remaining:** Keep full-suite backend regression as the standard pre-release confidence gate. No immediate backend test-status blocker remains for the current local-first stabilization pass
 
 **2. Redis Not Configured** ⏳ **DEFERRED**
 - **Impact:** No caching, slightly degraded performance
@@ -551,25 +555,25 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Current:** UP ✅
 - **Completed:** March 2, 2026
 - **Actions Taken:**
-  - ✅ Fixed GCP Secret Manager IAM permissions
-  - ✅ Verified all secrets loading correctly
-  - ✅ Tested PayMongo, SMTP, Maps API integrations
-  - ✅ All integrations operational
+   - ✅ Fixed GCP Secret Manager IAM permissions
+   - ✅ Verified all secrets loading correctly
+   - ✅ Tested PayMongo, SMTP, Maps API integrations
+   - ✅ All integrations operational
 
 **Mobile Analytics Integration** ✅ **COMPLETE!**
 - **Impact:** Full analytics pipeline operational (zone tracking, activity logging, session management)
 - **Current:** COMPLETE ✅
 - **Completed:** May 1, 2026
 - **Actions Taken:**
-  - ✅ Backend: 7 analytics endpoints implemented and tested
-  - ✅ Mobile API Layer: `analyticsApi.ts` with typed endpoints
-  - ✅ Orchestration Service: `analytics.ts` with privacy controls
-  - ✅ Geofencing Hook: `useAnalyticsGeofencing.ts` with Haversine distance
-  - ✅ ExploreMap Zone Overlays: Green (active) / gray (available) circles
-  - ✅ 5 Analytics Zones Seeded: SM MOA, Ayala Center, BGC, UP Diliman, Manila Ocean Park
-  - ✅ Full Pipeline Tested: enter → activity → parking → exit → session complete
-  - ✅ May 2: isActive boolean parsing fix in /analytics/zones route
-  - ✅ May 2: Non-destructive zone seeding script created
+   - ✅ Backend: 7 analytics endpoints implemented and tested
+   - ✅ Mobile API Layer: `analyticsApi.ts` with typed endpoints
+   - ✅ Orchestration Service: `analytics.ts` with privacy controls
+   - ✅ Geofencing Hook: `useAnalyticsGeofencing.ts` with Haversine distance
+   - ✅ ExploreMap Zone Overlays: Green (active) / gray (available) circles
+   - ✅ 5 Analytics Zones Seeded: SM MOA, Ayala Center, BGC, UP Diliman, Manila Ocean Park
+   - ✅ Full Pipeline Tested: enter → activity → parking → exit → session complete
+   - ✅ May 2: isActive boolean parsing fix in /analytics/zones route
+   - ✅ May 2: Non-destructive zone seeding script created
 
 ### P1 - HIGH PRIORITY (Must Fix Before Beta)
 
@@ -578,25 +582,25 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Current:** DEPLOYED ✅
 - **Completed:** March 12, 2026
 - **Actions Taken:**
-  - ✅ Created GitHub Actions workflow (deploy-web.yml)
-  - ✅ Configured Docker multi-stage build
-  - ✅ Set up GitHub secrets (VITE_API_BASE_URL, VITE_GOOGLE_MAPS_API_KEY, VITE_PAYMONGO_PUBLIC_KEY)
-  - ✅ Deployed to Cloud Run (parkpal-web-dev)
-  - ✅ Fixed Node version issue (18 → 20)
-  - ✅ Fixed nginx DNS resolution issue
-  - ✅ Health check passing
-  - **URL:** https://parkpal-web-dev-cxntrkjjmq-as.a.run.app
+   - ✅ Created GitHub Actions workflow (deploy-web.yml)
+   - ✅ Configured Docker multi-stage build
+   - ✅ Set up GitHub secrets (VITE_API_BASE_URL, VITE_GOOGLE_MAPS_API_KEY, VITE_PAYMONGO_PUBLIC_KEY)
+   - ✅ Deployed to Cloud Run (parkpal-web-dev)
+   - ✅ Fixed Node version issue (18 → 20)
+   - ✅ Fixed nginx DNS resolution issue
+   - ✅ Health check passing
+   - **URL:** https://parkpal-web-dev-cxntrkjjmq-as.a.run.app
 
 **5. Mobile App Distribution**
 - **Impact:** Users cannot access mobile app through public stores yet
 - **Current:** EAS-ready, app-store deployment intentionally deferred during active development
 - **Effort:** 1 week when beta/public distribution becomes the priority
 - **Action Required Later:**
-  - Confirm beta scope and release criteria
-  - Configure or verify EAS Build
-  - Submit to Apple App Store / TestFlight when ready
-  - Submit to Google Play testing track when ready
-  - Wait for approvals
+   - Confirm beta scope and release criteria
+   - Configure or verify EAS Build
+   - Submit to Apple App Store / TestFlight when ready
+   - Submit to Google Play testing track when ready
+   - Wait for approvals
 
 **6. Email Service** ✅ **COMPLETE + UPGRADED!**
 - **Impact:** Password resets working, better deliverability
@@ -604,14 +608,14 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Initial Completion:** March 2, 2026 (SMTP)
 - **Upgrade Completion:** March 10, 2026 (Resend API)
 - **Actions Taken:**
-  - ✅ Migrated from Nodemailer (SMTP) to Resend API
-  - ✅ Better deliverability (no SMTP firewall issues)
-  - ✅ Simplified secret management (4 secrets → 1)
-  - ✅ Added comprehensive test suite (18 tests)
-  - ✅ Created EMAIL_TESTING_GUIDE.md
-  - ✅ Free tier: 3,000 emails/month
-  - **Previous:** Gmail SMTP (smtp.gmail.com:587)
-  - **Current:** Resend API key managed through Secret Manager
+   - ✅ Migrated from Nodemailer (SMTP) to Resend API
+   - ✅ Better deliverability (no SMTP firewall issues)
+   - ✅ Simplified secret management (4 secrets → 1)
+   - ✅ Added comprehensive test suite (18 tests)
+   - ✅ Created EMAIL_TESTING_GUIDE.md
+   - ✅ Free tier: 3,000 emails/month
+   - **Previous:** Gmail SMTP (smtp.gmail.com:587)
+   - **Current:** Resend API key managed through Secret Manager
 
 ### ✅ Recently Completed (March 15, 2026)
 
@@ -619,17 +623,17 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Completed:** March 15, 2026
 - **Impact:** Team can test mobile app locally without manual IP configuration
 - **Actions Taken:**
-  - ✅ Implemented automatic IP detection using Expo's Metro bundler (`Constants.expoConfig.hostUri`)
-  - ✅ Created hybrid fallback system (3 methods: IP override → mDNS → auto-detection)
-  - ✅ Platform-specific defaults (iOS Simulator: localhost, Android Emulator: 10.0.2.2)
-  - ✅ Physical device support with zero configuration
-  - ✅ Created `.env.local.example` template for new developers
-  - ✅ Created `scripts/get-local-ip.js` helper utility
-  - ✅ Updated comprehensive documentation (BACKEND_SWITCHING.md, mobile README.md, main README.md)
-  - ✅ Tested on multiple physical Android devices - working dynamically
-  - **Files Modified:** `src/config/api.config.ts` (complete rewrite with smart detection)
-  - **Developer Experience:** Zero manual configuration, works across all networks
-  - **Team Benefit:** New developers can run `npm start` and immediately connect to local backend
+   - ✅ Implemented automatic IP detection using Expo's Metro bundler (`Constants.expoConfig.hostUri`)
+   - ✅ Created hybrid fallback system (3 methods: IP override → mDNS → auto-detection)
+   - ✅ Platform-specific defaults (iOS Simulator: localhost, Android Emulator: 10.0.2.2)
+   - ✅ Physical device support with zero configuration
+   - ✅ Created `.env.local.example` template for new developers
+   - ✅ Created `scripts/get-local-ip.js` helper utility
+   - ✅ Updated comprehensive documentation (BACKEND_SWITCHING.md, mobile README.md, main README.md)
+   - ✅ Tested on multiple physical Android devices - working dynamically
+   - **Files Modified:** `src/config/api.config.ts` (complete rewrite with smart detection)
+   - **Developer Experience:** Zero manual configuration, works across all networks
+   - **Team Benefit:** New developers can run `npm start` and immediately connect to local backend
 
 ### ✅ Previously Completed (March 10-12, 2026)
 
@@ -637,27 +641,27 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Completed:** March 10, 2026 (Evening)
 - **Impact:** Better email deliverability, simpler configuration, production-ready
 - **Actions Taken:**
-  - ✅ Migrated from Nodemailer (SMTP) to Resend API
-  - ✅ Created RESEND_API_KEY secret in GCP
-  - ✅ Deleted old SMTP secrets (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS)
-  - ✅ Updated GitHub Actions workflow (simplified from 4 secrets → 1)
-  - ✅ Updated Cloud Run service (revision 00024-pxj)
-  - ✅ Fixed email service bugs (fallback logger structure, response handling)
-  - ✅ Created comprehensive test suite (18 tests: 17 unit + 1 integration)
-  - ✅ Created EMAIL_TESTING_GUIDE.md (450 lines)
-  - ✅ Manual testing verified on Cloud Run dev
-  - **Cost:** $0/month (within free tier: 3,000 emails/month)
+   - ✅ Migrated from Nodemailer (SMTP) to Resend API
+   - ✅ Created RESEND_API_KEY secret in GCP
+   - ✅ Deleted old SMTP secrets (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS)
+   - ✅ Updated GitHub Actions workflow (simplified from 4 secrets → 1)
+   - ✅ Updated Cloud Run service (revision 00024-pxj)
+   - ✅ Fixed email service bugs (fallback logger structure, response handling)
+   - ✅ Created comprehensive test suite (18 tests: 17 unit + 1 integration)
+   - ✅ Created EMAIL_TESTING_GUIDE.md (450 lines)
+   - ✅ Manual testing verified on Cloud Run dev
+   - **Cost:** $0/month (within free tier: 3,000 emails/month)
 
 **Backend Test Improvements** ✅ **COMPLETE!**
 - **Completed:** March 10, 2026 (Evening)
 - **Impact:** 93.4% test pass rate (up from 86.7%)
 - **Actions Taken:**
-  - ✅ Fixed test fixture password fields (34 tests fixed)
-  - ✅ Fixed parking slot creation (lat/lon, address, slotType fields)
-  - ✅ Added email service tests (+18 tests)
-  - **Progress:** 235/271 → 277/288 tests passing
-  - **Improvement:** +34 tests fixed, +18 tests added
-  - **Pass rate:** 86.7% → 93.4% (+6.7 percentage points)
+   - ✅ Fixed test fixture password fields (34 tests fixed)
+   - ✅ Fixed parking slot creation (lat/lon, address, slotType fields)
+   - ✅ Added email service tests (+18 tests)
+   - **Progress:** 235/271 → 277/288 tests passing
+   - **Improvement:** +34 tests fixed, +18 tests added
+   - **Pass rate:** 86.7% → 93.4% (+6.7 percentage points)
 
 ### ✅ Previously Completed (Feb 24 - Mar 10, 2026)
 
@@ -665,44 +669,44 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Completed:** March 2, 2026
 - **Impact:** Automated deployments, no manual work needed
 - **Actions Taken:**
-  - ✅ Created `deploy-backend.yml` GitHub Actions workflow
-  - ✅ Configured GCP service account with proper IAM roles
-  - ✅ Set up GitHub secrets (GCP_SA_KEY, GCP_PROJECT_ID)
-  - ✅ Created GitHub Environments (development, staging, production)
-  - ✅ Automated Docker build + push to Google Container Registry
-  - ✅ Automated Prisma migrations before deployment
-  - ✅ Automated health checks after deployment
-  - ✅ Successfully tested deployment (3-5 min deploy time)
+   - ✅ Created `deploy-backend.yml` GitHub Actions workflow
+   - ✅ Configured GCP service account with proper IAM roles
+   - ✅ Set up GitHub secrets (GCP_SA_KEY, GCP_PROJECT_ID)
+   - ✅ Created GitHub Environments (development, staging, production)
+   - ✅ Automated Docker build + push to Google Container Registry
+   - ✅ Automated Prisma migrations before deployment
+   - ✅ Automated health checks after deployment
+   - ✅ Successfully tested deployment (3-5 min deploy time)
 
 **Cost Optimization** ✅ **COMPLETE!**
 - **Completed:** March 2, 2026
 - **Impact:** 96% cost reduction ($300 peak → $7-12/month)
 - **Actions Taken:**
-  - ✅ Stopped Cloud SQL when not in use
-  - ✅ Deleted staging and production GCP projects
-  - ✅ Consolidated to single development project
-  - ✅ Set up billing budgets ($50, $100 thresholds)
-  - ✅ Configured email alerts for cost overruns
-  - ✅ Cloud Run scales to zero when idle
-  - **Current monthly cost:** $7-12 ✅
+   - ✅ Stopped Cloud SQL when not in use
+   - ✅ Deleted staging and production GCP projects
+   - ✅ Consolidated to single development project
+   - ✅ Set up billing budgets ($50, $100 thresholds)
+   - ✅ Configured email alerts for cost overruns
+   - ✅ Cloud Run scales to zero when idle
+   - **Current monthly cost:** $7-12 ✅
 
 **CLI/IDE Integration & Workflow Tooling** ✅ **COMPLETE!**
 - **Completed:** March 10, 2026
 - **Impact:** 30-50% faster GCP operations, instant code diagnostics, 90% fewer PR failures
 - **Actions Taken:**
-  - ✅ Installed IDE MCP (VS Code diagnostics + Python execution)
-  - ✅ Documented GCloud CLI workflows for deployment and cost checks
-  - ✅ Created `backend-diagnostics` skill (instant error detection)
-  - ✅ Created `deployment-status` skill (1-command infrastructure health)
-  - ✅ Created `gcp-cost-monitor` skill (real-time cost tracking)
-  - ✅ Created `test-runner` skill (intelligent test execution & parsing)
-  - ✅ Created `pr-checker` skill (orchestrator: 4 skills + code-reviewer agent)
-  - ✅ Documented integration guide
-  - ✅ Created skills quick reference card
-  - ✅ Created future skills roadmap (11 planned skills)
-  - **Skills operational:** 7 total (GCloud CLI workflows, 1 orchestrator, standard repo skills)
-  - **Agents available:** 2 (code-reviewer, python-pro)
-  - **Workflow acceleration:** 8 minutes saved per PR via smart orchestration
+   - ✅ Installed IDE MCP (VS Code diagnostics + Python execution)
+   - ✅ Documented GCloud CLI workflows for deployment and cost checks
+   - ✅ Created `backend-diagnostics` skill (instant error detection)
+   - ✅ Created `deployment-status` skill (1-command infrastructure health)
+   - ✅ Created `gcp-cost-monitor` skill (real-time cost tracking)
+   - ✅ Created `test-runner` skill (intelligent test execution & parsing)
+   - ✅ Created `pr-checker` skill (orchestrator: 4 skills + code-reviewer agent)
+   - ✅ Documented integration guide
+   - ✅ Created skills quick reference card
+   - ✅ Created future skills roadmap (11 planned skills)
+   - **Skills operational:** 7 total (GCloud CLI workflows, 1 orchestrator, standard repo skills)
+   - **Agents available:** 2 (code-reviewer, python-pro)
+   - **Workflow acceleration:** 8 minutes saved per PR via smart orchestration
 
 ### P2 - MEDIUM PRIORITY (Fix Before Launch)
 
@@ -711,18 +715,18 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - **Current:** IMPLEMENTED ✅
 - **Completed:** April 18, 2026
 - **Actions Taken:**
-  - ✅ Integrated expo-image-picker in ListYourSpot mobile screen
-  - ✅ Full CRUD for photo upload functional
-  - ✅ GCP Cloud Storage integration ready
+   - ✅ Integrated expo-image-picker in ListYourSpot mobile screen
+   - ✅ Full CRUD for photo upload functional
+   - ✅ GCP Cloud Storage integration ready
 
 **8. Performance Testing**
 - **Impact:** Unknown system capacity
 - **Current:** Infrastructure exists but Redis down affects results
 - **Effort:** 3-5 days (after Redis fixed)
 - **Action Required:**
-  - Fix Redis first
-  - Run load tests
-  - Optimize bottlenecks
+   - Fix Redis first
+   - Run load tests
+   - Optimize bottlenecks
 
 ---
 
@@ -1136,27 +1140,27 @@ The following March plan is retained for history only. Current status is documen
 
 ## Next Steps
 
-### Immediate (July 16, 2026)
+### Immediate (July 19, 2026)
 
-1. Keep `docs/BETA_READINESS_CHECKLIST.md` as the future beta/deployment gate before GCP deployment validation or app-store submission work resumes.
-2. Recheck deployment/beta health evidence next: backend Cloud Run `/health`, web Cloud Run health, API docs availability, and required beta env/secrets for Google Maps, Google Sign-In, payments, and email.
-3. Produce a separate deployment/beta evidence plan before changing deployment config or secrets.
-4. Run a broader local backend or web regression only if the next product task needs confidence beyond the passing PR #179 GitHub checks and the focused local Google Sign-In validation recorded above.
+1. Rebuild and install a fresh native development client before validating Apple/Facebook auth, Google Sign-In, Google Maps tiles, and native map key behavior. Metro-only reloads are not enough for these native config changes.
+2. Run a physical-device smoke pass for Explore Map: map tiles, marker loading, manual refresh, GPS recenter after route/listing focus, and backend read-rate behavior under repeated refreshes.
+3. Recheck deployment/beta health evidence next: backend Cloud Run `/health`, web Cloud Run health, API docs availability, and required beta env/secrets for Google Maps, Google Sign-In, Facebook, Apple, payments, and email.
+4. Keep `docs/BETA_READINESS_CHECKLIST.md` as the future beta/deployment gate before GCP deployment validation or app-store submission work resumes.
 
 ### This Week
 
-1. Keep Redis deferred unless scale or a concrete feature requirement changes the decision.
-2. Keep the beta-readiness checklist current as a future gate covering mobile build, payments, email, maps, monitoring, Cloud Run validation, Redis deferral, and app-store prerequisites.
+1. Produce a native-smoke evidence note after the rebuilt dev-client test pass, separating Android, iOS, and backend observations.
+2. Keep Redis deferred unless scale or a concrete feature requirement changes the decision.
 3. Preserve the Google candidate scan scheduler as disabled-by-default until deployment configuration and operations review are complete.
 
 ### Next Review
 
-**Date:** June 2, 2026
+**Date:** July 22, 2026
 **Agenda:**
-- Fresh local web/backend test evidence if broader release confidence is needed
-- Web auth/MUI test runtime profiling if full-suite web duration remains high
+- Native dev-client smoke results for Apple/Facebook/Google auth and Explore Map stability
 - Future Cloud Run health and deployment confidence gates
 - Beta-readiness checklist status
+- Whether broader backend or web regression is needed beyond the PR #181 focused validation and passing GitHub checks
 
 ---
 

@@ -249,9 +249,9 @@ The app expects the following backend API endpoints:
 - User avatar and stats
 - Member since date with badge
 - Menu sections:
-  - Account (Edit Profile, Payment, Addresses)
-  - Parking (Vehicles, Listings, Reviews)
-  - Settings (Notifications, Privacy, Help, Terms)
+   - Account (Edit Profile, Payment, Addresses)
+   - Parking (Vehicles, Listings, Reviews)
+   - Settings (Notifications, Privacy, Help, Terms)
 - Logout functionality
 
 ## Design System
@@ -317,13 +317,13 @@ error: '#ef4444'
 **Solution Implemented:**
 - ✅ Automatic IP detection via Expo Metro bundler (`Constants.expoConfig.hostUri`)
 - ✅ Hybrid fallback system with 3 methods:
-  1. Manual override (`EXPO_PUBLIC_API_URL` in `.env.local`)
-  2. mDNS hostname (`EXPO_PUBLIC_BACKEND_HOSTNAME`)
-  3. Auto-detection from Metro bundler IP
+   1. Manual override (`EXPO_PUBLIC_API_URL` in `.env.local`)
+   2. mDNS hostname (`EXPO_PUBLIC_BACKEND_HOSTNAME`)
+   3. Auto-detection from Metro bundler IP
 - ✅ Platform-specific smart defaults:
-  - iOS Simulator → `http://localhost:3001/api/v1`
-  - Android Emulator → `http://10.0.2.2:3001/api/v1`
-  - Physical Devices → Auto-extracted from Metro bundler
+   - iOS Simulator → `http://localhost:3001/api/v1`
+   - Android Emulator → `http://10.0.2.2:3001/api/v1`
+   - Physical Devices → Auto-extracted from Metro bundler
 
 **Files Created/Modified:**
 - `src/config/api.config.ts` - Complete rewrite with smart IP detection

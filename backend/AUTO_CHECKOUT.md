@@ -1,6 +1,6 @@
 # Auto-Checkout Service
 
-Automatically checks out parking sessions that exceed the 12-hour maximum duration. Runs as a cron job every 30 minutes.
+The service checks out parking sessions that exceed the 12-hour maximum duration. A cron job runs it every 30 minutes.
 
 ---
 
