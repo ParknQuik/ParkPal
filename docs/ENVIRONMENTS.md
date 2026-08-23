@@ -164,7 +164,7 @@ npx prisma migrate dev
 createdb parkpal_qa  # or parkpal_prod
 ```
 
-2. Update DATABASE_URL in .env file
+2. Update DATABASE_URL in.env file
 
 3. Run migrations:
 ```bash

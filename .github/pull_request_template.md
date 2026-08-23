@@ -1,7 +1,7 @@
 # Pull Request
 
 ## Description
-<!-- Provide a brief description of the changes in this PR -->
+<!-- Give a short description of the changes in this PR. -->
 
 ## Type of Change
 <!-- Mark the relevant option with an 'x' -->
@@ -22,14 +22,14 @@
 Fixes #(issue number)
 
 ## Changes Made
-<!-- List the main changes made in this PR -->
+<!-- List the main changes in this PR. -->
 
 -
 -
 -
 
 ## Testing
-<!-- Describe the tests you ran to verify your changes -->
+<!-- List the tests you ran to check your changes. -->
 
 - [ ] Unit tests pass
 - [ ] Integration tests pass

@@ -5,10 +5,10 @@
 - [ ] Compile the Project
 - [ ] Create and Run Task
 - [ ] Launch the Project
-- [ ] Ensure Documentation is Complete
+- [ ] Check Documentation
 
 **Progress:**
 - Project folders and initial files for backend, frontend, and docs have been created.
 - README.md and overview documentation are in place.
 
-Next: Customize the project and install required extensions if any.
+Next step: Customize the project. Install required extensions if any exist.

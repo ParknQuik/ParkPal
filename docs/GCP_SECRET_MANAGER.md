@@ -68,7 +68,7 @@ gcloud iam service-accounts keys create parkpal-service-account-key.json \
   --iam-account=parkpal-backend-service@YOUR_PROJECT_ID.iam.gserviceaccount.com
 ```
 
-Store securely — this file grants GCP access. Add to `.gitignore`.
+Warning: Store this file securely. It grants GCP access. Add it to `.gitignore`.
 
 ### 4. Upload Secrets
 

@@ -1767,7 +1767,7 @@ Android: Play Store link
 | **PayMongo** | Transaction fees | ~$20 |
 | **Google Maps API** | 10K requests/month | $0 (free tier) |
 | **EAS Builds** | Production plan | $10 |
-| **Domain** | .com registration | $1 |
+| **Domain** |.com registration | $1 |
 | **TOTAL** | | **$165-215** |
 
 ### Cost Optimization Strategies
@@ -1835,7 +1835,7 @@ If budget is extremely tight, start with:
 | **Storage** | Supabase Storage (1GB) | $0 |
 | **Web Hosting** | Vercel/Netlify free tier | $0 |
 | **Mobile Builds** | EAS free tier (limited builds) | $0 |
-| **Domain** | .com | $1 |
+| **Domain** |.com | $1 |
 | **Monitoring** | Free tier (LogRocket/Sentry) | $0 |
 | **PayMongo** | Transaction fees only | $20 |
 | **TOTAL** | | **~$26-28/month** |

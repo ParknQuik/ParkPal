@@ -20,7 +20,7 @@
 
 ## Overview
 
-ParkPal uses **Google Cloud Platform (GCP)** for all infrastructure:
+ParkPal uses **Google Cloud Platform (GCP)** for its infrastructure:
 
 - **Backend**: Cloud Run (containerized Node.js)
 - **Database**: Cloud SQL (PostgreSQL)

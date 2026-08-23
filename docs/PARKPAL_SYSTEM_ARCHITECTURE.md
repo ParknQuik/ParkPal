@@ -19,7 +19,7 @@
 
 ## Executive Summary
 
-ParknQuik is a **dual-service smart parking platform** that combines:
+ParknQuik has two smart parking services:
 
 1. **Service 1: Smart Parking Analytics** - Crowd-sourced parking availability tracking using geofencing, Google Activity Recognition API, and optional IoT sensors to calculate circling time and occupancy rates for commercial parking complexes.
 

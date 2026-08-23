@@ -20,8 +20,8 @@
 
 ### GCP Authentication
 - **GCP_SA_KEY** - Service account JSON key (already configured for backend)
-  - Location: `~/.gcp/parkpal-sa-key.json` on local machine
-  - Already exists in GitHub repository secrets
+   - Location: `~/.gcp/parkpal-sa-key.json` on local machine
+   - Already exists in GitHub repository secrets
 
 ### Environment Variables
 

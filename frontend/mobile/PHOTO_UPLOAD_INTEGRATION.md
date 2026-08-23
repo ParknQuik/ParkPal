@@ -1,4 +1,6 @@
-# Photo Upload Integration Guide
+# Photo Upload Integration
+
+This guide explains how the mobile app uploads listing photos. Guide
 
 ## Overview
 

@@ -1,5 +1,7 @@
 # Photo Upload Implementation Plan
 
+This plan defines the photo upload work for parking listings.
+
 **Feature:** GCP Cloud Storage Photo Upload
 **Branch:** `feat/photo-upload-gcs`
 **Priority:** P1 - Critical (Only remaining blocker for beta)

@@ -110,12 +110,12 @@ POST   /api/v1/webhooks/review-submitted   # Trigger points for review submissio
 #### `points_transactions`
 - `id` (PK, UUID)
 - `user_id` (FK to users, UUID)
-- `amount` (INTEGER)  # positive for earn, negative for redeem
+- `amount` (INTEGER) # positive for earn, negative for redeem
 - `type` (ENUM: booking, referral, review, promo, redemption, adjustment)
 - `description` (TEXT)
-- `related_id` (UUID, nullable)  # e.g., booking_id, referral_id
+- `related_id` (UUID, nullable) # e.g., booking_id, referral_id
 - `created_at` (TIMESTAMP)
-- `expires_at` (TIMESTAMP, nullable)  # for points with expiration
+- `expires_at` (TIMESTAMP, nullable) # for points with expiration
 
 #### `referral_codes`
 - `id` (PK, UUID)
@@ -125,7 +125,7 @@ POST   /api/v1/webhooks/review-submitted   # Trigger points for review submissio
 - `created_at` (TIMESTAMP)
 - `expires_at` (TIMESTAMP, nullable)
 - `usage_count` (INTEGER, default 0)
-- `max_uses` (INTEGER, nullable)  # for limited-time promotions
+- `max_uses` (INTEGER, nullable) # for limited-time promotions
 
 #### `referral_rewards`
 - `id` (PK, UUID)
@@ -133,7 +133,7 @@ POST   /api/v1/webhooks/review-submitted   # Trigger points for review submissio
 - `referee_id` (FK to users, UUID)
 - `reward_points` (INTEGER)
 - `status` (ENUM: pending, completed, expired, fraudulent)
-- `booking_id` (FK to bookings, UUID, nullable)  # the qualifying booking
+- `booking_id` (FK to bookings, UUID, nullable) # the qualifying booking
 - `created_at` (TIMESTAMP)
 - `completed_at` (TIMESTAMP, nullable)
 

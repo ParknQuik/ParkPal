@@ -57,11 +57,11 @@ This roadmap is a planning record. For current project state, branch status, ope
 #### Backend Test Failures (Priority 1) ✅
 - [x] Run full test suite locally to reproduce failures ✅ DONE [Feb 24]
 - [x] Categorize 221 failing tests by type ✅ DONE [Feb 24]
-  - Database connection issues (185 tests)
-  - Authentication/authorization failures
-  - Booking logic failures
-  - Parking spot query failures
-  - Integration test failures
+   - Database connection issues (185 tests)
+   - Authentication/authorization failures
+   - Booking logic failures
+   - Parking spot query failures
+   - Integration test failures
 - [x] Create tracking in STATUS_REPORT.md ✅ DONE [Feb 24]
 - [x] Fix database connection issues (estimated 30-40 tests) ✅ DONE [Feb 24] - Fixed 185 tests!
 - [x] Fix authentication issues (estimated 40-50 tests) ✅ DONE [Feb 24]
@@ -163,12 +163,12 @@ This roadmap is a planning record. For current project state, branch status, ope
 - [ ] Internal testing with TestFlight/Internal Testing
 - [ ] Fix any critical bugs found
 - [ ] Prepare app store submissions:
-  - Screenshots (6.5", 5.5" for iOS)
-  - App descriptions
-  - Privacy policy
-  - Terms of service
-  - App icons
-  - Promotional materials
+   - Screenshots (6.5", 5.5" for iOS)
+   - App descriptions
+   - Privacy policy
+   - Terms of service
+   - App icons
+   - Promotional materials
 
 **Target:** Mobile apps ready for app store submission
 
@@ -216,18 +216,18 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ### App Store Submissions
 - [ ] **iOS App Store:**
-  - Complete App Store Connect setup
-  - Upload build via Transporter
-  - Fill out app information
-  - Submit for review (7-14 days typical)
-  - Monitor review status daily
+   - Complete App Store Connect setup
+   - Upload build via Transporter
+   - Fill out app information
+   - Submit for review (7-14 days typical)
+   - Monitor review status daily
 
 - [ ] **Google Play Store:**
-  - Complete Play Console setup
-  - Upload AAB bundle
-  - Fill out app information
-  - Submit for review (1-3 days typical)
-  - Monitor review status daily
+   - Complete Play Console setup
+   - Upload AAB bundle
+   - Fill out app information
+   - Submit for review (1-3 days typical)
+   - Monitor review status daily
 
 **Target:** Both apps submitted and in review
 
@@ -235,14 +235,14 @@ This roadmap is a planning record. For current project state, branch status, ope
 - [ ] Recruit 5-10 internal testers
 - [ ] Create test scenarios document
 - [ ] Test all critical user flows:
-  - User registration
-  - Search for parking spots
-  - Make a reservation
-  - Complete payment
-  - View bookings
-  - List a parking spot (host flow)
-  - Cancel reservation
-  - Forgot password flow
+   - User registration
+   - Search for parking spots
+   - Make a reservation
+   - Complete payment
+   - View bookings
+   - List a parking spot (host flow)
+   - Cancel reservation
+   - Forgot password flow
 - [ ] Log all bugs found
 - [ ] Prioritize bugs (P0, P1, P2)
 
@@ -270,66 +270,66 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ### Beta User Recruitment (Week 5)
 - [ ] Define beta user criteria:
-  - 10 hosts (with parking spots to list)
-  - 50 drivers (need parking regularly)
-  - Mix of iOS and Android users
-  - Geographic diversity
+   - 10 hosts (with parking spots to list)
+   - 50 drivers (need parking regularly)
+   - Mix of iOS and Android users
+   - Geographic diversity
 - [ ] Recruitment channels:
-  - Friends and family
-  - Social media posts
-  - University parking areas (flyers)
-  - Office building parking areas
-  - Nextdoor/local Facebook groups
+   - Friends and family
+   - Social media posts
+   - University parking areas (flyers)
+   - Office building parking areas
+   - Nextdoor/local Facebook groups
 - [ ] Create beta user agreement
 - [ ] Setup feedback collection system:
-  - Google Form for bug reports
-  - WhatsApp group for quick feedback
-  - Weekly Zoom check-ins
+   - Google Form for bug reports
+   - WhatsApp group for quick feedback
+   - Weekly Zoom check-ins
 
 **Target:** 60 beta users recruited
 
 ### Beta Launch (Week 5)
 - [ ] **Wait for app approvals:**
-  - iOS: Monitor status (7-14 day review)
-  - Android: Monitor status (1-3 day review)
+   - iOS: Monitor status (7-14 day review)
+   - Android: Monitor status (1-3 day review)
 - [ ] **If iOS delayed:** Launch web + Android beta first
 - [ ] Onboard beta users in small batches:
-  - Batch 1: 10 users (Day 1-2)
-  - Batch 2: 20 users (Day 3-4)
-  - Batch 3: 30 users (Day 5-7)
+   - Batch 1: 10 users (Day 1-2)
+   - Batch 2: 20 users (Day 3-4)
+   - Batch 3: 30 users (Day 5-7)
 - [ ] Monitor critical metrics:
-  - Registration success rate
-  - Payment success rate
-  - Booking completion rate
-  - Error rates
-  - API response times
+   - Registration success rate
+   - Payment success rate
+   - Booking completion rate
+   - Error rates
+   - API response times
 
 **Target:** 60 beta users onboarded
 
 ### Feedback Collection (Week 6)
 - [ ] Daily monitoring of:
-  - Bug reports (prioritize and fix)
-  - User feedback (categorize by theme)
-  - System metrics (uptime, performance)
-  - Payment transactions (success rate)
+   - Bug reports (prioritize and fix)
+   - User feedback (categorize by theme)
+   - System metrics (uptime, performance)
+   - Payment transactions (success rate)
 - [ ] Weekly check-in with beta users
 - [ ] Incentivize feedback:
-  - ₱500 credit for detailed feedback
-  - ₱1,000 credit for critical bug reports
+   - ₱500 credit for detailed feedback
+   - ₱1,000 credit for critical bug reports
 - [ ] Track success metrics:
-  - 500+ test bookings target
-  - 95%+ payment success rate
-  - 99%+ uptime
-  - <500ms API response time (p95)
+   - 500+ test bookings target
+   - 95%+ payment success rate
+   - 99%+ uptime
+   - <500ms API response time (p95)
 
 **Target:** 500+ bookings, actionable feedback collected
 
 ### Beta Improvements (Week 6)
 - [ ] Analyze feedback themes
 - [ ] Prioritize improvements:
-  - P0: Critical bugs (fix immediately)
-  - P1: Major UX issues (fix before launch)
-  - P2: Nice-to-haves (defer to post-launch)
+   - P0: Critical bugs (fix immediately)
+   - P1: Major UX issues (fix before launch)
+   - P2: Nice-to-haves (defer to post-launch)
 - [ ] Implement critical fixes
 - [ ] Deploy fixes to beta environment
 - [ ] Verify fixes with beta users
@@ -352,132 +352,132 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ### Production Infrastructure (Week 7)
 - [ ] **Database:**
-  - Setup production Cloud SQL instance
-  - Configure automated backups (daily)
-  - Setup point-in-time recovery
-  - Configure read replicas (if needed)
-  - Test disaster recovery procedures
+   - Setup production Cloud SQL instance
+   - Configure automated backups (daily)
+   - Setup point-in-time recovery
+   - Configure read replicas (if needed)
+   - Test disaster recovery procedures
 
 - [ ] **Caching:**
-  - Setup production Redis (Memorystore)
-  - Configure high availability
-  - Test failover procedures
+   - Setup production Redis (Memorystore)
+   - Configure high availability
+   - Test failover procedures
 
 - [ ] **Monitoring:**
-  - Setup GCP Monitoring dashboards
-  - Configure alerts:
+   - Setup GCP Monitoring dashboards
+   - Configure alerts:
     - Uptime <99%
     - Error rate >1%
     - API p95 >500ms
     - Payment failures >5%
-  - Setup PagerDuty/on-call rotation
-  - Test alert delivery
+   - Setup PagerDuty/on-call rotation
+   - Test alert delivery
 
 - [ ] **Logging:**
-  - Configure centralized logging (Cloud Logging)
-  - Setup log retention policies
-  - Create log-based metrics
-  - Test log searching
+   - Configure centralized logging (Cloud Logging)
+   - Setup log retention policies
+   - Create log-based metrics
+   - Test log searching
 
 **Target:** Production infrastructure operational
 
 ### Security Audit (Week 7)
 - [ ] **Code Security:**
-  - Run OWASP dependency check
-  - Fix high/critical vulnerabilities
-  - Review authentication flows
-  - Review authorization (RBAC)
-  - Test rate limiting
-  - Test input validation
+   - Run OWASP dependency check
+   - Fix high/critical vulnerabilities
+   - Review authentication flows
+   - Review authorization (RBAC)
+   - Test rate limiting
+   - Test input validation
 
 - [ ] **Infrastructure Security:**
-  - Review IAM permissions (principle of least privilege)
-  - Enable Cloud Armor (DDoS protection)
-  - Configure VPC firewall rules
-  - Enable audit logging
-  - Test secret rotation
+   - Review IAM permissions (principle of least privilege)
+   - Enable Cloud Armor (DDoS protection)
+   - Configure VPC firewall rules
+   - Enable audit logging
+   - Test secret rotation
 
 - [ ] **Data Security:**
-  - Verify database encryption at rest
-  - Verify TLS/SSL for all connections
-  - Review PII handling
-  - Test data deletion flows (GDPR compliance)
+   - Verify database encryption at rest
+   - Verify TLS/SSL for all connections
+   - Review PII handling
+   - Test data deletion flows (GDPR compliance)
 
 **Target:** Security score 90+/100
 
 ### Load Testing (Week 7)
 - [ ] **Define load scenarios:**
-  - Normal load: 100 concurrent users
-  - Peak load: 500 concurrent users
-  - Stress test: 1,000+ concurrent users
+   - Normal load: 100 concurrent users
+   - Peak load: 500 concurrent users
+   - Stress test: 1,000+ concurrent users
 
 - [ ] **Run load tests:**
-  - Test API endpoints (Artillery/k6)
-  - Test payment flows
-  - Test database performance
-  - Test Redis caching
-  - Identify bottlenecks
+   - Test API endpoints (Artillery/k6)
+   - Test payment flows
+   - Test database performance
+   - Test Redis caching
+   - Identify bottlenecks
 
 - [ ] **Optimize performance:**
-  - Add indexes if needed
-  - Optimize slow queries
-  - Tune connection pools
-  - Adjust caching strategies
+   - Add indexes if needed
+   - Optimize slow queries
+   - Tune connection pools
+   - Adjust caching strategies
 
 **Target:** System handles 500 concurrent users with <500ms p95 response time
 
 ### Marketing Preparation (Week 8)
 - [ ] **Landing Page:**
-  - Update website with launch info
-  - Add email signup for waitlist
-  - Create explainer video (2-3 min)
+   - Update website with launch info
+   - Add email signup for waitlist
+   - Create explainer video (2-3 min)
 
 - [ ] **Social Media:**
-  - Create Facebook page
-  - Create Instagram account
-  - Create TikTok account
-  - Prepare launch posts (10+ ready to go)
+   - Create Facebook page
+   - Create Instagram account
+   - Create TikTok account
+   - Prepare launch posts (10+ ready to go)
 
 - [ ] **Influencer Partnerships:**
-  - Identify 5-10 local influencers
-  - Reach out with partnership offers
-  - Prepare influencer promo codes
+   - Identify 5-10 local influencers
+   - Reach out with partnership offers
+   - Prepare influencer promo codes
 
 - [ ] **Paid Advertising:**
-  - Setup Facebook Ads account
-  - Create ad creatives (5+ variations)
-  - Setup ad campaigns (paused, ready to launch)
-  - Budget: ₱10,000
+   - Setup Facebook Ads account
+   - Create ad creatives (5+ variations)
+   - Setup ad campaigns (paused, ready to launch)
+   - Budget: ₱10,000
 
 - [ ] **Launch Event:**
-  - Plan launch event (virtual or in-person)
-  - Invite beta users, press, influencers
-  - Prepare press release
-  - Budget: ₱20,000
+   - Plan launch event (virtual or in-person)
+   - Invite beta users, press, influencers
+   - Prepare press release
+   - Budget: ₱20,000
 
 **Target:** Marketing materials ready, campaigns prepared
 
 ### Final Testing (Week 8)
 - [ ] **End-to-End Testing:**
-  - Test full user journeys (driver + host)
-  - Test payment flows (all 4 methods)
-  - Test edge cases (cancellations, refunds)
-  - Test mobile + web + API integration
+   - Test full user journeys (driver + host)
+   - Test payment flows (all 4 methods)
+   - Test edge cases (cancellations, refunds)
+   - Test mobile + web + API integration
 
 - [ ] **Cross-Browser Testing:**
-  - Chrome, Firefox, Safari, Edge
-  - Mobile Safari, Chrome Mobile
+   - Chrome, Firefox, Safari, Edge
+   - Mobile Safari, Chrome Mobile
 
 - [ ] **Accessibility Testing:**
-  - Screen reader testing
-  - Keyboard navigation
-  - Color contrast
-  - WCAG AA compliance
+   - Screen reader testing
+   - Keyboard navigation
+   - Color contrast
+   - WCAG AA compliance
 
 - [ ] **Rollback Testing:**
-  - Test database rollback procedures
-  - Test deployment rollback
-  - Document rollback steps
+   - Test database rollback procedures
+   - Test deployment rollback
+   - Document rollback steps
 
 **Target:** All critical flows tested and working
 
@@ -511,10 +511,10 @@ This roadmap is a planning record. For current project state, branch status, ope
 - [ ] Send press release
 - [ ] Launch influencer campaigns
 - [ ] Monitor in real-time:
-  - User registrations
-  - Error rates
-  - Payment transactions
-  - API performance
+   - User registrations
+   - Error rates
+   - Payment transactions
+   - API performance
 
 **Afternoon/Evening:**
 - [ ] Respond to user feedback
@@ -529,11 +529,11 @@ This roadmap is a planning record. For current project state, branch status, ope
 **Daily Tasks:**
 - [ ] Morning team standup (9:00 AM)
 - [ ] Monitor key metrics:
-  - Total users (target: 1,000 by end of week)
-  - Daily Active Users (target: 200+)
-  - Bookings completed (target: 500+)
-  - Payment success rate (target: 95%+)
-  - Uptime (target: 99.9%+)
+   - Total users (target: 1,000 by end of week)
+   - Daily Active Users (target: 200+)
+   - Bookings completed (target: 500+)
+   - Payment success rate (target: 95%+)
+   - Uptime (target: 99.9%+)
 - [ ] Respond to user support requests (<2 hour response time)
 - [ ] Fix bugs (prioritize P0, P1)
 - [ ] Adjust marketing based on performance
@@ -646,42 +646,42 @@ This roadmap is a planning record. For current project state, branch status, ope
 **1. App Store Rejections**
 - **Risk:** iOS/Android apps rejected, delaying launch
 - **Mitigation:**
-  - Follow all app store guidelines strictly
-  - Get legal review of privacy policy/terms
-  - Prepare detailed review notes
-  - Have web fallback plan (PWA)
+   - Follow all app store guidelines strictly
+   - Get legal review of privacy policy/terms
+   - Prepare detailed review notes
+   - Have web fallback plan (PWA)
 - **Contingency:** Launch web + approved platform only
 
 **2. Backend Test Failures Persist**
 - **Risk:** Cannot fix 221 tests in 2 weeks
 - **Mitigation:**
-  - Daily progress tracking
-  - Bring in additional developers if needed
-  - Focus on critical path tests first
+   - Daily progress tracking
+   - Bring in additional developers if needed
+   - Focus on critical path tests first
 - **Contingency:** Extend Phase 1 to 3-4 weeks
 
 **3. Low Beta User Adoption**
 - **Risk:** Cannot recruit 60 beta users
 - **Mitigation:**
-  - Start recruiting early
-  - Offer attractive incentives (₱1,000 credits)
-  - Leverage personal networks
+   - Start recruiting early
+   - Offer attractive incentives (₱1,000 credits)
+   - use personal networks
 - **Contingency:** Launch with smaller beta (30 users)
 
 **4. Payment Integration Issues**
 - **Risk:** PayMongo not working in production
 - **Mitigation:**
-  - Test extensively in staging
-  - Work with PayMongo support
-  - Have manual payment fallback
+   - Test extensively in staging
+   - Work with PayMongo support
+   - Have manual payment fallback
 - **Contingency:** Launch with reduced payment methods
 
 **5. Infrastructure Costs Higher Than Expected**
 - **Risk:** Production costs exceed $576/month
 - **Mitigation:**
-  - Monitor costs daily
-  - Setup budget alerts
-  - Optimize resource usage
+   - Monitor costs daily
+   - Setup budget alerts
+   - Optimize resource usage
 - **Contingency:** Scale down non-critical services
 
 ---
@@ -703,10 +703,10 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 **One-Time (Launch):**
 - Marketing: ₱90,000 (~$1,600)
-  - Beta incentives: ₱50,000
-  - Paid ads: ₱10,000
-  - Influencer partnerships: ₱10,000
-  - Launch event: ₱20,000
+   - Beta incentives: ₱50,000
+   - Paid ads: ₱10,000
+   - Influencer partnerships: ₱10,000
+   - Launch event: ₱20,000
 
 **Total Launch Budget:** ₱90,000 (~$1,600)
 

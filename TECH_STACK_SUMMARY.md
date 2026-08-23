@@ -105,17 +105,17 @@
 #### Machine Learning
 - **ML Platform:** MLflow (model tracking & deployment)
 - **Use Cases:**
-  - Circling time predictions
-  - Occupancy forecasting
-  - Demand prediction
-  - Dynamic pricing optimization
+   - Circling time predictions
+   - Occupancy forecasting
+   - Demand prediction
+   - Dynamic pricing optimization
 
 #### Geospatial Processing
 - **Library:** Turf.js (@turf/turf)
 - **Use Cases:**
-  - Geofencing (point-in-polygon checks)
-  - Distance calculations
-  - Zone boundary validation
+   - Geofencing (point-in-polygon checks)
+   - Distance calculations
+   - Zone boundary validation
 
 ---
 
@@ -128,22 +128,22 @@
 
 #### Payments
 - **Primary:** PayMongo (4 payment methods implemented)
-  - GCash
-  - Credit/Debit Cards
-  - GrabPay
-  - Maya (PayMaya)
+   - GCash
+   - Credit/Debit Cards
+   - GrabPay
+   - Maya (PayMaya)
 - **Alternatives:** Stripe, GCash direct
 
 #### IoT (Service 1 - Future)
 - **Protocol:** MQTT → REST Gateway → Backend
 - **Sensor Types:**
-  - Ultrasonic sensors (vehicle presence detection)
-  - Camera-based (computer vision)
-  - Magnetic sensors (vehicle detection)
+   - Ultrasonic sensors (vehicle presence detection)
+   - Camera-based (computer vision)
+   - Magnetic sensors (vehicle detection)
 
 #### Security
 - **Secrets Management:** GCP Secret Manager
-- **API Keys:** All stored in GCP Secret Manager (not .env)
+- **API Keys:** All stored in GCP Secret Manager (not.env)
 
 ---
 
@@ -158,9 +158,9 @@
 - **Version Control:** GitHub
 - **CI/CD:** GitHub Actions
 - **Testing:** Jest (280+ tests total)
-  - Backend: 150 tests (99.3% pass rate)
-  - Mobile: 45 tests
-  - Web: 85 tests (72% pass rate)
+   - Backend: 150 tests (99.3% pass rate)
+   - Mobile: 45 tests
+   - Web: 85 tests (72% pass rate)
 - **Performance Testing:** Artillery, k6, Lighthouse
 
 #### Production (Planned)

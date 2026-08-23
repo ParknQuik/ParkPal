@@ -702,7 +702,7 @@ app.get('/metrics', async (req, res) => {
 | Rotate JWT secret | 1h | P0 | 🔴 TODO |
 | Add helmet.js | 1h | P0 | 🔴 TODO |
 | Migrate to PostgreSQL | 4h | P0 | 🔴 TODO |
-| Remove .env from git | 30m | P0 | 🔴 TODO |
+| Remove.env from git | 30m | P0 | 🔴 TODO |
 | Fix WebSocket auth | 2h | P1 | 🟡 TODO |
 | Add request size limits | 30m | P1 | 🟡 TODO |
 
@@ -857,7 +857,7 @@ Before deploying to production:
 - [ ] Strong JWT secret (64+ chars)
 - [ ] Helmet.js security headers
 - [ ] PostgreSQL database
-- [ ] Secrets in Secret Manager (not .env)
+- [ ] Secrets in Secret Manager (not.env)
 - [ ] WebSocket authentication
 - [ ] HTTPS enforced
 - [ ] Security audit completed

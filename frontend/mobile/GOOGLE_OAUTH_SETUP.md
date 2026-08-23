@@ -39,7 +39,7 @@ GOOGLE_REDIRECT_URI=parknquik://
 
 ## Google Cloud OAuth Clients
 
-Create or verify these OAuth clients in Google Cloud Console:
+Create or verify these OAuth clients in Google Cloud Console. Keep the client IDs unchanged when you copy them:
 
 1. Web client
    - Used by the backend as the accepted token audience.
