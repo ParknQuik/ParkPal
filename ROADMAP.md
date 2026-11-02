@@ -1,7 +1,7 @@
 # ParkPal Development Roadmap
 
-**Last Updated:** May 22, 2026
-**Current Week:** Local-first quality stabilization
+**Last Updated:** November 2, 2026
+**Current Week:** Beta evidence refresh is the near-term goal; public launch remains gated
 **Current Phase:** Phase 6A complete; beta readiness deferred until validation gates are refreshed
 **Target Public Launch:** Deferred until beta readiness evidence is complete
 
@@ -28,7 +28,9 @@
 
 This roadmap is a planning record. For current project state, branch status, open PRs, and latest validation evidence, read `STATUS_REPORT.md` first.
 
-### Current Reality (May 22, 2026)
+### Current Reality (reconciled November 2, 2026)
+
+This planning snapshot was reconciled against `STATUS_REPORT.md` on November 2, 2026. The status report records the documented `dev` baseline at `d07a6d1` (PR #185) and this checkout at detached documentation commit `f424c24`; neither reference by itself establishes current validation or deployment health.
 
 - Local development remains the proof-of-concept baseline.
 - Phase 6A mobile analytics, Explore Page Revamp, dark/light mode, and penalty system work are complete.
@@ -190,7 +192,7 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ---
 
-## Phase 3: App Store Submissions (Week 4) ⚠️ IN PROGRESS
+## Historical Plan — Phase 3: App Store Submissions (Week 4) (superseded; submission deferred)
 
 **Status:** IN PROGRESS
 
@@ -209,7 +211,7 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ---
 
-## Phase 4: Beta Testing (Weeks 5-6) ⏳ PENDING
+## Historical Plan — Phase 4: Beta Testing (Weeks 5-6) (app-store submission deferred)
 
 **Duration:** March 17-21, 2026 (1 week)
 **Goal:** Submit mobile apps to app stores, internal testing
@@ -263,7 +265,7 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ---
 
-## Phase 4: Beta Testing (Weeks 5-6)
+## Historical Plan — Phase 4: Beta Testing (Weeks 5-6; duplicate historical schedule)
 
 **Duration:** March 24 - April 4, 2026 (2 weeks)
 **Goal:** Beta launch with 60 users, gather feedback
@@ -597,7 +599,7 @@ This roadmap is a planning record. For current project state, branch status, ope
 - [x] `ExploreMap` — zone availability badge + circling time ✅ [May 1]
 - [x] Analytics types in `types/index.ts` ✅ [May 1]
 
-### Phase 6B (Next):
+### Phase 6B (Future; not a beta prerequisite unless required by the beta checklist):
 - [ ] Background location tracking (requires Apple/Google background location entitlement)
 - [ ] Settings screen opt-in toggle (let users change decision post-prompt)
 - [ ] Zone availability circle overlays on ExploreMap
@@ -752,7 +754,7 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ---
 
-## Next Steps (This Week)
+## Historical Planning Notes — Next Steps (This Week; February 24-25, 2026)
 
 ### Immediate Actions (Feb 24-25, 2026)
 1. [ ] Review this roadmap with team
@@ -769,7 +771,7 @@ This roadmap is a planning record. For current project state, branch status, ope
 
 ---
 
-## 📋 Update Instructions
+## 📋 Historical Review Instructions (February 2026 cadence; use the startup card and current evidence for present work)
 
 **When completing tasks in this roadmap:**
 

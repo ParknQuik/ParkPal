@@ -1,7 +1,8 @@
 # ParkPal Project Status Report
 
-**Last Updated:** August 23, 2026
-**Current Branch:** `dev`
+**Last Updated:** November 2, 2026 (repository reconciliation; no fresh CI, deployment, or open-PR checks performed)
+**Current Checkout:** detached at `f424c24` (`docs: update status report after dev merge`)
+**Documented `dev` Baseline:** `d07a6d1` (PR #185)
 **Production Readiness:** 95/100 (PR #153 and PR #155-#157 landed, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, PR #179 stabilized mobile Google Sign-In, PR #181 integrated native Apple/Facebook auth plus map stability, and PR #184 moved CI, practical STE documentation, and Explore Map refresh/recenter fixes to `dev` with passing GitHub checks. Remaining confidence gaps are future deployment health validation, native dev-build smoke evidence, and beta distribution gates)
 **Phase:** Phase 6A: Mobile Analytics Integration — complete. Explore Page Revamp — all 5 phases complete. Dark/Light Mode — ALL PHASES COMPLETE (27 screens + 28 components migrated to useTheme()). Penalty System — IMPLEMENTED (late return penalties, rule violation warnings, points integration)
 
@@ -11,6 +12,7 @@
 
 | Date | Updated By | Changes Made | Production Readiness |
  |------|------------|--------------|---------------------|
+| November 2, 2026 | Codex | Reconciled repository references: documented `dev` baseline is `d07a6d1` (PR #185); this checkout is detached at `f424c24`. Existing validation, deployment, and open-PR evidence remains dated historical evidence; no fresh checks were performed. | 95/100 (historical score; not reassessed) |
 | August 23, 2026 | Codex | Verified PR #184 merged into `dev` at `bb501c6`, bringing backend deploy CI failure behavior, practical STE documentation cleanup, the RAG dev handover, and Explore Map refresh/recenter stabilization into the development baseline. GitHub backend, web, mobile, security, code quality, PR validation, PR-size, branch, and mobile environment checks passed after the PR title was corrected and the PR was reopened for fresh validation. Local validation before merge passed for `git diff --check`, Markdown fence balance, practical STE vague-word scan, focused Explore Map Jest 5/5, and mobile TypeScript. Local `dev` was backed up as `backup/dev-before-sync-20260802` before syncing to `origin/dev` | 95/100 |
 | July 19, 2026 | Codex | Verified PR #181 merged into `dev` at `6ebe61e`, integrating native Apple/Facebook auth with the existing Google auth contract, preserving tracked EAS/native map configuration, relaxing backend read-rate limits while keeping stricter auth/write limits, deduplicating Explore Map refreshes, and fixing GPS recenter after route focus. GitHub Mobile Environment Check plus backend, web, mobile, security, code quality, PR validation, PR-size, and branch checks passed. Local validation before merge passed for mobile `npm ci`, `env:check`, TypeScript, mobile Jest 104/104, Prisma validate, Expo config, backend syntax checks, `git diff --check`, and focused backend auth/googleAuth/marketplace/parkingCandidates/rateLimit Jest 110/110 after applying the social-auth migration to local dev and test databases | 95/100 |
 | July 16, 2026 | Codex | Verified PR #179 merged into `dev` at `ff6d192`, stabilizing native mobile Google Sign-In by sending backend `{ googleToken }`, preserving legacy backend `code` compatibility, and refreshing Google OAuth/env/EAS setup docs. GitHub backend, web, mobile, security, quality, validation, PR-size, branch, and mobile env checks passed after the PR title was corrected and the PR was reopened for fresh checks. Local validation on the feature branch passed for `backend` Google auth Jest 9/9 with Docker Postgres/Redis access, focused mobile AuthScreen Jest 12/12, mobile TypeScript, mobile `env:check`, and `git diff --check` | 95/100 |
@@ -113,11 +115,14 @@ This is the **primary project status log**. Keep historical sections labeled cle
 
 This is a **living document** that tracks ParkPal's actual state based on deployment data and test results. It gets updated with every significant progress milestone.
 
-### Current Reconciliation (August 23, 2026)
+### Current Reconciliation (repository evidence checked November 2, 2026)
 
-**Current Claims vs Supporting Evidence:**
+- **Repository references:** The documented `dev` baseline is `d07a6d1` (PR #185). This documentation checkout is detached at `f424c24`, whose commit message is `docs: update status report after dev merge`. These are separate references; the detached checkout is not represented as current `dev`.
+- **Freshness boundary:** This reconciliation used local repository metadata only. CI results, deployment health, GitHub open-PR state, and current service status were not checked on November 2, 2026. Claims below and elsewhere that refer to those checks remain historical as of their stated dates.
+
+**Status Snapshot (evidence through August 23, 2026):**
 - **Production readiness:** 95/100 after PR #153 reduced agent startup overhead, PR #155 added renter behavior status/account-standing UX, PR #156 shipped shared mobile list states plus dark-mode cleanup, PR #157 added Google parking candidate discovery scans, PR #160 recorded a clean startup smoke test, PR #161 stabilized web Vitest timeouts, PR #163 stabilized web auth form runtime tests, PR #165 added the Home account-standing banner, PR #171 surfaced mobile signup validation errors, PR #173 added the knowledge hit-rate scanner, PR #175 refreshed compact status mirrors, PR #177 added retrieval-miss routing coverage, PR #179 stabilized native mobile Google Sign-In, PR #181 integrated native Apple/Facebook auth plus map stability, and PR #184 moved CI, practical STE documentation, and Explore Map refresh/recenter fixes to `dev`. Future deployment health validation, native dev-build smoke evidence, and beta distribution gates are still needed before beta/deployment readiness claims are raised.
-- **Branch state:** `origin/dev` and local `dev` are at `bb501c6` after PR #184; no open PRs remain against `dev` as verified by `gh pr list --base dev --state open` on August 23, 2026.
+- **Branch and PR state (August 23, 2026 evidence):** `origin/dev` and local `dev` were recorded at `bb501c6` after PR #184; no open PRs against `dev` were reported by `gh pr list --base dev --state open` on that date. PR #185 subsequently established the documented baseline `d07a6d1`. Current open-PR state is unverified.
 - **Backend:** GitHub Backend Tests passed for PR #181 on July 19, 2026. Focused local backend validation for the PR #181 integration passed 110/110 across `auth`, `googleAuth`, `marketplace`, `parkingCandidates.routes`, and `rateLimit` Jest after applying the social-auth migration to local dev and test databases. Latest local backend full-suite evidence remains 494/496 passing with 2 skipped on May 25, 2026, run with `GCS_BUCKET_NAME=test-bucket npm test -- --runInBand --no-watchman` against the existing local test setup. Cloud Run `/health` rechecks belong to future deployment/beta validation.
 - **Web:** GitHub Frontend Web Tests passed for PR #181 on July 19, 2026. Latest local web evidence remains 85/85 passing in 28.37s on May 25, 2026 after auth form runtime test stabilization.
 - **Mobile:** GitHub Frontend Mobile Checks and Mobile Environment Check passed for PR #184 on August 23, 2026. Local PR #184 validation passed for focused Explore Map Jest 5/5 and mobile TypeScript before merge. Latest broader mobile evidence remains PR #181 Jest 104/104 before merge on July 19, 2026. Apple App Store / Google Play submission is intentionally deferred while the product is still in active development. Native Apple/Facebook auth, Google Sign-In, map tiles, and GPS behavior still need a rebuilt dev-client smoke pass.
@@ -462,8 +467,8 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 
 ## Open Pull Requests
 
-**Currently Open Against `dev`:**
-- None. Verified by `gh pr list --base dev --state open` on August 23, 2026.
+**Open Against `dev` (last checked August 23, 2026):**
+- None were reported by `gh pr list --base dev --state open` on that date. Current open-PR state is unverified.
 
 **Recently Merged:**
 - #184: Move CI, practical STE docs, and Explore Map fixes to `dev`
@@ -1144,7 +1149,7 @@ The following March plan is retained for history only. Current status is documen
 
 ## Next Steps
 
-### Immediate (August 23, 2026)
+### Next Evidence Gates (priorities recorded August 23, 2026; still unverified)
 
 1. Rebuild and install a fresh native development client before validating Apple/Facebook auth, Google Sign-In, Google Maps tiles, and native map key behavior. Metro-only reloads are not enough for these native config changes.
 2. Run a physical-device smoke pass for Explore Map: map tiles, marker loading, startup location, GPS recenter after route/listing focus, manual refresh cooldown, and backend read-rate behavior under repeated refreshes.
