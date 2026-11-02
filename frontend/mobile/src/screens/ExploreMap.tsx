@@ -256,6 +256,9 @@ export const ExploreMap: React.FC = () => {
   const regionChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeLocationHandledRef = useRef(false);
   const initialCenterHandledRef = useRef(false);
+  const hasFocusedRef = useRef(false);
+  const initializeMapCenterRef = useRef<() => void>(() => {});
+  const centerOnDeviceLocationRef = useRef<(preferFresh?: boolean) => void>(() => {});
   const listingFetchesRef = useRef(new Map<string, Promise<void>>());
   const candidateFetchesRef = useRef(new Map<string, Promise<void>>());
   const deviceLocationRequestRef = useRef<Promise<Location.LocationObject | null> | null>(null);
@@ -334,13 +337,13 @@ export const ExploreMap: React.FC = () => {
   }, [analyticsZones]);
 
   const { currentZone, sessionId } = useAnalyticsGeofencing(
-    analyticsZones.map(z => ({
+    useMemo(() => analyticsZones.map(z => ({
       id: z.id,
       name: z.name,
       centerLat: z.centroidLat,
       centerLon: z.centroidLon,
       radius: 300,
-    })),
+    })), [analyticsZones]),
     true
   );
 
@@ -613,32 +616,47 @@ export const ExploreMap: React.FC = () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return null;
 
-    if (deviceLocationRequestRef.current) {
-      return deviceLocationRequestRef.current;
+    let request = deviceLocationRequestRef.current;
+    if (!request) {
+      request = (async () => {
+        try {
+          if (!preferFresh) {
+            const lastKnown = await Location.getLastKnownPositionAsync({});
+            if (lastKnown) return lastKnown;
+          }
+
+          return await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+        } catch (err) {
+          if (preferFresh) {
+            return Location.getLastKnownPositionAsync({});
+          }
+          throw err;
+        } finally {
+          if (deviceLocationRequestRef.current === request) {
+            deviceLocationRequestRef.current = null;
+          }
+        }
+      })();
+      deviceLocationRequestRef.current = request;
     }
+    if (!preferFresh) return request;
 
-    const request = (async () => {
-      try {
-        if (!preferFresh) {
-          const lastKnown = await Location.getLastKnownPositionAsync({});
-          if (lastKnown) return lastKnown;
-        }
-
-        return await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-      } catch (err) {
-        if (preferFresh) {
-          return Location.getLastKnownPositionAsync({});
-        }
-        throw err;
-      } finally {
-        deviceLocationRequestRef.current = null;
-      }
-    })();
-
-    deviceLocationRequestRef.current = request;
-    return request;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        request,
+        new Promise<null>((resolve) => {
+          timeout = setTimeout(() => resolve(null), 8000);
+        }),
+      ]).then(async (location) => {
+        if (location) return location;
+        return Location.getLastKnownPositionAsync({});
+      });
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
   }, []);
 
   const centerOnDeviceLocation = useCallback(async (preferFresh = true) => {
@@ -688,10 +706,18 @@ export const ExploreMap: React.FC = () => {
     await centerOnDeviceLocation(false);
   }, [centerOnDeviceLocation, focusRouteLocation, hasRouteLocation, mapReady]);
 
+  initializeMapCenterRef.current = initializeMapCenter;
+  centerOnDeviceLocationRef.current = centerOnDeviceLocation;
+
   useFocusEffect(
     useCallback(() => {
-      initializeMapCenter();
-    }, [initializeMapCenter])
+      if (hasFocusedRef.current) {
+        centerOnDeviceLocationRef.current(true);
+      } else {
+        hasFocusedRef.current = true;
+        initializeMapCenterRef.current();
+      }
+    }, [])
   );
 
   useEffect(() => {
