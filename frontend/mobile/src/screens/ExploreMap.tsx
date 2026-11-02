@@ -538,6 +538,13 @@ export const ExploreMap: React.FC = () => {
       } catch (err) {
         if (isRateLimitError(err)) {
           setMapNotice(MAP_RATE_LIMIT_NOTICE);
+        } else {
+          const error = err as any;
+          const message = error?.response?.data?.error
+            || error?.response?.data?.message
+            || error?.message
+            || (typeof err === 'string' ? err : null);
+          setMapNotice(message ? `Unable to load parking: ${message}` : 'Unable to load parking. Please try again.');
         }
       } finally {
         listingFetchesRef.current.delete(requestKey);
