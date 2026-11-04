@@ -7,7 +7,7 @@ When the user says "run tests", "test backend", "check tests", "npm test":
 
 ## Action Steps
 
-1. Run backend tests using Bash tool
+1. Run backend tests with the shell using the repository command below
 2. Parse Jest/npm test output
 3. Categorize results (passed/failed/skipped)
 4. Extract failure details with file:line references

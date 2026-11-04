@@ -13,12 +13,12 @@ This skill **orchestrates multiple skills and optionally launches agents** for c
 
 1. **Run backend-diagnostics skill**
    - Check for TypeScript/JavaScript errors
-   - Uses: `mcp__ide__getDiagnostics`
+   - Use the available diagnostics integration, or repository-defined lint/typecheck/build scripts.
 
 2. **Run test-runner skill**
    - Execute all backend tests
    - Parse results for failures
-   - Uses: Bash (npm test)
+   - Run the test command defined by this repository; do not assume sample test counts.
 
 3. **Run git validation checks**
    - Check branch is up to date with base
@@ -30,14 +30,14 @@ This skill **orchestrates multiple skills and optionally launches agents** for c
 
 4. **Run deployment-status skill**
    - Verify infrastructure is healthy
-   - Uses: `gcloud` CLI health checks
+   - Use the configured GCloud MCP integration when available, otherwise `gcloud`; skip if neither is configured or authorized.
 
-### Phase 3: Deep Review (Agent - CONDITIONAL)
+### Phase 3: Deep Review (Conditional)
 
-5. **Launch code-reviewer agent** (only if needed)
+5. **Perform or delegate a focused code review** (only if needed)
    - If Phase 1 found issues → Skip deep review (fix issues first)
-   - If Phase 1 clean → Launch agent for security/quality review
-   - Uses: Task tool with code-reviewer agent
+   - If Phase 1 is clean → perform a security and quality review, using a review profile only when available
+   - If a separate review profile is available and delegation is appropriate, use the Codex `code-reviewer` profile; otherwise perform a focused review directly.
 
 ## Output Format
 
@@ -82,7 +82,7 @@ This skill **orchestrates multiple skills and optionally launches agents** for c
 🔬 DEEP REVIEW (Phase 3)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Launching code-reviewer agent for comprehensive review...
+Starting a focused code review for comprehensive review...
 (This will take 5-10 minutes for thorough analysis)
 
 Files to review (12):
@@ -126,7 +126,7 @@ Suggested PR title:
 "feat: Add photo upload feature with GCS integration"
 
 Next steps:
-1. Create PR: gh pr create --base dev --head feature/photo-upload
+1. After the user approves, create PR: gh pr create --base dev --head feature/photo-upload
 2. Add reviewers
 3. Wait for CI/CD checks (should all pass ✅)
 ```
@@ -284,48 +284,38 @@ git log origin/dev..HEAD --pretty=format:"%s"
 ❌ minor fixes (too vague)
 ```
 
-## Integration with Skills
+## Coordinating the Checks
 
-### 1. backend-diagnostics skill
+### 1. Backend diagnostics
 ```javascript
 // Called first for quick code check
-backend-diagnostics.run()
-  .then(result => {
-    if (result.errors > 0) {
-      return { status: 'fail', phase: 1 };
-    }
-  });
+Run backend diagnostics as described above
+  // Stop and report errors before continuing to later phases.
+
 ```
 
-### 2. test-runner skill
+### 2. Tests
 ```javascript
 // Called second for test validation
-test-runner.run()
-  .then(result => {
-    if (result.failed > 0) {
-      return { status: 'fail', phase: 1 };
-    }
-  });
+Run tests as described above
+  // Stop and report failures before continuing to later phases.
+
 ```
 
-### 3. deployment-status skill
+### 3. Deployment status
 ```javascript
 // Called third for infrastructure check
-deployment-status.run()
-  .then(result => {
-    if (result.health !== 'operational') {
-      return { status: 'warning', phase: 2 };
-    }
-  });
+Check deployment status as described above
+  // Treat unavailable status as not checked; report actual evidence.
+
 ```
 
-### 4. code-reviewer agent (CONDITIONAL)
+### 4. Code review (CONDITIONAL)
 ```javascript
 // Only launched if Phase 1 & 2 pass
 if (allQuickChecksPass) {
-  Task({
-    subagent_type: 'code-reviewer',
-    description: 'Review PR changes',
+  // Use the Codex code-reviewer profile when available; otherwise review directly.
+  reviewChanges({
     prompt: `Review these files for security, performance, and best practices:
     ${changedFiles.join('\n')}
 
@@ -354,7 +344,7 @@ Reason: Save 5-10 minutes, focus on quick fixes
 
 ### When to Launch Deep Review
 ```
-Launch code-reviewer agent if:
+Perform or delegate a focused code review if:
 • Phase 1 & 2 all pass ✅
 • Security-sensitive files changed (auth, payments, etc.)
 • Performance-critical paths modified
@@ -400,7 +390,7 @@ Phase 2 (Infrastructure): 5 seconds
 └─ deployment-status: 5s
 
 Phase 3 (Deep review): 8 minutes (CONDITIONAL)
-└─ code-reviewer agent: 8m
+└─ code-reviewer profile: 8m
 
 Total: 8 minutes 20 seconds (with deep review)
 Total: 20 seconds (quick checks only)
@@ -417,7 +407,7 @@ Me:
 2. Run test-runner → ✅ All pass
 3. Check git status → ✅ Up to date
 4. Run deployment-status → ✅ Healthy
-5. Launch code-reviewer agent → ✅ No issues
+5. Perform or delegate a focused code review → ✅ No issues
 
 Result: "Ready to create PR ✅"
 Duration: 8 minutes
@@ -503,6 +493,9 @@ Action required:
 ```
 
 ## Notes
+
+- Run only checks appropriate to the request and available project scripts; report unavailable checks as not run.
+- Never commit or push during validation without summarizing the exact changes and getting user approval, as required by project instructions.
 
 - **Orchestrates multiple skills** for comprehensive validation
 - **Conditionally launches agents** to save time
