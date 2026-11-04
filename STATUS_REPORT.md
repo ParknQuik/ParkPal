@@ -155,7 +155,7 @@ This is a **living document** that tracks ParkPal's actual state based on deploy
 - ✅ Implemented directions using Linking API (opens native maps app - Google Maps for Android, Apple Maps for iOS)
 - ✅ Fixed search bar positioning using useSafeAreaInsets()
 - ✅ Fixed "Search this area" button positioning dynamically
-- 📄 **Files Created:** `FilterModal.tsx` (398 lines), `EXPLORE_PAGE_REVAMP_ROADMAP.md` (5 phases, 102h total estimate)
+- 📄 **Files Created:** `FilterModal.tsx` (398 lines), `docs/plans/EXPLORE_PAGE_REVAMP_ROADMAP.md` (5 phases, 102h total estimate)
 - 📄 **Files Modified:** `ExploreMap.tsx` (icons, directions, positioning, filter integration, active filter indicator, clear filters chip)
 - ⏳ **Phase 2+ Pending:** Draggable bottom sheet, listing preview, quick book button, search history, autocomplete, filter chips, sorting, zone analytics, occupancy markers, heatmap, marker clustering, offline fallback, skeletons, accessibility
 
