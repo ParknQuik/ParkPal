@@ -6,6 +6,8 @@
 
 ## File Map
 
+Root-level documents are project entrypoints and canonical references. Topic-specific guides stay with their owning area, while standalone planning and tracking documents live in `docs/plans/`.
+
 ### Always Read First
 | File | Purpose |
 |------|---------|
@@ -15,6 +17,14 @@
 | `ROADMAP.md` | Development roadmap and sprint planning |
 | `TECH_STACK_SUMMARY.md` | Authoritative tech stack reference |
 | `docs/BETA_READINESS_CHECKLIST.md` | Beta gate checklist and latest validation evidence |
+
+### Planning & Tracking
+| File | Purpose |
+|------|---------|
+| `docs/plans/MIGRATION_GUIDE.md` | Migration planning and implementation notes |
+| `docs/plans/TODO.md` | Project task tracking |
+| `docs/plans/PHASE1_PERKS_PLAN.md` | Phase 1 perks plan |
+| `docs/plans/EXPLORE_PAGE_REVAMP_ROADMAP.md` | Explore page revamp phases and estimates |
 
 ### Architecture & Infrastructure
 | File | Purpose |
