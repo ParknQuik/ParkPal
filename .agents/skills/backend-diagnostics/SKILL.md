@@ -1,14 +1,14 @@
 ---
 name: backend-diagnostics
-description: Check backend code for TypeScript/JavaScript errors before committing using IDE MCP
+description: Check backend code for TypeScript and JavaScript diagnostics before committing
 ---
 
 When the user says "check backend", "diagnose backend", or "backend errors":
 
 ## Action Steps
 
-1. Call `mcp__ide__getDiagnostics()` to get all diagnostics for the project
-2. Filter diagnostics for backend files (backend/**/*.js, backend/**/*.ts)
+1. If a project diagnostics integration is available, inspect its diagnostics; otherwise run the backend lint, typecheck, or build scripts defined in `backend/package.json`.
+2. Filter diagnostics for backend files (`backend/**/*.js`, `backend/**/*.ts`) and report which check produced each result.
 3. Parse and categorize by severity:
    - **Errors** (must fix before commit)
    - **Warnings** (should review)
@@ -59,7 +59,7 @@ When the user says "check backend", "diagnose backend", or "backend errors":
 ## Example Usage
 
 **User:** "check backend"
-**Assistant:** Calls mcp__ide__getDiagnostics, analyzes, and reports:
+**Assistant:** Uses the available diagnostics integration or repository-defined backend checks, analyzes, and reports:
 ```
 🔍 Backend Diagnostics Report
 
@@ -80,5 +80,4 @@ When the user says "check backend", "diagnose backend", or "backend errors":
 ## Performance
 
 - Execution time: ~1-2 seconds
-- No file scanning needed (VS Code already has diagnostics)
-- Real-time results from language server
+- If IDE diagnostics are unavailable, run only the repository-defined checks needed to produce diagnostics; do not claim a check ran unless it did.
