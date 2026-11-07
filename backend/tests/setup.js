@@ -1,3 +1,16 @@
+const dotenv = require('dotenv');
+const path = require('path');
+
+// Load backend/.env.test before creating the Prisma client.
+const result = dotenv.config({ path: path.join(__dirname, '..', '.env.test') });
+
+if (result.error) {
+  console.error('Error loading .env.test file:', result.error);
+  process.exit(1);
+}
+
+process.env.NODE_ENV = 'test';
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 

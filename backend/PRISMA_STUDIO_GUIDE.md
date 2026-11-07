@@ -481,7 +481,7 @@ Prisma Studio is for **development and testing only**.
 
 **Workflow:**
 1. Run `npm run seed` (seed database)
-2. Run `node test-marketplace.js` (API tests)
+2. Run `node scripts/test-marketplace.js` (API tests)
 3. Open `npx prisma studio` (verify results)
 4. Check test data created correctly
 5. Clean up test data if needed
@@ -492,7 +492,7 @@ Prisma Studio is for **development and testing only**.
 npm start
 
 # Terminal 2
-node test-marketplace.js
+node scripts/test-marketplace.js
 
 # Terminal 3
 npx prisma studio

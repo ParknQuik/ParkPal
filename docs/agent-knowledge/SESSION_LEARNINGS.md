@@ -82,8 +82,8 @@ replacement for reading live code before edits.
 - A local `401 Invalid credentials` can mean seeded users are missing, the app
  is pointed at the wrong Postgres database, or seed data drifted; verify
  `DATABASE_URL` and seed state before changing auth behavior.
-- Start recovery with `backend/prisma/seed.js`, `backend/test/setup.js`,
- `backend/test/helpers.js`, `backend/tests/setup.js`, and auth-focused tests.
+- Start recovery with `backend/prisma/seed.js`, `backend/tests/setup.js`,
+  `backend/tests/helpers.js`, and auth-focused tests.
 - Validation: `cd backend && npm test -- auth.test.js password-reset.test.js googleAuth.test.js`; run `cd backend && npm run seed` only when intentionally reseeding local data.
 
 ### Startup Token Tooling
