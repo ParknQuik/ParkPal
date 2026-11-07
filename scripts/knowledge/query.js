@@ -804,7 +804,7 @@ function runQueryChecks(db) {
       ],
       expectedReferences: [
         'backend/prisma/seed.js',
-        'backend/test/setup.js',
+        'backend/tests/setup.js',
         'backend/tests/auth.test.js'
       ]
     },
