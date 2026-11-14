@@ -1,9 +1,11 @@
 const express = require('express');
 const { parkingCandidateScanSchema } = require('../validators/admin');
+const { requireAdmin } = require('../middleware/adminGuard');
+let mockRole = 'admin';
 
 jest.mock('../services/auth', () => ({
   authenticate: (req, res, next) => {
-    req.user = { id: 1, role: 'admin' };
+    req.user = { id: 1, role: mockRole };
     next();
   },
 }));
@@ -34,6 +36,7 @@ const routeExists = (method, path) => {
 describe('parking candidate admin routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRole = 'admin';
   });
 
   it('mounts candidate scan under /admin', async () => {
@@ -53,5 +56,12 @@ describe('parking candidate admin routes', () => {
 
     expect(error).toBeDefined();
     expect(adminController.googleScan).not.toHaveBeenCalled();
+  });
+
+  it('rejects candidate review access for authenticated non-admins', () => {
+    const next = jest.fn();
+    requireAdmin({ user: { id: 2, role: 'driver' } }, {}, next);
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 403 }));
+    expect(adminController.listCandidates).not.toHaveBeenCalled();
   });
 });

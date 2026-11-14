@@ -1,5 +1,5 @@
 const marketplaceController = require('../controllers/marketplaceController');
-const { authenticate } = require('../services/auth');
+const { authenticate, optionalAuthenticate } = require('../services/auth');
 const { paginate, validateSort } = require('../middleware/pagination');
 const { validateBody, validateQuery, validateParams } = require('../middleware/validation');
 const {
@@ -156,7 +156,7 @@ asyncHandler(marketplaceController.createListing));
    */
 app.get(
   '/marketplace/search',
-  authenticate,
+  optionalAuthenticate,
   validateQuery(searchListingsSchema),
   paginate({ defaultLimit: 20, maxLimit: 100 }),
   validateSort(['price', 'createdAt', 'averageRating'], 'createdAt', 'desc'),
@@ -272,6 +272,14 @@ app.get(
     authenticate,
     validateParams(idParamSchema),
     asyncHandler(marketplaceController.confirmBooking));
+
+  if (process.env.NODE_ENV === 'development') {
+    app.post(
+      '/marketplace/bookings/:id/dev-confirm',
+      authenticate,
+      validateParams(idParamSchema),
+      asyncHandler(marketplaceController.devConfirmBooking));
+  }
 
   /**
    * @swagger

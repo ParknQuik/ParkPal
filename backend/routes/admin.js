@@ -1,6 +1,7 @@
 const { authenticate } = require('../services/auth');
 const { validateBody, validateParams, validateQuery } = require('../middleware/validation');
 const adminController = require('../controllers/adminController');
+const { requireAdmin } = require('../middleware/adminGuard');
 const {
   parkingCandidateGeofenceSchema,
   parkingCandidateIdSchema,
@@ -22,6 +23,7 @@ module.exports = (app) => {
 app.post(
   '/admin/parking-candidates/google/scan',
   authenticate,
+  requireAdmin,
   validateBody(parkingCandidateScanSchema),
   adminController.googleScan
 );
@@ -33,6 +35,7 @@ app.post(
 app.get(
   '/admin/parking-candidates',
   authenticate,
+  requireAdmin,
   validateQuery(parkingCandidateListSchema),
   adminController.listCandidates
 );
@@ -44,6 +47,7 @@ app.get(
 app.get(
   '/admin/parking-candidates/:id/live-details',
   authenticate,
+  requireAdmin,
   validateParams(parkingCandidateIdSchema),
   adminController.getLiveDetails
 );
@@ -55,6 +59,7 @@ app.get(
 app.post(
   '/admin/parking-candidates/:id/approve-preview',
   authenticate,
+  requireAdmin,
   validateParams(parkingCandidateIdSchema),
   adminController.approvePreview
 );
@@ -66,6 +71,7 @@ app.post(
 app.post(
   '/admin/parking-candidates/:id/verify-geofence',
   authenticate,
+  requireAdmin,
   validateParams(parkingCandidateIdSchema),
   validateBody(parkingCandidateGeofenceSchema),
   adminController.verifyGeofence
@@ -78,6 +84,7 @@ app.post(
 app.post(
   '/admin/parking-candidates/:id/verify-commercial',
   authenticate,
+  requireAdmin,
   validateParams(parkingCandidateIdSchema),
   adminController.verifyCommercial
 );
@@ -89,6 +96,7 @@ app.post(
 app.post(
   '/admin/parking-candidates/:id/reject',
   authenticate,
+  requireAdmin,
   validateParams(parkingCandidateIdSchema),
   validateBody(parkingCandidateRejectSchema),
   adminController.reject
