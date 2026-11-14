@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin-dashboard
+Disallow: /host-dashboard
+Disallow: /profile
+Disallow: /bookings
+Disallow: /payment
+Disallow: /reserve
+Sitemap: https://parkpal.com/sitemap.xml

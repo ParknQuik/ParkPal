@@ -30,7 +30,7 @@ describe('modelRouter', () => {
     const selection = selectModelForTask('Format this title in title case.');
 
     expect(selection).toEqual(expect.objectContaining({
-      model: 'gpt-5.4-nano',
+      model: 'gpt-6-luna',
       reasoningEffort: 'none',
       complexity: 'trivial',
     }));
@@ -45,25 +45,25 @@ describe('modelRouter', () => {
     );
 
     expect(selection).toEqual(expect.objectContaining({
-      model: 'gpt-5.4-nano',
+      model: 'gpt-6-luna',
       reasoningEffort: 'low',
       complexity: 'simple',
     }));
   });
 
-  it('routes standard product help requests to mini with low reasoning effort', () => {
+  it('routes standard product help requests to gpt-6.1-sol with low reasoning effort', () => {
     const selection = selectModelForTask(
       'Help a ParkPal renter understand how to compare nearby parking options, choose a booking window, and prepare for checkout.'
     );
 
     expect(selection).toEqual(expect.objectContaining({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-6.1-sol',
       reasoningEffort: 'low',
       complexity: 'standard',
     }));
   });
 
-  it('routes multi-file coding and debugging prompts to gpt-5.5 with medium reasoning effort', () => {
+  it('routes multi-file coding and debugging prompts to gpt-6.1-terra with medium reasoning effort', () => {
     const task = [
       'Debug failing Jest tests across backend/services/modelRouter.js and backend/controllers/configController.js.',
       'The API returns 500 and the stack trace points at config parsing.',
@@ -73,7 +73,7 @@ describe('modelRouter', () => {
     const selection = selectModelForTask(task);
 
     expect(selection).toEqual(expect.objectContaining({
-      model: 'gpt-5.5',
+      model: 'gpt-6.1-terra',
       reasoningEffort: 'medium',
       complexity: 'complex',
     }));
@@ -88,7 +88,7 @@ describe('modelRouter', () => {
     );
 
     expect(selection).toEqual(expect.objectContaining({
-      model: 'gpt-5.5',
+      model: 'gpt-6-astra',
       reasoningEffort: 'high',
       complexity: 'critical',
     }));
@@ -130,7 +130,7 @@ describe('modelRouter', () => {
       confidence: 0.4,
     }));
     expect(selection).toEqual(expect.objectContaining({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-6.1-sol',
       reasoningEffort: 'low',
       complexity: 'standard',
     }));
@@ -142,7 +142,7 @@ describe('modelRouter', () => {
     );
 
     expect(handoff).toContain('Model Routing');
-    expect(handoff).toContain('Recommended model: gpt-5.5');
+    expect(handoff).toContain('Recommended model: gpt-6.1-terra');
     expect(handoff).toContain('Reasoning effort: medium');
     expect(handoff).toContain('Tier: complex');
     expect(handoff).toContain('Confidence:');
