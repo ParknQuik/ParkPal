@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Parse route files to extract endpoints
-function extractEndpointsFromRoute(filePath, routePrefix = '') {
+function extractEndpointsFromRoute(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
   const endpoints = [];
 
@@ -18,17 +18,15 @@ function extractEndpointsFromRoute(filePath, routePrefix = '') {
     .replace(/\/\/.*/g, '') // Remove line comments
     .replace(/\s+/g, ' '); // Collapse whitespace
 
-  // Match patterns like: app.get('/path', ...) or app.post('/path', ...)
-  const routePattern = /app\.(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]/g;
+  // Route modules register directly on app or on the v1 router.
+  const routePattern = /(?:app|router)\.(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`]/g;
 
   let match;
   while ((match = routePattern.exec(cleanedContent)) !== null) {
     const [, method, path] = match;
-    // Don't add prefix if path already starts with it
-    const finalPath = path.startsWith(routePrefix) ? path : `${routePrefix}${path}`;
     endpoints.push({
       method: method.toUpperCase(),
-      path: finalPath,
+      path,
       source: filePath.split('/').pop(),
     });
   }
@@ -46,14 +44,12 @@ function generateContract() {
     endpoints: [],
   };
 
-  // Files to scan
-  const routeFiles = [
-    { file: 'auth.js', prefix: '/auth' },
-    { file: 'marketplace.js', prefix: '/marketplace' },
-    { file: 'parking.js', prefix: '' }, // Has /slots and /bookings
-    { file: 'config.js', prefix: '/config' },
-    { file: 'users.js', prefix: '/users' },
-  ];
+  // Each v1 module is mounted directly on the v1 router, so its declared
+  // path is the contract path. Scan the whole directory to include newer APIs.
+  const routeFiles = fs.readdirSync(routesDir)
+    .filter((file) => file.endsWith('.js') && file !== 'index.js')
+    .sort()
+    .map((file) => ({ file }));
 
   console.log('🔍 Scanning backend routes...\n');
 
@@ -62,7 +58,7 @@ function generateContract() {
 
     if (fs.existsSync(filePath)) {
       console.log(`📄 Scanning ${file}...`);
-      const endpoints = extractEndpointsFromRoute(filePath, prefix);
+      const endpoints = extractEndpointsFromRoute(filePath);
       contract.endpoints.push(...endpoints);
       console.log(`   Found ${endpoints.length} endpoints`);
     } else {

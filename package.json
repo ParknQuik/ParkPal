@@ -21,6 +21,7 @@
     "knowledge:validate": "node --no-warnings scripts/knowledge/query.js --self-test",
     "pretest": "npm run contract:test",
     "test:all": "bash test-automator/scripts/run-all-tests.sh",
+    "test:e2e": "playwright test",
     "test:fix": "node test-automator/scripts/fix-failing-tests.js",
     "test:report": "node test-automator/scripts/generate-test-report.js",
     "test:enforce-coverage": "node test-automator/scripts/test-coverage-enforcer.js",
@@ -40,5 +41,10 @@
     "@vitejs/plugin-react": "^5.0.4",
     "expo": "^55.0.19",
     "typescript": "~5.9.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "baseline-browser-mapping": "^2.11.37"
   }
 }

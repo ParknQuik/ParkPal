@@ -167,10 +167,11 @@ class and reasoning effort to use. Substantial handoffs should include:
 
 Use `npm run knowledge:model-routing -- "<implementation intent>"` when a
 copyable block is easier than manually translating the compact context line.
-Map tiers as advisory defaults: `trivial` and `simple` use nano with none or low
-reasoning, `standard` uses mini with low reasoning, `complex` uses the full
-model with medium reasoning, and `critical` uses the full model with high
-reasoning.
+Map tiers as advisory defaults using currently available Codex models:
+`trivial` and `simple` use `gpt-6-luna` with none or low reasoning,
+`standard` uses `gpt-6.1-sol` with low reasoning, `complex` uses
+`gpt-6.1-terra` with medium reasoning, and `critical` uses `gpt-6-astra` with
+high reasoning. Revisit these defaults when the available model catalog changes.
 
 Routing metadata is informational only. It must not change result limits, widen
 plain startup context, or auto-load extra docs; plain startup remains

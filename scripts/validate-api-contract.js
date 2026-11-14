@@ -48,6 +48,13 @@ function extractFrontendEndpoints(filePath, clientName) {
   return endpoints;
 }
 
+function normalizeRoutePath(path) {
+  return path
+    .replace(/\/+$/, '')
+    .replace(/:[A-Za-z0-9_]+/g, ':param')
+    .replace(/\/+/g, '/') || '/';
+}
+
 // Main validation function
 function validateContract() {
   console.log(`${colors.cyan}╔══════════════════════════════════════════╗${colors.reset}`);
@@ -100,11 +107,11 @@ function validateContract() {
 
   const mismatches = [];
   // Backend paths are stored without /api/v1 prefix, so we create a set with just method + path
-  const backendPaths = new Set(contract.endpoints.map((ep) => `${ep.method} ${ep.path}`));
+  const backendPaths = new Set(contract.endpoints.map((ep) => `${ep.method} ${normalizeRoutePath(ep.path)}`));
 
   allFrontendEndpoints.forEach((frontendEp) => {
     // Frontend paths don't have /api/v1 either, so we just need method + path
-    const checkPath = `${frontendEp.method} ${frontendEp.path}`;
+    const checkPath = `${frontendEp.method} ${normalizeRoutePath(frontendEp.path)}`;
     const exists = backendPaths.has(checkPath);
 
     if (!exists) {

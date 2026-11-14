@@ -239,6 +239,57 @@
       ]
     },
     {
+      "id": "mobile-explore-driver-parking-choices",
+      "title": "Explore driver parking choices across bookable spaces and commercial guidance",
+      "subsystem": "mobile",
+      "priority": "high",
+      "knowledgeStatus": "current",
+      "sourcePaths": [
+        "docs/PARKPAL_SYSTEM_ARCHITECTURE.md",
+        "frontend/mobile/src/screens/ExploreMap.tsx",
+        "frontend/mobile/src/screens/HomeDashboard.tsx",
+        "frontend/mobile/src/store/slices/marketplaceSlice.ts",
+        "frontend/mobile/src/store/slices/analyticsSlice.ts",
+        "frontend/mobile/src/services/analytics.ts",
+        "frontend/mobile/src/services/api.ts",
+        "backend/controllers/marketplaceController.js",
+        "backend/routes/marketplace.js",
+        "backend/routes/analytics.js",
+        "backend/tests/marketplace.test.js",
+        "backend/tests/analytics.test.js",
+        "frontend/mobile/src/__tests__/screens/ExploreMap.test.tsx",
+        "backend/tests/parkingCandidates.routes.test.js"
+      ],
+      "routeKeywords": [
+        "Explore driver parking choices",
+        "compare nearby parking",
+        "best option for my needs",
+        "commercial availability",
+        "commercial parking guidance",
+        "bookable host space",
+        "host-listed parking space",
+        "parking candidate preview",
+        "parking availability and circling estimates",
+        "ExploreMap nearby options"
+      ],
+      "relatedApis": [
+        "marketplace search for bookable host-listed spaces",
+        "commercial zone availability and circling analytics",
+        "marketplace candidate discovery previews",
+        "candidate preview is not a booking or availability guarantee"
+      ],
+      "validationCommands": [
+        "rtk npm run knowledge:query -- \"fix Explore driver choices compare nearby parking best option for my needs\" --json",
+        "rtk npm run knowledge:context -- \"fix Explore driver choices compare nearby parking best option for my needs\" --limit 3",
+        "cd frontend/mobile && npm test -- --runTestsByPath src/__tests__/screens/ExploreMap.test.tsx --no-watchman"
+      ],
+      "knownFailurePatterns": [
+        "Do not imply candidate previews are bookable or guarantee availability.",
+        "Keep host-listed bookable spaces distinct from commercial availability and circling guidance.",
+        "Do not invent a universal ranking for the best parking option; suitability depends on driver needs."
+      ]
+    },
+    {
       "id": "google-parking-candidate-scan",
       "title": "Google parking candidate discovery, admin review, and scan scheduler",
       "subsystem": "backend",
