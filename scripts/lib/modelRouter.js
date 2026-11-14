@@ -2,11 +2,11 @@ const COMPLEXITY_TIERS = ['trivial', 'simple', 'standard', 'complex', 'critical'
 const REASONING_EFFORTS = ['none', 'low', 'medium', 'high'];
 
 const DEFAULT_MODEL_CONFIG = {
-  trivial: { model: 'gpt-5.4-nano', reasoningEffort: 'none' },
-  simple: { model: 'gpt-5.4-nano', reasoningEffort: 'low' },
-  standard: { model: 'gpt-5.4-mini', reasoningEffort: 'low' },
-  complex: { model: 'gpt-5.5', reasoningEffort: 'medium' },
-  critical: { model: 'gpt-5.5', reasoningEffort: 'high' },
+  trivial: { model: 'gpt-6-luna', reasoningEffort: 'none' },
+  simple: { model: 'gpt-6-luna', reasoningEffort: 'low' },
+  standard: { model: 'gpt-6.1-sol', reasoningEffort: 'low' },
+  complex: { model: 'gpt-6.1-terra', reasoningEffort: 'medium' },
+  critical: { model: 'gpt-6-astra', reasoningEffort: 'high' },
 };
 
 const PATTERNS = {

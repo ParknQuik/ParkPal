@@ -22,6 +22,34 @@ const BRANCH_DELTA_SCENARIOS = [
 
 const QUERY_SPECS = [
   {
+    query: 'fix Explore driver choices: compare nearby parking and find the best option for my needs, including commercial availability and bookable host spaces',
+    group: 'session-aware',
+    expectedPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedAnyPaths: [
+      '.agents/knowledge/source-map.json',
+      'docs/agent-knowledge/SESSION_LEARNINGS.md'
+    ],
+    expectedReferences: [
+      'docs/PARKPAL_SYSTEM_ARCHITECTURE.md',
+      'frontend/mobile/src/screens/ExploreMap.tsx',
+      'frontend/mobile/src/screens/HomeDashboard.tsx',
+      'backend/controllers/marketplaceController.js',
+      'backend/routes/analytics.js',
+      'backend/tests/marketplace.test.js',
+      'backend/tests/analytics.test.js',
+      'frontend/mobile/src/__tests__/screens/ExploreMap.test.tsx'
+    ],
+    rejectedFirstPaths: [
+      'STATUS_REPORT.md',
+      'ROADMAP.md',
+      '.agents/knowledge/compact/status.jsonl'
+    ],
+    requireTopPath: '.agents/knowledge/source-map.json'
+  },
+  {
     query: 'cash payment 403 booking modal PaymentScreen',
     group: 'session-aware',
     expectedPaths: [
@@ -335,6 +363,16 @@ const QUERY_SPECS = [
 
 const CONTEXT_SPECS = [
   {
+    query: 'fix Explore driver choices: compare nearby parking and find the best option for my needs, including commercial availability and bookable host spaces',
+    requiredFirstPath: '.agents/knowledge/source-map.json',
+    requiredFirstSummaryContains: 'Explore driver parking choices',
+    rejectedBeforeFirstPath: [
+      '.agents/knowledge/compact/status.jsonl',
+      '.agents/knowledge/compact/roadmap.jsonl',
+      'STATUS_REPORT.md'
+    ]
+  },
+  {
     query: 'mobile signup 400 authSlice AuthScreen',
     requiredFirstPath: '.agents/knowledge/source-map.json',
     rejectedBeforeFirstPath: [
@@ -646,20 +684,30 @@ function checkContextRouting(root, dbPath, spec) {
   });
   const citations = parseCitations(output);
   const paths = citations.map((citation) => citation.sourcePath);
+  const rankedResults = queryKnowledge(root, dbPath, spec.query, TASK_CONTEXT_LIMIT * 5).results || [];
+  const firstSummary = rankedResults[0]?.summary || '';
 
   return {
     query: spec.query,
     paths,
     firstPath: paths[0] || null,
+    firstSummary,
+    requiredFirstSummaryContains: spec.requiredFirstSummaryContains || null,
     requiredFirstPath: spec.requiredFirstPath,
     rejectedBeforeFirstPath: spec.rejectedBeforeFirstPath || []
   };
 }
 
-function buildCompactRecordPayload(root, dbPath, intent) {
+function buildCompactRecordPayload(root, dbPath, intent, contextOutput) {
   const payload = queryKnowledge(root, dbPath, intent, TASK_CONTEXT_LIMIT * 5);
+  const citedRanges = new Set(parseCitations(contextOutput).map((citation) =>
+    `${citation.sourcePath}:${citation.startLine}-${citation.endLine}`
+  ));
   const rows = (payload.results || [])
     .filter((row) => row.sourcePath.startsWith('.agents/knowledge/compact/'))
+    .filter((row) => !citedRanges.has(
+      `${row.canonicalSourcePath}:${row.canonicalStartLine}-${row.canonicalEndLine}`
+    ))
     .slice(0, TASK_CONTEXT_LIMIT);
 
   if (rows.length === 0) {
@@ -754,7 +802,7 @@ function measureTokenSavings(root, dbPath) {
     String(TASK_CONTEXT_LIMIT)
   ], env);
   const queryOutput = runNodeScript(root, 'scripts/knowledge/query.js', [intent], env);
-  const compactRecordPayload = buildCompactRecordPayload(root, dbPath, intent);
+  const compactRecordPayload = buildCompactRecordPayload(root, dbPath, intent, taskContextOutput);
   const citedExcerptPayload = buildCitedExcerptPayload(root, taskContextOutput);
 
   const scenarios = [
@@ -877,6 +925,12 @@ function validateContextChecks(contextChecks) {
     if (check.firstPath !== check.requiredFirstPath) {
       failures.push(
         `${check.query}: compact context first citation is ${check.firstPath || 'none'}, expected ${check.requiredFirstPath}.`
+      );
+    }
+
+    if (check.requiredFirstSummaryContains && !check.firstSummary.includes(check.requiredFirstSummaryContains)) {
+      failures.push(
+        `${check.query}: top ranked route summary is "${check.firstSummary || 'none'}", expected it to include "${check.requiredFirstSummaryContains}".`
       );
     }
 
