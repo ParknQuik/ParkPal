@@ -1,32 +1,25 @@
 # ParkPal Startup Card
 
-Use this file as the only automatic repo startup instruction source.
-Detailed startup guidance remains available on demand in
-`.claude/session-start-instructions.md`. Do not auto-load that file for plain
-startup.
+Only this file is loaded automatically; detailed guidance is in
+`.claude/session-start-instructions.md` (do not load it at plain startup).
 
 When the user says `start` or gives a compact startup intent:
 
-1. Rebuild the local knowledge index only if stale:
-   `rtk npm run knowledge:rebuild-if-stale`
-2. Run lean context with one result:
-   `rtk npm run knowledge:context -- "<intent>" --limit 1`
-   Use `current project status` when no intent is provided.
-3. Verify live git state:
-   `rtk git status --short --branch --untracked-files=normal`
-   `rtk git log -1 --oneline --decorate`
+1. Rebuild only if stale: `rtk npm run knowledge:rebuild-if-stale`.
+2. Run `rtk npm run knowledge:context -- "<intent>" --limit 1` (default intent:
+   `current project status`).
+3. Verify `rtk git status --short --branch --untracked-files=normal` and
+   `rtk git log -1 --oneline --decorate`.
 4. Stop and ask what to work on.
 
-Plain startup is routing only. Do not open `STATUS_REPORT.md`, broad docs, or
-cited source ranges unless the user asks for verified status or chooses a
-specific task. After a task is selected, use
-`rtk npm run knowledge:context -- "<intent>" --limit 3` or targeted cited ranges as
-needed. Use `rtk git status --short --branch --untracked-files=all` only for
-task-specific diagnostics that need every untracked path.
+Startup is routing only: don't open `STATUS_REPORT.md`, broad docs, or cited
+ranges unless verified status is requested or a task is chosen. Then use
+`rtk npm run knowledge:context -- "<intent>" --limit 3` or cited ranges. Use
+`rtk git status --short --branch --untracked-files=all` only when diagnostics
+need every untracked path.
 
-For implementation plans and cross-agent handoffs after task selection, copy the
-routing metadata from `knowledge:context` into the `<proposed_plan>` as a short
-`Model Routing` line. For substantial implementation handoffs, include:
+For plans and cross-agent handoffs, copy `knowledge:context` routing metadata
+into `<proposed_plan>` as `Model Routing`. Substantial handoffs include:
 
 - `Recommended model: <model>`
 - `Reasoning effort: <effort>`
@@ -34,9 +27,14 @@ routing metadata from `knowledge:context` into the `<proposed_plan>` as a short
 - `Confidence: <conf>`
 - `Reason: <top router reason>`
 
-You can generate this block with
-`rtk npm run knowledge:model-routing -- "<implementation intent>"`. Treat it as
-advisory only: Codex cannot self-switch models from repo code, and ParkPal has
-no runtime LLM routing in the app/server layer.
+Every implementation plan also includes `Required skills` and `Required agents`
+inside `<proposed_plan>`: list applicable skills and when used; assign specialist
+agents a scoped implementation/review role or write `None`. This documents the
+handoff; it doesn't launch agents during planning. If a needed resource is
+unavailable, state that and the best fallback. Keep `Model Routing` alongside.
+
+Generate it with `rtk npm run knowledge:model-routing -- "<intent>"`. Routing is
+advisory: Codex cannot self-switch from repo code; ParkPal has no app/server LLM
+routing.
 
 Before committing or pushing, summarize the changes and ask for approval.
