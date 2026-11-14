@@ -7,24 +7,22 @@ const {
   prisma,
 } = require('./setup');
 
-jest.mock('../services/paymongo', () => ({
-  createPaymentIntent: jest.fn(async ({ captureType = 'automatic' } = {}) => ({
-    success: true,
-    paymentIntent: {
-      id: `pi_test_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      attributes: {
-        client_key: 'pi_test_client_key',
-        status: captureType === 'manual' ? 'awaiting_capture' : 'succeeded',
-      },
-    },
-  })),
+jest.mock('../services/paymongo', () => {
+  const mockIntentDetails = new Map();
+  return {
+  publicKey: 'pk_test_public',
+  __mockIntentDetails: mockIntentDetails,
+  createPaymentIntent: jest.fn(async ({ amount = 0, captureType = 'automatic', metadata = {} } = {}) => {
+    const id = `pi_test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const attributes = { client_key: 'pi_test_client_key', public_key: 'pk_test_public', status: captureType === 'manual' ? 'awaiting_capture' : 'succeeded', amount: Math.round(amount * 100), currency: 'PHP', metadata };
+    mockIntentDetails.set(id, attributes);
+    return { success: true, paymentIntent: { id, attributes } };
+  }),
   getPaymentIntent: jest.fn(async (paymentIntentId) => ({
     success: true,
     paymentIntent: {
       id: paymentIntentId,
-      attributes: {
-        status: 'awaiting_capture',
-      },
+      attributes: mockIntentDetails.get(paymentIntentId) || { status: 'awaiting_capture', amount: 0, currency: 'PHP' },
     },
   })),
   capturePaymentIntent: jest.fn(async (paymentIntentId) => ({
@@ -54,7 +52,8 @@ jest.mock('../services/paymongo', () => ({
     },
   })),
   verifyWebhookSignature: jest.fn(() => true),
-}));
+  };
+});
 
 // Create test app
 const app = express();
@@ -71,6 +70,8 @@ const authLimiter = rateLimit({
 
 // Import v1 router
 const v1Router = require('../routes/v1');
+const paymongoService = require('../services/paymongo');
+const paymentsController = require('../controllers/paymentsController');
 app.use('/api/v1', v1Router(authLimiter));
 
 let testData = {};
@@ -120,132 +121,122 @@ afterAll(async () => {
 });
 
 describe('Payment API Tests', () => {
-  describe('POST /api/v1/payments', () => {
-    it('should process a payment successfully', async () => {
+  const makePendingBooking = () => prisma.booking.create({ data: {
+    slotId: testData.slot.id, userId: testData.users.driver.id,
+    startTime: new Date(Date.now() + 60 * 60 * 1000), endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+    price: 50, platformFee: 2.5, hostEarnings: 47.5, status: 'pending',
+  } });
+  it('rejects client-supplied intent amounts', async () => {
+    const response = await request(app)
+      .post('/api/v1/payments/intent')
+      .set('Authorization', `Bearer ${authTokens.driver}`)
+      .send({ bookingId: testBooking.id, paymentMethod: 'card', amount: 0.01 });
+    expect(response.status).toBe(400);
+  });
+
+  it('reuses the active provider intent for a repeated booking request', async () => {
+    const booking = await makePendingBooking();
+    const payload = { bookingId: booking.id, paymentMethod: 'card' };
+    const first = await request(app).post('/api/v1/payments/intent').set('Authorization', `Bearer ${authTokens.driver}`).send(payload);
+    const second = await request(app).post('/api/v1/payments/intent').set('Authorization', `Bearer ${authTokens.driver}`).send(payload);
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(200);
+    expect(second.body.paymentIntentId).toBe(first.body.paymentIntentId);
+    expect(await prisma.payment.count({ where: { bookingId: booking.id, purpose: 'booking' } })).toBe(1);
+  });
+
+  it('rejects a provider intent whose amount differs from the stored payment', async () => {
+    const booking = await makePendingBooking();
+    const intent = await request(app).post('/api/v1/payments/intent')
+      .set('Authorization', `Bearer ${authTokens.driver}`)
+      .send({ bookingId: booking.id, paymentMethod: 'card' });
+    const attrs = paymongoService.__mockIntentDetails.get(intent.body.paymentIntentId);
+    attrs.amount += 1;
+    const response = await request(app).post('/api/v1/payments/confirm')
+      .set('Authorization', `Bearer ${authTokens.driver}`)
+      .send({ paymentIntentId: intent.body.paymentIntentId });
+    expect(response.status).toBe(409);
+    expect(response.body.error).toContain('amount or currency');
+  });
+
+  it('prices extension intents on the server and binds them to the owned booking and requested hours', async () => {
+    const booking = await makePendingBooking();
+    const response = await request(app).post('/api/v1/payments/extension-intent')
+      .set('Authorization', `Bearer ${authTokens.driver}`)
+      .send({ bookingId: booking.id, hours: 2, paymentMethod: 'card' });
+    const base = testData.slot.price * 2;
+    const expected = Number((base + 10 + base * 0.05).toFixed(2));
+    expect(response.status).toBe(201);
+    expect(response.body.amount).toBe(expected);
+    expect(await prisma.payment.findFirst({ where: { transactionId: response.body.paymentIntentId } })).toMatchObject({ purpose: 'extension', extensionHours: 2, amount: expected, userId: testData.users.driver.id, bookingId: booking.id });
+  });
+
+  it('does not create an extension intent for another users booking', async () => {
+    const booking = await makePendingBooking();
+    const response = await request(app).post('/api/v1/payments/extension-intent')
+      .set('Authorization', `Bearer ${authTokens.host}`)
+      .send({ bookingId: booking.id, hours: 1, paymentMethod: 'card' });
+    expect(response.status).toBe(403);
+  });
+
+  it('keeps webhook retries and out-of-order failures idempotent', async () => {
+    const booking = await makePendingBooking();
+    const intent = await request(app).post('/api/v1/payments/intent')
+      .set('Authorization', `Bearer ${authTokens.driver}`)
+      .send({ bookingId: booking.id, paymentMethod: 'card' });
+    const callWebhook = async (type) => {
+      const req = {
+        headers: { 'paymongo-signature': 'test_signature' },
+        body: Buffer.from(JSON.stringify({ data: { attributes: { type, data: { attributes: { payment_intent_id: intent.body.paymentIntentId } } } } })),
+      };
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis() };
+      const next = jest.fn();
+      await paymentsController.handleWebhook(req, res, next);
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    };
+    await callWebhook('payment.paid');
+    await callWebhook('payment.paid');
+    await callWebhook('payment.failed');
+    expect((await prisma.payment.findFirst({ where: { transactionId: intent.body.paymentIntentId } })).status).toBe('completed');
+    expect((await prisma.booking.findUnique({ where: { id: booking.id } })).status).toBe('confirmed');
+  });
+
+  it('derives the PHP payment amount from the stored booking and accepts no client amount', async () => {
+    const response = await request(app)
+      .post('/api/v1/payments/intent')
+      .set('Authorization', `Bearer ${authTokens.driver}`)
+      .send({ bookingId: testBooking.id, paymentMethod: 'card' });
+
+    expect(response.status).toBe(201);
+    expect(paymongoService.createPaymentIntent).toHaveBeenCalledWith(expect.objectContaining({ amount: 52.5 }));
+    expect(response.body.amount).toBe(52.5);
+    const payment = await prisma.payment.findFirst({ where: { bookingId: testBooking.id, transactionId: response.body.paymentIntentId } });
+    expect(payment.amount).toBe(52.5);
+  });
+
+  describe('retired legacy payment endpoints', () => {
+    it('returns 410 with migration guidance for POST /payments', async () => {
       const response = await request(app)
         .post('/api/v1/payments')
         .set('Authorization', `Bearer ${authTokens.driver}`)
-        .send({
-          bookingId: testBooking.id,
-          paymentMethod: 'gcash',
-          amount: 50,
-        });
-
-      expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.userId).toBe(testData.users.driver.id);
-      expect(response.body.bookingId).toBe(testBooking.id);
-      expect(response.body.paymentMethod).toBe('gcash');
-      expect(response.body.amount).toBe(50);
-      expect(response.body.status).toBe('completed');
+        .send({ amount: 1, bookingId: testBooking.id, paymentMethod: 'card' });
+      expect(response.status).toBe(410);
+      expect(response.body.error).toContain('/payments/intent');
     });
 
-    it('should update booking status to confirmed after payment', async () => {
-      // Create a new booking for this test
-      const startTime = new Date(Date.now() + 3600000);
-      const endTime = new Date(Date.now() + 7200000);
-
-      const newBooking = await prisma.booking.create({
-        data: {
-          slotId: testData.slot.id,
-          userId: testData.users.driver.id,
-          startTime,
-          endTime,
-          price: 50,
-          platformFee: 2.5,
-          hostEarnings: 47.5,
-          status: 'pending',
-        },
-      });
-
-      await request(app)
-        .post('/api/v1/payments')
-        .set('Authorization', `Bearer ${authTokens.driver}`)
-        .send({
-          bookingId: newBooking.id,
-          paymentMethod: 'card',
-          amount: 50,
-        });
-
-      const updatedBooking = await prisma.booking.findUnique({
-        where: { id: newBooking.id },
-      });
-
-      expect(updatedBooking.status).toBe('confirmed');
-    });
-
-    it('should fail without authentication', async () => {
+    it('returns 410 with migration guidance for POST /payments/gcash', async () => {
       const response = await request(app)
-        .post('/api/v1/payments')
-        .send({
-          bookingId: testBooking.id,
-          paymentMethod: 'card',
-          amount: 50,
-        });
+        .post('/api/v1/payments/gcash')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({ amount: 1, bookingId: testBooking.id, paymentMethod: 'gcash' });
+      expect(response.status).toBe(410);
+      expect(response.body.error).toContain('/payments/intent');
+    });
 
+    it('requires authentication for retired endpoints', async () => {
+      const response = await request(app).post('/api/v1/payments').send({});
       expect(response.status).toBe(401);
-    });
-
-    it('should fail when paying for another users booking', async () => {
-      const response = await request(app)
-        .post('/api/v1/payments')
-        .set('Authorization', `Bearer ${authTokens.host}`)
-        .send({
-          bookingId: testBooking.id,
-          paymentMethod: 'card',
-          amount: 50,
-        });
-
-      expect(response.status).toBe(403);
-      expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('Unauthorized');
-    });
-
-    it('should fail for non-existent booking', async () => {
-      const response = await request(app)
-        .post('/api/v1/payments')
-        .set('Authorization', `Bearer ${authTokens.driver}`)
-        .send({
-          bookingId: 99999,
-          paymentMethod: 'card',
-          amount: 50,
-        });
-
-      expect(response.status).toBe(403);
-    });
-
-    it('should accept different payment methods', async () => {
-      const paymentMethods = ['card', 'cash', 'gcash', 'paymaya', 'paymongo'];
-
-      for (const method of paymentMethods) {
-        const startTime = new Date(Date.now() + 3600000);
-        const endTime = new Date(Date.now() + 7200000);
-
-        const booking = await prisma.booking.create({
-          data: {
-            slotId: testData.slot.id,
-            userId: testData.users.driver.id,
-            startTime,
-            endTime,
-            price: 50,
-            platformFee: 2.5,
-            hostEarnings: 47.5,
-            status: 'pending',
-          },
-        });
-
-        const response = await request(app)
-          .post('/api/v1/payments')
-          .set('Authorization', `Bearer ${authTokens.driver}`)
-          .send({
-            bookingId: booking.id,
-            paymentMethod: method,
-            amount: 50,
-          });
-
-        expect(response.status).toBe(201);
-        expect(response.body.paymentMethod).toBe(method);
-      }
     });
   });
 
@@ -462,8 +453,7 @@ describe('Payment API Tests', () => {
           .post('/api/v1/payments/intent')
           .set('Authorization', `Bearer ${authTokens.driver}`)
           .send({
-            amount: openModeBooking.price,
-            paymentMethod: 'card',
+              paymentMethod: 'card',
             bookingId: openModeBooking.id
           });
 
@@ -483,8 +473,7 @@ describe('Payment API Tests', () => {
           .post('/api/v1/payments/intent')
           .set('Authorization', `Bearer ${authTokens.driver}`)
           .send({
-            amount: fixedModeBooking.price,
-            paymentMethod: 'card',
+              paymentMethod: 'card',
             bookingId: fixedModeBooking.id
           });
 
@@ -509,8 +498,7 @@ describe('Payment API Tests', () => {
           .post('/api/v1/payments/intent')
           .set('Authorization', `Bearer ${authTokens.driver}`)
           .send({
-            amount: openModeBooking.price,
-            paymentMethod: 'card',
+              paymentMethod: 'card',
             bookingId: openModeBooking.id
           });
 
@@ -669,6 +657,8 @@ describe('Payment API Tests', () => {
         
         // 1 hour parking should be much less than 12 hour authorization
         expect(completedPayment.amount).toBeLessThan(openModeBooking.authAmount);
+        expect(completedPayment.platformFeeAmount).toBeCloseTo(completedPayment.capturedParkingAmount * 0.05, 2);
+        expect(completedPayment.amount).toBeCloseTo(completedPayment.capturedParkingAmount + completedPayment.platformFeeAmount, 2);
       });
     });
   });
@@ -700,7 +690,6 @@ describe('Cash Payment Tests', () => {
         .post('/api/v1/payments/intent')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
-          amount: cashBooking.price,
           paymentMethod: 'cash',
           bookingId: cashBooking.id
         });
@@ -732,8 +721,7 @@ describe('POST /api/v1/payments/confirm - Cash Payment', () => {
          .post('/api/v1/payments/intent')
          .set('Authorization', `Bearer ${authTokens.driver}`)
          .send({
-           amount: cashBooking.price,
-           paymentMethod: 'cash',
+            paymentMethod: 'cash',
            bookingId: cashBooking.id
          });
 
@@ -748,6 +736,13 @@ describe('POST /api/v1/payments/confirm - Cash Payment', () => {
 
        expect(response.status).toBe(200);
        expect(response.body.message).toContain('cash');
+
+       const retry = await request(app)
+         .post('/api/v1/payments/confirm')
+         .set('Authorization', `Bearer ${authTokens.driver}`)
+         .send({ paymentIntentId });
+       expect(retry.status).toBe(200);
+       expect(retry.body.booking.status).toBe('confirmed');
 
        // Verify payment created with pending status
        const payment = await prisma.payment.findFirst({
@@ -785,8 +780,7 @@ describe('POST /api/v1/payments/confirm - Cash Payment', () => {
          .post('/api/v1/payments/intent')
          .set('Authorization', `Bearer ${authTokens.driver}`)
          .send({
-           amount: cashBooking.price,
-           paymentMethod: 'cash',
+            paymentMethod: 'cash',
            bookingId: cashBooking.id
          });
 

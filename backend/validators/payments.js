@@ -67,12 +67,18 @@ exports.createPaymentSchema = Joi.object({
   'object.xor': 'Either sessionId or bookingId must be provided, but not both'
 });
 
+// PaymentIntent amounts are taken from the persisted booking, never the browser.
+exports.createPaymentIntentSchema = Joi.object({
+  bookingId: Joi.number().integer().positive().required(),
+  paymentMethod: Joi.string().valid('card', 'cash', 'gcash', 'paymaya', 'grab_pay', 'paymongo', 'debit', 'credit').required()
+});
+
 /**
  * Validator for payment query parameters
  */
 exports.getPaymentsQuerySchema = Joi.object({
   status: Joi.string()
-    .valid('pending', 'completed', 'failed', 'refunded')
+    .valid('pending', 'processing', 'authorized', 'completed', 'failed', 'cancelled', 'refunded')
     .optional(),
 
   paymentMethod: Joi.string()
@@ -107,6 +113,12 @@ exports.confirmPaymentSchema = Joi.object({
       'string.empty': 'paymentIntentId cannot be empty',
       'any.required': 'paymentIntentId is required'
     })
+});
+
+exports.createExtensionIntentSchema = Joi.object({
+  bookingId: Joi.number().integer().positive().required(),
+  hours: Joi.number().integer().min(1).max(4).required(),
+  paymentMethod: Joi.string().valid('card', 'gcash', 'paymaya', 'grab_pay').required()
 });
 
 /**

@@ -264,9 +264,11 @@ export const paymentAPI = {
   // Create payment intent for booking
   createPaymentIntent: (data: {
     bookingId: number;
-    amount: number;
     paymentMethod: 'cash' | 'gcash' | 'card' | 'grab_pay' | 'paymaya';
   }) => api.post('/payments/intent', data),
+
+  createExtensionIntent: (data: { bookingId: number; hours: number; paymentMethod: 'card' | 'gcash' | 'paymaya' | 'grab_pay' }) =>
+    api.post('/payments/extension-intent', data),
 
   // Confirm payment after completion
   confirmPayment: (data: { paymentIntentId: string }) =>
