@@ -1,8 +1,34 @@
 # Web Frontend Deployment Setup
 
-**Last Updated:** March 10, 2026
-**Status:** Ready for deployment
+**Last Updated:** November 14, 2026
+**Status:** Configuration reference; live production readiness is unverified
 **Platform:** GCP Cloud Run
+
+> This document is a deployment checklist, not evidence that the listed services,
+> secrets, domains, or workflows are currently configured. Verify each item
+> against the active GCP project and GitHub environment before a release.
+
+## Public domain assumption
+
+The current customer-facing canonical host assumption is `https://parkpal.com`.
+The production web service, custom-domain mapping, DNS, TLS certificate, and
+backend API host have not been verified as configured. Keep preview and
+development URLs out of canonical metadata. Do not treat this checklist as a
+deployment approval.
+
+## Transport security and browser keys
+
+Cloud Run terminates HTTPS before forwarding a request to the container. The
+container's Nginx configuration redirects requests that Cloud Run marks as
+forwarded HTTP, and returns HSTS on responses. Keep the public Cloud Run HTTPS
+endpoint enabled; do not expose the container directly outside Cloud Run.
+
+Values prefixed with `VITE_` are compiled into browser JavaScript and are
+visible to every visitor. The Google Maps key is a browser key: restrict it by
+the deployed website's HTTP referrer and by the APIs it can call. Never put
+payment-provider secret keys, service-account credentials, or other private
+credentials in a `VITE_` variable. Payment operations must continue through the
+backend API.
 **CI/CD:** GitHub Actions
 
 ---
@@ -87,7 +113,7 @@ echo "VITE_PAYMONGO_PUBLIC_KEY: $PAYMONGO_KEY"
 Go to: https://github.com/ParknQuik/ParkPal/settings/secrets/actions
 
 Add these secrets:
-1. **VITE_API_BASE_URL** = `https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/api`
+1. **VITE_API_BASE_URL** = `https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app/api/v1`
 2. **VITE_GOOGLE_MAPS_API_KEY** = (output from Step 2)
 3. **VITE_PAYMONGO_PUBLIC_KEY** = (output from Step 2)
 
@@ -124,6 +150,10 @@ curl https://parkpal-web-dev-<hash>.a.run.app/health
 ---
 
 ## Deployment Environments
+
+The service names and environment values below are historical configuration
+references. Confirm the live Cloud Run service, region, API URL, min/max
+instances, and domain mapping before using them.
 
 ### Development (dev branch)
 - **Service:** parkpal-web-dev
