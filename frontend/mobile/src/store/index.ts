@@ -34,7 +34,7 @@ const authPersistTransform = createTransform(
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['settings', 'auth'],
+  whitelist: ['settings'],
   transforms: [authPersistTransform],
 };
 

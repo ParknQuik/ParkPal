@@ -1,5 +1,5 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sessionStorage } from './sessionStorage';
 import { API_BASE_URL } from '../config/api.config';
 import type {
   BehaviorStatus,
@@ -21,7 +21,12 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('token');
+    const authAttempt = /\/auth\/(login|register|google|apple|facebook)(?:\?|$)/.test(config.url || '');
+    if (authAttempt) {
+      delete config.headers.Authorization;
+      return config;
+    }
+    const token = await sessionStorage.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,9 +42,15 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response) {
-      if (error.response.status === 401) {
-        await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('user');
+      if (error.response.status === 401 && error.config?.headers?.Authorization) {
+        const sentAuthorization = error.config.headers.Authorization;
+        const currentToken = await sessionStorage.getToken();
+        if (currentToken && sentAuthorization === `Bearer ${currentToken}`) {
+          await sessionStorage.clear();
+          const { store } = await import('../store');
+          const { sessionInvalidated } = await import('../store/slices/authSlice');
+          store.dispatch(sessionInvalidated());
+        }
       }
     }
     return Promise.reject(error);

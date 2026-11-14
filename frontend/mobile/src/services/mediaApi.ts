@@ -1,7 +1,5 @@
-import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api.config';
+import api from './api';
 
 // Use the same API URL configuration as the main api.ts
 
@@ -50,18 +48,7 @@ export const mediaAPI = {
    * Request a signed upload URL from the backend
    */
   async requestUploadUrl(slotId: number, fileName: string): Promise<UploadUrlResponse> {
-    const token = await AsyncStorage.getItem('token');
-
-    const response = await axios.post(
-      `${API_BASE_URL}/media/upload-url`,
-      { slotId, fileName },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const response = await api.post('/media/upload-url', { slotId, fileName });
 
     return response.data;
   },
@@ -92,18 +79,7 @@ export const mediaAPI = {
    * Confirm upload and trigger image processing
    */
   async confirmUpload(slotId: number, fileName: string): Promise<Photo> {
-    const token = await AsyncStorage.getItem('token');
-
-    const response = await axios.post(
-      `${API_BASE_URL}/media/confirm-upload`,
-      { slotId, fileName },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const response = await api.post('/media/confirm-upload', { slotId, fileName });
 
     return response.data;
   },
@@ -112,17 +88,9 @@ export const mediaAPI = {
    * Get signed URL for uploading a listing photo
    */
   async getListingPhotoUploadUrl(listingId: number, fileName: string): Promise<UploadUrlResponse> {
-    const token = await AsyncStorage.getItem('token');
-
-    const response = await axios.get(
-      `${API_BASE_URL}/marketplace/listings/${listingId}/photos/upload-url`,
-      {
-        params: { fileName },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await api.get(`/marketplace/listings/${listingId}/photos/upload-url`, {
+      params: { fileName },
+    });
 
     return response.data;
   },
@@ -142,17 +110,9 @@ export const mediaAPI = {
 
       await this.uploadToGCS(uploadUrl, imageUri, contentType);
 
-      const token = await AsyncStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/marketplace/listings/${listingId}/photos/confirm`,
-        { fileName: gcsFileName },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await api.post(`/marketplace/listings/${listingId}/photos/confirm`, {
+        fileName: gcsFileName,
+      });
 
       return response.data;
     } catch (error) {
@@ -165,7 +125,7 @@ export const mediaAPI = {
    * Get all photos for a parking slot
    */
   async getSlotPhotos(slotId: number): Promise<Photo[]> {
-    const response = await axios.get(`${API_BASE_URL}/media/photos/slot/${slotId}`);
+    const response = await api.get(`/media/photos/slot/${slotId}`);
     return response.data;
   },
 
@@ -173,13 +133,7 @@ export const mediaAPI = {
    * Delete a photo
    */
   async deletePhoto(photoId: number): Promise<void> {
-    const token = await AsyncStorage.getItem('token');
-
-    await axios.delete(`${API_BASE_URL}/media/photos/${photoId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    await api.delete(`/media/photos/${photoId}`);
   },
 
   /**

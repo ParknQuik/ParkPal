@@ -19,7 +19,7 @@ import type * as GoogleSignInModule from '@react-native-google-signin/google-sig
 import { useAppDispatch, useAppSelector } from '../store';
 import { login, signup, setUser, setToken } from '../store/slices/authSlice';
 import { authAPI } from '../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sessionStorage } from '../services/sessionStorage';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { validateEmail, validatePassword } from '../utils/helpers';
@@ -189,8 +189,7 @@ export const AuthScreen: React.FC = () => {
   const storeSocialAuthResponse = async (userResponse: any) => {
     const { token, user } = userResponse.data;
 
-    await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('user', JSON.stringify(user));
+    await sessionStorage.save(token, user, rememberMe);
     dispatch(setUser(user));
     dispatch(setToken(token));
   };
@@ -366,7 +365,7 @@ export const AuthScreen: React.FC = () => {
 
     if (!password) {
       newErrors.password = 'Password is required';
-    } else {
+    } else if (activeTab === 'signup') {
       const validation = validatePassword(password);
       if (!validation.valid) {
         newErrors.password = validation.message;
@@ -390,7 +389,7 @@ export const AuthScreen: React.FC = () => {
 
     try {
       if (activeTab === 'login') {
-        await dispatch(login({ email: normalizedEmail, password })).unwrap();
+        await dispatch(login({ email: normalizedEmail, password, remember: rememberMe })).unwrap();
       } else {
         await dispatch(signup({ name: normalizedName, email: normalizedEmail, password })).unwrap();
       }
@@ -537,8 +536,8 @@ export const AuthScreen: React.FC = () => {
       marginRight: spacing.md,
     },
     eyeButton: {
-      minWidth: 36,
-      minHeight: 36,
+      minWidth: 44,
+      minHeight: 44,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: -spacing.xs,
@@ -747,9 +746,11 @@ export const AuthScreen: React.FC = () => {
                     placeholder="John Doe"
                     placeholderTextColor={colors.textTertiary}
                     editable={!authBusy}
+                    accessibilityLabel="Full Name"
+                    accessibilityHint={errors.name}
                   />
                 </View>
-                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+                {errors.name && <Text style={styles.errorText} accessibilityLiveRegion="polite">{errors.name}</Text>}
               </View>
             )}
 
@@ -771,9 +772,11 @@ export const AuthScreen: React.FC = () => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!authBusy}
+                  accessibilityLabel="Email Address"
+                  accessibilityHint={errors.email}
                 />
               </View>
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              {errors.email && <Text style={styles.errorText} accessibilityLiveRegion="polite">{errors.email}</Text>}
             </View>
 
             <View style={styles.inputGroup}>
@@ -793,6 +796,8 @@ export const AuthScreen: React.FC = () => {
                   placeholderTextColor={colors.textTertiary}
                   secureTextEntry={!showPassword}
                   editable={!authBusy}
+                  accessibilityLabel="Password"
+                  accessibilityHint={errors.password}
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -805,7 +810,7 @@ export const AuthScreen: React.FC = () => {
                   <MaterialCommunityIcons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+              {errors.password && <Text style={styles.errorText} accessibilityLiveRegion="polite">{errors.password}</Text>}
             </View>
 
             {activeTab === 'signup' && (
@@ -829,9 +834,11 @@ export const AuthScreen: React.FC = () => {
                     placeholderTextColor={colors.textTertiary}
                     secureTextEntry={!showPassword}
                     editable={!authBusy}
+                    accessibilityLabel="Confirm Password"
+                    accessibilityHint={errors.confirmPassword}
                   />
                 </View>
-                {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+                {errors.confirmPassword && <Text style={styles.errorText} accessibilityLiveRegion="polite">{errors.confirmPassword}</Text>}
               </View>
             )}
 
