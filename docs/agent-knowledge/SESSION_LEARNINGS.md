@@ -4,6 +4,21 @@ Curated implementation lessons for ParkPal agents. Keep entries short,
 reviewable, and tied to completed work. This file is an index source, not a
 replacement for reading live code before edits.
 
+## 2026-11-14 - Explore Driver Parking Choices
+
+- Host-listed marketplace spaces are bookable options. Commercial parking data
+  provides analytics guidance such as availability and circling estimates; it
+  does not create a ParkPal booking.
+- Candidate previews are unverified discovery results. They are not bookable
+  and must not imply guaranteed availability, occupancy, or pricing.
+- Do not invent one universal ranking for the "best" parking choice. Suitability
+  depends on the driver's needs and the distinct evidence available for each
+  option.
+- Start with `docs/PARKPAL_SYSTEM_ARCHITECTURE.md`,
+  `frontend/mobile/src/screens/ExploreMap.tsx`,
+  `frontend/mobile/src/screens/HomeDashboard.tsx`, the marketplace and analytics
+  slices/services, and their focused API and Explore tests.
+
 ## 2026-05-23 - Payment and Mobile Workflow Lessons
 
 ### React Hook Order Before Early Returns
