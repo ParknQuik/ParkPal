@@ -68,7 +68,7 @@ describe('Auth Integration Flow', () => {
     expect(localStorage.getItem('user')).toBe(JSON.stringify(registerResponse.data.user));
 
     // Verify navigation was called
-    expect(mockNavigate).toHaveBeenCalledWith('/search');
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 
   it('should handle login after registration', async () => {
@@ -100,7 +100,7 @@ describe('Auth Integration Flow', () => {
 
     // Verify login token stored
     expect(localStorage.getItem('token')).toBe('login-token');
-    expect(mockNavigate).toHaveBeenCalledWith('/search');
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 
   it('should show validation errors preventing registration submission', async () => {
@@ -219,7 +219,11 @@ describe('Auth Integration Flow', () => {
   it('should validate password length', async () => {
     render(<Login />);
 
+    await userEvent.setup().click(screen.getByRole('tab', { name: /register/i }));
+
     // Type short password
+    fillInput(/name/i, 'Short Password');
+    fillInput(/email/i, 'short@example.com');
     const passwordInput = screen.getByLabelText(/password/i);
     fireEvent.change(passwordInput, { target: { value: '12345' } });
 
@@ -228,7 +232,7 @@ describe('Auth Integration Flow', () => {
 
     // Should show password length error
     await waitFor(() => {
-      expect(screen.getByText('Password must be at least 6 characters')).toBeInTheDocument();
+      expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
     });
 
     // API should not be called

@@ -1,4 +1,4 @@
-import React, { Component, ReactNode, ErrorInfo } from 'react';
+import { Component, ReactNode, ErrorInfo } from 'react';
 import { Box, Container, Typography, Button, Paper } from '@mui/material';
 import { Error as ErrorIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 
@@ -24,7 +24,7 @@ class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(_error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI
     return { hasError: true };
   }
@@ -147,10 +147,5 @@ class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-ErrorBoundary.defaultProps = {
-  resetOnError: false,
-  showContactSupport: true,
-};
 
 export default ErrorBoundary;

@@ -1,6 +1,6 @@
 // Cache bust: Force rebuild with env vars
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
 	Box,
 	Paper,
@@ -35,9 +35,17 @@ import {
 	Refresh,
 } from '@mui/icons-material';
 import api from '../api';
+import { loadGoogleMaps } from '../utils/googleMaps';
 
 const MapView = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
+	const query = new URLSearchParams(location.search);
+	const requestedCenter = query.has('lat') && query.has('lng')
+		? { lat: Number(query.get('lat')), lng: Number(query.get('lng')) }
+		: null;
+	const checkIn = query.get('checkIn') || '';
+	const checkOut = query.get('checkOut') || '';
 	const mapRef = useRef(null);
 	const googleMapRef = useRef(null);
 	const markersRef = useRef([]);
@@ -45,7 +53,7 @@ const MapView = () => {
 	const [slots, setSlots] = useState([]);
 	const [filteredSlots, setFilteredSlots] = useState([]);
 	const [selectedSlot, setSelectedSlot] = useState(null);
-	const [searchQuery, setSearchQuery] = useState('');
+	const [searchQuery, setSearchQuery] = useState(query.get('location') || '');
 	const [userLocation, setUserLocation] = useState(null);
 	const [searchCenter, setSearchCenter] = useState(null); // Where to search (can be different from user location)
 	const [radius, setRadius] = useState(5); // Search radius in km (default 5km)
@@ -54,6 +62,11 @@ const MapView = () => {
 	const [mapLoaded, setMapLoaded] = useState(false);
 	const [autoRefresh, setAutoRefresh] = useState(true); // Auto-refresh toggle
 	const [lastRefresh, setLastRefresh] = useState(Date.now());
+	const [minPrice, setMinPrice] = useState('');
+	const [maxPrice, setMaxPrice] = useState('');
+	const [slotType, setSlotType] = useState('');
+	const [amenity, setAmenity] = useState('');
+	const [sortBy, setSortBy] = useState('nearest');
 
 	// Default center (Manila)
 	const defaultCenter = { lat: 14.5995, lng: 120.9842 };
@@ -70,7 +83,7 @@ const MapView = () => {
 		if (userLocation || searchCenter) {
 			fetchSlots();
 		}
-	}, [userLocation, searchCenter, radius]);
+	}, [userLocation, searchCenter, radius, checkIn, checkOut]);
 
 	useEffect(() => {
 		if (mapLoaded) {
@@ -84,7 +97,12 @@ const MapView = () => {
 		// Debounce search filtering
 		const timer = setTimeout(() => filterSlots(), 300);
 		return () => clearTimeout(timer);
-	}, [searchQuery, slots]);
+	}, [searchQuery, slots, minPrice, maxPrice, slotType, amenity, sortBy, userLocation, searchCenter]);
+
+	useEffect(() => {
+		const timer = setTimeout(() => fetchSlots(), 250);
+		return () => clearTimeout(timer);
+	}, [minPrice, maxPrice, slotType, amenity]);
 
 	// Auto-refresh parking slots every 30 seconds
 	useEffect(() => {
@@ -100,40 +118,13 @@ const MapView = () => {
 	}, [autoRefresh, userLocation, searchCenter, radius]);
 
 	const loadGoogleMapsScript = () => {
-		// Check if Google Maps is already loaded
-		if (window.google && window.google.maps) {
-			setMapLoaded(true);
-			return;
-		}
-
-		// Check for API key in environment
-		const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-		// Debug: Log API key status (remove after debugging)
-		console.log('[MapView] API Key check:', {
-			exists: !!apiKey,
-			length: apiKey?.length,
-			firstChars: apiKey?.substring(0, 10),
-			isPlaceholder: apiKey === 'YOUR_GOOGLE_MAPS_API_KEY'
-		});
-
-		if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
-			console.warn('Google Maps API key not configured. Using list view only.');
-			setError('Map view unavailable. Configure VITE_GOOGLE_MAPS_API_KEY to enable maps.');
-			setMapLoaded(false);
-			return;
-		}
-
-		const script = document.createElement('script');
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&v=beta`;
-		script.async = true;
-		script.defer = true;
-		script.onload = () => setMapLoaded(true);
-		script.onerror = () => {
-			setError('Failed to load Google Maps. Check your API key configuration.');
-			setMapLoaded(false);
-		};
-		document.head.appendChild(script);
+		loadGoogleMaps(['marker'])
+			.then(() => setMapLoaded(true))
+			.catch((loadError) => {
+				console.warn('[MapView] Google Maps unavailable:', loadError);
+				setError(loadError.message || 'Map view unavailable. Check your Google Maps configuration.');
+				setMapLoaded(false);
+			});
 	};
 
 	const getUserLocation = () => {
@@ -164,7 +155,7 @@ const MapView = () => {
 		try {
 			setLoading(true);
 			// Use searchCenter if set (user moved map), otherwise use userLocation
-			const center = searchCenter || userLocation || defaultCenter;
+			const center = searchCenter || requestedCenter || userLocation || defaultCenter;
 
 			const response = await api.get('/marketplace/search', {
 				params: {
@@ -172,6 +163,14 @@ const MapView = () => {
 					lon: center.lng || center.lon,
 					radius: radius, // User-adjustable radius
 					status: 'available',
+					...(minPrice !== '' ? { minPrice } : {}),
+					...(maxPrice !== '' ? { maxPrice } : {}),
+					...(slotType ? { slotType } : {}),
+					...(amenity ? { amenities: amenity } : {}),
+					...(checkIn && checkOut ? {
+						availableFrom: new Date(checkIn).toISOString(),
+						availableTo: new Date(checkOut).toISOString(),
+					} : {}),
 				},
 			});
 			// Handle v1 API response format: { data: [...], pagination: {...} }
@@ -187,25 +186,27 @@ const MapView = () => {
 	};
 
 	const filterSlots = () => {
-		if (!searchQuery.trim()) {
-			setFilteredSlots(slots);
-			return;
-		}
-
 		const query = searchQuery.toLowerCase();
-		const filtered = slots.filter(
+		let filtered = slots.filter(
 			(slot) =>
-				slot.address?.toLowerCase().includes(query) ||
+				!query || slot.address?.toLowerCase().includes(query) ||
 				slot.description?.toLowerCase().includes(query) ||
 				slot.slotType?.toLowerCase().includes(query)
 		);
+		if (minPrice !== '') filtered = filtered.filter((slot) => Number(slot.price) >= Number(minPrice));
+		if (maxPrice !== '') filtered = filtered.filter((slot) => Number(slot.price) <= Number(maxPrice));
+		if (slotType) filtered = filtered.filter((slot) => slot.slotType === slotType);
+		if (amenity) filtered = filtered.filter((slot) => (Array.isArray(slot.amenities) ? slot.amenities : []).includes(amenity));
+		const center = searchCenter || requestedCenter || userLocation || defaultCenter;
+		const distance = (slot) => Number(slot.distance ?? Math.hypot(slot.lat - center.lat, slot.lon - center.lng));
+		filtered.sort((a, b) => sortBy === 'cheapest' ? Number(a.price) - Number(b.price) : sortBy === 'top_rated' ? Number(b.rating || 0) - Number(a.rating || 0) : distance(a) - distance(b));
 		setFilteredSlots(filtered);
 	};
 
 	const initializeMap = async () => {
-		if (!mapRef.current || !window.google) return;
+		if (!mapRef.current || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
 
-		const center = userLocation || defaultCenter;
+		const center = searchCenter || requestedCenter || userLocation || defaultCenter;
 
 		// Initialize map with mapId for Advanced Markers
 		const map = new window.google.maps.Map(mapRef.current, {
@@ -226,7 +227,7 @@ const MapView = () => {
 		markersRef.current = [];
 
 		// Create pin element for user location
-		if (userLocation && window.google.maps.marker) {
+		if (userLocation) {
 			try {
 				const userPin = document.createElement('div');
 				userPin.style.width = '16px';
@@ -289,10 +290,11 @@ const MapView = () => {
 					position,
 					content: markerContent,
 					title: slot.address,
+					gmpClickable: true,
 				});
 
-				// Add click listener
-				marker.addListener('click', () => {
+				// Advanced Markers use the DOM gmp-click event.
+				marker.addEventListener('gmp-click', () => {
 					setSelectedSlot(slot);
 					map.panTo(position);
 				});
@@ -342,7 +344,7 @@ const MapView = () => {
 	};
 
 	return (
-		<Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+		<Box sx={{ height: 'calc(100vh - 72px)', minHeight: 500, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
 			{/* Error Alert */}
 			{error && (
 				<Alert severity="warning" onClose={() => setError('')}>
@@ -355,7 +357,8 @@ const MapView = () => {
 				{/* Sidebar */}
 				<Paper
 					sx={{
-						width: 350,
+						width: { xs: '100%', md: 350 },
+						flex: { xs: '0 0 58%', md: '0 0 350px' },
 						display: 'flex',
 						flexDirection: 'column',
 						borderRadius: 0,
@@ -419,6 +422,30 @@ const MapView = () => {
 					</Box>
 
 					<Divider />
+					<Box sx={{ px: 2, py: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+						<TextField size="small" label="Min ₱/hr" type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} inputProps={{ min: 0 }} />
+						<TextField size="small" label="Max ₱/hr" type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} inputProps={{ min: 0 }} />
+						<FormControl size="small" sx={{ gridColumn: '1 / -1' }}>
+							<InputLabel id="slot-type-label">Space type</InputLabel>
+							<Select labelId="slot-type-label" label="Space type" value={slotType} onChange={(e) => setSlotType(e.target.value)}>
+								<MenuItem value="">Any type</MenuItem><MenuItem value="roadside_qr">Roadside (QR)</MenuItem><MenuItem value="commercial_manual">Commercial (Manual)</MenuItem><MenuItem value="commercial_iot">Commercial (IoT)</MenuItem>
+							</Select>
+						</FormControl>
+						<FormControl size="small" sx={{ gridColumn: '1 / -1' }}>
+							<InputLabel id="amenity-label">Amenity</InputLabel>
+							<Select labelId="amenity-label" label="Amenity" value={amenity} onChange={(e) => setAmenity(e.target.value)}>
+								<MenuItem value="">Any amenity</MenuItem><MenuItem value="ev_charging">EV charging</MenuItem><MenuItem value="covered">Covered</MenuItem><MenuItem value="security">Security</MenuItem><MenuItem value="cctv">CCTV</MenuItem><MenuItem value="restroom">Restroom</MenuItem><MenuItem value="elevator">Elevator</MenuItem><MenuItem value="lighting">Lighting</MenuItem><MenuItem value="wide_slot">Wide space</MenuItem><MenuItem value="valet">Valet</MenuItem>
+							</Select>
+						</FormControl>
+						<FormControl size="small" sx={{ gridColumn: '1 / -1' }}>
+							<InputLabel id="sort-label">Sort by</InputLabel>
+							<Select labelId="sort-label" label="Sort by" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+								<MenuItem value="nearest">Nearest</MenuItem><MenuItem value="cheapest">Cheapest</MenuItem><MenuItem value="top_rated">Top rated</MenuItem>
+							</Select>
+						</FormControl>
+					</Box>
+
+					<Divider />
 
 					{/* Slots List */}
 					<Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
@@ -467,48 +494,50 @@ const MapView = () => {
 														: 'divider',
 											}}
 										>
-											<ListItemText
-												primary={
-													<Box
-														display="flex"
-														justifyContent="space-between"
-														alignItems="center"
-														mb={0.5}
-													>
-														<Typography variant="subtitle2" fontWeight="bold">
-															₱{slot.price}/hr
+										<ListItemText
+											primaryTypographyProps={{ component: 'div' }}
+											primary={
+												<Box
+													display="flex"
+													justifyContent="space-between"
+													alignItems="center"
+													mb={0.5}
+												>
+													<Typography variant="subtitle2" fontWeight="bold">
+														₱{slot.price}/hr
+													</Typography>
+													<Chip
+														label={slot.status}
+														color={getStatusColor(slot.status)}
+														size="small"
+													/>
+												</Box>
+											}
+											secondary={
+												<>
+													<Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+														<LocationOn sx={{ fontSize: 14 }} />
+														<Typography variant="caption" noWrap>
+															{slot.address}
 														</Typography>
-														<Chip
-															label={slot.status}
-															color={getStatusColor(slot.status)}
-															size="small"
-														/>
 													</Box>
-												}
-												secondary={
-													<>
-														<Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
-															<LocationOn sx={{ fontSize: 14 }} />
-															<Typography variant="caption" noWrap>
-																{slot.address}
+													{slot.rating > 0 && (
+														<Box display="flex" alignItems="center" gap={0.5}>
+															<Star sx={{ fontSize: 14, color: 'warning.main' }} />
+															<Typography variant="caption">
+																{slot.rating.toFixed(1)}
 															</Typography>
 														</Box>
-														{slot.rating > 0 && (
-															<Box display="flex" alignItems="center" gap={0.5}>
-																<Star sx={{ fontSize: 14, color: 'warning.main' }} />
-																<Typography variant="caption">
-																	{slot.rating.toFixed(1)}
-																</Typography>
-															</Box>
-														)}
-														{slot.distance && (
-															<Typography variant="caption" color="text.secondary">
-																{slot.distance.toFixed(1)} km away
-															</Typography>
-														)}
-													</>
-												}
-											/>
+													)}
+													{slot.distance && (
+														<Typography variant="caption" color="text.secondary">
+															{slot.distance.toFixed(1)} km away
+														</Typography>
+													)}
+												</>
+											}
+											secondaryTypographyProps={{ component: 'div' }}
+										/>
 										</ListItem>
 										{index < filteredSlots.length - 1 && <Divider />}
 									</React.Fragment>
@@ -535,6 +564,12 @@ const MapView = () => {
 									top: 16,
 									left: '50%',
 									transform: 'translateX(-50%)',
+									'&:hover, &:active': {
+										transform: 'translateX(-50%)',
+									},
+									'@media (hover: hover) and (prefers-reduced-motion: no-preference)': {
+										transition: 'box-shadow 200ms ease-out, background-color 200ms ease-out',
+									},
 									boxShadow: 3,
 									zIndex: 1,
 								}}
@@ -596,7 +631,7 @@ const MapView = () => {
 								bottom: 16,
 								left: '50%',
 								transform: 'translateX(-50%)',
-								minWidth: 400,
+												minWidth: { xs: 'calc(100% - 24px)', sm: 400 },
 								maxWidth: 500,
 								boxShadow: 3,
 							}}
@@ -662,14 +697,15 @@ const MapView = () => {
 									fullWidth
 									variant="contained"
 									onClick={() =>
-										navigate('/reserve', { state: { slot: selectedSlot } })
+										navigate(`/reserve?${new URLSearchParams({ listingId: String(selectedSlot.id), ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}) })}`, { state: { slot: selectedSlot, checkIn, checkOut } })
 									}
-									disabled={selectedSlot.status !== 'available'}
+									disabled={selectedSlot.status !== 'available' && !(checkIn && checkOut)}
 								>
-									{selectedSlot.status === 'available'
+									{selectedSlot.status === 'available' || (checkIn && checkOut)
 										? 'Reserve Now'
 										: 'Not Available'}
 								</Button>
+								<Button fullWidth sx={{ mt: 1 }} onClick={() => navigate(`/listing/${selectedSlot.id}${checkIn || checkOut ? `?${new URLSearchParams({ ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}) })}` : ''}`)}>View listing details</Button>
 							</CardContent>
 						</Card>
 					)}

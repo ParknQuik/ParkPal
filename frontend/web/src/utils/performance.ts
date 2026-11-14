@@ -14,6 +14,7 @@ interface PerformanceMetrics {
 class PerformanceMonitor {
   private metrics: PerformanceMetrics[] = [];
   private reportingEndpoint: string | null = null;
+  private observers: PerformanceObserver[] = [];
 
   constructor(reportingEndpoint?: string) {
     this.reportingEndpoint = reportingEndpoint || null;
@@ -63,6 +64,7 @@ class PerformanceMonitor {
       });
 
       observer.observe({ entryTypes: ['largest-contentful-paint'] });
+      this.observers.push(observer);
     } catch (error) {
       console.warn('LCP observation failed:', error);
     }
@@ -92,6 +94,7 @@ class PerformanceMonitor {
       });
 
       observer.observe({ entryTypes: ['first-input'] });
+      this.observers.push(observer);
     } catch (error) {
       console.warn('FID observation failed:', error);
     }
@@ -125,6 +128,7 @@ class PerformanceMonitor {
       });
 
       observer.observe({ entryTypes: ['layout-shift'] });
+      this.observers.push(observer);
     } catch (error) {
       console.warn('CLS observation failed:', error);
     }
@@ -173,6 +177,12 @@ class PerformanceMonitor {
     }
   }
 
+  public stop(): void {
+    this.reportingEndpoint = null;
+    this.observers.forEach((observer) => observer.disconnect());
+    this.observers = [];
+  }
+
   /**
    * Report metric to analytics endpoint
    */
@@ -182,8 +192,13 @@ class PerformanceMonitor {
     try {
       await fetch(this.reportingEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(metric),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-ParkPal-Analytics-Consent': 'granted',
+        },
+        // The server timestamps samples and stores no account or device identifiers.
+        body: JSON.stringify({ name: metric.name, value: metric.value, rating: metric.rating }),
+        keepalive: true,
       });
     } catch (error) {
       console.error('Failed to report metric:', error);
@@ -235,6 +250,11 @@ export const initializePerformanceMonitoring = (reportingEndpoint?: string): voi
   if (!performanceMonitor) {
     performanceMonitor = new PerformanceMonitor(reportingEndpoint);
   }
+};
+
+export const stopPerformanceMonitoring = (): void => {
+  performanceMonitor?.stop();
+  performanceMonitor = null;
 };
 
 /**

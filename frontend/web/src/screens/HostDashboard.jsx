@@ -22,7 +22,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  DialogContentText,
 } from '@mui/material';
+import QRCode from 'qrcode';
 import {
   Add as AddIcon,
   AttachMoney as MoneyIcon,
@@ -42,6 +44,8 @@ export default function HostDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({ open: false, slotId: null });
+  const [busyListingId, setBusyListingId] = useState(null);
+  const [qrDialog, setQrDialog] = useState({ open: false, name: '', image: '', loading: false, error: '' });
 
   useEffect(() => {
     fetchHostData();
@@ -53,13 +57,8 @@ export default function HostDashboard() {
       setLoading(true);
       setError('');
 
-      // Fetch host's listings
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const listingsRes = await api.get('/marketplace/search');
-      const hostListings = (listingsRes.data.listings || listingsRes.data || []).filter(
-        (slot) => slot.ownerId === user.id
-      );
-      setListings(hostListings);
+      const listingsRes = await api.get('/marketplace/host/listings');
+      setListings(Array.isArray(listingsRes.data) ? listingsRes.data : listingsRes.data.listings || []);
 
       // Fetch earnings
       const earningsRes = await api.get('/marketplace/host/earnings');
@@ -74,12 +73,22 @@ export default function HostDashboard() {
 
   const handleDeleteListing = async () => {
     try {
-      await api.delete(`/api/slots/${deleteDialog.slotId}`);
+      await api.delete(`/marketplace/listings/${deleteDialog.slotId}`);
       setDeleteDialog({ open: false, slotId: null });
       fetchHostData(); // Refresh data
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete listing');
     }
+  };
+
+  const handleToggleListing = async (listing) => {
+    setBusyListingId(listing.id);
+    try {
+      await api.patch(`/marketplace/listings/${listing.id}/toggle`, { isActive: !listing.isActive });
+      await fetchHostData();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Unable to update listing availability');
+    } finally { setBusyListingId(null); }
   };
 
   const getStatusColor = (status) => {
@@ -90,6 +99,19 @@ export default function HostDashboard() {
       out_of_service: 'default',
     };
     return colors[status] || 'default';
+  };
+
+  const showListingQr = async (listing) => {
+    setQrDialog({ open: true, name: listing.title || listing.address, image: '', loading: true, error: '' });
+    try {
+      const { data } = await api.get(`/marketplace/listings/${listing.id}`);
+      const qrData = data?.qrCodeData || data?.data?.qrCodeData;
+      if (!qrData) throw new Error('QR data is unavailable');
+      const image = await QRCode.toDataURL(qrData, { width: 240, margin: 2 });
+      setQrDialog((current) => ({ ...current, image, loading: false }));
+    } catch (err) {
+      setQrDialog((current) => ({ ...current, loading: false, error: err.response?.data?.error || 'Unable to load this listing QR code.' }));
+    }
   };
 
   if (loading) {
@@ -118,7 +140,7 @@ export default function HostDashboard() {
         </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 3 }} action={<Button color="inherit" size="small" onClick={fetchHostData}>Retry</Button>} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
@@ -185,7 +207,7 @@ export default function HostDashboard() {
           alignItems="center"
           mb={3}
         >
-          <Typography variant="h5">My Listings ({listings.length})</Typography>
+          <Box><Typography variant="h5">My Listings ({listings.length})</Typography><Typography variant="body2" color="text.secondary">{listings.filter((listing) => listing.isActive).length} active</Typography></Box>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -264,8 +286,8 @@ export default function HostDashboard() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={listing.status}
-                        color={getStatusColor(listing.status)}
+                        label={listing.isActive ? listing.status : 'paused'}
+                        color={listing.isActive ? getStatusColor(listing.status) : 'default'}
                         size="small"
                       />
                     </TableCell>
@@ -279,6 +301,10 @@ export default function HostDashboard() {
                       >
                         <ViewIcon />
                       </IconButton>
+                      <IconButton size="small" onClick={() => showListingQr(listing)} title="Show listing QR code" aria-label={`Show QR code for ${listing.title || listing.address}`}><span style={{ fontSize: 12, fontWeight: 700 }}>QR</span></IconButton>
+                      <Button size="small" disabled={busyListingId === listing.id} onClick={() => handleToggleListing(listing)}>
+                        {listing.isActive ? 'Pause' : 'Resume'}
+                      </Button>
                       <IconButton
                         size="small"
                         onClick={() =>
@@ -327,6 +353,16 @@ export default function HostDashboard() {
             Delete
           </Button>
         </DialogActions>
+      </Dialog>
+      <Dialog open={qrDialog.open} onClose={() => setQrDialog((current) => ({ ...current, open: false }))}>
+        <DialogTitle>Listing QR code</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{qrDialog.name}</DialogContentText>
+          {qrDialog.loading && <CircularProgress sx={{ display: 'block', m: 3 }} />}
+          {qrDialog.error && <Alert severity="error" sx={{ mt: 2 }}>{qrDialog.error}<Button onClick={() => { const listing = listings.find((item) => (item.title || item.address) === qrDialog.name); if (listing) showListingQr(listing); }}>Retry</Button></Alert>}
+          {qrDialog.image && <Box component="img" src={qrDialog.image} alt={`QR code for ${qrDialog.name}`} sx={{ display: 'block', width: 240, height: 240, mx: 'auto', mt: 2 }} />}
+        </DialogContent>
+        <DialogActions><Button onClick={() => setQrDialog((current) => ({ ...current, open: false }))}>Close</Button></DialogActions>
       </Dialog>
     </Container>
   </Box>

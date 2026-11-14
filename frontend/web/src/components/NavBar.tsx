@@ -34,11 +34,16 @@ export const NavBar: React.FC = () => {
 
   const handleDashboard = () => {
     handleClose();
-    if (user?.role === 'host') {
-      navigate('/host-dashboard');
-    } else if (user?.role === 'admin') {
+    if (user?.role === 'admin') {
       navigate('/admin-dashboard');
+    } else {
+      navigate('/host-dashboard');
     }
+  };
+
+  const handleBookings = () => {
+    handleClose();
+    navigate('/bookings');
   };
 
   const handleLogout = () => {
@@ -57,16 +62,12 @@ export const NavBar: React.FC = () => {
   };
 
   return (
-    <AppBar position="static">
+    <AppBar position="sticky" elevation={0}>
       <Toolbar>
-        <Typography
-          variant="h6"
-          component="div"
-          sx={{ flexGrow: 1, cursor: 'pointer' }}
-          onClick={() => navigate(user ? '/search' : '/')}
-        >
-          ParknQuik
-        </Typography>
+        <Button color="inherit" onClick={() => navigate(user ? '/search' : '/')} aria-label="ParknQuik home" sx={{ flexGrow: 1, justifyContent: 'flex-start', textTransform: 'none', fontSize: '1.22rem', fontWeight: 800, letterSpacing: '-.045em', '&:hover': { backgroundColor: 'transparent', boxShadow: 'none' } }}>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, mr: 1.1, borderRadius: '10px 10px 10px 3px', bgcolor: 'primary.main', color: '#fff', fontSize: 16, fontWeight: 900 }}>P</Box>
+          <Box component="span">ParknQuik</Box>
+        </Button>
 
         {user && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -107,10 +108,24 @@ export const NavBar: React.FC = () => {
                 Profile
               </MenuItem>
 
-              {(user.role === 'host' || user.role === 'admin') && (
+              <MenuItem onClick={handleBookings}>My bookings</MenuItem>
+
+              {user.role !== 'admin' && (
                 <MenuItem onClick={handleDashboard}>
                   <Dashboard sx={{ mr: 1 }} />
-                  Dashboard
+                  My Listings
+                </MenuItem>
+              )}
+              {user.role === 'admin' && (
+                <MenuItem onClick={() => { handleClose(); navigate('/host-dashboard'); }}>
+                  <Dashboard sx={{ mr: 1 }} />
+                  My Listings
+                </MenuItem>
+              )}
+
+              {user.role === 'admin' && (
+                <MenuItem onClick={() => { handleClose(); navigate('/admin-dashboard/metrics'); }}>
+                  Metrics &amp; health
                 </MenuItem>
               )}
 
@@ -123,7 +138,7 @@ export const NavBar: React.FC = () => {
         )}
 
         {!user && (
-          <Button color="inherit" onClick={() => navigate('/')}>
+          <Button color="inherit" onClick={() => navigate('/login')}>
             Login
           </Button>
         )}

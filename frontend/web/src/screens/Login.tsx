@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Box, TextField, Button, Typography, Container, Alert, Tab, Tabs } from '@mui/material';
@@ -8,6 +8,7 @@ import { loginSchema, registerSchema, LoginFormData, RegisterFormData } from '..
 
 const Login: React.FC = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { login, register: registerUser, isLoading } = useAuth();
 	const [tab, setTab] = useState<number>(0);
 	const [error, setError] = useState<string>('');
@@ -44,7 +45,7 @@ const Login: React.FC = () => {
 
 		try {
 			await login(data.email, data.password);
-			navigate('/search');
+			navigate(new URLSearchParams(location.search).get('returnTo') || '/', { replace: true });
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Login failed');
 		}
@@ -55,7 +56,7 @@ const Login: React.FC = () => {
 
 		try {
 			await registerUser(data.name, data.email, data.password);
-			navigate('/search');
+			navigate(new URLSearchParams(location.search).get('returnTo') || '/', { replace: true });
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Registration failed');
 		}

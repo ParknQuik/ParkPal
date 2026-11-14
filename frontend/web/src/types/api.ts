@@ -9,6 +9,7 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  phone?: string;
   role: 'driver' | 'host' | 'admin';
   createdAt: string;
   updatedAt: string;

@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export interface ProtectedRouteProps {
@@ -9,19 +8,14 @@ export interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  redirectTo = '/',
+  redirectTo = '/login',
 }) => {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate(redirectTo, { replace: true });
-    }
-  }, [isAuthenticated, navigate, redirectTo]);
+  const location = useLocation();
 
   if (!isAuthenticated) {
-    return null;
+    const returnTo = `${location.pathname}${location.search}`;
+    return <Navigate to={`${redirectTo}?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
   return <>{children}</>;
