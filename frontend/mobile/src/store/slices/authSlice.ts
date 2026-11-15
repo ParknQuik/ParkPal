@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { REHYDRATE } from 'redux-persist';
 import { AuthState, User } from '../../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sessionStorage } from '../../services/sessionStorage';
 import { authAPI } from '../../services/api';
 import { notificationService } from '../../services/notifications';
 
@@ -44,14 +45,13 @@ const normalizeAuthError = (error: unknown, fallbackMessage: string): string => 
 
 export const login = createAsyncThunk(
   'auth/login',
-  async (credentials: { email: string; password: string }, { rejectWithValue }) => {
+  async (credentials: { email: string; password: string; remember?: boolean }, { rejectWithValue }) => {
     try {
       const response = await authAPI.login(credentials.email, credentials.password);
 
       const { token, user } = response.data;
 
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify(user));
+      await sessionStorage.save(token, user, credentials.remember ?? false);
 
       return { user, token };
     } catch (error) {
@@ -68,8 +68,7 @@ export const signup = createAsyncThunk(
 
       const { token, user } = response.data;
 
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify(user));
+      await sessionStorage.save(token, user, true);
 
       return { user, token };
     } catch (error) {
@@ -79,13 +78,12 @@ export const signup = createAsyncThunk(
 );
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  await AsyncStorage.removeItem('token');
-  await AsyncStorage.removeItem('user');
+  await sessionStorage.clear();
 });
 
 export const checkAuth = createAsyncThunk('auth/checkAuth', async () => {
-  const token = await AsyncStorage.getItem('token');
-  const userStr = await AsyncStorage.getItem('user');
+  const token = await sessionStorage.getToken();
+  const userStr = await sessionStorage.getUser();
 
   if (token && userStr) {
     const user = JSON.parse(userStr);
@@ -101,7 +99,8 @@ export const updateUserProfile = createAsyncThunk(
     const response = await authAPI.updateProfile(data);
     const updatedUser = response.data;
 
-    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+    const token = await sessionStorage.getToken();
+    if (token) await sessionStorage.save(token, updatedUser, true);
 
     return updatedUser;
   }
@@ -119,6 +118,12 @@ const authSlice = createSlice({
       state.token = action.payload;
     },
     clearError: (state) => {
+      state.error = null;
+    },
+    sessionInvalidated: (state) => {
+      state.user = null;
+      state.token = null;
+      state.isAuthenticated = false;
       state.error = null;
     },
   },
@@ -226,5 +231,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser, setToken } = authSlice.actions;
+export const { clearError, setUser, setToken, sessionInvalidated } = authSlice.actions;
 export default authSlice.reducer;

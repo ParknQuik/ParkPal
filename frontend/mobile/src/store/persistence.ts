@@ -5,6 +5,8 @@ export const sanitizePersistedAuthState = (state: unknown): unknown => {
 
   return {
     ...(state as Record<string, unknown>),
+    token: null,
+    isAuthenticated: false,
     loading: false,
     checkingAuth: false,
     error: null,
