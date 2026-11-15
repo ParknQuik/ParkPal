@@ -1,83 +1,12 @@
 ---
 name: backend-diagnostics
-description: Check backend code for TypeScript and JavaScript diagnostics before committing
+description: Run relevant repository-defined checks and report diagnostics for ParkPal backend files.
 ---
 
-When the user says "check backend", "diagnose backend", or "backend errors":
+When the user asks to check or diagnose the backend:
 
-## Action Steps
+1. Inspect `backend/package.json` and the current task to select an applicable lint, typecheck, build, or diagnostics command. If no such script exists, say so; do not imply that a check ran.
+2. Use an available project diagnostics integration when it provides relevant current results. Otherwise run only the appropriate repository-defined check.
+3. Report the source of each result and group actionable errors and warnings by file with line references. Separate checks that passed, failed, or were not run.
 
-1. If a project diagnostics integration is available, inspect its diagnostics; otherwise run the backend lint, typecheck, or build scripts defined in `backend/package.json`.
-2. Filter diagnostics for backend files (`backend/**/*.js`, `backend/**/*.ts`) and report which check produced each result.
-3. Parse and categorize by severity:
-   - **Errors** (must fix before commit)
-   - **Warnings** (should review)
-   - **Info** (optional improvements)
-4. Group by file for easy navigation
-5. Provide actionable summary with file:line references
-
-## Output Format
-
-```
-🔍 Backend Diagnostics Report
-
-📊 Summary:
-- Errors: X
-- Warnings: Y
-- Info: Z
-
-❌ ERRORS (Must Fix):
-• backend/services/email.js:45
-  Cannot find module 'nodemailer'
-  → Fix: Run 'npm install nodemailer'
-
-• backend/routes/auth.js:123
-  'user' is possibly undefined
-  → Fix: Add null check: if (!user) return res.status(404).json(...)
-
-⚠️  WARNINGS (Should Review):
-• backend/utils/validation.js:67
-  Unused variable 'result'
-  → Fix: Remove unused variable or use it
-
-ℹ️  INFO (Optional):
-• backend/config/database.js:12
-  Consider using const instead of let
-  → Fix: Change 'let' to 'const' if value doesn't change
-
-✅ Ready to commit: [YES/NO based on errors count]
-```
-
-## Smart Behaviors
-
-- If NO errors found: "✅ Backend diagnostics clean! Ready to commit."
-- If errors found: "❌ Found X errors. Please fix before committing."
-- Provide clickable file paths: `backend/services/email.js:45`
-- Suggest common fixes for known error patterns
-- Prioritize errors over warnings
-
-## Example Usage
-
-**User:** "check backend"
-**Assistant:** Uses the available diagnostics integration or repository-defined backend checks, analyzes, and reports:
-```
-🔍 Backend Diagnostics Report
-
-📊 Summary: 2 errors, 5 warnings, 3 info
-
-❌ ERRORS: 2 must be fixed
-⚠️  WARNINGS: 5 should review
-✅ Ready to commit: NO
-```
-
-## Integration Points
-
-- **Pre-commit workflow:** Always run before `git commit`
-- **After editing:** Run after making changes to backend files
-- **Code review:** Run before creating pull requests
-- **CI/CD integration:** Catches errors before GitHub Actions
-
-## Performance
-
-- Execution time: ~1-2 seconds
-- If IDE diagnostics are unavailable, run only the repository-defined checks needed to produce diagnostics; do not claim a check ran unless it did.
+Do not claim the work is ready to commit or prescribe a commit as an automatic next step. A clean diagnostic run covers only the checks performed. Do not run unrelated tests or infrastructure checks unless the request calls for them.

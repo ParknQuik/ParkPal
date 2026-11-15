@@ -1,152 +1,20 @@
 ---
 name: deployment-status
-description: Quick deployment health check for ParkPal infrastructure using GCloud MCP
+description: Check live ParkPal deployment health using available authorized GCP evidence.
 ---
 
-When the user says "check deployment", "deployment status", "health check", or "is it deployed":
+When the user asks for deployment status or a health check, inspect the current deployment configuration and then query the configured GCloud integration or `gcloud` CLI if available and authorized. The current backend workflow defines project `parkpal-474417`, region `asia-southeast1`, and environment-specific services `parkpal-backend-dev`, `parkpal-backend-staging`, and `parkpal-backend-prod`. Confirm the target environment from the request or live configuration before reporting a service as current.
 
-## Action Steps
+Useful read-only checks (substitute the verified target):
 
-1. Use the configured GCloud MCP integration when available; otherwise use the `gcloud` CLI to check Cloud Run services
-2. Use the configured GCloud MCP integration when available; otherwise use the `gcloud` CLI to get latest Cloud Run logs
-3. Use the configured GCloud MCP integration when available; otherwise use the `gcloud` CLI to check Cloud SQL status
-4. Use the configured GCloud MCP integration when available; otherwise use the `gcloud` CLI to verify secrets configuration
-5. Compile comprehensive health report
-
-## Read-Only GCloud CLI Examples
-
-### 1. Check Cloud Run Services
 ```bash
-gcloud run services list --project=parkpal-474417 --format=json
-```
-
-### 2. Get Latest Logs
-```bash
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=parkpal-backend-dev" --limit=20 --project=parkpal-474417 --format=json
-```
-
-### 3. Check Cloud SQL Status
-```bash
+gcloud run services describe SERVICE --project=parkpal-474417 --region=asia-southeast1 --format=json
+gcloud run services logs read SERVICE --project=parkpal-474417 --region=asia-southeast1 --limit=20
 gcloud sql instances describe parkpal-db --project=parkpal-474417 --format=json
 ```
 
-### 4. List Secrets
-```bash
-gcloud secrets list --project=parkpal-474417 --format=json
-```
+Check only the components relevant to the request. Do not retrieve secret values. To check secret configuration, report metadata or presence only where authorized. If live GCP access is unavailable, distinguish repository configuration from actual deployment state and report the status as unverified.
 
-## Output Format
+Summarize the verified project, region, service, latest revision/readiness, relevant recent errors, and database state when checked. Include the evidence source and observation time when available. Do not infer health from a service existing or a historical example. Do not invent URLs, revisions, timestamps, logs, secret counts, budgets, or costs.
 
-```
-📊 ParkPal Deployment Status (parkpal-474417)
-
-🌐 BACKEND SERVICE
-✅ Service: parkpal-backend-dev
-   URL: https://parkpal-backend-dev-cxntrkjjmq-as.a.run.app
-   Status: RUNNING
-   Latest Revision: parkpal-backend-dev-00012-sxp
-   Deployed: 10 minutes ago
-   Health: ✅ Healthy
-
-🗄️ DATABASE
-✅ Instance: parkpal-db
-   Status: RUNNABLE (or STOPPED)
-   Version: PostgreSQL 16
-   Tier: db-custom-1-3840
-   Region: asia-southeast1
-   Connection: parkpal-474417:asia-southeast1:parkpal-db
-
-🔐 SECRETS (10 configured)
-✅ DATABASE_URL
-✅ JWT_SECRET
-✅ REDIS_URL
-✅ PAYMONGO_SECRET_KEY
-✅ PAYMONGO_PUBLIC_KEY
-✅ GOOGLE_MAPS_API_KEY
-✅ SMTP_HOST
-✅ SMTP_PORT
-✅ SMTP_USER
-✅ SMTP_PASS
-
-📝 RECENT LOGS (Last 20 entries)
-✅ No errors in recent logs
-   Last log: "Server listening on port 8080"
-   Timestamp: 2 minutes ago
-
-💰 ESTIMATED COSTS
-Cloud Run: $5-10/month
-Cloud SQL: $0/month (stopped for cost savings)
-Storage: $2/month
-Total: $7-12/month ✅ (within $50 budget)
-
-🎯 OVERALL HEALTH: ✅ OPERATIONAL
-```
-
-## Smart Behaviors
-
-### If Backend is DOWN:
-```
-❌ BACKEND SERVICE: DOWN
-   Issue: Service not responding
-   Last Error: [error message from logs]
-   Action: Check GitHub Actions workflow or redeploy
-```
-
-### If Database is STOPPED:
-```
-🟡 DATABASE: STOPPED
-   Note: Stopped for cost optimization
-   Action: Start with: gcloud sql instances patch parkpal-db --activation-policy=ALWAYS
-```
-
-### If Errors in Logs:
-```
-⚠️  RECENT LOGS: 3 errors found
-   Error 1: "Cannot connect to database" (5 min ago)
-   Error 2: "Secret Manager access denied" (8 min ago)
-   Action: Check IAM permissions and database connection
-```
-
-### If Deployment is Recent:
-```
-🚀 RECENT DEPLOYMENT DETECTED
-   Deployed: 2 minutes ago
-   Commit: "fix: Update email service" (SHA: abc1234)
-   Status: Still warming up, check again in 3 minutes
-```
-
-## Status Indicators
-
-- ✅ **Healthy**: Service running, no errors
-- 🟡 **Degraded**: Service running but with warnings
-- ❌ **Down**: Service not responding or critical errors
-- 🚀 **Deploying**: Recent deployment, still warming up
-- 🔄 **Restarting**: Service restarting
-
-## Integration Points
-
-- **Post-deployment check:** Run after GitHub Actions completes
-- **Morning standup:** Quick health check before work
-- **Bug investigation:** First step when user reports issues
-- **Cost monitoring:** Verify services aren't over-provisioned
-
-## Performance
-
-- Execution time depends on GCP response time and the configured execution environment.
-- Provides real-time status from GCP
-- No local file access needed
-- Comprehensive view in single command
-
-## Example Usage
-
-**User:** "check deployment"
-**Assistant:**
-1. Runs four read-only queries through the configured GCloud MCP integration when available, otherwise the CLI
-2. Parses JSON responses
-3. Generates formatted health report
-4. Highlights any issues requiring attention
-
-**User:** "is the backend running?"
-**Assistant:**
-1. Quick check using the configured GCloud MCP integration or `gcloud` CLI
-2. Reports: "✅ Yes, parkpal-backend-dev is RUNNING and healthy"
+This is a read-only status workflow. A recommendation to redeploy, start a database, or change a service is not authorization to do so. Obtain explicit user approval before deployment or any cost-bearing service change.
