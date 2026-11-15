@@ -50,5 +50,5 @@ module.exports = (app, authLimiter) => {
    *       401:
    *         description: Invalid Google token
    */
-  app.post('/auth/google', authLimiter, asyncHandler(googleAuthController.googleAuth));
+  app.post('/auth/google', authLimiter.login, asyncHandler(googleAuthController.googleAuth));
 };
