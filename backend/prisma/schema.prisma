@@ -67,6 +67,7 @@ model Zone {
   parkingSlots     ParkingSlot[]
   sensorEvents     SensorEvent[]
   zoneMetrics      ZoneMetrics[]
+  crowdParkingMetrics CrowdParkingMetric[]
   linkedCandidates ParkingCandidate[] @relation("ZoneLinkedCandidates")
 
   @@map("zones")
@@ -215,6 +216,21 @@ model ZoneMetrics {
   zone                   Zone     @relation(fields: [zoneId], references: [id])
 
   @@map("zone_metrics")
+}
+
+model CrowdParkingMetric {
+  id                     Int      @id @default(autoincrement())
+  zoneId                 Int      @map("zone_id")
+  windowStart            DateTime @map("window_start")
+  windowEnd              DateTime @map("window_end")
+  avgCirclingTimeSeconds Int      @map("avg_circling_time_seconds")
+  sampleCount            Int      @map("sample_count")
+  createdAt              DateTime @default(now()) @map("created_at")
+  zone                   Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([zoneId, windowStart])
+  @@index([zoneId, windowEnd])
+  @@map("crowd_parking_metrics")
 }
 
 model Booking {

@@ -369,6 +369,34 @@ describe('Marketplace API Tests', () => {
       }
     });
 
+    it('filters listings to the supplied viewport before returning results', async () => {
+      const response = await request(app).get('/api/v1/marketplace/search').query({
+        south: 14.531, west: 120.984, north: 14.533, east: 120.986,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.some((listing) => listing.id === testData.slot.id)).toBe(true);
+      expect(response.body.data.every((listing) => listing.lat >= 14.531 && listing.lat <= 14.533 && listing.lon >= 120.984 && listing.lon <= 120.986)).toBe(true);
+    });
+
+    it.each([
+      [{ south: 14.5, west: 120.9, north: 14.6 }],
+      [{ south: 14.6, west: 120.9, north: 14.5, east: 121 }],
+      [{ south: -91, west: 120, north: 14, east: 121 }],
+    ])('rejects incomplete or invalid viewport bounds: %o', async (bounds) => {
+      const response = await request(app).get('/api/v1/marketplace/search').query(bounds);
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Validation failed');
+    });
+
+    it('does not expand an empty viewport search', async () => {
+      const response = await request(app).get('/api/v1/marketplace/search').query({
+        south: -1, west: -1, north: 1, east: 1,
+      });
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual([]);
+    });
+
     it('should filter by price range', async () => {
       const response = await request(app)
         .get('/api/v1/marketplace/search?minPrice=40&maxPrice=60')

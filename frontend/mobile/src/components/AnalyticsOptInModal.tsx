@@ -1,8 +1,8 @@
 /**
  * Analytics Opt-In Modal (Phase 6A)
  *
- * Shown once after first login. User can accept or decline anonymous
- * parking analytics data collection. Decision is persisted in AsyncStorage.
+ * Shown once after first login. User can accept or decline foreground-only
+ * parking analytics collection. Decision is persisted in AsyncStorage.
  */
 
 import React, { useMemo } from 'react';
@@ -108,15 +108,17 @@ export const AnalyticsOptInModal: React.FC<Props> = ({ visible, onAccept, onDecl
           <Text style={styles.icon}>📍</Text>
           <Text style={styles.title}>Help improve parking in your area</Text>
           <Text style={styles.body}>
-            ParkPal can anonymously track how long drivers circle for parking in your
-            neighborhood. This data helps predict parking availability and reduce
-            congestion.{'\n\n'}
-            No personal information is stored. You can opt out any time in Settings.
+            If you opt in, ParkPal uses foreground location and motion activity while
+            you are inside a verified commercial parking area. This helps estimate
+            recent circling time; it does not report open spaces or
+            guaranteed availability.{'\n\n'}
+            Raw session signals are used to create anonymous hourly summaries and then
+            deleted. Collection stops when you leave the area, close the app, or opt out.
           </Text>
 
           <View style={styles.bullets}>
             {[
-              'Anonymous location data only',
+              'Foreground collection in verified areas only',
               'Never sold to third parties',
               'Improves circling time estimates',
             ].map((item) => (

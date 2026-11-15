@@ -21,7 +21,7 @@
 
 ParknQuik has two smart parking services:
 
-1. **Service 1: Smart Parking Analytics** - Crowd-sourced parking availability tracking using geofencing, Google Activity Recognition API, and optional IoT sensors to calculate circling time and occupancy rates for commercial parking complexes.
+1. **Service 1: Smart Parking Analytics** - Opt-in, foreground geofencing and native activity signals support circling-time analytics for verified external parking facilities. Operator-provided occupancy data remains separate from crowd guidance.
 
 2. **Service 2: P2P Parking Marketplace** - Airbnb-style marketplace where hosts rent out private parking spaces (driveways, garages, roadside spots) to drivers via QR code check-in/checkout.
 
@@ -104,10 +104,10 @@ ParknQuik has two smart parking services:
        │ Start Circling Timer         │
        ▼                              ▼
 ┌──────────────────────────────────────────────┐
-│   Google Activity Recognition API             │
-│   • IN_VEHICLE → Still searching              │
-│   • STILL (30s+) → Parked!                   │
-│   • ON_FOOT → Parked!                        │
+│   Native activity recognition                 │
+│   • IN_VEHICLE → Searching                    │
+│   • STILL / ON_FOOT → Possible parking        │
+│   • Verified geofence + opt-in required       │
 └──────────────────────────────────────────────┘
        │                              │
        │ Activity Events              │ IoT Sensor
@@ -118,15 +118,15 @@ ParknQuik has two smart parking services:
 │  • Process activity transitions               │
 │  • Detect parking confirmation                │
 │  • Calculate circling time                    │
-│  • Update zone occupancy                      │
+│  • Aggregate external circling time            │
 └──────────────────────────────────────────────┘
        │
        ▼
 ┌──────────────────────────────────────────────┐
 │         Analytics & Predictions               │
 │  • Avg circling time per zone/hour            │
-│  • Occupancy percentage                       │
-│  • Demand forecasting                         │
+│  • Minimum three-session hourly sample        │
+│  • No external open-space or occupancy claims │
 └──────────────────────────────────────────────┘
 ```
 
@@ -477,7 +477,7 @@ POST /api/analytics/activity
 }
 Response: { status: "ok" }
 
-// Get zone availability (for map)
+// Get availability for a managed ParkPal zone (for map)
 GET /api/analytics/zones/{zoneId}/availability
 Response: {
   zoneId: 5,
@@ -487,6 +487,11 @@ Response: {
   occupancyPercentage: 69.4,
   estimatedCirclingTime: 420  // seconds
 }
+
+// Verified external facilities use crowd guidance, not managed-slot occupancy.
+// Return no estimate unless the latest completed hourly bucket has >= 3 sessions.
+// The response includes aggregate circling time, sample count, and freshness.
+// Unverified candidate previews have no zoneId and are excluded from collection.
 
 // IoT sensor webhook
 POST /api/analytics/sensor/event
@@ -647,9 +652,11 @@ Response: { reviewId: 555 }
 - Tokenize payment data
 
 **Location Data:**
-- Only collect when app is active
-- Anonymize for analytics
-- Allow opt-out
+- Collect only while signed in, opted in, and foregrounded with location permission
+- Limit collection to verified zone geofences; stop on opt-out, permission loss, or backgrounding
+- Delete user-linked raw external-zone activity and session rows after hourly aggregation; opt-out deletes unaggregated external-zone rows
+- Serve external-facility circling-time guidance only from aggregates with at least three completed sessions in the latest hourly window
+- Do not use crowd guidance as an occupancy, capacity, price, or booking guarantee
 
 **Compliance:**
 - GDPR (if applicable)

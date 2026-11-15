@@ -164,6 +164,9 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: 'com.parknquik.mobile',
       usesAppleSignIn: true,
+      infoPlist: {
+        NSMotionUsageDescription: 'ParknQuik uses motion activity, while you opt in and the app is open, to estimate circling time in verified commercial parking areas.',
+      },
       config: {
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY_IOS || 'YOUR_IOS_API_KEY_HERE',
       },
@@ -180,6 +183,7 @@ module.exports = {
       permissions: [
         'ACCESS_FINE_LOCATION',
         'ACCESS_COARSE_LOCATION',
+        'ACTIVITY_RECOGNITION',
         'CAMERA',
         'READ_EXTERNAL_STORAGE',
         'WRITE_EXTERNAL_STORAGE',

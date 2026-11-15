@@ -1,15 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Link } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RoleRoute } from './components/RoleRoute';
 import { NavBar } from './components/NavBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingSpinner from './components/LoadingSpinner';
-import theme from './theme/theme';
+import { ThemeModeProvider } from './theme/ThemeModeProvider';
 import { initializePerformanceMonitoring, stopPerformanceMonitoring } from './utils/performance';
 import { Box, Button, Container, Link as MuiLink, Paper, Typography } from '@mui/material';
 
@@ -135,7 +133,7 @@ const authenticatedRoutes: ScreenRoute[] = [
 
 const roleRestrictedRoutes: RoleRestrictedRoute[] = [
   { path: '/list-slot', Screen: ListSlot, roles: ['driver', 'host', 'admin'] },
-  { path: '/host-dashboard', Screen: HostDashboard, roles: ['host', 'admin'] },
+  { path: '/host-dashboard', Screen: HostDashboard, roles: ['driver', 'host', 'admin'] },
   { path: '/admin-dashboard', Screen: AdminDashboard, roles: ['admin'] },
   { path: '/admin-dashboard/metrics', Screen: AdminMetricsDashboard, roles: ['admin'] },
 ];
@@ -161,8 +159,7 @@ function renderRoutes(
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+      <ThemeModeProvider>
         <Router>
           <AuthProvider>
             <SiteMetadata />
@@ -186,7 +183,7 @@ function App() {
             <PrivacyControls />
           </AuthProvider>
         </Router>
-      </ThemeProvider>
+      </ThemeModeProvider>
     </ErrorBoundary>
   );
 }

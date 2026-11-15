@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MapView from '../MapView';
 import api from '../../api';
+import { loadGoogleMaps } from '../../utils/googleMaps';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
 vi.mock('../../utils/googleMaps', () => ({
@@ -34,6 +35,30 @@ describe('MapView', () => {
 		fireEvent.change(screen.getByLabelText('Min ₱/hr'), { target: { value: '50' } });
 		await waitFor(() => expect(api.get).toHaveBeenCalledWith('/marketplace/search', expect.objectContaining({
 			params: expect.objectContaining({ minPrice: '50' }),
+		})));
+	});
+
+	it('searches the visible map bounds and keeps them on filter refreshes', async () => {
+		const map = {
+			getBounds: () => ({
+				getSouthWest: () => ({ lat: () => 14.5, lng: () => 120.9 }),
+				getNorthEast: () => ({ lat: () => 14.7, lng: () => 121.1 }),
+			}),
+		};
+		class Marker { map: unknown; constructor(options: { map: unknown }) { this.map = options.map; } addEventListener() {} }
+		class GoogleMap { constructor() { return map; } }
+		Object.defineProperty(window, 'google', { configurable: true, value: { maps: { Map: GoogleMap, marker: { AdvancedMarkerElement: Marker } } } });
+		vi.mocked(loadGoogleMaps).mockResolvedValue({} as typeof google);
+		render(<MemoryRouter><MapView /></MemoryRouter>);
+		const searchButton = await screen.findByRole('button', { name: 'Search This Area' });
+		fireEvent.click(searchButton);
+		const expectedBounds = { south: 14.5, west: 120.9, north: 14.7, east: 121.1 };
+		await waitFor(() => expect(api.get).toHaveBeenCalledWith('/marketplace/search', expect.objectContaining({
+			params: expect.objectContaining(expectedBounds),
+		})));
+		fireEvent.change(screen.getByLabelText('Min ₱/hr'), { target: { value: '50' } });
+		await waitFor(() => expect(api.get).toHaveBeenCalledWith('/marketplace/search', expect.objectContaining({
+			params: expect.objectContaining({ ...expectedBounds, minPrice: '50' }),
 		})));
 	});
 });

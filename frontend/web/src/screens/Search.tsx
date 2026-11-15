@@ -155,9 +155,9 @@ const Search: React.FC = () => {
 							Find owner-listed parking near your destination, compare the details, then reserve for the time you need.
 						</Typography>
 					</Box>
-					<Paper elevation={0} sx={{ position: 'relative', minHeight: { xs: 150, md: 210 }, overflow: 'hidden', p: 2.5, border: '1px solid', borderColor: 'divider', background: 'linear-gradient(135deg, #e8f1e9 0%, #f4f6f1 62%, #f5e6da 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+								<Paper elevation={0} sx={{ position: 'relative', minHeight: { xs: 150, md: 210 }, overflow: 'hidden', p: 2.5, border: '1px solid', borderColor: 'divider', background: (theme) => theme.palette.mode === 'dark' ? 'linear-gradient(135deg, #20372e 0%, #1a2824 62%, #382a23 100%)' : 'linear-gradient(135deg, #e8f1e9 0%, #f4f6f1 62%, #f5e6da 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
 						<Box aria-hidden="true" sx={{ position: 'absolute', inset: '22% -8% auto 24%', height: 2, bgcolor: 'rgba(23,107,91,.18)', transform: 'rotate(-22deg)', boxShadow: '0 30px 0 rgba(23,107,91,.14), 0 60px 0 rgba(23,107,91,.12)' }} />
-						<Box sx={{ position: 'relative', alignSelf: 'flex-end', width: 54, height: 54, borderRadius: '50% 50% 50% 8px', transform: 'rotate(-45deg)', bgcolor: 'primary.main', color: 'white', display: 'grid', placeItems: 'center', boxShadow: '0 10px 24px rgba(23,107,91,.28)' }}><LocationIcon sx={{ transform: 'rotate(45deg)' }} /></Box>
+							<Box sx={{ position: 'relative', alignSelf: 'flex-end', width: 54, height: 54, borderRadius: '50% 50% 50% 8px', transform: 'rotate(-45deg)', bgcolor: 'primary.main', color: 'primary.contrastText', display: 'grid', placeItems: 'center', boxShadow: '0 10px 24px rgba(23,107,91,.28)' }}><LocationIcon sx={{ transform: 'rotate(45deg)' }} /></Box>
 						<Box sx={{ position: 'relative' }}>
 							<Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 800 }}>MADE FOR THE CITY</Typography>
 							<Typography variant="h6">A real space, ready when you are.</Typography>
@@ -172,21 +172,21 @@ const Search: React.FC = () => {
 						{/* Location */}
 						<Grid item xs={12} md={6}>
 							<Typography component="label" htmlFor="search-location" variant="body2" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>Where do you need parking?</Typography>
-							<Box ref={locationWidgetRef} aria-label="Where do you need parking?" sx={{ minHeight: 56, '& gmp-place-autocomplete': { width: '100%', '--gmpx-color-surface': 'transparent', '--gmpx-color-on-surface': 'var(--mui-palette-text-primary)' } }} />
+							<Box ref={locationWidgetRef} aria-label="Where do you need parking?" sx={{ minHeight: 56, '& gmp-place-autocomplete': { width: '100%', colorScheme: (theme) => theme.palette.mode, backgroundColor: 'background.paper', color: 'text.primary', border: '1px solid', borderColor: 'divider', borderRadius: 2 } }} />
 							{mapsError && <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>{mapsError} Choose a popular location below to continue.</Typography>}
 						</Grid>
 
 						{/* Date Range */}
 						<Grid item xs={12} md={3}>
+							<Typography component="label" htmlFor="search-check-in" variant="body2" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>Check-in</Typography>
 							<TextField
-								label="Check-in"
+								id="search-check-in"
 								type="datetime-local"
 								value={searchParams.checkIn}
 								onChange={(e) =>
 									setSearchParams({ ...searchParams, checkIn: e.target.value })
 								}
 								fullWidth
-								InputLabelProps={{ shrink: true }}
 								InputProps={{
 									startAdornment: (
 										<InputAdornment position="start">
@@ -198,15 +198,15 @@ const Search: React.FC = () => {
 						</Grid>
 
 						<Grid item xs={12} md={3}>
+							<Typography component="label" htmlFor="search-check-out" variant="body2" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>Check-out</Typography>
 							<TextField
-								label="Check-out"
+								id="search-check-out"
 								type="datetime-local"
 								value={searchParams.checkOut}
 								onChange={(e) =>
 									setSearchParams({ ...searchParams, checkOut: e.target.value })
 								}
 								fullWidth
-								InputLabelProps={{ shrink: true }}
 								InputProps={{
 									startAdornment: (
 										<InputAdornment position="start">

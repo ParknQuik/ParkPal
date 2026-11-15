@@ -21,7 +21,6 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { searchListings } from '../store/slices/marketplaceSlice';
 import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
 import { useTheme } from '../context/ThemeContext';
-import { useAnalyticsGeofencing } from '../hooks/useAnalyticsGeofencing';
 import { analyticsService } from '../services/analytics';
 import { marketplaceAPI } from '../services/api';
 import { ListingBottomSheet } from '../components/ListingBottomSheet';
@@ -227,7 +226,9 @@ const CandidateMarker = React.memo(({ candidate, selected, onPress }: {
     >
       <View
         accessible
-        accessibilityLabel={`${candidate.title}. Preview parking candidate, not bookable.`}
+        accessibilityLabel={candidate.isPreview
+          ? `${candidate.title}. Preview parking candidate, not bookable.`
+          : `${candidate.title}. Verified commercial parking guidance, not bookable.`}
         accessibilityRole="button"
         collapsable={false}
         style={{
@@ -317,7 +318,7 @@ export const ExploreMap: React.FC = () => {
   const [mapReady, setMapReady] = useState(false);
 
   const { listings, loading } = useAppSelector((state) => state.marketplace);
-  const { zoneAvailability } = useAppSelector((state) => state.analytics);
+  const { zoneAvailability, activeZoneId, activeSession } = useAppSelector((state) => state.analytics);
 
   const suggestions = useAutocomplete(searchQuery, listings);
 
@@ -358,16 +359,8 @@ export const ExploreMap: React.FC = () => {
     }
   }, [analyticsZones]);
 
-  const { currentZone, sessionId } = useAnalyticsGeofencing(
-    useMemo(() => analyticsZones.map(z => ({
-      id: z.id,
-      name: z.name,
-      centerLat: z.centroidLat,
-      centerLon: z.centroidLon,
-      radius: 300,
-    })), [analyticsZones]),
-    true
-  );
+  const currentZone = activeZoneId == null ? null : analyticsZones.find((zone) => zone.id === activeZoneId) ?? null;
+  const sessionId = activeSession?.id ?? null;
 
   useEffect(() => {
     if (currentZone) {

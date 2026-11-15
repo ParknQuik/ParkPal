@@ -56,6 +56,7 @@ const MapView = () => {
 	const [searchQuery, setSearchQuery] = useState(query.get('location') || '');
 	const [userLocation, setUserLocation] = useState(null);
 	const [searchCenter, setSearchCenter] = useState(null); // Where to search (can be different from user location)
+	const [viewportBounds, setViewportBounds] = useState(null);
 	const [radius, setRadius] = useState(5); // Search radius in km (default 5km)
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
@@ -83,7 +84,7 @@ const MapView = () => {
 		if (userLocation || searchCenter) {
 			fetchSlots();
 		}
-	}, [userLocation, searchCenter, radius, checkIn, checkOut]);
+	}, [userLocation, searchCenter, viewportBounds, radius, checkIn, checkOut]);
 
 	useEffect(() => {
 		if (mapLoaded) {
@@ -91,7 +92,11 @@ const MapView = () => {
 			const timer = setTimeout(() => initializeMap(), 100);
 			return () => clearTimeout(timer);
 		}
-	}, [mapLoaded, slots]);
+	}, [mapLoaded]);
+
+	useEffect(() => {
+		if (mapLoaded) updateMarkers();
+	}, [mapLoaded, filteredSlots, userLocation]);
 
 	useEffect(() => {
 		// Debounce search filtering
@@ -115,7 +120,7 @@ const MapView = () => {
 		}, 30000); // 30 seconds
 
 		return () => clearInterval(interval);
-	}, [autoRefresh, userLocation, searchCenter, radius]);
+	}, [autoRefresh, userLocation, searchCenter, viewportBounds, radius]);
 
 	const loadGoogleMapsScript = () => {
 		loadGoogleMaps(['marker'])
@@ -162,6 +167,7 @@ const MapView = () => {
 					lat: center.lat,
 					lon: center.lng || center.lon,
 					radius: radius, // User-adjustable radius
+					...(viewportBounds || {}),
 					status: 'available',
 					...(minPrice !== '' ? { minPrice } : {}),
 					...(maxPrice !== '' ? { maxPrice } : {}),
@@ -207,18 +213,22 @@ const MapView = () => {
 		if (!mapRef.current || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
 
 		const center = searchCenter || requestedCenter || userLocation || defaultCenter;
+		if (!googleMapRef.current) {
+			googleMapRef.current = new window.google.maps.Map(mapRef.current, {
+				center,
+				zoom: 13,
+				mapId: 'PARKPAL_MAP',
+				mapTypeControl: false,
+				streetViewControl: false,
+				fullscreenControl: false,
+			});
+		}
+		updateMarkers();
+	};
 
-		// Initialize map with mapId for Advanced Markers
-		const map = new window.google.maps.Map(mapRef.current, {
-			center,
-			zoom: 13,
-			mapId: 'PARKPAL_MAP', // Required for Advanced Markers
-			mapTypeControl: false,
-			streetViewControl: false,
-			fullscreenControl: false,
-		});
-
-		googleMapRef.current = map;
+	const updateMarkers = () => {
+		const map = googleMapRef.current;
+		if (!map || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
 
 		// Clear existing markers
 		markersRef.current.forEach((marker) => {
@@ -305,15 +315,6 @@ const MapView = () => {
 			}
 		});
 
-		// Fit bounds to show all markers
-		if (filteredSlots.length > 0) {
-			const bounds = new window.google.maps.LatLngBounds();
-			filteredSlots.forEach((slot) => {
-				bounds.extend({ lat: slot.lat, lng: slot.lon });
-			});
-			if (userLocation) bounds.extend(userLocation);
-			map.fitBounds(bounds);
-		}
 	};
 
 	const handleRecenterMap = () => {
@@ -321,15 +322,21 @@ const MapView = () => {
 			googleMapRef.current.panTo(userLocation);
 			googleMapRef.current.setZoom(15);
 			setSearchCenter(null); // Reset to user location
+			setViewportBounds(null);
 		}
 	};
 
 	const handleSearchThisArea = () => {
 		if (googleMapRef.current) {
-			const center = googleMapRef.current.getCenter();
-			setSearchCenter({
-				lat: center.lat(),
-				lng: center.lng(),
+			const bounds = googleMapRef.current.getBounds();
+			if (!bounds) return;
+			const southWest = bounds.getSouthWest();
+			const northEast = bounds.getNorthEast();
+			setViewportBounds({
+				south: southWest.lat(),
+				west: southWest.lng(),
+				north: northEast.lat(),
+				east: northEast.lng(),
 			});
 		}
 	};
@@ -584,9 +591,9 @@ const MapView = () => {
 									position: 'absolute',
 									bottom: 100,
 									right: 16,
-									bgcolor: 'white',
+									bgcolor: 'background.paper',
 									boxShadow: 2,
-									'&:hover': { bgcolor: 'white' },
+									'&:hover': { bgcolor: 'background.paper' },
 								}}
 								onClick={handleRecenterMap}
 								title="Return to your location"
@@ -601,7 +608,7 @@ const MapView = () => {
 							alignItems="center"
 							justifyContent="center"
 							height="100%"
-							bgcolor="grey.100"
+							bgcolor="background.default"
 							p={4}
 							textAlign="center"
 						>

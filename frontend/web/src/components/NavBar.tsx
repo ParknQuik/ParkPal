@@ -9,14 +9,18 @@ import {
   MenuItem,
   Avatar,
   Box,
+  FormControl,
+  Select,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard, CalendarMonth } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeMode } from '../theme/ThemeModeProvider';
 
 export const NavBar: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { preference, setPreference } = useThemeMode();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -65,9 +69,23 @@ export const NavBar: React.FC = () => {
     <AppBar position="sticky" elevation={0}>
       <Toolbar>
         <Button color="inherit" onClick={() => navigate(user ? '/search' : '/')} aria-label="ParknQuik home" sx={{ flexGrow: 1, justifyContent: 'flex-start', textTransform: 'none', fontSize: '1.22rem', fontWeight: 800, letterSpacing: '-.045em', '&:hover': { backgroundColor: 'transparent', boxShadow: 'none' } }}>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, mr: 1.1, borderRadius: '10px 10px 10px 3px', bgcolor: 'primary.main', color: '#fff', fontSize: 16, fontWeight: 900 }}>P</Box>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, mr: 1.1, borderRadius: '10px 10px 10px 3px', bgcolor: 'primary.main', color: 'primary.contrastText', fontSize: 16, fontWeight: 900 }}>P</Box>
           <Box component="span">ParknQuik</Box>
         </Button>
+
+        <FormControl size="small" sx={{ minWidth: { xs: 92, sm: 112 }, mr: { xs: 0.5, sm: 1 } }}>
+          <Select
+            native
+            value={preference}
+            onChange={(event) => setPreference(event.target.value as 'system' | 'light' | 'dark')}
+            inputProps={{ 'aria-label': 'Color theme' }}
+            sx={{ height: 40, borderRadius: 2, '& .MuiSelect-select': { py: 1, px: 1.25 }, '& fieldset': { borderColor: 'divider' } }}
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </Select>
+        </FormControl>
 
         {user && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -108,7 +126,10 @@ export const NavBar: React.FC = () => {
                 Profile
               </MenuItem>
 
-              <MenuItem onClick={handleBookings}>My bookings</MenuItem>
+              <MenuItem onClick={handleBookings}>
+                <CalendarMonth sx={{ mr: 1 }} />
+                My bookings
+              </MenuItem>
 
               {user.role !== 'admin' && (
                 <MenuItem onClick={handleDashboard}>

@@ -87,6 +87,9 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
   const amenities = listing?.amenities || [];
   const canBook = listing?.canBook !== false;
   const isPreviewCandidate = listing?.source === 'google_candidate' && listing?.isPreview;
+  const crowdGuidance = listing?.source === 'google_candidate' && listing?.canShowAnalytics
+    ? listing?.crowdGuidance
+    : null;
 
   const occupancyPercentage = zoneAvailability?.occupancyPercentage;
   const availableSlots = zoneAvailability?.available;
@@ -246,7 +249,22 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             </ScrollView>
           </View>
         )}
-        {zoneAvailability && (
+        {crowdGuidance ? (
+          <View style={styles.zoneAvailability} accessibilityLabel="Crowdsourced circling guidance">
+            <View style={styles.circlingRow}>
+              <MaterialCommunityIcons name="clock-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.circlingText}>
+                About {Math.max(1, Math.round(crowdGuidance.circlingTimeSeconds / 60))} min circling time
+              </Text>
+            </View>
+            <Text style={styles.circlingText}>
+              Based on {crowdGuidance.sampleCount} recent parking sessions. This is guidance, not live availability.
+            </Text>
+            <Text style={styles.circlingText}>
+              Updated {new Date(crowdGuidance.windowEnd).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            </Text>
+          </View>
+        ) : zoneAvailability && listing?.source !== 'google_candidate' && (
           <View style={styles.zoneAvailability}>
             <View style={styles.availInfoRow}>
               <View style={[styles.availBadge, getAvailabilityStyle()]}>
@@ -285,7 +303,7 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
         </View>
       </View>
     </ScrollView>);
-  }, [photoUri, title, distance, rating, reviewCount, pricePerHour, amenities, zoneAvailability, occupancyPercentage, availableSlots, totalSlots, circlingTime, insets.bottom, onQuickBook, onDirections, onViewDetails, listing, canBook, isPreviewCandidate, colors]);
+  }, [photoUri, title, distance, rating, reviewCount, pricePerHour, amenities, zoneAvailability, occupancyPercentage, availableSlots, totalSlots, circlingTime, insets.bottom, onQuickBook, onDirections, onViewDetails, listing, canBook, isPreviewCandidate, crowdGuidance, colors]);
 
   return (
     <BottomSheet

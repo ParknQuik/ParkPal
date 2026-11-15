@@ -120,7 +120,9 @@ export const AppNavigator: React.FC = () => {
       const startGeofencing = async () => {
         try {
           const res = await analyticsAPI.getZones();
-          const zones: Zone[] = (res.data.zones ?? []).map((z: any) => ({
+          const zones: Zone[] = (res.data.zones ?? [])
+            .filter((z: any) => z.isVerifiedExternal === true)
+            .map((z: any) => ({
             id: z.id,
             name: z.name,
             geofencePolygon: z.geofencePolygon ?? [],
@@ -153,7 +155,13 @@ export const AppNavigator: React.FC = () => {
 
   const handleOptInDecline = async () => {
     await AsyncStorage.setItem(OPT_IN_PROMPTED_KEY, 'true');
+    GeofenceService.stop();
     dispatch(setAnalyticsOptIn(false));
+    try {
+      await analyticsAPI.revokeConsent();
+    } catch {
+      // Tracking is stopped locally even if privacy cleanup cannot reach the API.
+    }
     setShowOptIn(false);
   };
 
