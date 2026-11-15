@@ -219,8 +219,16 @@ default ignored database untouched. It covers:
 
 ## Manual Learning Capture
 
-Use `npm run knowledge:add-learning -- --title "..."` only when the user asks to
-update knowledge or a merged-PR workflow explicitly includes knowledge capture.
-The command appends a small Markdown block to
+At task completion, consider capture only for a verified, reusable project
+invariant, a surprising failure with a verified cause, or a useful validation
+or environment constraint. Suggest a concise lesson with relevant files and
+evidence, then wait for user approval. Never append a suggestion automatically;
+after approval, use `npm run knowledge:add-learning -- --title "..."`. The
+command appends a small Markdown block to
 `docs/agent-knowledge/SESSION_LEARNINGS.md`; it never summarizes chat logs or
-rewrites existing entries.
+rewrites existing entries. If there is no strong candidate, say nothing about
+capture.
+
+Store durable lessons in session learnings, stable implementation routes and
+validation guidance in `.agents/knowledge/source-map.json`, and update compact
+mirrors only for startup, status, roadmap, or workflow routing.
