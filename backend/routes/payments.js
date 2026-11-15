@@ -2,7 +2,8 @@ const paymentsController = require('../controllers/paymentsController');
 const { authenticate } = require('../services/auth');
 const { validateBody, validateQuery, validateParams } = require('../middleware/validation');
 const {
-  createPaymentSchema,
+  createPaymentIntentSchema,
+  createExtensionIntentSchema,
   confirmPaymentSchema,
   getPaymentsQuerySchema,
   idParamSchema
@@ -14,7 +15,7 @@ module.exports = (app) => {
   app.post(
     '/payments/intent',
     authenticate,
-    validateBody(createPaymentSchema),
+    validateBody(createPaymentIntentSchema),
     asyncHandler(paymentsController.createPaymentIntent));
 
   app.post(
@@ -23,18 +24,22 @@ module.exports = (app) => {
     validateBody(confirmPaymentSchema),
     asyncHandler(paymentsController.confirmPayment));
 
+  app.post(
+    '/payments/extension-intent',
+    authenticate,
+    validateBody(createExtensionIntentSchema),
+    asyncHandler(paymentsController.createExtensionIntent));
+
    // GCash direct payment (alternative flow)
    app.post(
      '/payments/gcash',
      authenticate,
-     validateBody(createPaymentSchema),
      asyncHandler(paymentsController.createGCashPayment));
 
    // Legacy payment endpoint (backward compatibility)
   app.post(
     '/payments',
     authenticate,
-    validateBody(createPaymentSchema),
     asyncHandler(paymentsController.processPayment));
 
   app.get(

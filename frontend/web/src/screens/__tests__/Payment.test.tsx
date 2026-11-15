@@ -1,160 +1,122 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Payment from '../Payment';
 import api from '../../api';
 
-// Mock the API module
 vi.mock('../../api');
 
-// Mock useNavigate
 const mockNavigate = vi.fn();
-let mockLocationState: { booking?: { id: number; price: number } } = {
-  booking: {
-    id: 123,
-    price: 50,
-  },
-};
-
+let booking: Record<string, unknown> | null = { id: 123, price: 50, platformFee: 2.5, startTime: '2030-01-01T10:00:00Z', endTime: '2030-01-01T11:00:00Z' };
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-    useLocation: () => ({ state: mockLocationState }),
-  };
+  return { ...actual, useNavigate: () => mockNavigate, useLocation: () => ({ state: { booking }, search: '' }) };
 });
 
-describe('Payment Screen', () => {
+const renderPayment = () => render(<BrowserRouter><Payment /></BrowserRouter>);
+
+describe('Payment screen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
-    mockLocationState = {
-      booking: {
-        id: 123,
-        price: 50,
-      },
-    };
+    vi.stubEnv('DEV', true);
+    booking = { id: 123, price: 50, platformFee: 2.5, status: 'pending', startTime: '2030-01-01T10:00:00Z', endTime: '2030-01-01T11:00:00Z' };
   });
 
-  it('renders payment methods correctly', () => {
-    render(
-      <BrowserRouter>
-        <Payment />
-      </BrowserRouter>
-    );
+  afterEach(() => vi.unstubAllEnvs());
 
-    expect(screen.getByText('Complete Payment')).toBeInTheDocument();
+  it('shows the PHP booking total and available payment methods', () => {
+    renderPayment();
+    expect(screen.getByText('Complete payment')).toBeInTheDocument();
+    expect(screen.getByText('₱52.50')).toBeInTheDocument();
     expect(screen.getByText('GCash')).toBeInTheDocument();
-    expect(screen.getByText('Credit/Debit Card')).toBeInTheDocument();
-    expect(screen.getByText('GrabPay')).toBeInTheDocument();
-    expect(screen.getByText('PayMaya')).toBeInTheDocument();
+    expect(screen.getByText('Maya')).toBeInTheDocument();
+    expect(screen.getByText('Credit or debit card')).toBeInTheDocument();
   });
 
-  it('displays booking summary with correct total', () => {
-    render(
-      <BrowserRouter>
-        <Payment />
-      </BrowserRouter>
-    );
-
-    expect(screen.getByText('Booking Summary')).toBeInTheDocument();
-    expect(screen.getByText('$50')).toBeInTheDocument();
-    expect(screen.getByText('$52.00')).toBeInTheDocument(); // Total with service fee
+  it('simulates a development confirmation and opens booking detail', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { message: 'Development booking confirmed' } } as never);
+    renderPayment();
+    fireEvent.click(screen.getByRole('button', { name: 'Simulate booking confirmation (dev)' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/marketplace/bookings/123/dev-confirm'));
+    expect(mockNavigate).toHaveBeenCalledWith('/bookings/123');
+    expect(api.post).toHaveBeenCalledTimes(1);
   });
 
-  it('allows selecting different payment methods', () => {
-    render(
-      <BrowserRouter>
-        <Payment />
-      </BrowserRouter>
-    );
-
-    const grabPayRadio = screen.getAllByRole('radio')[2];
-    fireEvent.click(grabPayRadio);
-
-    expect(grabPayRadio).toBeChecked();
+  it('shows development confirmation errors and stays on checkout', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({ response: { data: { error: 'Only pending bookings can be confirmed' } } });
+    renderPayment();
+    fireEvent.click(screen.getByRole('button', { name: 'Simulate booking confirmation (dev)' }));
+    expect(await screen.findByText('Only pending bookings can be confirmed')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('handles successful payment intent creation', async () => {
-    const mockPost = vi.mocked(api.post);
-    mockPost.mockResolvedValueOnce({
-      data: {
-        paymentIntentId: 'pi_123',
-        clientKey: 'key_123',
-      },
-    });
-
-    render(
-      <BrowserRouter>
-        <Payment />
-      </BrowserRouter>
-    );
-
-    const payButton = screen.getByRole('button', { name: /Pay \$52.00/i });
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledWith('/api/v1/payments/intent', {
-        bookingId: 123,
-        amount: 5000,
-        paymentMethod: 'gcash',
-      });
-    });
+  it('hides development confirmation outside Vite development mode', () => {
+    vi.stubEnv('DEV', false);
+    renderPayment();
+    expect(screen.queryByRole('button', { name: 'Simulate booking confirmation (dev)' })).not.toBeInTheDocument();
   });
 
-  it('displays error message on payment failure', async () => {
-    const mockPost = vi.mocked(api.post);
-    mockPost.mockRejectedValueOnce({
-      response: {
-        data: {
-          error: 'Payment failed',
-        },
-      },
-    });
+  it('sends the booking id without a client amount and reports backend-confirmed success', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { paymentIntentId: 'pi_test', clientKey: 'client', publicKey: 'pk_test' } } as never)
+      .mockResolvedValueOnce({ data: { status: 'completed' } } as never);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { id: 'pm_test' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { attributes: { status: 'succeeded' } } }) });
+    vi.stubGlobal('fetch', fetchMock);
 
-    render(
-      <BrowserRouter>
-        <Payment />
-      </BrowserRouter>
-    );
+    renderPayment();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay ₱52.50' }));
 
-    const payButton = screen.getByRole('button', { name: /Pay \$52.00/i });
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Payment failed')).toBeInTheDocument();
-    });
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/payments/intent', { bookingId: 123, paymentMethod: 'gcash' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/payments/confirm', { paymentIntentId: 'pi_test' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/bookings/123');
   });
 
-  it('disables pay button while processing', async () => {
-    const mockPost = vi.mocked(api.post);
-    mockPost.mockImplementation(() => new Promise(() => {})); // Never resolves
-
-    render(
-      <BrowserRouter>
-        <Payment />
-      </BrowserRouter>
-    );
-
-    const payButton = screen.getByRole('button', { name: /Pay \$52.00/i });
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(payButton).toBeDisabled();
-      expect(screen.getByText('Processing...')).toBeInTheDocument();
-    });
+  it('keeps a pending result from being shown as successful', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { paymentIntentId: 'pi_pending', clientKey: 'client', publicKey: 'pk_test' } } as never)
+      .mockResolvedValueOnce({ data: { status: 'pending' } } as never);
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { id: 'pm_test' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { attributes: { status: 'processing' } } }) }));
+    renderPayment();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay ₱52.50' }));
+    expect(await screen.findByText(/Payment is still pending/)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('shows error when no booking is provided', () => {
-    mockLocationState = {};
+  it('shows an object-shaped intent error safely and keeps checkout usable', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({ response: { data: { error: { message: 'Booking already paid' } } } });
+    renderPayment();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay ₱52.50' }));
+    expect(await screen.findByText('Booking already paid')).toBeInTheDocument();
+    expect(screen.getByText('Complete payment')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 
-    render(
-      <BrowserRouter>
-        <Payment />
-      </BrowserRouter>
-    );
+  it('shows a cancelled state without treating the booking as successful', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { paymentIntentId: 'pi_cancelled', clientKey: 'client', publicKey: 'pk_test' } } as never)
+      .mockResolvedValueOnce({ data: { status: 'cancelled' } } as never);
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { id: 'pm_test' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { attributes: { status: 'canceled' } } }) }));
+    renderPayment();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay ₱52.50' }));
+    expect(await screen.findByText(/Payment was cancelled/)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 
-    expect(screen.getByText(/No booking found/i)).toBeInTheDocument();
+  it('verifies provider redirect returns with the backend before navigating', async () => {
+    window.history.pushState({}, '', '/?bookingId=123&payment_intent_id=pi_return');
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { status: 'authorized' } } as never);
+    renderPayment();
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/payments/confirm', { paymentIntentId: 'pi_return' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/bookings/123', { replace: true });
+    window.history.pushState({}, '', '/');
+  });
+
+  it('shows a clear message when there is no booking to pay', () => {
+    booking = null;
+    renderPayment();
+    expect(screen.getByText(/No booking found/)).toBeInTheDocument();
   });
 });

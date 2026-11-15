@@ -33,6 +33,15 @@ const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal server error';
   let details = err.details || {};
+  const isPrismaError = err.name?.startsWith('Prisma') || err.code?.startsWith('P');
+  const prismaMeta = err.meta && typeof err.meta === 'object' ? err.meta : {};
+  const diagnosticMeta = Object.fromEntries(
+    ['modelName', 'target', 'field_name', 'column_name', 'constraint'].flatMap((key) =>
+      typeof prismaMeta[key] === 'string' || Array.isArray(prismaMeta[key])
+        ? [[key, prismaMeta[key]]]
+        : []
+    )
+  );
 
   // Handle specific error types
 
@@ -51,8 +60,15 @@ const errorHandler = (err, req, res, next) => {
     message = 'Record not found';
   } else if (err.code?.startsWith('P')) {
     // Other Prisma errors
-    statusCode = 400;
+    statusCode = 500;
     message = 'Database operation failed';
+    details = {};
+  }
+
+  if (isPrismaError && !['P2002', 'P2025'].includes(err.code)) {
+    statusCode = 500;
+    message = 'Database operation failed';
+    details = {};
   }
 
   // JWT errors
@@ -91,10 +107,18 @@ const errorHandler = (err, req, res, next) => {
   console[logLevel]('[ERROR]', {
     timestamp: new Date().toISOString(),
     method: req.method,
-    url: req.url,
+    url: req.path,
     statusCode,
     message,
     userId: req.user?.id,
+    ...(isPrismaError && {
+      databaseError: {
+        name: err.name,
+        code: err.code,
+        metadata: diagnosticMeta,
+        operation: `${req.method} ${req.baseUrl || ''}${req.route?.path || req.path}`
+      }
+    }),
     ...(statusCode >= 500 && { stack: err.stack })
   });
 

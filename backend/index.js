@@ -1,22 +1,31 @@
+// Load local environment before importing modules that initialize Redis or read config.
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { authRateLimit } = require('./middleware/authRateLimit');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const cron = require('node-cron');
-require('dotenv').config();
 
 const secretManager = require('./config/secretManager');
 const logger = require('./config/logger');
 const metrics = require('./config/metrics');
+const { authenticate } = require('./services/auth');
+const { requireAdmin } = require('./middleware/adminGuard');
+const { pruneWebPerformanceMetrics } = require('./services/webPerformanceMetrics');
 const { validateEnvironment, printEnvironmentSummary } = require('./config/env-validation');
 
 const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 3001;
+
+// Cloud Run adds one trusted forwarding hop; req.ip must use the originating client.
+app.set('trust proxy', 1);
 
 // Validate environment variables
 const envValidation = validateEnvironment();
@@ -84,17 +93,11 @@ const apiMethodLimiter = (req, res, next) => {
   return apiWriteLimiter(req, res, next);
 };
 
-// Bypass rate limiter in test environment to allow comprehensive testing
-const authLimiter = process.env.NODE_ENV === 'test'
-  ? (req, res, next) => next() // Bypass in tests
-  : rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 5, // 5 attempts per IP
-      message: { error: 'Too many authentication attempts, please try again later.' },
-      skipSuccessfulRequests: true, // Don't count successful logins
-      standardHeaders: true,
-      legacyHeaders: false,
-    });
+const authLimiter = {
+  login: authRateLimit('login'),
+  register: authRateLimit('register'),
+  reset: authRateLimit('reset'),
+};
 
 // Middleware
 // Security headers with helmet.js
@@ -150,7 +153,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // HTTP request logging with Morgan + Winston
-app.use(morgan('combined', { stream: logger.stream }));
+app.use(morgan('combined', {
+  stream: logger.stream,
+  skip: (req) => req.path === '/api/v1/analytics/performance' || req.path === '/api/analytics/performance',
+}));
 
 // Prometheus metrics middleware
 app.use(metrics.metricsMiddleware);
@@ -177,7 +183,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { deprecate } = require('./middleware/deprecation');
 
 // Metrics endpoint (before other routes)
-app.get('/metrics', metrics.getMetrics);
+app.get('/metrics', authenticate, requireAdmin, metrics.getMetrics);
 
 // Health check routes (before other routes)
 healthRoutes(app);
@@ -284,6 +290,16 @@ if (process.env.NODE_ENV !== 'test') {
   // Google parking candidate discovery cron job
   const { scheduleGoogleParkingCandidateScan } = require('./services/parkingCandidateScanScheduler');
   scheduleGoogleParkingCandidateScan(cron);
+
+  cron.schedule('15 2 * * *', async () => {
+    try {
+      const result = await pruneWebPerformanceMetrics();
+      logger.info(`Pruned ${result.count} expired web performance samples`);
+    } catch (error) {
+      logger.error('Failed to prune expired web performance samples', { error: error.message });
+    }
+  });
+  logger.info('Web performance sample retention scheduled (90 days)');
 }
 
 // Only start server if not in test mode
