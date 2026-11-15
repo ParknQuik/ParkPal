@@ -391,6 +391,10 @@ const CONTEXT_SPECS = [
       'ROADMAP.md',
       'DOCUMENTATION.md'
     ]
+  },
+  {
+    query: 'end-of-task knowledge review propose lesson for approval',
+    requiredFirstPath: '.agents/knowledge/README.md'
   }
 ];
 
@@ -948,6 +952,28 @@ function validateContextChecks(contextChecks) {
   return failures;
 }
 
+function validateCapturePolicy(root = ROOT) {
+  const skillPath = path.join(root, '.agents/skills/parkpal-knowledge/SKILL.md');
+  const readmePath = path.join(root, '.agents/knowledge/README.md');
+  const skill = fs.readFileSync(skillPath, 'utf8');
+  const readme = fs.readFileSync(readmePath, 'utf8');
+  const failures = [];
+
+  for (const [label, content] of [['skill', skill], ['README', readme]]) {
+    if (!/wait for (the )?user(?:'s)? approval/i.test(content)) {
+      failures.push(`${label}: capture policy must require user approval before writing.`);
+    }
+    if (!/session_learnings\.md/i.test(content) || !/source-map\.json/i.test(content)) {
+      failures.push(`${label}: capture policy must distinguish session learnings and source-map routing.`);
+    }
+  }
+
+  if (!/say\s+nothing\s+about\s+knowledge\s+capture/i.test(skill)) {
+    failures.push('skill: no-candidate policy must avoid capture chatter.');
+  }
+  return failures;
+}
+
 function formatReport(report) {
   const topRows = report.queries.map((item) => [
     shortQuery(item.query),
@@ -1115,7 +1141,8 @@ function main() {
     const contextChecks = CONTEXT_SPECS.map((spec) => checkContextRouting(ROOT, currentDb.dbPath, spec));
     const failures = [
       ...validate(queries, currentTokenSavings),
-      ...validateContextChecks(contextChecks)
+      ...validateContextChecks(contextChecks),
+      ...validateCapturePolicy(ROOT)
     ];
     const report = {
       baseline: {

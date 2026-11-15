@@ -572,6 +572,9 @@
         "broad docs returned",
         "source-map routing",
         "session learnings",
+        "end-of-task knowledge review",
+        "propose lesson for approval",
+        "knowledge capture approval",
         "expected references",
         "rejected first path",
         "vector database",
@@ -604,6 +607,8 @@
         "Runtime rebuilds should refresh the SQLite DB without rewriting tracked compact JSONL mirrors.",
         "Tracked compact mirror freshness is guarded by knowledge:compact -- --check, not normal startup rebuilds.",
         "A retrieval miss should be fixed in source-map routing, session learnings, compact mirrors, or status overrides before adding broader docs.",
+        "At task completion, propose only verified reusable lessons for review; never append to session learnings before user approval.",
+        "Store durable lessons in session learnings, stable routes and validation guidance in the source map, and update compact mirrors only for routing needs.",
         "Regression specs for misses should include expected paths, expected references, and rejected first paths or references when broad docs must not outrank source routes.",
         "Vector search should wait for repeated regression-backed lexical misses or a new cross-repo/user-facing search requirement."
       ]

@@ -49,3 +49,19 @@ implementation planning, and cross-agent handoff.
    commit, and cited `STATUS_REPORT.md` ranges.
 12. Do not rely on the index for source-code truth when code files are directly
    relevant. Use it to find where to inspect.
+
+## End-of-Task Knowledge Review
+
+At task completion, consider whether the work produced a verified, reusable
+project invariant, a surprising failure with a verified cause, or a useful
+validation or environment constraint. Suggest a lesson only when it is
+high-signal and supported by evidence. Keep the proposal brief and include the
+lesson, relevant files, and verification evidence. Wait for the user's approval
+before writing anything; after approval, use the existing
+`npm run knowledge:add-learning` flow. If there is no strong candidate, say
+nothing about knowledge capture.
+
+Put durable lessons in `docs/agent-knowledge/SESSION_LEARNINGS.md`. Update
+`.agents/knowledge/source-map.json` for stable implementation routes and
+validation guidance. Update compact mirrors only when startup, status, roadmap,
+or workflow routing needs a corresponding change.
