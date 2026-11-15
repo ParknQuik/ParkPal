@@ -10,9 +10,18 @@ import authReducer, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { REHYDRATE } from 'redux-persist';
 import { authAPI } from '../../../services/api';
+import { sessionStorage } from '../../../services/sessionStorage';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage');
+jest.mock('../../../services/sessionStorage', () => ({
+  sessionStorage: {
+    save: jest.fn().mockResolvedValue(undefined),
+    getToken: jest.fn().mockResolvedValue(null),
+    getUser: jest.fn().mockResolvedValue(null),
+    clear: jest.fn().mockResolvedValue(undefined),
+  },
+}));
 
 // Mock API
 jest.mock('../../../services/api', () => ({
@@ -75,11 +84,7 @@ describe('authSlice', () => {
       expect(state.loading).toBe(false);
       expect(state.error).toBe(null);
 
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith('token', mockToken);
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        'user',
-        JSON.stringify(mockUser)
-      );
+      expect(sessionStorage.save).toHaveBeenCalledWith(mockToken, mockUser, false);
     });
 
     it('should handle login failure', async () => {
@@ -238,8 +243,7 @@ describe('authSlice', () => {
       expect(state.token).toBe(null);
       expect(state.isAuthenticated).toBe(false);
 
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('token');
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('user');
+      expect(sessionStorage.clear).toHaveBeenCalled();
     });
   });
 
@@ -252,11 +256,8 @@ describe('authSlice', () => {
       };
       const mockToken = 'mock-jwt-token';
 
-      (AsyncStorage.getItem as jest.Mock).mockImplementation((key) => {
-        if (key === 'token') return Promise.resolve(mockToken);
-        if (key === 'user') return Promise.resolve(JSON.stringify(mockUser));
-        return Promise.resolve(null);
-      });
+      (sessionStorage.getToken as jest.Mock).mockResolvedValue(mockToken);
+      (sessionStorage.getUser as jest.Mock).mockResolvedValue(JSON.stringify(mockUser));
 
       await store.dispatch(checkAuth());
 
@@ -268,7 +269,8 @@ describe('authSlice', () => {
     });
 
     it('should handle missing auth data', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+      (sessionStorage.getToken as jest.Mock).mockResolvedValue(null);
+      (sessionStorage.getUser as jest.Mock).mockResolvedValue(null);
 
       await store.dispatch(checkAuth());
 
@@ -327,6 +329,7 @@ describe('authSlice', () => {
       (authAPI.updateProfile as jest.Mock).mockResolvedValue({
         data: updatedUser,
       });
+      (sessionStorage.getToken as jest.Mock).mockResolvedValue('mock-jwt-token');
 
       (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
 
@@ -339,10 +342,7 @@ describe('authSlice', () => {
       expect(state.loading).toBe(false);
       expect(state.error).toBe(null);
 
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        'user',
-        JSON.stringify(updatedUser)
-      );
+      expect(sessionStorage.save).toHaveBeenCalledWith('mock-jwt-token', updatedUser, true);
     });
 
     it('should handle profile update failure', async () => {

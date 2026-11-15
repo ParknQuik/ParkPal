@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TextInput,
+  SectionList,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
@@ -83,6 +84,20 @@ const getLocationCoords = (location: Location.LocationObject | null) => {
     latitude: location.coords.latitude,
     longitude: location.coords.longitude,
   };
+};
+
+const getDistanceKm = (
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number }
+): number => {
+  const earthRadiusKm = 6371;
+  const dLat = ((to.latitude - from.latitude) * Math.PI) / 180;
+  const dLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+  const lat1 = (from.latitude * Math.PI) / 180;
+  const lat2 = (to.latitude * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
 const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: {
@@ -265,6 +280,7 @@ export const ExploreMap: React.FC = () => {
   const lastListingFetchRef = useRef<{ key: string; timestamp: number } | null>(null);
   const lastManualRefreshRef = useRef(0);
   const [selectedMarker, setSelectedMarker] = useState<string | number | null>(null);
+  const [nearbyResultsVisible, setNearbyResultsVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [locating, setLocating] = useState(false);
   const [mapNotice, setMapNotice] = useState<string | null>(null);
@@ -278,6 +294,7 @@ export const ExploreMap: React.FC = () => {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [zoneIndicatorVisible, setZoneIndicatorVisible] = useState(true);
   const [zoneOccupancyMap, setZoneOccupancyMap] = useState<Record<string, number>>({});
+  const [zoneAvailabilityMap, setZoneAvailabilityMap] = useState<Record<string, any>>({});
   const [cachedListings, setCachedListings] = useState<any[]>([]);
   const [candidatePins, setCandidatePins] = useState<ParkingCandidateDiscoveryPin[]>([]);
   const insets = useSafeAreaInsets();
@@ -319,9 +336,13 @@ export const ExploreMap: React.FC = () => {
   useEffect(() => {
     const loadZoneMetrics = async () => {
       const metrics: Record<string, number> = {};
+      const availabilityByZone: Record<string, any> = {};
       for (const zone of analyticsZones) {
         try {
           const result = await analyticsService.getZoneAvailability(zone.id);
+          if (result) {
+            availabilityByZone[zone.id] = result;
+          }
           if (result?.occupancyPercentage != null) {
             metrics[zone.id] = result.occupancyPercentage;
           }
@@ -330,6 +351,7 @@ export const ExploreMap: React.FC = () => {
         }
       }
       setZoneOccupancyMap(metrics);
+      setZoneAvailabilityMap(availabilityByZone);
     };
     if (analyticsZones.length > 0) {
       loadZoneMetrics();
@@ -376,6 +398,9 @@ export const ExploreMap: React.FC = () => {
   const selectedCandidate = typeof selectedMarker === 'string' && selectedMarker.startsWith('candidate-')
     ? candidatePins.find((candidate) => `candidate-${candidate.id}` === selectedMarker)
     : null;
+  const selectedAnalyticsZone = typeof selectedMarker === 'string' && selectedMarker.startsWith('zone-')
+    ? analyticsZones.find((zone) => `zone-${zone.id}` === selectedMarker)
+    : null;
   const selectedMapEntity = selectedListing || (selectedCandidate ? {
     ...selectedCandidate,
     id: `candidate-${selectedCandidate.id}`,
@@ -389,6 +414,25 @@ export const ExploreMap: React.FC = () => {
     canBook: false,
     title: selectedCandidate.title,
     address: selectedCandidate.address,
+  } : selectedAnalyticsZone ? {
+    ...selectedAnalyticsZone,
+    id: `zone-${selectedAnalyticsZone.id}`,
+    latitude: selectedAnalyticsZone.centroidLat,
+    longitude: selectedAnalyticsZone.centroidLon,
+    description: '',
+    photos: [],
+    amenities: [],
+    rating: null,
+    reviewCount: 0,
+    distance: getDistanceKm(region, {
+      latitude: selectedAnalyticsZone.centroidLat,
+      longitude: selectedAnalyticsZone.centroidLon,
+    }),
+    pricePerHour: selectedAnalyticsZone.pricePerHour,
+    canBook: false,
+    source: 'commercial_zone',
+    title: selectedAnalyticsZone.name,
+    address: selectedAnalyticsZone.address,
   } : null);
 
   useEffect(() => {
@@ -399,7 +443,9 @@ export const ExploreMap: React.FC = () => {
 
   const selectedZoneAvail = selectedListing?.zoneId
     ? zoneAvailability[selectedListing.zoneId]
-    : null;
+    : selectedAnalyticsZone
+      ? zoneAvailabilityMap[selectedAnalyticsZone.id]
+      : null;
 
   const hasActiveFilters = Object.keys(activeFilters).length > 0;
 
@@ -479,6 +525,30 @@ export const ExploreMap: React.FC = () => {
     });
   }, [displayListings, activeSort]);
 
+  const bookableListings = useMemo(
+    () => sortedListings.filter((listing: any) => listing.canBook !== false && listing.source !== 'google_candidate'),
+    [sortedListings]
+  );
+
+  const commercialZones = useMemo(() => {
+    if (!isConnected || !hasLocationContext) return [];
+    const needle = searchQuery.trim().toLowerCase();
+    return analyticsZones
+      .map((zone) => ({
+        ...zone,
+        kind: 'commercial' as const,
+        distance: getDistanceKm(region, { latitude: zone.centroidLat, longitude: zone.centroidLon }),
+        availability: zoneAvailabilityMap[zone.id] || null,
+      }))
+      .filter((zone) => zone.distance <= 3 && (!needle || `${zone.name} ${zone.address || ''}`.toLowerCase().includes(needle)))
+      .sort((a, b) => {
+        if (activeSort === 'nearest') return a.distance - b.distance;
+        if (activeSort === 'cheapest') return (a.pricePerHour ?? Infinity) - (b.pricePerHour ?? Infinity);
+        if (activeSort === 'available_now') return (b.availability?.available ?? 0) - (a.availability?.available ?? 0);
+        return 0;
+      });
+  }, [analyticsZones, region, zoneAvailabilityMap, isConnected, hasLocationContext, searchQuery, activeSort]);
+
   const regionKey = useMemo(() => {
     const lat = Math.round(region.latitude * 1000);
     const lon = Math.round(region.longitude * 1000);
@@ -489,6 +559,14 @@ export const ExploreMap: React.FC = () => {
   const clustered = useMemo(() => {
     return clusterMarkers(sortedListings, region);
   }, [sortedListings, regionKey]);
+
+  const nearbySections = useMemo(() => {
+    const sections = [
+      { title: 'Bookable spaces', kind: 'listing' as const, data: bookableListings },
+      { title: 'Commercial parking', kind: 'commercial' as const, data: commercialZones },
+    ];
+    return sections.filter((section) => section.data.length > 0);
+  }, [bookableListings, commercialZones]);
 
   const refreshMapData = useCallback(async (lat: number, lon: number, filters?: FilterConfig) => {
     const params: any = {
@@ -794,6 +872,11 @@ export const ExploreMap: React.FC = () => {
     }
   }, [listings, cachedListings, candidatePins, isConnected, resetZoneIndicatorTimer]);
 
+  const handleNearbyResultPress = useCallback((listing: any) => {
+    setNearbyResultsVisible(false);
+    handleMarkerPress(listing.id);
+  }, [handleMarkerPress]);
+
   const handleViewDetails = () => {
     if (selectedListing) {
       navigation.navigate('ParkingDetail', { spotId: selectedListing.id });
@@ -946,6 +1029,49 @@ export const ExploreMap: React.FC = () => {
       flex: 1,
       fontSize: 14,
       color: colors.textPrimary,
+    },
+    nearbyResult: {
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    nearbyResultHeading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    nearbyResultTitle: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+    nearbyResultPrice: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    nearbyResultAddress: {
+      marginTop: 4,
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    nearbyResultFacts: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 8,
+    },
+    nearbyResultFact: {
+      fontSize: 11,
+      color: colors.textSecondary,
     },
     filterButton: {
       width: 48,
@@ -1147,6 +1273,38 @@ export const ExploreMap: React.FC = () => {
       fontWeight: '600',
     },
   }), [colors, insets.bottom]);
+
+  const renderNearbyResult = useCallback(({ item }: { item: any }) => {
+    const title = item.title || item.address || 'Parking space';
+    const distance = typeof item.distance === 'number' ? `${item.distance.toFixed(1)} km` : 'Distance unavailable';
+    const price = item.pricePerHour != null ? `₱${item.pricePerHour}/hr` : 'Price unavailable';
+    const available = item.availability === true || item.status === 'available';
+    const availabilityLabel = available ? 'Available' : 'Availability varies';
+    const rating = typeof item.rating === 'number' ? item.rating.toFixed(1) : 'New';
+
+    return (
+      <TouchableOpacity
+        style={styles.nearbyResult}
+        onPress={() => handleNearbyResultPress(item)}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel={`${title}. ${distance} away. ${price}. ${availabilityLabel}. Rating ${rating}. View on map.`}
+      >
+        <View style={styles.nearbyResultHeading}>
+          <Text style={styles.nearbyResultTitle} numberOfLines={1}>{title}</Text>
+          <Text style={styles.nearbyResultPrice}>{price}</Text>
+        </View>
+        {!!item.address && item.address !== title && (
+          <Text style={styles.nearbyResultAddress} numberOfLines={1}>{item.address}</Text>
+        )}
+        <View style={styles.nearbyResultFacts}>
+          <Text style={styles.nearbyResultFact}>{distance}</Text>
+          <Text style={styles.nearbyResultFact}>{availabilityLabel}</Text>
+          <Text style={styles.nearbyResultFact}>★ {rating}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [handleNearbyResultPress, styles]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
