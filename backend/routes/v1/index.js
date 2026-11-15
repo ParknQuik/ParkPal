@@ -13,6 +13,9 @@ const router = express.Router();
  * Each route module handles its own endpoints
  */
 module.exports = (authLimiter) => {
+  const authLimiters = typeof authLimiter === 'function'
+    ? { login: authLimiter, register: authLimiter, reset: authLimiter }
+    : authLimiter;
   const authRoutes = require('../auth');
   const googleAuthRoutes = require('../googleAuth');
   const appleAuthRoutes = require('../appleAuth');
@@ -31,21 +34,23 @@ module.exports = (authLimiter) => {
   const earningsRoutes = require('../earnings');
   const pointsRoutes = require('../points');
   const knowledgeAdminRoutes = require('../knowledgeAdmin');
+  const adminMetricsRoutes = require('../adminMetrics');
 
   // Health routes (no auth required)
   healthRoutes(router);
 
   // Auth routes get stricter rate limiting
-  authRoutes(router, authLimiter);
+  authRoutes(router, authLimiters);
 
   // Social Auth routes
-  googleAuthRoutes(router, authLimiter);
-  appleAuthRoutes(router, authLimiter);
-  facebookAuthRoutes(router, authLimiter);
+  googleAuthRoutes(router, authLimiters);
+  appleAuthRoutes(router, authLimiters);
+  facebookAuthRoutes(router, authLimiters);
 
   // Admin routes
   const adminRoutes = require('../admin');
   adminRoutes(router);
+  adminMetricsRoutes(router);
   knowledgeAdminRoutes(router);
 
   // Other routes

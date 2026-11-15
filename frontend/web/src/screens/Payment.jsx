@@ -1,291 +1,168 @@
-import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import {
-	Container,
-	Box,
-	Typography,
-	Card,
-	CardContent,
-	FormControl,
-	FormLabel,
-	RadioGroup,
-	FormControlLabel,
-	Radio,
-	Button,
-	Alert,
-	CircularProgress,
-	Divider
-} from '@mui/material';
-import {
-	CreditCard as CreditCardIcon,
-	AccountBalanceWallet as WalletIcon,
-	LocalTaxi as GrabPayIcon,
-	Phone as PayMayaIcon
-} from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Alert, Box, Button, Card, CardContent, CircularProgress, Container, Divider, FormControl, FormControlLabel, Radio, RadioGroup, TextField, Typography } from '@mui/material';
 import api from '../api';
 
+const safeErrorMessage = (error, fallback) => {
+  const payload = error?.response?.data;
+  const candidates = [payload?.error, payload?.message, payload?.details, error?.message];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate;
+    if (candidate && typeof candidate === 'object') {
+      const message = typeof candidate.message === 'string' ? candidate.message : null;
+      if (message?.trim()) return message;
+    }
+  }
+  return fallback;
+};
+
 const Payment = () => {
-	const navigate = useNavigate();
-	const location = useLocation();
-	const booking = location.state?.booking;
-	const [paymentMethod, setPaymentMethod] = useState('gcash');
-	const [error, setError] = useState('');
-	const [loading, setLoading] = useState(false);
-	const [processingStep, setProcessingStep] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [params] = useSearchParams();
+  const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const [booking, setBooking] = useState(location.state?.booking || null);
+  const [paymentMethod, setPaymentMethod] = useState('gcash');
+  const [card, setCard] = useState({ number: '', month: '', year: '', cvc: '' });
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bookingId = params.get('bookingId');
+  const paymentIntentId = params.get('payment_intent_id');
+  const payable = booking ? Number(booking.price || 0) + Number(booking.platformFee || 0) : 0;
 
-	if (!booking) {
-		return (
-			<Container>
-				<Alert severity="error" sx={{ mt: 4 }}>
-					No booking found. Please go back and create a reservation.
-				</Alert>
-				<Button onClick={() => navigate('/map')} sx={{ mt: 2 }}>
-					Back to Map
-				</Button>
-			</Container>
-		);
-	}
+  useEffect(() => {
+    if (!bookingId || booking) return;
+    api.get(`/marketplace/bookings/${bookingId}`).then(({ data }) => setBooking(data.booking || data))
+      .catch((err) => setError(safeErrorMessage(err, 'Could not reload this booking')));
+  }, [bookingId, booking]);
 
-	const paymentMethods = [
-		{
-			id: 'gcash',
-			name: 'GCash',
-			description: 'Most popular in Philippines',
-			icon: <WalletIcon sx={{ fontSize: 40 }} />
-		},
-		{
-			id: 'card',
-			name: 'Credit/Debit Card',
-			description: 'Visa, Mastercard',
-			icon: <CreditCardIcon sx={{ fontSize: 40 }} />
-		},
-		{
-			id: 'grab_pay',
-			name: 'GrabPay',
-			description: 'Pay with GrabPay wallet',
-			icon: <GrabPayIcon sx={{ fontSize: 40 }} />
-		},
-		{
-			id: 'paymaya',
-			name: 'PayMaya',
-			description: 'Digital wallet',
-			icon: <PayMayaIcon sx={{ fontSize: 40 }} />
-		}
-	];
+  useEffect(() => {
+    if (!paymentIntentId) return;
+    setLoading(true);
+    api.post('/payments/confirm', { paymentIntentId })
+      .then(({ data }) => {
+        const nextStatus = data.status || 'pending';
+        setStatus(nextStatus);
+        if (nextStatus === 'failed') setError('Payment failed. Please check the payment method and retry.');
+        if (nextStatus === 'cancelled') setError('Payment was cancelled. You can try again when ready.');
+        if (nextStatus === 'completed' || nextStatus === 'authorized') {
+          navigate(`/bookings/${bookingId}`, { replace: true });
+        }
+      })
+      .catch((err) => setError(safeErrorMessage(err, 'Payment confirmation could not be verified')))
+      .finally(() => setLoading(false));
+  // Run once for a redirect return.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentIntentId]);
 
-	const handlePayment = async () => {
-		setLoading(true);
-		setError('');
-		setProcessingStep('Creating payment intent...');
+  const handlePayment = async () => {
+    if (!booking) return;
+    setLoading(true);
+    setError('');
+    setStatus('Creating payment intent…');
+    try {
+      const intentResponse = await api.post('/payments/intent', { bookingId: booking.id, paymentMethod });
+      const { paymentIntentId: intentId, clientKey, publicKey } = intentResponse.data;
+      if (!publicKey || !clientKey) throw new Error('PayMongo sandbox keys are not configured.');
+      if (!['succeeded', 'awaiting_capture'].includes(intentResponse.data.status)) {
+      const auth = `Basic ${btoa(`${publicKey}:`)}`;
+      const billing = { name: user?.name || 'ParkPal Driver', email: user?.email || '', address: { country: 'PH' } };
+      const methodPayload = { data: { attributes: { type: paymentMethod, billing } } };
+      if (paymentMethod === 'card') {
+        methodPayload.data.attributes.details = {
+          card_number: card.number.replace(/\s/g, ''),
+          exp_month: Number(card.month),
+          exp_year: Number(card.year),
+          cvc: card.cvc,
+        };
+      }
+      const methodResponse = await fetch('https://api.paymongo.com/v1/payment_methods', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify(methodPayload),
+      });
+      const methodData = await methodResponse.json();
+      if (!methodResponse.ok) throw new Error(methodData.errors?.[0]?.detail || 'Unable to create PayMongo payment method');
+      const returnUrl = `${window.location.origin}/payment?bookingId=${booking.id}&payment_intent_id=${encodeURIComponent(intentId)}`;
+      const attachResponse = await fetch(`https://api.paymongo.com/v1/payment_intents/${encodeURIComponent(intentId)}/attach`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: auth },
+        body: JSON.stringify({ data: { attributes: { payment_method: methodData.data.id, client_key: clientKey, return_url: returnUrl } } }),
+      });
+      const attachData = await attachResponse.json();
+      if (!attachResponse.ok) throw new Error(attachData.errors?.[0]?.detail || 'Unable to attach payment method');
+      const intent = attachData.data.attributes;
+      if (intent.status === 'awaiting_next_action' && intent.next_action?.redirect?.url) {
+        window.location.assign(intent.next_action.redirect.url);
+        return;
+      }
+      }
+      const confirmed = await api.post('/payments/confirm', { paymentIntentId: intentId });
+      setStatus(confirmed.data.status || 'pending');
+      if (['completed', 'authorized'].includes(confirmed.data.status)) navigate(`/bookings/${booking.id}`);
+      else if (confirmed.data.status === 'failed') setError('Payment failed. Check your payment method and try again.');
+      else if (confirmed.data.status === 'cancelled') setError('Payment was cancelled. You can try again when ready.');
+      else setStatus('Payment is still pending. We will only mark the booking successful after PayMongo confirms it.');
+    } catch (err) {
+      setError(safeErrorMessage(err, 'Payment could not be completed'));
+      setStatus('');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-		try {
-			// Step 1: Create payment intent
-			const intentResponse = await api.post('/api/v1/payments/intent', {
-				bookingId: booking.id,
-				amount: booking.price * 100, // Convert to cents
-				paymentMethod
-			});
+  const handleDevConfirm = async () => {
+    if (!booking) return;
+    setLoading(true);
+    setError('');
+    setStatus('');
+    try {
+      await api.post(`/marketplace/bookings/${booking.id}/dev-confirm`);
+      navigate(`/bookings/${booking.id}`);
+    } catch (err) {
+      setError(safeErrorMessage(err, 'Development confirmation failed'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-			const { paymentIntentId, clientKey } = intentResponse.data;
-			setProcessingStep('Payment intent created. Redirecting to payment...');
+  if (!booking && !error && bookingId) return <Container sx={{ py: 4 }}><CircularProgress /></Container>;
+  if (!booking) return <Container sx={{ py: 4 }}><Alert severity="error">{error || 'No booking found. Return to your bookings and choose a pending reservation.'}</Alert><Button onClick={() => navigate('/bookings')}>My bookings</Button></Container>;
 
-			// Step 2: For e-wallets (GCash, GrabPay, PayMaya), redirect to payment page
-			if (paymentMethod === 'gcash' || paymentMethod === 'grab_pay' || paymentMethod === 'paymaya') {
-				// In production, this would redirect to PayMongo checkout page
-				// For now, show success message
-				alert(`Payment Intent Created!\n\nPayment ID: ${paymentIntentId}\n\nIn production, you would be redirected to ${paymentMethod.toUpperCase()} to complete payment.\n\nClient Key: ${clientKey}`);
-
-				// For demo purposes, auto-confirm the payment
-				setProcessingStep('Confirming payment...');
-				await confirmPayment(paymentIntentId);
-			}
-			// Step 3: For card payments, would show card input form
-			else if (paymentMethod === 'card') {
-				// In production, integrate PayMongo.js SDK for card input
-				alert(`Card Payment\n\nPayment ID: ${paymentIntentId}\n\nIn production, a secure card input form would appear here using PayMongo.js SDK.\n\nClient Key: ${clientKey}`);
-
-				// For demo purposes, auto-confirm the payment
-				setProcessingStep('Processing card payment...');
-				await confirmPayment(paymentIntentId);
-			}
-
-		} catch (err) {
-			console.error('Payment error:', err);
-			setError(err.response?.data?.error || err.message || 'Payment failed');
-			setLoading(false);
-			setProcessingStep('');
-		}
-	};
-
-	const confirmPayment = async (paymentIntentId) => {
-		try {
-			const confirmResponse = await api.post('/api/v1/payments/confirm', {
-				paymentIntentId
-			});
-
-			if (confirmResponse.data.status === 'succeeded') {
-				setProcessingStep('Payment successful!');
-				// Navigate to success page or bookings
-				setTimeout(() => {
-					alert('Payment successful! Your booking is confirmed.');
-					navigate('/bookings');
-				}, 1500);
-			} else {
-				throw new Error('Payment confirmation failed');
-			}
-		} catch (err) {
-			console.error('Confirmation error:', err);
-			setError(err.response?.data?.error || err.message || 'Payment confirmation failed');
-			setLoading(false);
-			setProcessingStep('');
-		}
-	};
-
-	return (
-		<Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-			<Typography variant="h4" gutterBottom fontWeight="bold">
-				Complete Payment
-			</Typography>
-
-			<Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mt: 3 }}>
-				{/* Left Column - Booking Summary */}
-				<Card sx={{ flex: '1 1 300px' }}>
-					<CardContent>
-						<Typography variant="h6" gutterBottom fontWeight="bold">
-							Booking Summary
-						</Typography>
-						<Divider sx={{ my: 2 }} />
-						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-							<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-								<Typography color="text.secondary">Booking ID:</Typography>
-								<Typography fontWeight="600">#{booking.id}</Typography>
-							</Box>
-							<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-								<Typography color="text.secondary">Parking Fee:</Typography>
-								<Typography fontWeight="600">${booking.price}</Typography>
-							</Box>
-							<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-								<Typography color="text.secondary">Service Fee:</Typography>
-								<Typography fontWeight="600">$2.00</Typography>
-							</Box>
-							<Divider />
-							<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-								<Typography variant="h6" fontWeight="bold">Total:</Typography>
-								<Typography variant="h6" color="primary" fontWeight="bold">
-									${(booking.price + 2).toFixed(2)}
-								</Typography>
-							</Box>
-						</Box>
-					</CardContent>
-				</Card>
-
-				{/* Right Column - Payment Method Selection */}
-				<Box sx={{ flex: '2 1 500px' }}>
-					{error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-					{processingStep && (
-						<Alert severity="info" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-							<CircularProgress size={20} sx={{ mr: 2 }} />
-							{processingStep}
-						</Alert>
-					)}
-
-					<Card>
-						<CardContent>
-							<FormControl component="fieldset" fullWidth>
-								<FormLabel component="legend" sx={{ mb: 3, fontWeight: 'bold', fontSize: '1.1rem' }}>
-									Choose Payment Method
-								</FormLabel>
-								<RadioGroup
-									value={paymentMethod}
-									onChange={(e) => setPaymentMethod(e.target.value)}
-								>
-									{paymentMethods.map((method) => (
-										<Card
-											key={method.id}
-											variant="outlined"
-											sx={{
-												mb: 2,
-												cursor: 'pointer',
-												border: paymentMethod === method.id ? 2 : 1,
-												borderColor: paymentMethod === method.id ? 'primary.main' : 'divider',
-												bgcolor: paymentMethod === method.id ? 'primary.50' : 'background.paper',
-												transition: 'all 0.2s',
-												'&:hover': {
-													borderColor: 'primary.main',
-													boxShadow: 1
-												}
-											}}
-											onClick={() => setPaymentMethod(method.id)}
-										>
-											<CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
-												<Box sx={{ color: 'primary.main' }}>
-													{method.icon}
-												</Box>
-												<Box sx={{ flex: 1 }}>
-													<Typography variant="h6" fontWeight="600">
-														{method.name}
-													</Typography>
-													<Typography variant="body2" color="text.secondary">
-														{method.description}
-													</Typography>
-												</Box>
-												<Radio
-													checked={paymentMethod === method.id}
-													value={method.id}
-													onChange={() => {}}
-												/>
-											</CardContent>
-										</Card>
-									))}
-								</RadioGroup>
-							</FormControl>
-
-							<Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-								<Button
-									variant="outlined"
-									onClick={() => navigate(-1)}
-									fullWidth
-									disabled={loading}
-									size="large"
-								>
-									Cancel
-								</Button>
-								<Button
-									variant="contained"
-									onClick={handlePayment}
-									disabled={loading}
-									fullWidth
-									size="large"
-									sx={{
-										py: 1.5,
-										fontWeight: 'bold',
-										fontSize: '1rem'
-									}}
-								>
-									{loading ? (
-										<>
-											<CircularProgress size={20} sx={{ mr: 1 }} color="inherit" />
-											Processing...
-										</>
-									) : (
-										`Pay $${(booking.price + 2).toFixed(2)}`
-									)}
-								</Button>
-							</Box>
-						</CardContent>
-					</Card>
-
-					<Alert severity="info" sx={{ mt: 2 }}>
-						<Typography variant="body2">
-							💳 <strong>Demo Mode:</strong> This is using PayMongo test environment.
-							No real money will be charged.
-						</Typography>
-					</Alert>
-				</Box>
-			</Box>
-		</Container>
-	);
+  return <Container maxWidth="md" sx={{ py: 4 }}>
+    <Typography variant="h4" gutterBottom>Complete payment</Typography>
+    <Card sx={{ mb: 3 }}><CardContent>
+      <Typography variant="h6">Booking #{booking.id}</Typography>
+      <Typography>{booking.slot?.address || booking.address}</Typography>
+      <Typography color="text.secondary">{new Date(booking.startTime).toLocaleString()} – {booking.endTime ? new Date(booking.endTime).toLocaleString() : 'Open-ended'}</Typography>
+      <Divider sx={{ my: 2 }} />
+      <Box display="flex" justifyContent="space-between"><Typography>Total (PHP)</Typography><Typography fontWeight="bold">₱{payable.toFixed(2)}</Typography></Box>
+    </CardContent></Card>
+    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    {status && <Alert severity={['completed', 'authorized'].includes(status) ? 'success' : ['failed', 'cancelled'].includes(status) ? 'error' : 'info'} sx={{ mb: 2 }}>{status}</Alert>}
+    <Card><CardContent>
+      <FormControl>
+        <Typography variant="h6">Choose payment method</Typography>
+        <RadioGroup value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+          <FormControlLabel value="gcash" control={<Radio />} label="GCash" />
+          <FormControlLabel value="paymaya" control={<Radio />} label="Maya" />
+          <FormControlLabel value="grab_pay" control={<Radio />} label="GrabPay" />
+          <FormControlLabel value="card" control={<Radio />} label="Credit or debit card" />
+        </RadioGroup>
+      </FormControl>
+      {paymentMethod === 'card' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '2fr 1fr 1fr 1fr' }, gap: 1, mt: 2 }}>
+        <TextField sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }} label="Card number" autoComplete="cc-number" value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value })} />
+        <TextField label="MM" autoComplete="cc-exp-month" value={card.month} onChange={(e) => setCard({ ...card, month: e.target.value })} />
+        <TextField label="YY" autoComplete="cc-exp-year" value={card.year} onChange={(e) => setCard({ ...card, year: e.target.value })} />
+        <TextField label="CVC" autoComplete="cc-csc" type="password" value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value })} />
+      </Box>}
+      <Button variant="contained" fullWidth sx={{ mt: 3 }} disabled={loading} onClick={handlePayment}>
+        {loading ? 'Processing…' : `Pay ₱${payable.toFixed(2)}`}
+      </Button>
+      {import.meta.env.DEV && booking.status === 'pending' && <Button variant="outlined" fullWidth sx={{ mt: 1 }} disabled={loading} onClick={handleDevConfirm}>
+        Simulate booking confirmation (dev)
+      </Button>}
+      <Typography variant="caption" display="block" sx={{ mt: 2 }}>Sandbox checkout. Payment details are sent directly to PayMongo.</Typography>
+    </CardContent></Card>
+  </Container>;
 };
 
 export default Payment;

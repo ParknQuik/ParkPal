@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -18,6 +19,7 @@ import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { AccountStanding } from '../components/AccountStanding';
 import { BehaviorStatus } from '../types';
+import { completePayMongoCheckout } from '../services/paymongoCheckout';
 import {
   getSuspensionAlertMessage,
   isAccountSuspendedError,
@@ -44,6 +46,9 @@ export const PaymentScreen: React.FC = () => {
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [behaviorStatus, setBehaviorStatus] = useState<BehaviorStatus | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [serverPricedAmount, setServerPricedAmount] = useState<number | null>(null);
+  const [card, setCard] = useState({ number: '', month: '', year: '', cvc: '' });
 
   const refreshBehaviorStatus = async () => {
     const response = await behaviorAPI.getStatus();
@@ -55,7 +60,11 @@ export const PaymentScreen: React.FC = () => {
     refreshBehaviorStatus().catch(() => undefined);
   }, []);
 
-  const orderData = {
+  const orderData = serverPricedAmount !== null ? {
+    subtotal: serverPricedAmount,
+    serviceFee: 0,
+    total: serverPricedAmount,
+  } : {
     subtotal: amount || 0,
     serviceFee: Math.round((amount || 0) * 0.05),
     total: (amount || 0) + Math.round((amount || 0) * 0.05),
@@ -119,19 +128,22 @@ export const PaymentScreen: React.FC = () => {
         }
 
         const intentResponse = await paymentAPI.createPaymentIntent({
-          amount: orderData.total,
           paymentMethod: 'cash',
           bookingId: finalBookingId,
         });
+        if (Number.isFinite(intentResponse.data.amount)) setServerPricedAmount(intentResponse.data.amount);
 
         const confirmResponse = await paymentAPI.confirmPayment({
           paymentIntentId: intentResponse.data.paymentIntentId,
         });
+        if (confirmResponse.data.booking?.status !== 'confirmed') {
+          throw new Error('Booking confirmation is still pending. Please retry or check My Bookings.');
+        }
 
         navigation.navigate('PaymentSuccess', {
           paymentId: confirmResponse.data.payment?.id || intentResponse.data.paymentId,
           bookingId: finalBookingId,
-          amount: orderData.total,
+          amount: intentResponse.data.amount,
           spotName: spotName || 'Parking Spot',
           spotAddress: spotAddress || '',
           startTime: startTime || '',
@@ -177,28 +189,24 @@ export const PaymentScreen: React.FC = () => {
       }
 
       const intentResponse = await paymentAPI.createPaymentIntent({
-        amount: orderData.total,
         paymentMethod: selectedPayment as 'cash' | 'gcash' | 'card' | 'grab_pay' | 'paymaya',
         bookingId: finalBookingId,
       });
-
-      const { paymentIntentId } = intentResponse.data;
-
-      const confirmResponse = await paymentAPI.confirmPayment({
-        paymentIntentId,
-      });
-
-      navigation.navigate('PaymentSuccess', {
-        paymentId: confirmResponse.data.paymentId || paymentIntentId,
-        bookingId: finalBookingId,
-        amount: orderData.total,
-        spotName: spotName || 'Parking Spot',
-        spotAddress: spotAddress || '',
-        startTime: startTime || '',
-        endTime: endTime || '',
-        paymentMethod: selectedPayment,
-        rentalMode,
-      });
+      if (Number.isFinite(intentResponse.data.amount)) setServerPricedAmount(intentResponse.data.amount);
+      const { paymentIntentId, clientKey, publicKey, amount: verifiedAmount, status: providerStatus } = intentResponse.data;
+      if (!publicKey || !clientKey) throw new Error('PayMongo payment keys are not configured');
+      const confirmed = await completePayMongoCheckout({ paymentIntentId, clientKey, publicKey, status: providerStatus }, selectedPayment, 'ParkPal Driver', card);
+      const status = confirmed.status;
+      setPaymentStatus(status);
+      if (status === 'completed' || status === 'authorized') {
+        navigation.navigate('PaymentSuccess', {
+          paymentId: confirmed.paymentId || intentResponse.data.paymentId || paymentIntentId,
+          bookingId: finalBookingId, amount: verifiedAmount, spotName: spotName || 'Parking Spot',
+          spotAddress: spotAddress || '', startTime: startTime || '', endTime: endTime || '',
+          paymentMethod: selectedPayment, rentalMode,
+        });
+      }
+      return;
     } catch (err: any) {
       if (isAccountSuspendedError(err)) {
         Alert.alert('Booking paused', getSuspensionAlertMessage(err));
@@ -427,6 +435,11 @@ export const PaymentScreen: React.FC = () => {
 
       <View style={styles.contentArea}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {paymentStatus && paymentStatus !== 'completed' && paymentStatus !== 'authorized' && (
+          <Text accessibilityRole="alert" style={{ color: colors.textSecondary, marginHorizontal: 20, marginTop: 12 }}>
+            Payment status: {paymentStatus}. You can retry when ready; your booking is not confirmed until PayMongo verifies payment.
+          </Text>
+        )}
         {behaviorStatus && (behaviorStatus.totalStrikes > 0 || behaviorStatus.isSuspended) && (
           <View style={styles.standingWrap}>
             <AccountStanding status={behaviorStatus} surface="banner" testID="payment-account-standing" />
@@ -438,14 +451,14 @@ export const PaymentScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Price Details</Text>
 
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Subtotal</Text>
+            <Text style={styles.priceLabel}>{serverPricedAmount === null ? 'Subtotal' : 'Server priced total (PHP)'}</Text>
             <Text style={styles.priceValue}>₱{orderData.subtotal.toFixed(2)}</Text>
           </View>
 
-          <View style={styles.priceRow}>
+          {serverPricedAmount === null && <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Service Fee</Text>
             <Text style={styles.priceValue}>₱{orderData.serviceFee.toFixed(2)}</Text>
-          </View>
+          </View>}
 
           <View style={styles.divider} />
 
@@ -505,6 +518,16 @@ export const PaymentScreen: React.FC = () => {
               <View style={styles.cashPolicyContent}>
                 <Text style={styles.cashPolicyTitle}>Cash booking policy</Text>
                 <Text style={styles.cashPolicyText}>{cashPolicyNote}</Text>
+              </View>
+            </View>
+          )}
+          {selectedPayment === 'card' && (
+            <View style={{ gap: 10, marginTop: 12 }}>
+              <TextInput accessibilityLabel="Card number" keyboardType="number-pad" placeholder="Card number" value={card.number} onChangeText={(number) => setCard((current) => ({ ...current, number }))} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, color: colors.textPrimary }} />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput accessibilityLabel="Expiry month" keyboardType="number-pad" placeholder="MM" value={card.month} onChangeText={(month) => setCard((current) => ({ ...current, month }))} style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, color: colors.textPrimary }} />
+                <TextInput accessibilityLabel="Expiry year" keyboardType="number-pad" placeholder="YYYY" value={card.year} onChangeText={(year) => setCard((current) => ({ ...current, year }))} style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, color: colors.textPrimary }} />
+                <TextInput accessibilityLabel="CVC" keyboardType="number-pad" placeholder="CVC" secureTextEntry value={card.cvc} onChangeText={(cvc) => setCard((current) => ({ ...current, cvc }))} style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, color: colors.textPrimary }} />
               </View>
             </View>
           )}

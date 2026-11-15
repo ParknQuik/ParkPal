@@ -280,6 +280,10 @@ model Payment {
   amount        Float
   currency      String          @default("PHP")
   paymentMethod String          @map("payment_method")
+  purpose       String          @default("booking")
+  extensionHours Int?           @map("extension_hours")
+  capturedParkingAmount Float?  @map("captured_parking_amount")
+  platformFeeAmount Float?      @map("platform_fee_amount")
   status        String          @default("pending")
   transactionId String?         @unique @map("transaction_id")
   createdAt     DateTime        @default(now()) @map("created_at")
@@ -568,4 +572,16 @@ model KnowledgeIndexingRun {
   @@index([source])
   @@index([startedAt])
   @@map("knowledge_indexing_runs")
+}
+
+model WebPerformanceMetric {
+  id         Int      @id @default(autoincrement())
+  name       String
+  value      Float
+  rating     String
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@index([name, recordedAt])
+  @@index([recordedAt])
+  @@map("web_performance_metrics")
 }
