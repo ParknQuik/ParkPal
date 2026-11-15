@@ -22,8 +22,28 @@ const {
   zonesListQuerySchema
 } = require('../validators/analytics');
 const { asyncHandler } = require('../middleware/errorHandler');
+const Joi = require('joi');
+const { recordWebPerformanceMetric } = require('../services/webPerformanceMetrics');
+
+const performanceMetricSchema = Joi.object({
+  name: Joi.string().valid('LCP', 'FID', 'CLS', 'TTFB').required(),
+  value: Joi.number().min(0).max(120000).required(),
+  rating: Joi.string().valid('good', 'needs-improvement', 'poor').required(),
+});
+
+function requireAnalyticsConsent(req, res, next) {
+  if (req.get('X-ParkPal-Analytics-Consent') !== 'granted') {
+    return res.status(403).json({ error: 'Optional analytics consent is required' });
+  }
+  return next();
+}
 
 module.exports = (router) => {
+
+router.post('/analytics/performance', requireAnalyticsConsent, validateBody(performanceMetricSchema), asyncHandler(async (req, res) => {
+  await recordWebPerformanceMetric(req.body);
+  res.status(202).json({ status: 'accepted' });
+}));
 
 /**
  * POST /api/v1/analytics/zone/enter

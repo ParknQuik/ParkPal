@@ -24,22 +24,28 @@ implementation planning, and cross-agent handoff.
    `Tier`, `Confidence`, and `Reason`; run
    `npm run knowledge:model-routing -- "<implementation intent>"` to print the
    block.
-4. Treat routing as advisory only. It is for handoff, orchestration, or human
+4. Every implementation plan must also include `Required skills` and
+   `Required agents`. Select only skills that apply to the planned work and
+   note their use; assign specialist agents to concrete implementation or
+   review scopes, or write `None`. These sections document the handoff and do
+   not by themselves launch agents during planning. If a needed skill or agent
+   is unavailable, state the limitation and the available fallback.
+5. Treat routing as advisory only. It is for handoff, orchestration, or human
    operator selection; Codex cannot self-switch models from repo code, and this
    is not app-runtime OpenAI routing.
-5. Verify the printed Branch/HEAD with `git status` before making current-state
+6. Verify the printed Branch/HEAD with `git status` before making current-state
    claims.
-6. During plain startup, do not open cited line ranges or `STATUS_REPORT.md`
+7. During plain startup, do not open cited line ranges or `STATUS_REPORT.md`
    excerpts unless the user provided a specific intent that requires verified
    status. Open only cited line ranges by default after a task is selected.
-7. Use `npm run knowledge:query -- "<topic>"` only when the task needs deeper
+8. Use `npm run knowledge:query -- "<topic>"` only when the task needs deeper
    investigation beyond the lean context output.
-8. Read any freshness warnings first. If HEAD or source files changed since the
+9. Read any freshness warnings first. If HEAD or source files changed since the
    DB was built, treat the index as a router and rebuild before relying on rank.
-9. Treat `needs-verification`, `planned`, `historical`, and `isStale` chunks as
+10. Treat `needs-verification`, `planned`, `historical`, and `isStale` chunks as
    leads, not confirmed truth. Stale roadmap text should not outrank current
    status evidence for "continue" or "next steps" work.
-10. For current project status follow-up, always verify with `git status`, latest
+11. For current project status follow-up, always verify with `git status`, latest
    commit, and cited `STATUS_REPORT.md` ranges.
-11. Do not rely on the index for source-code truth when code files are directly
+12. Do not rely on the index for source-code truth when code files are directly
    relevant. Use it to find where to inspect.

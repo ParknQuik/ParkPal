@@ -531,7 +531,7 @@ Response: {
 }
 
 // Driver searches
-GET /api/marketplace/search?lat=14.5990&lon=120.9842&radius=5km&startTime=2025-10-06T08:00&endTime=2025-10-06T16:00
+GET /api/marketplace/search?lat=14.5990&lon=120.9842&radius=5&startTime=2025-10-06T08:00&endTime=2025-10-06T16:00
 Response: [{
   slotId: 999,
   address: "123 Main St",

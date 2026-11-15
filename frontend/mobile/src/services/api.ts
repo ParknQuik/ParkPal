@@ -248,10 +248,6 @@ export const vehiclesAPI = {
 export const userAPI = {
   updateProfile: (data: { name?: string; phone?: string; avatar?: string }) =>
     api.patch('/users/profile', data),
-  getPaymentMethods: () => api.get('/users/payment-methods'),
-  addPaymentMethod: (data: any) => api.post('/users/payment-methods', data),
-  deletePaymentMethod: (id: string) =>
-    api.delete(`/users/payment-methods/${id}`),
   getProfileUploadUrl: (fileName: string) =>
     api.get<{ uploadUrl: string; fileName: string; expiresAt: string }>('/users/profile/upload-url', {
       params: { fileName }

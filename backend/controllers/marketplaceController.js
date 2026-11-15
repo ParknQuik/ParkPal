@@ -238,15 +238,15 @@ exports.updateListing = async (req, res, next) => {
     const updatedListing = await prisma.parkingSlot.update({
       where: { id: parseInt(id) },
       data: {
-        ...(title && { title }),
-        ...(description && { description }),
-        ...(address && { address }),
-        ...(lat && { lat: parseFloat(lat) }),
-        ...(lon && { lon: parseFloat(lon) }),
-        ...(price && { price: parseFloat(price) }),
-        ...(slotType && { slotType }),
-        ...(amenities && { amenities: JSON.stringify(amenities) }),
-        ...(photos && { photos: JSON.stringify(photos) }),
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description }),
+        ...(address !== undefined && { address }),
+        ...(lat !== undefined && { lat: parseFloat(lat) }),
+        ...(lon !== undefined && { lon: parseFloat(lon) }),
+        ...(price !== undefined && { price: parseFloat(price) }),
+        ...(slotType !== undefined && { slotType }),
+        ...(amenities !== undefined && { amenities: JSON.stringify(amenities) }),
+        ...(photos !== undefined && { photos: JSON.stringify(photos) }),
       },
       include: {
         owner: {
@@ -254,6 +254,8 @@ exports.updateListing = async (req, res, next) => {
         },
       },
     });
+
+    await cache.invalidateListingsCache();
 
     res.json(updatedListing);
    } catch (error) {
@@ -319,6 +321,8 @@ exports.searchListings = async (req, res, next) => {
       slotType,
       status,
       q,
+      availableFrom,
+      availableTo,
     } = req.query;
 
 
@@ -338,6 +342,8 @@ exports.searchListings = async (req, res, next) => {
       slotType,
       status,
       q,
+      availableFrom,
+      availableTo,
       offset: skip,
       limit: take,
       sort: JSON.stringify(sortOptions),
@@ -353,6 +359,9 @@ exports.searchListings = async (req, res, next) => {
 
 
      const where = {};
+
+     // Only active listings can be discovered or booked.
+     where.isActive = true;
 
      // Exclude current user's own listings if authenticated
      if (req.user) {
@@ -372,6 +381,27 @@ exports.searchListings = async (req, res, next) => {
         { address: { contains: q, mode: 'insensitive' } },
         { title: { contains: q, mode: 'insensitive' } },
       ];
+    }
+
+    // Availability is filtered in SQL before pagination. Adjacent bookings are
+    // allowed because booking intervals use half-open [start, end) semantics.
+    if (availableFrom || availableTo) {
+      const requestedStart = new Date(availableFrom);
+      const requestedEnd = new Date(availableTo);
+      if (!availableFrom || !availableTo || !Number.isFinite(requestedStart.getTime()) ||
+          !Number.isFinite(requestedEnd.getTime()) || requestedEnd <= requestedStart) {
+        return res.status(400).json({ error: 'A valid availableFrom/availableTo interval is required' });
+      }
+      where.bookings = {
+        none: {
+          status: { in: ['pending', 'confirmed', 'active'] },
+          startTime: { lt: requestedEnd },
+          OR: [{ endTime: null }, { endTime: { gt: requestedStart } }],
+        },
+      };
+      // A prior booking marks the shared slot row as reserved. A non-overlapping
+      // time interval may still be booked, so let the booking relation decide.
+      where.status = { in: ['available', 'reserved'] };
     }
 
 
@@ -516,6 +546,8 @@ exports.searchListings = async (req, res, next) => {
           slotType,
           status,
           q,
+          availableFrom,
+          availableTo,
           offset: skip,
           limit: take,
           sort: JSON.stringify(sortOptions),
@@ -693,20 +725,8 @@ exports.createBooking = async (req, res, next) => {
         where: {
           slotId: parseInt(slotId),
           status: { in: ['confirmed', 'pending', 'active'] },
-          OR: [
-            {
-              startTime: { lte: start },
-              endTime: { gt: start }
-            },
-            {
-              startTime: { lt: end },
-              endTime: { gte: end }
-            },
-            {
-              startTime: { gte: start },
-              endTime: { lte: end }
-            }
-          ]
+          startTime: { lt: end },
+          OR: [{ endTime: null }, { endTime: { gt: start } }]
         }
       });
 
@@ -762,7 +782,7 @@ exports.createBooking = async (req, res, next) => {
       return res.status(400).json({ error: 'Cannot book your own parking slot' });
     }
 
-    if (slot.status !== 'available') {
+    if (slot.status !== 'available' && !(rentalMode === 'fixed' && slot.status === 'reserved')) {
       return res.status(400).json({ error: 'Slot is not available' });
     }
 
@@ -817,20 +837,8 @@ exports.createBooking = async (req, res, next) => {
             where: {
               slotId: parseInt(slotId),
               status: { in: ['confirmed', 'pending', 'active'] },
-              OR: [
-                {
-                  startTime: { lte: start },
-                  endTime: { gt: start }
-                },
-                {
-                  startTime: { lt: end },
-                  endTime: { gte: end }
-                },
-                {
-                  startTime: { gte: start },
-                  endTime: { lte: end }
-                }
-              ]
+              startTime: { lt: end },
+              OR: [{ endTime: null }, { endTime: { gt: start } }]
             }
           })
         : [];
@@ -1154,9 +1162,13 @@ exports.qrCheckOut = async (req, res, next) => {
         const paymongoService = require('../services/paymongo');
         const actualAmount = totalAmount;
         const maxAmount = session.booking.authAmount || 0;
+        const actualPlatformFee = Number((actualAmount * 0.05).toFixed(2));
+        const actualCaptureAmount = actualAmount + actualPlatformFee;
         
         // Capture only the actual amount (up to authorized max)
-        const captureAmount = Math.min(actualAmount, maxAmount);
+        const captureAmount = Math.min(actualCaptureAmount, maxAmount);
+        const capturedParkingAmount = Math.min(actualAmount, captureAmount);
+        const capturedPlatformFee = Math.max(0, captureAmount - capturedParkingAmount);
         
         
         captureResult = await paymongoService.capturePaymentIntent(
@@ -1186,14 +1198,16 @@ exports.qrCheckOut = async (req, res, next) => {
             where: { id: existingPayment.id },
             data: {
               status: 'completed',
-              amount: captureAmount
+              amount: captureAmount,
+              capturedParkingAmount,
+              platformFeeAmount: capturedPlatformFee
             }
           });
         }
         
         // If actual amount exceeds authorized max, log overstay charge needed
-        if (actualAmount > maxAmount) {
-          const overstayAmount = actualAmount - maxAmount;
+        if (actualCaptureAmount > maxAmount) {
+          const overstayAmount = actualCaptureAmount - maxAmount;
           
           // TODO: Create additional charge or add to user balance
           // For now, we'll create a notification for the user
@@ -1888,6 +1902,67 @@ exports.confirmBooking = async (req, res, next) => {
 };
 
 /**
+ * Confirm an owned pending booking for local development without a payment.
+ * POST /marketplace/bookings/:id/dev-confirm
+ */
+exports.devConfirmBooking = async (req, res, next) => {
+  try {
+    const bookingId = Number.parseInt(req.params.id, 10);
+    const userId = req.user.id;
+
+    const booking = await prisma.$transaction(async (tx) => {
+      const current = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { slot: true },
+      });
+
+      if (!current) {
+        const error = new Error('BOOKING_NOT_FOUND');
+        error.code = 'BOOKING_NOT_FOUND';
+        throw error;
+      }
+      if (current.userId !== userId) {
+        const error = new Error('BOOKING_FORBIDDEN');
+        error.code = 'BOOKING_FORBIDDEN';
+        throw error;
+      }
+      if (current.status !== 'pending') {
+        const error = new Error('BOOKING_NOT_PENDING');
+        error.code = 'BOOKING_NOT_PENDING';
+        throw error;
+      }
+
+      const result = await tx.booking.updateMany({
+        where: { id: bookingId, userId, status: 'pending' },
+        data: { status: 'confirmed' },
+      });
+      if (result.count !== 1) {
+        const error = new Error('BOOKING_NOT_PENDING');
+        error.code = 'BOOKING_NOT_PENDING';
+        throw error;
+      }
+
+      await tx.parkingSlot.update({
+        where: { id: current.slotId },
+        data: { status: 'reserved' },
+      });
+
+      return tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { slot: { select: { id: true, address: true, status: true } } },
+      });
+    });
+
+    res.json({ message: 'Development booking confirmed', booking });
+  } catch (error) {
+    if (error.code === 'BOOKING_NOT_FOUND') return res.status(404).json({ error: 'Booking not found' });
+    if (error.code === 'BOOKING_FORBIDDEN') return res.status(403).json({ error: 'Unauthorized to confirm this booking' });
+    if (error.code === 'BOOKING_NOT_PENDING') return res.status(400).json({ error: 'Only pending bookings can be confirmed' });
+    next(error);
+  }
+};
+
+/**
  * Get reviews for a specific listing
  */
 exports.toggleListingAvailability = async (req, res, next) => {
@@ -2195,7 +2270,7 @@ exports.extendBooking = async (req, res, next) => {
 
     const paymentIntent = verifyResult.paymentIntent;
     const piStatus = paymentIntent.attributes.status;
-    if (piStatus !== 'succeeded' && piStatus !== 'authorized') {
+    if (piStatus !== 'succeeded') {
       return res.status(400).json({
         error: 'Invalid payment status',
         details: `Payment intent must be succeeded or authorized, but is ${piStatus}`
@@ -2215,6 +2290,16 @@ exports.extendBooking = async (req, res, next) => {
     // Verify ownership
     if (booking.userId !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const extensionPayment = await prisma.payment.findFirst({ where: {
+      transactionId: paymentIntentId, bookingId: booking.id, userId,
+      purpose: 'extension', extensionHours, status: 'completed'
+    } });
+    const providerAttrs = paymentIntent.attributes;
+    const expectedCost = Number((booking.slot.price * extensionHours + 10 + booking.slot.price * extensionHours * 0.05).toFixed(2));
+    if (!extensionPayment || Math.round(extensionPayment.amount * 100) !== Number(providerAttrs.amount) || Math.round(expectedCost * 100) !== Number(providerAttrs.amount) || String(providerAttrs.currency).toUpperCase() !== 'PHP') {
+      return res.status(409).json({ error: 'A completed, matching extension payment is required' });
     }
 
     // Validate booking state (same checks as availability)
@@ -2276,32 +2361,7 @@ exports.extendBooking = async (req, res, next) => {
         },
       });
 
-      const existingExtensionPayment = await tx.payment.findUnique({
-        where: { transactionId: paymentIntentId },
-      });
-
-      if (existingExtensionPayment) {
-        await tx.payment.update({
-          where: { id: existingExtensionPayment.id },
-          data: {
-            bookingId: parseInt(id),
-            amount: totalCost,
-            paymentMethod: 'extension',
-            status: 'completed',
-          },
-        });
-      } else {
-        await tx.payment.create({
-          data: {
-            userId,
-            bookingId: parseInt(id),
-            amount: totalCost,
-            paymentMethod: 'extension',
-            status: 'completed',
-            transactionId: paymentIntentId,
-          },
-        });
-      }
+      // Extension payment is created and verified before this transaction.
 
       // Create notification
       await tx.notification.create({

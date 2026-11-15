@@ -6,7 +6,7 @@ const { sendPasswordResetEmail } = require('../services/email');
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.validatedData;
+    const { name, email, password } = req.validatedData;
 
     // Async password validation (for breached password check)
     const passwordValidation = await validatePassword(password);
@@ -29,7 +29,7 @@ exports.register = async (req, res, next) => {
         name,
         email,
         password: hashedPassword,
-        role
+        role: 'driver'
       }
     });
 

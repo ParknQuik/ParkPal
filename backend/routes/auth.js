@@ -55,7 +55,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/auth/register', authLimiter, validateBody(registerSchema), asyncHandler(authController.register));
+  app.post('/auth/register', authLimiter.register, validateBody(registerSchema), asyncHandler(authController.register));
 
   /**
    * @swagger
@@ -100,7 +100,7 @@ module.exports = (app, authLimiter) => {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  app.post('/auth/login', authLimiter, validateBody(loginSchema), asyncHandler(authController.login));
+  app.post('/auth/login', authLimiter.login, validateBody(loginSchema), asyncHandler(authController.login));
 
   /**
    * @swagger
@@ -136,7 +136,7 @@ module.exports = (app, authLimiter) => {
    *       401:
    *         description: Incorrect current password or unauthorized
    */
-  app.put('/auth/password', authenticate, authLimiter, validateBody(changePasswordSchema), asyncHandler(authController.changePassword));
+  app.put('/auth/password', authenticate, authLimiter.login, validateBody(changePasswordSchema), asyncHandler(authController.changePassword));
 
   /**
    * @swagger
@@ -204,7 +204,7 @@ module.exports = (app, authLimiter) => {
    *       400:
    *         description: Invalid email format
    */
-  app.post('/auth/forgot-password', authLimiter, validateBody(forgotPasswordSchema), asyncHandler(authController.forgotPassword));
+  app.post('/auth/forgot-password', authLimiter.reset, validateBody(forgotPasswordSchema), asyncHandler(authController.forgotPassword));
 
   /**
    * @swagger
@@ -235,5 +235,5 @@ module.exports = (app, authLimiter) => {
    *       400:
    *         description: Invalid or expired token
    */
-  app.post('/auth/reset-password', authLimiter, validateBody(resetPasswordSchema), asyncHandler(authController.resetPassword));
+  app.post('/auth/reset-password', authLimiter.reset, validateBody(resetPasswordSchema), asyncHandler(authController.resetPassword));
 };

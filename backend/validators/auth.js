@@ -34,12 +34,8 @@ exports.registerSchema = Joi.object({
       'any.required': 'Password is required'
     }),
 
-  role: Joi.string()
-    .valid('driver', 'host', 'admin', 'operator', 'user')
-    .default('user')
-    .messages({
-      'any.only': 'Role must be one of: driver, host, admin, operator, user'
-    }),
+  // Accept legacy role fields but never pass caller-controlled authorization through.
+  role: Joi.any().strip(),
 
   phone: Joi.string()
     .pattern(/^\+?[1-9]\d{1,14}$/)
