@@ -1,6 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const cors = require('cors');
+const marketplaceRoutes = require('../routes/marketplace');
 const {
   setupTestDatabase,
   teardownTestDatabase,
@@ -8,17 +9,21 @@ const {
   prisma,
 } = require('./setup');
 
-jest.mock('../services/paymongo', () => ({
+jest.mock('../services/paymongo', () => {
+  const mockPaymentDetails = new Map();
+  return {
+  __mockPaymentDetails: mockPaymentDetails,
   getPaymentIntent: jest.fn(async (paymentIntentId) => ({
     success: true,
     paymentIntent: {
       id: paymentIntentId,
       attributes: {
-        status: 'succeeded',
+        ...(mockPaymentDetails.get(paymentIntentId) || { status: 'succeeded' }),
       },
     },
   })),
-}));
+  };
+});
 
 jest.mock('../services/mediaService', () => ({
   generateListingPhotoUploadUrl: jest.fn(),
@@ -42,9 +47,11 @@ const authLimiter = rateLimit({
 const v1Router = require('../routes/v1');
 app.use('/api/v1', v1Router(authLimiter));
 const mediaService = require('../services/mediaService');
+const paymongoService = require('../services/paymongo');
 
 let testData = {};
 let authTokens = {};
+let developmentApp;
 
 beforeAll(async () => {
   testData = await setupTestDatabase();
@@ -65,6 +72,15 @@ beforeAll(async () => {
       password: 'testpass123',
     });
   authTokens.host = hostLogin.body.token;
+
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  const developmentRouter = express.Router();
+  marketplaceRoutes(developmentRouter);
+  process.env.NODE_ENV = previousNodeEnv;
+  developmentApp = express();
+  developmentApp.use(express.json());
+  developmentApp.use('/api/v1', developmentRouter);
 });
 
 afterAll(async () => {
@@ -307,6 +323,39 @@ describe('Marketplace API Tests', () => {
       expect(Array.isArray(response.body.data)).toBe(true);
     });
 
+    it('allows anonymous date search, excludes overlapping reservations, and includes free intervals on reserved slots', async () => {
+      const bookedStart = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+      bookedStart.setUTCHours(12, 0, 0, 0);
+      const bookedEnd = new Date(bookedStart.getTime() + 60 * 60 * 1000);
+      await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.users.driver.id,
+          startTime: bookedStart,
+          endTime: bookedEnd,
+          price: 50,
+          platformFee: 2.5,
+          hostEarnings: 47.5,
+          status: 'confirmed',
+        },
+      });
+      await prisma.parkingSlot.update({ where: { id: testData.slot.id }, data: { status: 'reserved' } });
+
+      const overlapping = await request(app).get('/api/v1/marketplace/search').query({
+        availableFrom: new Date(bookedStart.getTime() + 30 * 60 * 1000).toISOString(),
+        availableTo: new Date(bookedEnd.getTime() + 30 * 60 * 1000).toISOString(),
+      });
+      const adjacent = await request(app).get('/api/v1/marketplace/search').query({
+        availableFrom: bookedEnd.toISOString(),
+        availableTo: new Date(bookedEnd.getTime() + 60 * 60 * 1000).toISOString(),
+      });
+
+      expect(overlapping.status).toBe(200);
+      expect(overlapping.body.data.some((listing) => listing.id === testData.slot.id)).toBe(false);
+      expect(adjacent.status).toBe(200);
+      expect(adjacent.body.data.some((listing) => listing.id === testData.slot.id)).toBe(true);
+    });
+
     it('should filter by location and radius', async () => {
       const response = await request(app)
         .get('/api/v1/marketplace/search?lat=14.5312&lon=120.9844&radius=10')
@@ -465,6 +514,75 @@ describe('Marketplace API Tests', () => {
       await prisma.booking.deleteMany({
         where: { slotId: testData.slot.id },
       });
+    });
+  });
+
+  describe('POST /api/v1/marketplace/bookings/:id/dev-confirm', () => {
+    const makePendingBooking = async (overrides = {}) => {
+      await prisma.parkingSlot.update({ where: { id: testData.slot.id }, data: { status: 'available' } });
+      return prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.users.driver.id,
+          startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 25 * 60 * 60 * 1000),
+          price: 50,
+          platformFee: 2.5,
+          hostEarnings: 47.5,
+          status: 'pending',
+          ...overrides,
+        },
+      });
+    };
+
+    afterEach(async () => {
+      await prisma.payment.deleteMany({ where: { booking: { slotId: testData.slot.id } } });
+      await prisma.booking.deleteMany({ where: { slotId: testData.slot.id } });
+      await prisma.parkingSlot.update({ where: { id: testData.slot.id }, data: { status: 'available' } });
+    });
+
+    it('confirms an owned pending booking and reserves its slot without payment or cash notification', async () => {
+      const booking = await makePendingBooking();
+      const paymentCount = await prisma.payment.count({ where: { bookingId: booking.id } });
+      const notificationCount = await prisma.notification.count({ where: { userId: testData.users.host.id } });
+
+      const response = await request(developmentApp)
+        .post(`/api/v1/marketplace/bookings/${booking.id}/dev-confirm`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.booking.status).toBe('confirmed');
+      expect((await prisma.parkingSlot.findUnique({ where: { id: testData.slot.id } })).status).toBe('reserved');
+      expect(await prisma.payment.count({ where: { bookingId: booking.id } })).toBe(paymentCount);
+      expect(await prisma.notification.count({ where: { userId: testData.users.host.id } })).toBe(notificationCount);
+    });
+
+    it('rejects a booking owned by another user', async () => {
+      const booking = await makePendingBooking();
+      const response = await request(developmentApp)
+        .post(`/api/v1/marketplace/bookings/${booking.id}/dev-confirm`)
+        .set('Authorization', `Bearer ${authTokens.host}`);
+      expect(response.status).toBe(403);
+    });
+
+    it('returns not found and rejects non-pending bookings', async () => {
+      const missing = await request(developmentApp)
+        .post('/api/v1/marketplace/bookings/999999/dev-confirm')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+      expect(missing.status).toBe(404);
+
+      const booking = await makePendingBooking({ status: 'confirmed' });
+      const nonPending = await request(developmentApp)
+        .post(`/api/v1/marketplace/bookings/${booking.id}/dev-confirm`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+      expect(nonPending.status).toBe(400);
+    });
+
+    it('is not registered outside development mode', async () => {
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings/1/dev-confirm')
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+      expect(response.status).toBe(404);
     });
   });
 
@@ -827,6 +945,17 @@ describe('Marketplace API Tests', () => {
       });
     });
 
+    const createExtensionPayment = async (hours, transactionId) => {
+      const base = testData.slot.price * hours;
+      const amount = Number((base + 10 + base * 0.05).toFixed(2));
+      await prisma.payment.create({ data: {
+        userId: testData.users.driver.id, bookingId: extendableBooking.id, amount,
+        paymentMethod: 'card', status: 'completed', purpose: 'extension', extensionHours: hours,
+        transactionId,
+      } });
+      paymongoService.__mockPaymentDetails.set(transactionId, { status: 'succeeded', amount: Math.round(amount * 100), currency: 'PHP' });
+    };
+
     describe('GET /api/v1/marketplace/bookings/:id/extension-availability', () => {
       it('should check extension availability successfully', async () => {
         const response = await request(app)
@@ -960,7 +1089,19 @@ describe('Marketplace API Tests', () => {
     });
 
     describe('POST /api/v1/marketplace/bookings/:id/extend', () => {
+      it('rejects an extension when the provider amount differs from the stored quote', async () => {
+        await createExtensionPayment(2, 'mismatched_extension_payment');
+        paymongoService.__mockPaymentDetails.get('mismatched_extension_payment').amount += 1;
+        const response = await request(app)
+          .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
+          .set('Authorization', `Bearer ${authTokens.driver}`)
+          .send({ hours: 2, paymentIntentId: 'mismatched_extension_payment' });
+        expect(response.status).toBe(409);
+        expect(response.body.error).toContain('matching extension payment');
+      });
+
       it('should extend booking successfully', async () => {
+        await createExtensionPayment(2, 'test_payment_intent_123');
         const response = await request(app)
           .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
           .set('Authorization', `Bearer ${authTokens.driver}`)
@@ -978,11 +1119,11 @@ describe('Marketplace API Tests', () => {
         expect(response.body.extension.hours).toBe(2);
         expect(response.body.extension.newEndTime).toBeTruthy();
 
-        // Verify payment record created
+        // Verify the previously completed extension payment remains linked.
         const payment = await prisma.payment.findFirst({
           where: {
             bookingId: extendableBooking.id,
-            paymentMethod: 'extension'
+            purpose: 'extension'
           }
         });
         expect(payment).toBeTruthy();
@@ -991,6 +1132,7 @@ describe('Marketplace API Tests', () => {
       });
 
       it('should track multiple extensions', async () => {
+        await createExtensionPayment(1, 'test_payment_1');
         // First extension
         await request(app)
           .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
@@ -1001,6 +1143,7 @@ describe('Marketplace API Tests', () => {
           });
 
         // Second extension
+        await createExtensionPayment(2, 'test_payment_2');
         const response = await request(app)
           .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
           .set('Authorization', `Bearer ${authTokens.driver}`)
@@ -1040,6 +1183,7 @@ describe('Marketplace API Tests', () => {
       });
 
       it('should detect race condition (slot becomes unavailable)', async () => {
+        await createExtensionPayment(2, 'test_payment_intent_123');
         // Create a conflicting booking between checking and extending
         await prisma.booking.create({
           data: {
@@ -1069,6 +1213,7 @@ describe('Marketplace API Tests', () => {
       });
 
       it('should notify slot owner of extension', async () => {
+        await createExtensionPayment(2, 'test_payment_intent_123');
         await request(app)
           .post(`/api/v1/marketplace/bookings/${extendableBooking.id}/extend`)
           .set('Authorization', `Bearer ${authTokens.driver}`)
