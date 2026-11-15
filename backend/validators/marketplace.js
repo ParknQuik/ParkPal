@@ -116,8 +116,12 @@ exports.createListingSchema = Joi.object({
 });
 
 exports.updateListingSchema = Joi.object({
+  title: Joi.string().min(3).max(200).optional(),
   address: Joi.string().min(10).max(500).optional(),
+  lat: Joi.number().min(-90).max(90).optional(),
+  lon: Joi.number().min(-180).max(180).optional(),
   price: Joi.number().min(0).max(10000).optional(),
+  slotType: Joi.string().valid('roadside_qr', 'commercial_manual', 'commercial_iot').optional(),
   description: Joi.string().max(2000).optional().allow(null, ''),
   amenities: Joi.array().items(Joi.string().max(100)).max(20).optional(),
   photos: Joi.array().items(Joi.string().uri()).max(10).optional(),

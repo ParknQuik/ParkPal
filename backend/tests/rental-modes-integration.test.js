@@ -10,24 +10,23 @@ const {
   TEST_USERS
 } = require('./setup');
 
-jest.mock('../services/paymongo', () => ({
-  createPaymentIntent: jest.fn(async ({ captureType = 'automatic' } = {}) => ({
+jest.mock('../services/paymongo', () => {
+  const mockIntentDetails = new Map();
+  return {
+  publicKey: 'pk_test_public',
+  createPaymentIntent: jest.fn(async ({ amount = 0, captureType = 'automatic', metadata = {} } = {}) => {
+    const id = `pi_${captureType === 'manual' ? 'manual' : 'auto'}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const attributes = { client_key: 'pi_test_client_key', status: captureType === 'manual' ? 'awaiting_capture' : 'succeeded', amount: Math.round(amount * 100), currency: 'PHP', metadata };
+    mockIntentDetails.set(id, attributes);
+    return {
     success: true,
-    paymentIntent: {
-      id: `pi_${captureType === 'manual' ? 'manual' : 'auto'}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      attributes: {
-        client_key: 'pi_test_client_key',
-        status: captureType === 'manual' ? 'awaiting_capture' : 'succeeded',
-      },
-    },
-  })),
+    paymentIntent: { id, attributes },
+  }; }),
   getPaymentIntent: jest.fn(async (paymentIntentId) => ({
     success: true,
     paymentIntent: {
       id: paymentIntentId,
-      attributes: {
-        status: paymentIntentId.includes('_manual_') ? 'awaiting_capture' : 'succeeded',
-      },
+      attributes: mockIntentDetails.get(paymentIntentId) || { status: paymentIntentId.includes('_manual_') ? 'awaiting_capture' : 'succeeded', amount: 0, currency: 'PHP' },
     },
   })),
   capturePaymentIntent: jest.fn(async (paymentIntentId) => ({
@@ -39,7 +38,8 @@ jest.mock('../services/paymongo', () => ({
       },
     },
   })),
-}));
+  };
+});
 
 // Setup Express app
 const app = express();
@@ -144,7 +144,6 @@ describe('Rental Modes Integration Tests', () => {
         .post('/api/v1/payments/intent')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
-          amount: bookingResponse.body.booking.price,
           paymentMethod: 'card',
           bookingId
         });
@@ -186,13 +185,19 @@ describe('Rental Modes Integration Tests', () => {
       expect(extensionAvailability.body.available).toBe(true);
 
       const extensionPaymentIntent = await request(app)
-        .post('/api/v1/payments/intent')
+        .post('/api/v1/payments/extension-intent')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
-          amount: extensionAvailability.body.pricing.total,
+          hours: 2,
           paymentMethod: 'card',
           bookingId
         });
+
+      const extensionConfirmResponse = await request(app)
+        .post('/api/v1/payments/confirm')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({ paymentIntentId: extensionPaymentIntent.body.paymentIntentId });
+      expect(extensionConfirmResponse.body.status).toBe('completed');
 
       const extendResponse = await request(app)
         .post(`/api/v1/marketplace/bookings/${bookingId}/extend`)
@@ -262,7 +267,6 @@ describe('Rental Modes Integration Tests', () => {
         .post('/api/v1/payments/intent')
         .set('Authorization', `Bearer ${authTokens.driver}`)
         .send({
-          amount: bookingResponse.body.booking.authAmount,
           paymentMethod: 'card',
           bookingId
         });

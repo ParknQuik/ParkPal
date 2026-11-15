@@ -64,6 +64,21 @@ exports.authenticate = async (req, res, next) => {
   }
 };
 
+// Public marketplace reads may optionally personalize results for signed-in users.
+exports.optionalAuthenticate = async (req, res, next) => {
+  const token = req.headers['authorization']?.replace('Bearer ', '');
+  if (!token) return next();
+  try {
+    const jwtSecret = await getJwtSecret();
+    jwt.verify(token, jwtSecret, (err, decoded) => {
+      if (!err) req.user = decoded;
+      next();
+    });
+  } catch {
+    next();
+  }
+};
+
 exports.generateToken = async (user) => {
   const jwtSecret = await getJwtSecret();
 

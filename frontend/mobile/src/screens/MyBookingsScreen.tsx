@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../store';
 import { getMyBookings } from '../store/slices/marketplaceSlice';
 import { marketplaceAPI, paymentAPI } from '../services/api';
+import { completePayMongoCheckout } from '../services/paymongoCheckout';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
@@ -103,6 +105,7 @@ export const MyBookingsScreen: React.FC = () => {
   const [extendModalVisible, setExtendModalVisible] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [selectedHours, setSelectedHours] = useState(1);
+  const [extensionCard, setExtensionCard] = useState({ number: '', month: '', year: '', cvc: '' });
   const [extensionAvailability, setExtensionAvailability] = useState<any>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [extending, setExtending] = useState(false);
@@ -214,16 +217,15 @@ export const MyBookingsScreen: React.FC = () => {
       setExtending(true);
 
       // Create payment intent for extension
-      const paymentResponse = await paymentAPI.createPaymentIntent({
-        amount: extensionAvailability.pricing.total,
+      const paymentResponse = await paymentAPI.createExtensionIntent({
+        hours: selectedHours,
         paymentMethod: 'card', // Use user's saved payment method
         bookingId: selectedBooking.id,
       });
 
-      // Confirm payment
-      await paymentAPI.confirmPayment({
-        paymentIntentId: paymentResponse.data.paymentIntentId,
-      });
+      const { paymentIntentId, clientKey, publicKey, status } = paymentResponse.data;
+      const payment = await completePayMongoCheckout({ paymentIntentId, clientKey, publicKey, status }, 'card', 'ParkPal Driver', extensionCard);
+      if (payment.status !== 'completed') throw new Error('Extension payment is not completed yet. You can retry the extension after payment clears.');
 
       // Extend booking
       await marketplaceAPI.extendBooking(selectedBooking.id, {
@@ -1095,6 +1097,15 @@ export const MyBookingsScreen: React.FC = () => {
                     </View>
                   )
                 ) : null}
+
+                <View style={{ gap: 8, marginTop: 12 }}>
+                  <TextInput accessibilityLabel="Extension card number" keyboardType="number-pad" placeholder="Card number" value={extensionCard.number} onChangeText={(number) => setExtensionCard((current) => ({ ...current, number }))} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, color: colors.textPrimary }} />
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TextInput accessibilityLabel="Extension card expiry month" keyboardType="number-pad" placeholder="MM" value={extensionCard.month} onChangeText={(month) => setExtensionCard((current) => ({ ...current, month }))} style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, color: colors.textPrimary }} />
+                    <TextInput accessibilityLabel="Extension card expiry year" keyboardType="number-pad" placeholder="YYYY" value={extensionCard.year} onChangeText={(year) => setExtensionCard((current) => ({ ...current, year }))} style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, color: colors.textPrimary }} />
+                    <TextInput accessibilityLabel="Extension card CVC" keyboardType="number-pad" placeholder="CVC" secureTextEntry value={extensionCard.cvc} onChangeText={(cvc) => setExtensionCard((current) => ({ ...current, cvc }))} style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, color: colors.textPrimary }} />
+                  </View>
+                </View>
 
                 <View style={styles.extensionModalActions}>
                   <TouchableOpacity

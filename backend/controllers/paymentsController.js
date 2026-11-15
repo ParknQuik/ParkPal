@@ -7,6 +7,16 @@ function generateSecureToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+const ACTIVE_PAYMENT_STATES = ['pending', 'processing', 'authorized'];
+function providerPaymentStatus(status) {
+  if (status === 'succeeded') return 'completed';
+  if (status === 'awaiting_capture') return 'authorized';
+  if (status === 'processing' || status === 'awaiting_next_action' || status === 'awaiting_payment_method') return 'processing';
+  if (status === 'canceled' || status === 'cancelled') return 'cancelled';
+  if (status === 'requires_payment_method') return 'failed';
+  return 'pending';
+}
+
 /**
  * Create a payment intent for a booking
  * Step 1: Driver selects payment method (GCash/Card)
@@ -15,7 +25,7 @@ function generateSecureToken() {
  */
 exports.createPaymentIntent = async (req, res, next) => {
   try {
-    const { bookingId, amount, paymentMethod } = req.body;
+    const { bookingId, paymentMethod } = req.body;
     const userId = req.user.id;
 
     // Verify booking exists and belongs to user
@@ -31,6 +41,44 @@ exports.createPaymentIntent = async (req, res, next) => {
     if (booking.status === 'confirmed') {
       return res.status(400).json({ error: 'Booking already paid' });
     }
+    if (['completed', 'cancelled'].includes(booking.status)) {
+      return res.status(409).json({ error: `Booking is ${booking.status} and cannot be paid` });
+    }
+
+    const existing = await prisma.payment.findFirst({
+      where: { bookingId: booking.id, userId, purpose: 'booking', status: { in: ACTIVE_PAYMENT_STATES } },
+      orderBy: { createdAt: 'desc' }
+    });
+    if (existing) {
+      if (existing.paymentMethod !== paymentMethod) return res.status(409).json({ error: 'Another payment method already has an active payment for this booking' });
+      if (paymentMethod === 'cash') return res.status(200).json({ paymentIntentId: existing.transactionId, message: 'Cash payment selected. Pay at location.', requiresPayment: false, amount: existing.amount, bookingId: booking.id, paymentId: existing.id });
+      const currentIntent = await paymongoService.getPaymentIntent(existing.transactionId);
+      if (currentIntent.success) {
+        const attrs = currentIntent.paymentIntent.attributes;
+        const currentStatus = providerPaymentStatus(attrs.status);
+        if (currentStatus === 'completed' || currentStatus === 'authorized') {
+          await prisma.$transaction(async (tx) => {
+            await tx.payment.update({ where: { id: existing.id }, data: { status: currentStatus } });
+            await tx.booking.update({ where: { id: booking.id }, data: { status: 'confirmed' } });
+          });
+          return res.status(200).json({ paymentId: existing.id, paymentIntentId: existing.transactionId, clientKey: attrs.client_key, publicKey: paymongoService.publicKey, amount: existing.amount, status: attrs.status, captureType: booking.rentalMode === 'open' ? 'manual' : 'automatic' });
+        } else if (!ACTIVE_PAYMENT_STATES.includes(currentStatus)) {
+          await prisma.payment.update({ where: { id: existing.id }, data: { status: currentStatus } });
+        } else {
+          return res.status(200).json({
+            paymentId: existing.id, paymentIntentId: existing.transactionId,
+            clientKey: attrs.client_key, publicKey: paymongoService.publicKey,
+            amount: existing.amount, status: attrs.status, captureType: booking.rentalMode === 'open' ? 'manual' : 'automatic'
+          });
+        }
+      }
+    }
+
+    // Booking amounts are stored in PHP. Never accept a payable amount from the browser.
+    const payableAmount = Number((booking.rentalMode === 'open' ? (booking.authAmount || booking.price + (booking.platformFee || 0)) : (booking.price + (booking.platformFee || 0))).toFixed(2));
+    if (!Number.isFinite(payableAmount) || payableAmount < 1) {
+      return res.status(400).json({ error: 'Booking amount is not payable' });
+    }
 
     if (paymentMethod === 'cash') {
       const cashToken = generateSecureToken();
@@ -40,9 +88,10 @@ exports.createPaymentIntent = async (req, res, next) => {
           userId,
           bookingId: parseInt(bookingId),
           paymentMethod: 'cash',
-          amount: parseFloat(amount),
+          amount: payableAmount,
           status: 'pending',
-          transactionId: `cash_${cashToken}`
+          transactionId: `cash_${cashToken}`,
+          purpose: 'booking'
         }
       });
 
@@ -50,7 +99,7 @@ exports.createPaymentIntent = async (req, res, next) => {
         paymentIntentId: `cash_${cashToken}`,
         message: 'Cash payment selected. Pay at location.',
         requiresPayment: false,
-        amount: parseFloat(amount),
+        amount: payableAmount,
         bookingId: parseInt(bookingId),
         paymentId: payment.id
       });
@@ -62,7 +111,7 @@ exports.createPaymentIntent = async (req, res, next) => {
 
     // Create PaymentIntent with PayMongo
     const result = await paymongoService.createPaymentIntent({
-      amount: parseFloat(amount),
+      amount: payableAmount,
       description: `Parking at ${booking.slot.address} - Booking #${bookingId}`,
       captureType: captureType,
       metadata: {
@@ -71,6 +120,7 @@ exports.createPaymentIntent = async (req, res, next) => {
         slotId: booking.slotId.toString(),
         paymentMethod: paymentMethod || 'unknown',
         rentalMode: booking.rentalMode,
+        purpose: 'booking',
         ...(isOpenMode && { 
           authorizationOnly: true,
           maxAmount: booking.authAmount 
@@ -91,9 +141,10 @@ exports.createPaymentIntent = async (req, res, next) => {
         userId,
         bookingId: parseInt(bookingId),
         paymentMethod: paymentMethod || 'pending',
-        amount: parseFloat(amount),
+        amount: payableAmount,
         status: 'pending',
-        transactionId: result.paymentIntent.id
+        transactionId: result.paymentIntent.id,
+        purpose: 'booking'
       }
     });
 
@@ -110,7 +161,8 @@ exports.createPaymentIntent = async (req, res, next) => {
       paymentId: payment.id,
       paymentIntentId: result.paymentIntent.id,
       clientKey: result.paymentIntent.attributes.client_key,
-      amount: parseFloat(amount),
+      publicKey: paymongoService.publicKey,
+      amount: payableAmount,
       status: result.paymentIntent.attributes.status,
       captureType: captureType,
       message: isOpenMode 
@@ -118,8 +170,49 @@ exports.createPaymentIntent = async (req, res, next) => {
         : 'Payment intent created - proceed with payment'
     });
    } catch (error) {
+     if (error.code === 'P2002') return res.status(409).json({ error: 'A payment is already being processed for this booking. Retry to reuse it.' });
      next(error);
    }
+};
+
+exports.createExtensionIntent = async (req, res, next) => {
+  try {
+    const { bookingId, hours, paymentMethod } = req.body;
+    const userId = req.user.id;
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { slot: true } });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.userId !== userId) return res.status(403).json({ error: 'Unauthorized' });
+    if (booking.rentalMode !== 'fixed' || ['completed', 'cancelled'].includes(booking.status) || !booking.endTime || new Date(booking.endTime) < new Date()) {
+      return res.status(400).json({ error: 'Booking cannot be extended' });
+    }
+    const base = Number((booking.slot.price * hours).toFixed(2));
+    const amount = Number((base + 10 + base * 0.05).toFixed(2));
+    const active = await prisma.payment.findFirst({ where: { bookingId, userId, purpose: 'extension', extensionHours: hours, status: { in: ACTIVE_PAYMENT_STATES } } });
+    if (active) {
+      const existing = await paymongoService.getPaymentIntent(active.transactionId);
+      if (existing.success) {
+        const currentStatus = providerPaymentStatus(existing.paymentIntent.attributes.status);
+        if (ACTIVE_PAYMENT_STATES.includes(currentStatus) || currentStatus === 'completed' || currentStatus === 'authorized') {
+          if (currentStatus === 'completed' || currentStatus === 'authorized') await prisma.payment.update({ where: { id: active.id }, data: { status: currentStatus } });
+          return res.status(200).json({ paymentId: active.id, paymentIntentId: active.transactionId, clientKey: existing.paymentIntent.attributes.client_key, publicKey: paymongoService.publicKey, amount, hours, status: existing.paymentIntent.attributes.status });
+        }
+        await prisma.payment.update({ where: { id: active.id }, data: { status: currentStatus } });
+      }
+    }
+    const created = await paymongoService.createPaymentIntent({
+      amount, description: `Booking #${bookingId} extension (${hours} hours)`, captureType: 'automatic',
+      metadata: { bookingId: String(bookingId), userId: String(userId), purpose: 'extension', extensionHours: String(hours), paymentMethod }
+    });
+    if (!created.success) return res.status(502).json({ error: 'Failed to create payment intent', details: created.error?.message });
+    const payment = await prisma.payment.create({ data: {
+      userId, bookingId, amount, currency: 'PHP', paymentMethod, status: 'pending',
+      transactionId: created.paymentIntent.id, purpose: 'extension', extensionHours: hours
+    } });
+    return res.status(201).json({ paymentId: payment.id, paymentIntentId: payment.transactionId, clientKey: created.paymentIntent.attributes.client_key, publicKey: paymongoService.publicKey, amount, hours, status: created.paymentIntent.attributes.status });
+  } catch (error) {
+    if (error.code === 'P2002') return res.status(409).json({ error: 'An extension payment is already being processed. Retry to reuse it.' });
+    next(error);
+  }
 };
 
 /**
@@ -137,7 +230,7 @@ exports.confirmPayment = async (req, res, next) => {
       const payment = await prisma.payment.findFirst({
         where: {
           transactionId: paymentIntentId,
-          status: 'pending'
+          purpose: 'booking'
         },
         include: { 
           booking: {
@@ -148,9 +241,7 @@ exports.confirmPayment = async (req, res, next) => {
         }
       });
       
-      if (!payment) {
-        return res.status(404).json({ error: 'Payment not found or already confirmed' });
-      }
+      if (!payment) return res.status(404).json({ error: 'Payment not found' });
       
       const booking = payment.booking;
       
@@ -162,33 +253,21 @@ exports.confirmPayment = async (req, res, next) => {
         return res.status(403).json({ error: 'Unauthorized' });
       }
       
-      const updatedPayment = await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'pending',
-          paymentMethod: 'cash'
-        }
-      });
-      
-      await prisma.booking.update({
-        where: { id: booking.id },
-        data: { status: 'confirmed' }
-      });
-      
-      await prisma.notification.create({
-        data: {
-          userId: booking.slot?.ownerId,
-          title: 'Booking Confirmed - Cash Payment',
-          body: `Booking #${booking.id} confirmed. Guest will pay in cash.`,
-          type: 'booking_confirmed',
+      const { updatedPayment, updatedBooking } = await prisma.$transaction(async (tx) => {
+        const updatedPayment = await tx.payment.update({ where: { id: payment.id }, data: { status: 'pending', paymentMethod: 'cash' } });
+        const updatedBooking = await tx.booking.update({ where: { id: booking.id }, data: { status: 'confirmed' } });
+        if (booking.status !== 'confirmed' && booking.slot?.ownerId) await tx.notification.create({ data: {
+          userId: booking.slot.ownerId, title: 'Booking Confirmed - Cash Payment',
+          body: `Booking #${booking.id} confirmed. Guest will pay in cash.`, type: 'booking_confirmed',
           data: JSON.stringify({ bookingId: booking.id, paymentMethod: 'cash' })
-        }
+        } });
+        return { updatedPayment, updatedBooking };
       });
 
       return res.json({
         message: 'Booking confirmed. Please collect cash payment from customer.',
         payment: updatedPayment,
-        booking: { ...booking, status: 'confirmed' }
+        booking: updatedBooking
       });
     }
 
@@ -217,41 +296,43 @@ exports.confirmPayment = async (req, res, next) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    const attrs = paymentIntent.attributes;
+    const expectedCents = Math.round(payment.amount * 100);
+    if (Number(attrs.amount) !== expectedCents || String(attrs.currency).toUpperCase() !== payment.currency || payment.currency !== 'PHP') {
+      return res.status(409).json({ error: 'Provider payment amount or currency does not match this payment' });
+    }
+    const metadata = attrs.metadata || {};
+    if ((metadata.bookingId && Number(metadata.bookingId) !== payment.bookingId) || (metadata.userId && Number(metadata.userId) !== payment.userId) || (metadata.purpose && metadata.purpose !== payment.purpose) || (payment.purpose === 'extension' && Number(metadata.extensionHours) !== payment.extensionHours)) return res.status(409).json({ error: 'Provider payment metadata does not match this payment' });
+
      // Update payment status based on PayMongo status
-     let paymentStatus = 'pending';
+     let paymentStatus = providerPaymentStatus(status);
      let bookingStatus = payment.booking.status;
 
-     // Check if this is a manual capture (authorization hold)
-     const isManualCapture = payment.booking.rentalMode === 'open';
-
      if (status === 'succeeded') {
-       paymentStatus = 'completed';
        bookingStatus = 'confirmed';
      } else if (status === 'awaiting_capture') {
        // For manual capture, payment is authorized but not yet captured
-       paymentStatus = 'authorized';
        bookingStatus = 'confirmed';
-     } else if (status === 'processing') {
-       paymentStatus = 'processing';
-     } else if (status === 'requires_payment_method' || status === 'canceled') {
-       paymentStatus = 'failed';
      }
 
      // Update payment record
-     const updatedPayment = await prisma.payment.update({
-       where: { id: payment.id },
-       data: {
-         status: paymentStatus
-       }
+       const paymentOutcome = await prisma.$transaction(async (tx) => {
+       const fresh = await tx.payment.findUnique({ where: { id: payment.id } });
+       // Completed payments are terminal; delayed provider reads cannot downgrade them.
+         if (fresh.status === 'completed' && paymentStatus !== 'completed') {
+           await tx.booking.update({ where: { id: payment.bookingId }, data: { status: 'confirmed' } });
+           return { payment: fresh, status: 'completed' };
+         }
+       const updated = await tx.payment.update({ where: { id: payment.id }, data: { status: paymentStatus } });
+       if (paymentStatus === 'completed' || paymentStatus === 'authorized') await tx.booking.update({ where: { id: payment.bookingId }, data: { status: 'confirmed' } });
+         return { payment: updated, status: paymentStatus };
      });
+       const updatedPayment = paymentOutcome.payment;
+       paymentStatus = paymentOutcome.status;
+       if (paymentStatus === 'completed' || paymentStatus === 'authorized') bookingStatus = 'confirmed';
 
      // Update booking status if payment succeeded or authorized
      if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
-       await prisma.booking.update({
-         where: { id: payment.bookingId },
-         data: { status: bookingStatus }
-       });
-
        broadcast({
          type: paymentStatus === 'authorized' ? 'payment_authorized' : 'payment_completed',
          payment: updatedPayment,
@@ -278,58 +359,7 @@ exports.confirmPayment = async (req, res, next) => {
  * Create GCash payment source (for direct GCash payments)
  */
 exports.createGCashPayment = async (req, res, next) => {
-  try {
-    const { bookingId, amount } = req.body;
-    const userId = req.user.id;
-
-    // Verify booking
-    const booking = await prisma.booking.findUnique({
-      where: { id: parseInt(bookingId) },
-      include: { slot: true }
-    });
-
-    if (!booking || booking.userId !== userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    // Create GCash source
-    const sourceResult = await paymongoService.createSource({
-      amount: parseFloat(amount),
-      type: 'gcash',
-      redirect: {
-        success: `${process.env.FRONTEND_URL}/payment/success?bookingId=${bookingId}`,
-        failed: `${process.env.FRONTEND_URL}/payment/failed?bookingId=${bookingId}`
-      }
-    });
-
-    if (!sourceResult.success) {
-      return res.status(500).json({
-        error: 'Failed to create GCash payment',
-        details: sourceResult.error.message
-      });
-    }
-
-    // Save payment record
-    const payment = await prisma.payment.create({
-      data: {
-        userId,
-        bookingId: parseInt(bookingId),
-        paymentMethod: 'gcash',
-        amount: parseFloat(amount),
-        status: 'pending',
-        transactionId: sourceResult.source.id
-      }
-    });
-
-    // Return checkout URL for user to complete payment
-    res.status(201).json({
-      paymentId: payment.id,
-      checkoutUrl: sourceResult.source.attributes.redirect.checkout_url,
-      message: 'Redirect user to GCash payment page'
-    });
-   } catch (error) {
-     next(error);
-   }
+  res.status(410).json({ error: 'This payment flow has been retired. Use POST /payments/intent and POST /payments/confirm.' });
 };
 
 /**
@@ -337,38 +367,7 @@ exports.createGCashPayment = async (req, res, next) => {
  * TODO: Deprecated - use createPaymentIntent instead
  */
 exports.processPayment = async (req, res, next) => {
-  try {
-    const { bookingId, paymentMethod, amount } = req.body;
-    const userId = req.user.id;
-
-    const booking = await prisma.booking.findUnique({
-      where: { id: parseInt(bookingId) }
-    });
-
-    if (!booking || booking.userId !== userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    const payment = await prisma.payment.create({
-      data: {
-        userId,
-        bookingId: parseInt(bookingId),
-        paymentMethod: paymentMethod || 'pending',
-        amount: parseFloat(amount),
-        status: 'completed'
-      }
-    });
-
-    await prisma.booking.update({
-      where: { id: parseInt(bookingId) },
-      data: { status: 'confirmed' }
-    });
-
-    broadcast({ type: 'payment_completed', payment });
-    res.status(201).json(payment);
-  } catch (error) {
-    next(error);
-  }
+  res.status(410).json({ error: 'This payment flow has been retired. Use POST /payments/intent and POST /payments/confirm.' });
 };
 
 /**
@@ -495,28 +494,27 @@ exports.handleWebhook = async (req, res, next) => {
  */
 async function handlePaymentPaid(paymentData) {
   const paymentIntentId = paymentData.attributes.payment_intent_id;
+  if (!paymentIntentId) return;
+  const verified = await paymongoService.getPaymentIntent(paymentIntentId);
+  if (!verified.success || verified.paymentIntent.attributes.status !== 'succeeded') return;
 
    // Find payment record
    const payment = await prisma.payment.findFirst({
      where: { transactionId: paymentIntentId }
    });
 
-   if (!payment) {
-     return;
-   }
+   if (!payment || Number(verified.paymentIntent.attributes.amount) !== Math.round(payment.amount * 100) || String(verified.paymentIntent.attributes.currency).toUpperCase() !== payment.currency) return;
 
   // Update payment and booking
-  await prisma.payment.update({
-    where: { id: payment.id },
-    data: {
-      status: 'completed'
-    }
+  let changed = false;
+  await prisma.$transaction(async (tx) => {
+    const fresh = await tx.payment.findUnique({ where: { id: payment.id } });
+    if (fresh.status === 'completed') return;
+    await tx.payment.update({ where: { id: payment.id }, data: { status: 'completed' } });
+    if (payment.purpose === 'booking') await tx.booking.update({ where: { id: payment.bookingId }, data: { status: 'confirmed' } });
+    changed = true;
   });
-
-  await prisma.booking.update({
-    where: { id: payment.bookingId },
-    data: { status: 'confirmed' }
-  });
+  if (!changed) return;
 
   broadcast({
     type: 'payment_completed',
@@ -533,6 +531,7 @@ async function handlePaymentPaid(paymentData) {
  */
 async function handlePaymentFailed(paymentData) {
   const paymentIntentId = paymentData.attributes.payment_intent_id;
+  if (!paymentIntentId) return;
 
   const payment = await prisma.payment.findFirst({
     where: { transactionId: paymentIntentId }
@@ -543,12 +542,8 @@ async function handlePaymentFailed(paymentData) {
     return;
   }
 
-  await prisma.payment.update({
-    where: { id: payment.id },
-    data: {
-      status: 'failed'
-    }
-  });
+  if (['completed', 'authorized', 'cancelled'].includes(payment.status)) return;
+  await prisma.payment.update({ where: { id: payment.id }, data: { status: 'failed' } });
 
 
 }
