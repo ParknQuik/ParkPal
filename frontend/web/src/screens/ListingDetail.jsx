@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
 	Container,
 	Box,
@@ -21,10 +21,13 @@ import {
 	LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import api from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 const ListingDetail = () => {
 	const { id } = useParams();
 	const navigate = useNavigate();
+	const location = useLocation();
+	const { user } = useAuth();
 	const [listing, setListing] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
@@ -36,7 +39,7 @@ const ListingDetail = () => {
 	const fetchListing = async () => {
 		try {
 			setLoading(true);
-			const { data } = await api.get(`/api/marketplace/listings/${id}`);
+			const { data } = await api.get(`/marketplace/listings/${id}`);
 			setListing(data);
 		} catch (err) {
 			setError(err.response?.data?.error || 'Failed to load listing');
@@ -74,6 +77,14 @@ const ListingDetail = () => {
 			</Container>
 		);
 	}
+	const hasSearchInterval = Boolean(new URLSearchParams(location.search).get('checkIn') && new URLSearchParams(location.search).get('checkOut'));
+	const canReserve = listing.isActive && (listing.status === 'available' || hasSearchInterval);
+	const photos = (() => {
+		try { return Array.isArray(listing.photos) ? listing.photos : JSON.parse(listing.photos || '[]'); }
+		catch { return []; }
+	})();
+	const photoUrl = (photo) => typeof photo === 'string' ? photo : photo?.url || photo?.secure_url;
+	const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${listing.lat},${listing.lon}`;
 
 	return (
 		<Box>
@@ -94,6 +105,9 @@ const ListingDetail = () => {
 			</AppBar>
 
 			<Container maxWidth="md" sx={{ py: 4 }}>
+				{photos.length > 0 && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: photos.length > 1 ? '2fr 1fr' : '1fr' }, gap: 1, mb: 2, maxHeight: 420, overflow: 'hidden', borderRadius: 3 }}>
+					{photos.slice(0, 3).map((photo, index) => photoUrl(photo) ? <Box key={photoUrl(photo)} component="img" src={photoUrl(photo)} alt={`${listing.title || 'Parking space'} photo ${index + 1}`} sx={{ width: '100%', height: index === 0 ? 300 : 148, objectFit: 'cover', gridRow: { sm: index === 0 && photos.length > 1 ? 'span 2' : 'auto' } }} /> : null)}
+				</Box>}
 				<Card>
 					<CardContent>
 						<Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
@@ -101,6 +115,7 @@ const ListingDetail = () => {
 								<Typography variant="h4" gutterBottom>
 									₱{listing.price}/hour
 								</Typography>
+								<Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>Bookable parking listing</Typography>
 								<Chip
 									label={listing.slotType?.replace('_', ' ').toUpperCase()}
 									variant="outlined"
@@ -118,6 +133,7 @@ const ListingDetail = () => {
 							<LocationIcon color="action" />
 							<Typography variant="h6">{listing.address}</Typography>
 						</Box>
+						{listing.owner?.name && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Listed by {listing.owner.name}</Typography>}
 
 						{listing.description && (
 							<Box mb={3}>
@@ -166,15 +182,13 @@ const ListingDetail = () => {
 								<Typography variant="body1">{listing.lon}</Typography>
 							</Grid>
 						</Grid>
+						<Button component="a" href={mapsUrl} target="_blank" rel="noreferrer" variant="outlined" fullWidth sx={{ mb: 2 }}>Get directions</Button>
 
 						<Box display="flex" gap={2}>
-							<Button
-								variant="contained"
-								fullWidth
-								onClick={() => navigate(`/list-slot?edit=${listing.id}`)}
-							>
-								Edit Listing
-							</Button>
+							{user?.id === listing.ownerId ? <Button variant="outlined" fullWidth onClick={() => navigate(`/list-slot?edit=${listing.id}`)}>Edit Listing</Button> : <Button
+								variant="contained" fullWidth disabled={!canReserve}
+								onClick={() => navigate(`/reserve?${new URLSearchParams({ listingId: String(listing.id), ...Object.fromEntries(new URLSearchParams(location.search)) })}`, { state: { slot: listing } })}
+							>Reserve this space</Button>}
 							<Button
 								variant="outlined"
 								fullWidth

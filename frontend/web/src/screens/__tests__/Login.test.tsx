@@ -9,11 +9,13 @@ vi.mock('../../api');
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
+let mockSearch = '';
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useLocation: () => ({ search: mockSearch }),
   };
 });
 
@@ -25,6 +27,7 @@ describe('Login Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    mockSearch = '';
   });
 
   describe('Rendering', () => {
@@ -88,7 +91,18 @@ describe('Login Component', () => {
       expect(localStorage.getItem('user')).toBe(JSON.stringify(mockResponse.data.user));
 
       // Verify navigation
-      expect(mockNavigate).toHaveBeenCalledWith('/search');
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+    });
+
+    it('returns to the original reservation path after sign-in', async () => {
+      mockSearch = '?returnTo=%2Freserve%3FlistingId%3D12%26checkIn%3D2030-01-01T10%253A00';
+      vi.mocked(api.post).mockResolvedValueOnce({ data: { user: { id: 1, email: 'test@example.com', name: 'Test', role: 'driver' }, token: 'token' } });
+      const user = userEvent.setup();
+      render(<Login />);
+      fillInput(/email/i, 'test@example.com');
+      fillInput(/password/i, 'Password123');
+      await user.click(screen.getByRole('button', { name: /^login$/i }));
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/reserve?listingId=12&checkIn=2030-01-01T10%3A00', { replace: true }));
     });
 
     it('should display error on failed login', async () => {
@@ -201,7 +215,7 @@ describe('Login Component', () => {
       expect(localStorage.getItem('token')).toBe('new-jwt-token');
 
       // Verify navigation
-      expect(mockNavigate).toHaveBeenCalledWith('/search');
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });
 
     it('should display error on failed registration', async () => {

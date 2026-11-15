@@ -65,7 +65,7 @@ describe('Profile Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    mockApi.get.mockResolvedValue({ data: [] });
+    vi.mocked(mockApi.get).mockResolvedValue({ data: [] });
   });
 
   describe('Rendering', () => {
@@ -100,7 +100,7 @@ describe('Profile Component', () => {
   describe('Bookings', () => {
     it('should fetch and display bookings', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
-      mockApi.get.mockResolvedValue({ data: mockBookings });
+      vi.mocked(mockApi.get).mockResolvedValue({ data: mockBookings } as never);
 
       render(<Profile />);
 
@@ -116,7 +116,7 @@ describe('Profile Component', () => {
 
     it('should show "No bookings yet" when no bookings', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
-      mockApi.get.mockResolvedValue({ data: [] });
+      vi.mocked(mockApi.get).mockResolvedValue({ data: [] });
 
       render(<Profile />);
 
@@ -127,7 +127,7 @@ describe('Profile Component', () => {
 
     it('should display coordinates when address is missing', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
-      mockApi.get.mockResolvedValue({ data: [mockBookings[1]] });
+      vi.mocked(mockApi.get).mockResolvedValue({ data: [mockBookings[1]] } as never);
 
       render(<Profile />);
 
@@ -138,7 +138,7 @@ describe('Profile Component', () => {
 
     it('should show confirmed status chip in success color', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
-      mockApi.get.mockResolvedValue({ data: [mockBookings[0]] });
+      vi.mocked(mockApi.get).mockResolvedValue({ data: [mockBookings[0]] } as never);
 
       render(<Profile />);
 
@@ -150,7 +150,7 @@ describe('Profile Component', () => {
 
     it('should handle booking fetch error gracefully', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
-      mockApi.get.mockRejectedValue(new Error('Network error'));
+      vi.mocked(mockApi.get).mockRejectedValue(new Error('Network error'));
 
       render(<Profile />);
 

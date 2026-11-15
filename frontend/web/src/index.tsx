@@ -1,12 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { initializePerformanceMonitoring } from './utils/performance';
-
-// Initialize performance monitoring
-if (import.meta.env.VITE_ENABLE_ANALYTICS === 'true') {
-  initializePerformanceMonitoring('/api/v1/analytics/performance');
-}
 
 // Register service worker for PWA support
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

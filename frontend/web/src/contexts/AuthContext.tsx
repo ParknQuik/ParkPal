@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import api from '../api';
 import type { User, AuthResponse } from '../types';
 import { AxiosError } from 'axios';
@@ -16,31 +16,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function authErrorMessage(error: AxiosError<{ error: string; retryAfter?: number }>, fallback: string): string {
+  const message = error.response?.data?.error || fallback;
+  if (error.response?.status !== 429) return message;
+  const retryAfter = Number(error.response.data?.retryAfter || error.response.headers['retry-after']);
+  return retryAfter > 0
+    ? `${message} You can try again in ${retryAfter} seconds.`
+    : `${message} Please wait before trying again.`;
+}
+
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+  });
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // Restore auth state from localStorage on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        // Invalid stored data, clear it
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
-  }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
@@ -56,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(data.user));
     } catch (error) {
       const axiosError = error as AxiosError<{ error: string }>;
-      throw new Error(axiosError.response?.data?.error || 'Login failed');
+      throw new Error(authErrorMessage(axiosError, 'Login failed'));
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(data.user));
     } catch (error) {
       const axiosError = error as AxiosError<{ error: string }>;
-      throw new Error(axiosError.response?.data?.error || 'Registration failed');
+      throw new Error(authErrorMessage(axiosError, 'Registration failed'));
     } finally {
       setIsLoading(false);
     }

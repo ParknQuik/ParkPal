@@ -58,7 +58,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     showToast(message, 'info');
   }, [showToast]);
 
-  const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {
       return;
     }

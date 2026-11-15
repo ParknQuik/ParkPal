@@ -70,7 +70,7 @@ describe('NavBar', () => {
 
     await user.click(screen.getByRole('button', { name: /login/i }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+    expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
   it('should navigate to login when logo clicked while unauthenticated', async () => {
@@ -126,7 +126,7 @@ describe('NavBar', () => {
     const avatar = screen.getByLabelText(/account of current user/i);
     await user.click(avatar);
 
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('My Listings')).toBeInTheDocument();
   });
 
   it('should navigate to profile when profile menu clicked', async () => {
@@ -175,8 +175,26 @@ describe('NavBar', () => {
     const avatar = screen.getByLabelText(/account of current user/i);
     await user.click(avatar);
 
-    const dashboardItem = screen.getByText('Dashboard');
+    const dashboardItem = screen.getByText('My Listings');
     await user.click(dashboardItem);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/host-dashboard');
+  });
+
+  it('should let a signed-in driver open My Listings', async () => {
+    const user = userEvent.setup();
+    const mockUser: User = {
+      id: 2,
+      email: 'driver@example.com',
+      name: 'Driver User',
+      role: 'driver',
+      createdAt: '2025-01-01',
+      updatedAt: '2025-01-01',
+    };
+
+    renderNavBar(mockUser);
+    await user.click(screen.getByLabelText(/account of current user/i));
+    await user.click(screen.getByText('My Listings'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/host-dashboard');
   });

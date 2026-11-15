@@ -100,6 +100,22 @@ describe('AuthContext', () => {
       expect(result.current.isAuthenticated).toBe(false);
     });
 
+    it('includes the retry time in rate-limit errors', async () => {
+      vi.mocked(api.post).mockRejectedValueOnce({
+        response: {
+          status: 429,
+          data: { error: 'Too many requests.', retryAfter: 42 },
+          headers: { 'retry-after': '42' },
+        },
+      });
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        await expect(result.current.login('test@example.com', 'Password123'))
+          .rejects.toThrow('Too many requests. You can try again in 42 seconds.');
+      });
+    });
+
     it('should set loading state during login', async () => {
       let resolveLogin: (value: any) => void;
       const loginPromise = new Promise((resolve) => {
