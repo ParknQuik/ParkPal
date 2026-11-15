@@ -44,7 +44,7 @@ const getAppleAudience = () =>
 
 exports.appleAuth = async (req, res, next) => {
   try {
-    const { appleToken, fullName, email } = req.body;
+    const { appleToken, fullName } = req.body;
 
     if (!appleToken) {
       return res.status(400).json({ error: 'Apple token is required' });
@@ -66,7 +66,7 @@ exports.appleAuth = async (req, res, next) => {
     const result = await signInWithSocialProfile({
       providerIdField: 'appleId',
       providerId: appleUser.sub,
-      email: appleUser.email || email,
+      email: appleUser.email,
       name: fullName,
     });
 

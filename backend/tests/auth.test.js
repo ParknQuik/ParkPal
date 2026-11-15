@@ -97,7 +97,7 @@ describe('Auth API Tests', () => {
       expect(user.password).toMatch(/^\$2[aby]\$/); // bcrypt hash pattern
     });
 
-    it('should default role to user if not provided', async () => {
+    it('should assign the driver role if no role is provided', async () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send({
@@ -108,7 +108,7 @@ describe('Auth API Tests', () => {
         });
 
       expect(response.status).toBe(201);
-      expect(response.body.user.role).toBe('user'); // Default is 'user' not 'driver'
+      expect(response.body.user.role).toBe('driver');
     });
   });
 
@@ -198,32 +198,18 @@ describe('Auth API Tests', () => {
   });
 
   describe('User Roles', () => {
-    it('should create user with host role', async () => {
+    it.each(['host', 'admin', 'operator'])('should ignore a forged %s role', async (role) => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send({
           name: 'Host User',
-          email: 'host@example.com',
+          email: `${role}@example.com`,
           password: 'TestPass123!',
-          role: 'host',
+          role,
         });
 
       expect(response.status).toBe(201);
-      expect(response.body.user.role).toBe('host');
-    });
-
-    it('should create user with admin role', async () => {
-      const response = await request(app)
-        .post('/api/v1/auth/register')
-        .send({
-          name: 'Admin User',
-          email: 'admin@example.com',
-          password: 'TestPass123!',
-          role: 'admin',
-        });
-
-      expect(response.status).toBe(201);
-      expect(response.body.user.role).toBe('admin');
+      expect(response.body.user.role).toBe('driver');
     });
   });
 

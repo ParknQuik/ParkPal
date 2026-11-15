@@ -27,39 +27,31 @@ const signInWithSocialProfile = async ({
     throw Object.assign(new Error('Missing social provider id'), { statusCode: 401 });
   }
 
-  if (!email) {
-    throw Object.assign(new Error('Email is required from social provider'), { statusCode: 401 });
-  }
-
   let user = await prisma.user.findUnique({
     where: { [providerIdField]: providerId },
   });
 
   if (!user) {
-    user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (user) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          [providerIdField]: providerId,
-          ...(profileImageUrl ? { profileImageUrl } : {}),
-        },
-      });
-    } else {
-      user = await prisma.user.create({
-        data: {
-          name: name || email.split('@')[0],
-          email,
-          [providerIdField]: providerId,
-          password: await createRandomPasswordHash(),
-          role: 'driver',
-          profileImageUrl,
-        },
-      });
+    if (!email) {
+      throw Object.assign(new Error('Email is required from social provider'), { statusCode: 401 });
     }
+    const emailOwner = await prisma.user.findUnique({ where: { email } });
+    if (emailOwner) {
+      throw Object.assign(
+        new Error('An account with this email already exists. Use your existing sign-in method.'),
+        { statusCode: 409 }
+      );
+    }
+    user = await prisma.user.create({
+      data: {
+        name: name || email.split('@')[0],
+        email,
+        [providerIdField]: providerId,
+        password: await createRandomPasswordHash(),
+        role: 'driver',
+        profileImageUrl,
+      },
+    });
   }
 
   if (!user.isActive) {
