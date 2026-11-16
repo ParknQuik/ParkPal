@@ -29,4 +29,13 @@ describe('loadGoogleMaps', () => {
 		const { loadGoogleMaps } = await import('../googleMaps');
 		await expect(loadGoogleMaps(['places'])).rejects.toThrow('Configure VITE_GOOGLE_MAPS_API_KEY');
 	});
+
+	it('uses an already loaded Maps API without a local key', async () => {
+		vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', '');
+		const maps = { maps: { importLibrary: vi.fn().mockResolvedValue(undefined) } } as unknown as typeof google;
+		Object.defineProperty(window, 'google', { configurable: true, value: maps });
+		const { loadGoogleMaps } = await import('../googleMaps');
+		await expect(loadGoogleMaps(['places'])).resolves.toBe(maps);
+		expect(maps.maps.importLibrary).toHaveBeenCalledWith('places');
+	});
 });
