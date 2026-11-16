@@ -66,7 +66,9 @@ export default function Payment() {
         const nextStatus = data.status || 'pending';
         setStatus(nextStatus);
         if (['completed', 'authorized'].includes(nextStatus)) navigate(`/bookings/${bookingId}`, { replace: true });
-        else if (['failed', 'cancelled'].includes(nextStatus)) setError(`Payment was ${nextStatus}. Choose a payment method to try again.`);
+        else if (['failed', 'cancelled'].includes(nextStatus)) setError(nextStatus === 'failed'
+          ? 'Payment failed. Choose a payment method to try again.'
+          : 'Payment was cancelled. Choose a payment method to try again.');
       })
       .catch((err) => setError(safeErrorMessage(err, 'Payment confirmation could not be verified')))
       .finally(() => setLoading(false));
