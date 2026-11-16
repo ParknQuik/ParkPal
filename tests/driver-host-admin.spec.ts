@@ -59,15 +59,41 @@ test('host creates a listing and manages existing listing availability', async (
     else await route.continue();
   });
   await page.route('**/api/v1/marketplace/listings/space-7/toggle', async (route) => { active = !active; await route.fulfill({ json: { listing: { ...listing, isActive: active } } }); });
+  await page.addInitScript(() => {
+    const runtime = window as any;
+    class MapMock {
+      constructor(private element: HTMLElement) {}
+      addListener(name: string, listener: (event: any) => void) {
+        if (name === 'click') this.element.addEventListener('click', () => listener({
+          latLng: { lat: () => 14.5995, lng: () => 120.9842 },
+        }));
+      }
+      panTo() {}
+      setZoom() {}
+    }
+    class MarkerMock {
+      addListener() {}
+      setPosition() {}
+    }
+    class AutocompleteMock {
+      constructor(_input: HTMLInputElement) {}
+      bindTo() {}
+      addListener() {}
+      getPlace() { return {}; }
+      unbindAll() {}
+    }
+    runtime.google = {
+      maps: { Map: MapMock, Marker: MarkerMock, places: { Autocomplete: AutocompleteMock }, importLibrary: async () => ({}) },
+    };
+  });
   await page.goto('/list-slot');
   await page.getByLabel('Listing title').fill('Harbor Garage');
-  await page.getByLabel('Latitude').fill('14.5995');
-  await page.getByLabel('Longitude').fill('120.9842');
   await page.getByLabel('Full Address').fill(listing.address);
+  await page.getByRole('region', { name: 'Parking location map' }).click();
   await page.getByLabel('Price per Hour (₱)').fill('120');
   await page.getByRole('button', { name: /create listing/i }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Listing created successfully' })).toBeVisible();
-  expect(created).toMatchObject({ title: 'Harbor Garage', price: 120 });
+  expect(created).toMatchObject({ title: 'Harbor Garage', address: listing.address, price: 120, lat: 14.5995, lon: 120.9842 });
   await page.goto('/host-dashboard');
   await expect(page.getByRole('heading', { name: 'Host Dashboard' })).toBeVisible();
   await expect(page.getByText('12 Test Street, Manila')).toBeVisible();
