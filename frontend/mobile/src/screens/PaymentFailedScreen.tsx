@@ -224,7 +224,7 @@ export const PaymentFailedScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title="Payment Failed" onBack={handleBack} />
       </SafeAreaView>

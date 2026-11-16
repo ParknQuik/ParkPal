@@ -302,7 +302,7 @@ export const EditProfileScreen: React.FC = () => {
       fontSize: 40,
     },
     uploadingOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
       justifyContent: 'center',
       alignItems: 'center',
@@ -316,7 +316,7 @@ export const EditProfileScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity

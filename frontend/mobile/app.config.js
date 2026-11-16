@@ -177,7 +177,6 @@ module.exports = {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#667eea',
       },
-      edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: 'com.parknquik.mobile',
       permissions: [

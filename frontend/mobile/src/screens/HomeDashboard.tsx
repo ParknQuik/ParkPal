@@ -663,7 +663,7 @@ export const HomeDashboard: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
@@ -887,7 +887,7 @@ export const HomeDashboard: React.FC = () => {
                   />
                   <Text style={styles.emptyText}>No parking spots found nearby</Text>
                 </View>
-              ) : null
+              ) : undefined
             }
           />
         )}
