@@ -133,7 +133,7 @@ export const PointsHistoryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <AppHeader title="Points History" onBack={handleBack} />
         <View style={styles.contentArea}>
@@ -169,7 +169,7 @@ export const PointsHistoryScreen: React.FC = () => {
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
               }
-              ListEmptyComponent={!loading ? renderEmptyState : null}
+              ListEmptyComponent={!loading ? renderEmptyState : undefined}
             />
           )}
         </View>

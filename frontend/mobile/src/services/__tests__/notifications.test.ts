@@ -1,32 +1,7 @@
-type NotificationMock = {
-  addNotificationReceivedListener: jest.Mock;
-  addNotificationResponseReceivedListener: jest.Mock;
-  cancelAllScheduledNotificationsAsync: jest.Mock;
-  getExpoPushTokenAsync: jest.Mock;
-  getPermissionsAsync: jest.Mock;
-  requestPermissionsAsync: jest.Mock;
-  scheduleNotificationAsync: jest.Mock;
-  setNotificationHandler: jest.Mock;
-};
+import { createNotificationService, type ExpoNotificationsModule } from '../notificationServiceFactory';
 
-const loadNotificationService = ({
-  constantsOverrides = {},
-  notificationOverrides = {},
-}: {
-  constantsOverrides?: Record<string, unknown>;
-  notificationOverrides?: Partial<NotificationMock>;
-} = {}) => {
-  jest.resetModules();
-
-  const mockConstants = {
-    appOwnership: 'standalone',
-    executionEnvironment: 'standalone',
-    easConfig: { projectId: 'eas-project-id' },
-    expoConfig: { extra: { eas: { projectId: 'expo-project-id' } } },
-    ...constantsOverrides,
-  };
-
-  const mockNotifications: NotificationMock = {
+const makeService = ({ expoGo = false, overrides = {} }: { expoGo?: boolean; overrides?: Record<string, unknown> } = {}) => {
+  const notifications = {
     addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
     addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
     cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
@@ -35,111 +10,63 @@ const loadNotificationService = ({
     requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
     scheduleNotificationAsync: jest.fn().mockResolvedValue('notification-id'),
     setNotificationHandler: jest.fn(),
-    ...notificationOverrides,
+    ...overrides,
   };
-
-  let mockNotificationsLoaded = 0;
-
-  jest.doMock('expo', () => ({
-    isRunningInExpoGo: () =>
-      mockConstants.appOwnership === 'expo' || mockConstants.executionEnvironment === 'storeClient',
-  }));
-
-  jest.doMock('expo-constants', () => ({
-    __esModule: true,
-    default: mockConstants,
-  }));
-
-  jest.doMock('expo-notifications', () => {
-    mockNotificationsLoaded += 1;
-    return mockNotifications;
+  const loadNotifications = jest.fn(() => notifications as unknown as ExpoNotificationsModule);
+  const service = createNotificationService({
+    isExpoGo: () => expoGo,
+    loadNotifications,
+    getProjectId: () => 'eas-project-id',
   });
-
-  const { notificationService } = require('../notifications');
-
-  return {
-    notificationService,
-    mockNotifications,
-    getNotificationsLoaded: () => mockNotificationsLoaded,
-  };
+  return { service, notifications, loadNotifications };
 };
 
 describe('notificationService', () => {
-  afterEach(() => {
-    jest.dontMock('expo');
-    jest.dontMock('expo-constants');
-    jest.dontMock('expo-notifications');
-  });
-
-  it('does not load or call expo-notifications remote push APIs in Expo Go', async () => {
-    const { notificationService, mockNotifications, getNotificationsLoaded } = loadNotificationService({
-      constantsOverrides: {
-        appOwnership: 'expo',
-        executionEnvironment: 'storeClient',
-      },
-    });
-
-    await expect(notificationService.getPushToken()).resolves.toBeNull();
-    await expect(notificationService.scheduleNotification('Title', 'Body')).resolves.toBe('');
-    await expect(notificationService.cancelAllNotifications()).resolves.toBeUndefined();
-    await expect(notificationService.configureNotificationHandler()).resolves.toBeUndefined();
-
-    const receivedSubscription = notificationService.addNotificationReceivedListener(jest.fn());
-    const responseSubscription = notificationService.addNotificationResponseListener(jest.fn());
-    receivedSubscription.remove();
-    responseSubscription.remove();
-
-    expect(getNotificationsLoaded()).toBe(0);
-    expect(mockNotifications.getPermissionsAsync).not.toHaveBeenCalled();
-    expect(mockNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
-    expect(mockNotifications.getExpoPushTokenAsync).not.toHaveBeenCalled();
-    expect(mockNotifications.setNotificationHandler).not.toHaveBeenCalled();
-    expect(mockNotifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-    expect(mockNotifications.cancelAllScheduledNotificationsAsync).not.toHaveBeenCalled();
-    expect(mockNotifications.addNotificationReceivedListener).not.toHaveBeenCalled();
-    expect(mockNotifications.addNotificationResponseReceivedListener).not.toHaveBeenCalled();
+  it('does not load or call remote push APIs in Expo Go', async () => {
+    const { service, notifications, loadNotifications } = makeService({ expoGo: true });
+    await expect(service.getPushToken()).resolves.toBeNull();
+    await expect(service.scheduleNotification('Title', 'Body')).resolves.toBe('');
+    await expect(service.cancelAllNotifications()).resolves.toBeUndefined();
+    await expect(service.configureNotificationHandler()).resolves.toBeUndefined();
+    service.addNotificationReceivedListener(jest.fn()).remove();
+    service.addNotificationResponseListener(jest.fn()).remove();
+    expect(loadNotifications).not.toHaveBeenCalled();
+    expect(notifications.getPermissionsAsync).not.toHaveBeenCalled();
+    expect(notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(notifications.getExpoPushTokenAsync).not.toHaveBeenCalled();
+    expect(notifications.setNotificationHandler).not.toHaveBeenCalled();
+    expect(notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+    expect(notifications.cancelAllScheduledNotificationsAsync).not.toHaveBeenCalled();
+    expect(notifications.addNotificationReceivedListener).not.toHaveBeenCalled();
+    expect(notifications.addNotificationResponseReceivedListener).not.toHaveBeenCalled();
   });
 
   it('requests permissions and retrieves the Expo push token in native builds', async () => {
-    const { notificationService, mockNotifications } = loadNotificationService({
-      notificationOverrides: {
-        getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
-        requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-      },
-    });
-
-    await expect(notificationService.getPushToken()).resolves.toBe('ExponentPushToken[test]');
-
-    expect(mockNotifications.getPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(mockNotifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(mockNotifications.getExpoPushTokenAsync).toHaveBeenCalledWith({
-      projectId: 'eas-project-id',
-    });
+    const { service, notifications } = makeService({ overrides: {
+      getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
+      requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+    } });
+    await expect(service.getPushToken()).resolves.toBe('ExponentPushToken[test]');
+    expect(notifications.getPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(notifications.getExpoPushTokenAsync).toHaveBeenCalledWith({ projectId: 'eas-project-id' });
   });
 
   it('returns null when notification permissions are denied', async () => {
-    const { notificationService, mockNotifications } = loadNotificationService({
-      notificationOverrides: {
-        getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
-        requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'denied' }),
-      },
-    });
-
-    await expect(notificationService.getPushToken()).resolves.toBeNull();
-
-    expect(mockNotifications.getExpoPushTokenAsync).not.toHaveBeenCalled();
+    const { service, notifications } = makeService({ overrides: {
+      getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'undetermined' }),
+      requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'denied' }),
+    } });
+    await expect(service.getPushToken()).resolves.toBeNull();
+    expect(notifications.getExpoPushTokenAsync).not.toHaveBeenCalled();
   });
 
   it('returns null when Expo push token validation fails', async () => {
-    const { notificationService, mockNotifications } = loadNotificationService({
-      notificationOverrides: {
-        getExpoPushTokenAsync: jest.fn().mockRejectedValue({ code: 'VALIDATION_ERROR' }),
-      },
-    });
-
-    await expect(notificationService.getPushToken()).resolves.toBeNull();
-
-    expect(mockNotifications.getPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(mockNotifications.getExpoPushTokenAsync).toHaveBeenCalledTimes(1);
+    const { service, notifications } = makeService({ overrides: {
+      getExpoPushTokenAsync: jest.fn().mockRejectedValue({ code: 'VALIDATION_ERROR' }),
+    } });
+    await expect(service.getPushToken()).resolves.toBeNull();
+    expect(notifications.getPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(notifications.getExpoPushTokenAsync).toHaveBeenCalledTimes(1);
   });
 });

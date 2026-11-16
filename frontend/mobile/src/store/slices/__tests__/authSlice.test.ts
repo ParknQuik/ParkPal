@@ -12,7 +12,7 @@ import { REHYDRATE } from 'redux-persist';
 import { authAPI } from '../../../services/api';
 import { sessionStorage } from '../../../services/sessionStorage';
 
-// Mock AsyncStorage
+// jest.Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage');
 jest.mock('../../../services/sessionStorage', () => ({
   sessionStorage: {
@@ -23,7 +23,7 @@ jest.mock('../../../services/sessionStorage', () => ({
   },
 }));
 
-// Mock API
+// jest.Mock API
 jest.mock('../../../services/api', () => ({
   authAPI: {
     login: jest.fn(),

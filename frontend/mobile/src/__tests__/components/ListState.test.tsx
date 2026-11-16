@@ -27,8 +27,8 @@ describe('ListState components', () => {
     ['vehicle', 'vehicle-skeleton-card'],
     ['transaction', 'transaction-skeleton-row'],
     ['listing', 'listing-skeleton-card'],
-  ] as const)('renders %s loading skeletons', (variant, skeletonTestId) => {
-    const { getByLabelText, getAllByTestId } = render(
+  ] as const)('renders %s loading skeletons', async (variant, skeletonTestId) => {
+    const { getByLabelText, getAllByTestId } = await render(
       <ListLoadingState
         variant={variant}
         accessibilityLabel={`Loading ${variant}`}
@@ -40,9 +40,9 @@ describe('ListState components', () => {
     expect(getAllByTestId(skeletonTestId)).toHaveLength(3);
   });
 
-  it('renders retryable failure content and invokes retry', () => {
+  it('renders retryable failure content and invokes retry', async () => {
     const onRetry = jest.fn();
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText } = await render(
       <RetryableFailureState
         title="Unable to load bookings"
         message="Network request failed"
@@ -54,13 +54,13 @@ describe('ListState components', () => {
     expect(getByLabelText('Unable to load bookings')).toBeTruthy();
     expect(getByText('Network request failed')).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Retry loading bookings'));
+    await fireEvent.press(getByLabelText('Retry loading bookings'));
 
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('renders object-shaped failure messages as text', () => {
-    const { getByText } = render(
+  it('renders object-shaped failure messages as text', async () => {
+    const { getByText } = await render(
       <RetryableFailureState
         title="Unable to load vehicles"
         message={{ message: 'License plate already exists' }}

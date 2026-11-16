@@ -42,7 +42,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: '22.22.2'
           cache: 'npm'
           cache-dependency-path: frontend/mobile/package-lock.json
 
@@ -56,7 +56,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend/mobile
-          npm ci
+          npm ci --legacy-peer-deps
 
       - name: Determine build configuration
         id: build-config

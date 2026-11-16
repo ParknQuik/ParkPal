@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import { AppState } from 'react-native';
 import GeofenceService from '../../services/analyticsGeofenceService';
 import { enterZone, exitZone, logActivity } from '../../store/slices/analyticsSlice';
+import * as activityModule from '../../../modules/parking-activity-recognition/src';
 
 jest.mock('expo-location', () => ({
   Accuracy: { Balanced: 3 },
@@ -11,6 +12,14 @@ jest.mock('expo-location', () => ({
 }));
 
 jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios',
+    select: (platforms: Record<string, unknown>) =>
+      platforms.ios ?? platforms.native ?? platforms.default,
+  },
+  TurboModuleRegistry: {
+    get: jest.fn(() => null),
+  },
   AppState: {
     currentState: 'active',
     addEventListener: jest.fn(),
@@ -69,8 +78,7 @@ describe('AnalyticsGeofenceService foreground lifecycle', () => {
       positionListener = listener;
       return Promise.resolve({ remove: jest.fn() });
     });
-    const activityModule = require('../../../modules/parking-activity-recognition/src');
-    activityModule.startActivityUpdates.mockImplementation((listener: typeof activityListener) => {
+    (activityModule.startActivityUpdates as jest.Mock).mockImplementation((listener: typeof activityListener) => {
       activityListener = listener;
       return Promise.resolve();
     });
@@ -118,8 +126,7 @@ describe('AnalyticsGeofenceService foreground lifecycle', () => {
   });
 
   it('does not create analytics sessions when motion permission is denied', async () => {
-    const activityModule = require('../../../modules/parking-activity-recognition/src');
-    activityModule.requestPermission.mockResolvedValue(false);
+    (activityModule.requestPermission as jest.Mock).mockResolvedValue(false);
     await GeofenceService.start([zone], 7, dispatch as any);
     positionListener?.(location);
     await Promise.resolve();

@@ -267,7 +267,7 @@ export const ExploreMap: React.FC = () => {
   const { colors, isDark } = useTheme();
   const mapRef = useRef<MapView>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regionChangeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeLocationHandledRef = useRef(false);
@@ -1151,14 +1151,14 @@ export const ExploreMap: React.FC = () => {
       fontSize: 20,
     },
     mapContainer: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     map: {
       width: '100%',
       height: '100%',
     },
     loadingOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(255,255,255,0.5)',
       justifyContent: 'center',
       alignItems: 'center',

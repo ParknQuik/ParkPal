@@ -134,17 +134,17 @@ describe('AppNavigator auth transition', () => {
     jest.useRealTimers();
   });
 
-  it('renders the branded loading screen while startup auth is checked', () => {
+  it('renders the branded loading screen while startup auth is checked', async () => {
     appState.auth.checkingAuth = true;
 
-    const { getByText, getByLabelText } = render(<AppNavigator />);
+    const { getByText, getByLabelText } = await render(<AppNavigator />);
 
     expect(getByText('ParknQuik')).toBeTruthy();
     expect(getByLabelText('ParknQuik is loading').props.accessibilityState.busy).toBe(true);
   });
 
   it('renders AuthStack after unauthenticated startup auth resolves', async () => {
-    const { getByText } = render(<AppNavigator />);
+    const { getByText } = await render(<AppNavigator />);
 
     await waitFor(() => {
       expect(getByText('AuthStack')).toBeTruthy();
@@ -152,19 +152,19 @@ describe('AppNavigator auth transition', () => {
   });
 
   it('renders the interstitial before MainStack after successful auth', async () => {
-    const screen = render(<AppNavigator />);
+    const screen = await render(<AppNavigator />);
 
     await waitFor(() => {
       expect(screen.getByText('AuthStack')).toBeTruthy();
     });
 
     appState.auth.isAuthenticated = true;
-    screen.rerender(<AppNavigator />);
+    await screen.rerender(<AppNavigator />);
 
     expect(screen.getByText('ParknQuik')).toBeTruthy();
     expect(screen.queryByText('MainStack')).toBeNull();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(700);
     });
 

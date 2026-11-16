@@ -806,7 +806,7 @@ export const MyBookingsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-       <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.surface} />
+       <StatusBar barStyle={`${statusBarStyle}-content`} />
 
       <View style={styles.tabsContainer}>
         {TABS.map((tab) => (
