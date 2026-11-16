@@ -369,6 +369,8 @@
       "priority": "high",
       "knowledgeStatus": "current",
       "sourcePaths": [
+        "frontend/web/src/screens/ListSlot.jsx",
+        "frontend/web/src/utils/googleMaps.ts",
         "frontend/mobile/src/screens/MyListingsScreen.tsx",
         "frontend/mobile/src/screens/ListYourSpot.tsx",
         "frontend/mobile/src/utils/listingForm.ts",
@@ -393,7 +395,8 @@
         "file://",
         "image picker",
         "local photo upload",
-        "host listing create photo upload"
+        "host listing create photo upload",
+        "web host listing address search map pin coordinates"
       ],
       "relatedApis": [
         "POST /api/v1/marketplace/listings",
@@ -403,6 +406,8 @@
         "createListingSchema photos URL validation"
       ],
       "validationCommands": [
+        "cd frontend/web && npm test -- --run src/screens/__tests__/ListSlot.test.tsx",
+        "cd frontend/web && npm run type-check && npm run build",
         "cd frontend/mobile && npm test -- --runTestsByPath src/__tests__/screens/ListYourSpot.helpers.test.ts src/__tests__/store/marketplaceSlice.test.ts --no-watchman",
         "cd frontend/mobile && npx tsc --noEmit"
       ],

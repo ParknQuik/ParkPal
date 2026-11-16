@@ -5,7 +5,7 @@ let mapsPromise: Promise<typeof google> | undefined;
 /** Load the Maps JavaScript API once for all screens, then await requested libraries. */
 export async function loadGoogleMaps(libraries: GoogleMapsLibraries[] = []): Promise<typeof google> {
 	const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-	if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
+	if (!window.google?.maps && (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY')) {
 		throw new Error('Configure VITE_GOOGLE_MAPS_API_KEY to enable Google Maps.');
 	}
 

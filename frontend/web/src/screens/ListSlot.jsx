@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
 	Container,
@@ -17,6 +17,7 @@ import {
 	Grid,
 } from '@mui/material';
 import api from '../api';
+import { loadGoogleMaps } from '../utils/googleMaps';
 
 const SLOT_TYPES = [
 	{ value: 'roadside_qr', label: 'Roadside (QR)' },
@@ -53,6 +54,15 @@ const ListSlot = () => {
 	const [loading, setLoading] = useState(false);
 	const [initialLoading, setInitialLoading] = useState(Boolean(editId));
 	const [photoFiles, setPhotoFiles] = useState([]);
+	const addressInputRef = useRef(null);
+	const mapElementRef = useRef(null);
+	const redirectTimerRef = useRef(null);
+	const [mapError, setMapError] = useState('');
+	const [mapReady, setMapReady] = useState(false);
+
+	useEffect(() => () => {
+		if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+	}, []);
 
 	useEffect(() => {
 		if (!editId) return;
@@ -63,6 +73,45 @@ const ListSlot = () => {
 		})).catch((err) => setError(err.response?.data?.error || 'Unable to load listing for editing'))
 			.finally(() => setInitialLoading(false));
 	}, [editId]);
+
+	useEffect(() => {
+		if (initialLoading || !addressInputRef.current || !mapElementRef.current) return undefined;
+		let active = true;
+		let map;
+		let marker;
+		let autocomplete;
+		const setLocation = (location, pan = true) => {
+			const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+			const lon = typeof location.lng === 'function' ? location.lng() : location.lng;
+			if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+			setFormData((old) => ({ ...old, lat: String(lat), lon: String(lon) }));
+			marker.setPosition({ lat, lng: lon });
+			if (pan) map.panTo({ lat, lng: lon });
+		};
+		loadGoogleMaps(['places']).then((maps) => {
+			if (!active) return;
+			const existing = formData.lat !== '' && formData.lon !== '' && Number.isFinite(Number(formData.lat)) && Number.isFinite(Number(formData.lon));
+			const center = existing ? { lat: Number(formData.lat), lng: Number(formData.lon) } : { lat: 14.5995, lng: 120.9842 };
+			map = new maps.maps.Map(mapElementRef.current, { center, zoom: existing ? 17 : 12, mapTypeControl: false, streetViewControl: false, fullscreenControl: false });
+			marker = new maps.maps.Marker({ map, position: existing ? center : undefined, draggable: true, title: 'Parking spot location' });
+			map.addListener('click', (event) => setLocation(event.latLng));
+			marker.addListener('dragend', (event) => setLocation(event.latLng, false));
+			autocomplete = new maps.maps.places.Autocomplete(addressInputRef.current, { fields: ['formatted_address', 'geometry', 'name'] });
+			autocomplete.bindTo('bounds', map);
+			autocomplete.addListener('place_changed', () => {
+				const place = autocomplete.getPlace();
+				if (place.formatted_address) setFormData((old) => ({ ...old, address: place.formatted_address }));
+				if (place.geometry?.location) {
+					map.setZoom(17);
+					setLocation(place.geometry.location);
+				} else setError('Choose an address from the suggestions to set its map location.');
+			});
+			setMapReady(true);
+		}).catch((loadError) => {
+			if (active) setMapError(loadError.message || 'Location picker unavailable. Check your Google Maps configuration.');
+		});
+		return () => { active = false; if (autocomplete) autocomplete.unbindAll(); };
+	}, [initialLoading]);
 
 	const handleChange = (e) => {
 		setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -89,28 +138,36 @@ const ListSlot = () => {
 			if (editId) await api.put(`/marketplace/listings/${editId}`, payload);
 			else { const response = await api.post('/marketplace/listings', payload); listingId = response.data?.id || response.data?.data?.id; }
 			const uploaded = [];
-			let photoFailures = 0;
+			const photoFailures = [];
 			for (const file of photoFiles) {
 				try {
-					const ext = file.name.split('.').pop() || 'jpg';
-					const signed = await api.get(`/marketplace/listings/${listingId}/photos/upload-url`, { params: { fileName: `photo-${Date.now()}-${uploaded.length}.${ext}` } });
+					const contentType = file.type || 'image/jpeg';
+					const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+					const signed = await api.get(`/marketplace/listings/${listingId}/photos/upload-url`, { params: { fileName: `photo-${Date.now()}-${uploaded.length}.${ext}`, contentType } });
 					const { uploadUrl, fileName } = signed.data;
-					const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'image/jpeg' }, body: file });
-					if (!put.ok) throw new Error('Photo upload failed');
+					const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file });
+					if (!put.ok) throw new Error(`Storage upload failed (${put.status})`);
 					const confirmed = await api.post(`/marketplace/listings/${listingId}/photos/confirm`, { fileName });
 					const url = confirmed.data?.original || confirmed.data?.data?.original;
 					if (url) uploaded.push(url);
-				} catch (_) { photoFailures += 1; /* preserve listing if a photo upload fails */ }
+					else throw new Error('Photo processing did not return an image URL');
+				} catch (uploadError) {
+					photoFailures.push(uploadError.response?.data?.error || uploadError.message || 'Photo upload failed');
+				}
 			}
 			if (uploaded.length) {
 				try { await api.put(`/marketplace/listings/${listingId}`, { photos: [...formData.photos, ...uploaded] }); }
-				catch (_) { photoFailures += uploaded.length; }
+				catch (uploadError) { photoFailures.push(uploadError.response?.data?.error || 'Uploaded photos could not be attached to the listing'); }
 			}
 
-			setSuccess(photoFailures ? `Listing ${editId ? 'updated' : 'created'}. Some photos could not be uploaded or attached; you can retry by editing the listing.` : `Listing ${editId ? 'updated' : 'created'} successfully! Redirecting...`);
-			setTimeout(() => {
-				navigate('/host-dashboard');
-			}, 2000);
+			setSuccess(photoFailures.length ? `Listing ${editId ? 'updated' : 'created'}.` : `Listing ${editId ? 'updated' : 'created'} successfully! Redirecting...`);
+			if (photoFailures.length) setError(`Photo upload issue: ${photoFailures.join('; ')}. You can retry by editing the listing.`);
+			if (!photoFailures.length) {
+				redirectTimerRef.current = setTimeout(() => {
+					redirectTimerRef.current = null;
+					navigate('/host-dashboard');
+				}, 2000);
+			}
 		} catch (err) {
 			setError(err.response?.data?.error || 'Failed to create listing');
 		} finally {
@@ -152,50 +209,24 @@ const ListSlot = () => {
 							</Typography>
 						</Grid>
 						<Grid item xs={12} sm={6}>
-							<TextField
-								fullWidth
-								label="Latitude"
-								name="lat"
-								type="number"
-								value={formData.lat}
-								onChange={handleChange}
-								required
-								inputProps={{ step: 'any' }}
-								helperText="Enter the actual latitude for this parking location"
-							/>
+								<TextField fullWidth label="Full Address" name="address" inputRef={addressInputRef} value={formData.address} onChange={handleChange} required placeholder="Search for your parking spot address" />
+						</Grid>
+						<Grid item xs={12}>
+							{mapError ? <Alert severity="warning" sx={{ mb: 1 }}>Location picker unavailable: {mapError} You can still enter the address and use a previously saved location.</Alert> : <>
+								<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{mapReady ? 'Choose an address, then click the map or drag the pin to the exact parking spot.' : 'Loading address search and map…'}</Typography>
+								<Box ref={mapElementRef} role="region" aria-label="Parking location map" sx={{ width: '100%', height: 320, borderRadius: 1, bgcolor: 'grey.100', border: 1, borderColor: 'divider' }} />
+							</>}
+						</Grid>
+						<Grid item xs={12}>
+							<Typography variant="body2" color="text.secondary" aria-live="polite">Coordinates: {formData.lat && formData.lon ? `${Number(formData.lat).toFixed(6)}, ${Number(formData.lon).toFixed(6)} (latitude, longitude)` : 'Select a location on the map'}</Typography>
 						</Grid>
 						<Grid item xs={12}>
 							<Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Photos</Typography>
 							<Button component="label" variant="outlined" disabled={formData.photos.length + photoFiles.length >= 5}>Choose photos (up to 5)
-								<input hidden multiple accept="image/*" type="file" onChange={(event) => { const next = Array.from(event.target.files || []).slice(0, Math.max(0, 5 - formData.photos.length - photoFiles.length)); setPhotoFiles((current) => [...current, ...next]); event.target.value = ''; }} />
+								<input hidden multiple accept="image/jpeg,image/png,image/webp" type="file" aria-label="Choose listing photos" onChange={(event) => { const next = Array.from(event.target.files || []).slice(0, Math.max(0, 5 - formData.photos.length - photoFiles.length)); setPhotoFiles((current) => [...current, ...next]); event.target.value = ''; }} />
 							</Button>
 							<Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>{[...formData.photos.map((src) => ({ src, existing: true })), ...photoFiles.map((file) => ({ src: URL.createObjectURL(file), existing: false, file }))].map((photo, index) => <Box key={index} sx={{ position: 'relative' }}><Box component="img" src={photo.src} alt={`Listing photo ${index + 1}`} sx={{ width: 88, height: 72, objectFit: 'cover', borderRadius: 1 }} /><Button size="small" onClick={() => photo.existing ? setFormData((old) => ({ ...old, photos: old.photos.filter((_, i) => i !== index) })) : setPhotoFiles((old) => old.filter((file) => file !== photo.file))}>Remove</Button></Box>)}</Box>
 							<Typography variant="caption" display="block" color="text.secondary">{formData.photos.length + photoFiles.length}/5 photos</Typography>
-						</Grid>
-						<Grid item xs={12} sm={6}>
-							<TextField
-								fullWidth
-								label="Longitude"
-								name="lon"
-								type="number"
-								value={formData.lon}
-								onChange={handleChange}
-								required
-								inputProps={{ step: 'any' }}
-							/>
-						</Grid>
-						<Grid item xs={12}>
-							<TextField
-								fullWidth
-								label="Full Address"
-								name="address"
-								value={formData.address}
-								onChange={handleChange}
-								required
-								multiline
-								rows={2}
-								placeholder="e.g., 123 Main Street, Makati City, Metro Manila"
-							/>
 						</Grid>
 
 						{/* Listing Details Section */}
