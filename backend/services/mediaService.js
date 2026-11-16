@@ -289,7 +289,7 @@ async function cleanupOldProfileFiles(userId, keepFileName) {
  * @param {string} fileName - Original file name
  * @returns {Promise<{uploadUrl: string, fileName: string, expiresAt: Date}>}
  */
-async function generateListingPhotoUploadUrl(listingId, fileName) {
+async function generateListingPhotoUploadUrl(listingId, fileName, contentType = 'image/jpeg') {
   try {
     const timestamp = Date.now();
     const ext = fileName.split('.').pop() || 'jpg';
@@ -301,7 +301,7 @@ async function generateListingPhotoUploadUrl(listingId, fileName) {
       version: 'v4',
       action: 'write',
       expires: Date.now() + 15 * 60 * 1000,
-      contentType: 'image/jpeg'
+      contentType
     });
 
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
