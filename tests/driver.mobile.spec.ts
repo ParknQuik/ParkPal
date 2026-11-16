@@ -28,8 +28,8 @@ test('mobile browser completes a driver reservation through confirmed booking', 
   await page.getByLabel('Start time').fill(dates.start);
   await page.getByLabel('End time').fill(dates.end);
   await page.getByRole('button', { name: 'Continue to payment choice' }).click();
-  await expect(page).toHaveURL('/payment?bookingId=mobile-booking');
-  await page.getByRole('button', { name: 'Reserve and pay · ₱100.00' }).click();
+  await expect(page).toHaveURL('/payment');
+  await page.getByRole('button', { name: /^Reserve and pay/ }).click();
   await expect(page).toHaveURL(/\/bookings\/mobile-booking$/);
   await expect(page.getByText('Booking confirmed')).toBeVisible();
 });

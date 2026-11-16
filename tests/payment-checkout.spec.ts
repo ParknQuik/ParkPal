@@ -6,7 +6,7 @@ const booking = {
   id: bookingId,
   price: 120,
   platformFee: 5,
-  address: '12 Test Street, Manila',
+  slot: { address: '12 Test Street, Manila' },
   startTime: '2026-11-15T09:00:00.000Z',
   endTime: '2026-11-15T10:00:00.000Z',
   status: 'pending',
