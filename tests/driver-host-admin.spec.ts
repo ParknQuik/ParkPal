@@ -25,9 +25,9 @@ test('driver reserves a listing and can review the booking and profile', async (
   const dates = await futureLocalDateRange(page);
   await page.getByLabel('Start time').fill(dates.start);
   await page.getByLabel('End time').fill(dates.end);
-  await page.getByRole('button', { name: 'Reserve and continue to payment' }).click();
+  await page.getByRole('button', { name: 'Continue to payment choice' }).click();
   await expect(page).toHaveURL('/payment?bookingId=booking-42');
-  await page.getByRole('button', { name: 'Pay ₱125.00' }).click();
+  await page.getByRole('button', { name: 'Reserve and pay · ₱125.00' }).click();
   await expect(page).toHaveURL(/\/bookings\/booking-42$/);
   await expect(page.getByText('Booking confirmed')).toBeVisible();
   await page.goto('/bookings');

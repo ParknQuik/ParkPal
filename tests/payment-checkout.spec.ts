@@ -47,7 +47,7 @@ async function prepareCheckout(page: import('@playwright/test').Page, confirmati
   });
 
   await page.goto(`/payment?bookingId=${bookingId}`);
-  await expect(page.getByRole('heading', { name: 'Complete payment' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Choose how to pay' })).toBeVisible();
   await expect(page.getByText('12 Test Street, Manila')).toBeVisible();
   return { confirmations, getAttachedPayload: () => attachedPayload };
 }
@@ -55,17 +55,17 @@ async function prepareCheckout(page: import('@playwright/test').Page, confirmati
 test('shows a readable backend 400 on checkout without navigating', async ({ driverPage: page }) => {
   await prepareCheckout(page, 'completed', { status: 400, body: { error: { message: 'Booking already paid' } } });
 
-  await page.getByRole('button', { name: 'Pay ₱125.00' }).click();
+  await page.getByRole('button', { name: 'Reserve and pay · ₱125.00' }).click();
 
   await expect(page.getByRole('alert').filter({ hasText: 'Booking already paid' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Complete payment' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Choose how to pay' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/payment\\?bookingId=${bookingId}$`));
 });
 
 test('reloads a pending booking and confirms success only after the provider return', async ({ driverPage: page }) => {
   const { confirmations, getAttachedPayload } = await prepareCheckout(page, 'completed');
 
-  await page.getByRole('button', { name: 'Pay ₱125.00' }).click();
+  await page.getByRole('button', { name: 'Reserve and pay · ₱125.00' }).click();
   await expect(page).toHaveURL(new RegExp(`/payment\\?bookingId=${bookingId}&payment_intent_id=${intentId}`));
   await expect(page).toHaveURL(new RegExp(`/bookings/${bookingId}$`));
 
@@ -86,10 +86,10 @@ for (const status of ['pending', 'failed', 'cancelled']) {
   test(`keeps a ${status} payment on checkout`, async ({ driverPage: page }) => {
     const { confirmations } = await prepareCheckout(page, status);
 
-    await page.getByRole('button', { name: 'Pay ₱125.00' }).click();
+    await page.getByRole('button', { name: 'Reserve and pay · ₱125.00' }).click();
 
     await expect(page).toHaveURL(new RegExp(`/payment\\?bookingId=${bookingId}&payment_intent_id=${intentId}`));
-    await expect(page.getByRole('heading', { name: 'Complete payment' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Choose how to pay' })).toBeVisible();
     if (status === 'pending') {
       await expect(page.getByRole('alert').filter({ hasText: /^pending$/ })).toBeVisible();
     } else {
