@@ -49,7 +49,7 @@ jest.mock('react-native-fbsdk-next', () => ({
   LoginManager: {
     logInWithPermissions: mockFacebookLogInWithPermissions,
   },
-}), { virtual: true });
+}));
 
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
@@ -161,8 +161,8 @@ describe('AuthScreen', () => {
     );
   });
 
-  it('renders the focused login screen without the old header and marketing elements', () => {
-    const { getByText, queryByText, queryByLabelText } = render(<AuthScreen />);
+  it('renders the focused login screen without the old header and marketing elements', async () => {
+    const { getByText, queryByText, queryByLabelText } = await render(<AuthScreen />);
 
     expect(getByText('ParknQuik')).toBeTruthy();
     expect(queryByText('Welcome Back')).toBeNull();
@@ -171,8 +171,8 @@ describe('AuthScreen', () => {
     expect(queryByLabelText('Apple sign in coming soon')).toBeNull();
   });
 
-  it('shows the login form controls and Google sign-in', () => {
-    const { getByText, getByPlaceholderText, getByLabelText } = render(<AuthScreen />);
+  it('shows the login form controls and Google sign-in', async () => {
+    const { getByText, getByPlaceholderText, getByLabelText } = await render(<AuthScreen />);
 
     expect(getByPlaceholderText('name@example.com')).toBeTruthy();
     expect(getByText('Password')).toBeTruthy();
@@ -187,9 +187,9 @@ describe('AuthScreen', () => {
     const dispatch = jest.fn();
     mockUseAppDispatch.mockReturnValue(dispatch);
 
-    const { getByLabelText } = render(<AuthScreen />);
+    const { getByLabelText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByLabelText('Continue with Google'));
+    await fireEvent.press(getByLabelText('Continue with Google'));
 
     await waitFor(() => {
       expect(mockGoogleSignIn).toHaveBeenCalledWith('native-google-id-token');
@@ -222,9 +222,9 @@ describe('AuthScreen', () => {
       },
     });
 
-    const { getByLabelText } = render(<AuthScreen />);
+    const { getByLabelText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByLabelText('Continue with Google'));
+    await fireEvent.press(getByLabelText('Continue with Google'));
 
     await waitFor(() => {
       expect(mockGoogleSignIn).toHaveBeenCalledWith('fallback-google-id-token');
@@ -233,9 +233,9 @@ describe('AuthScreen', () => {
 
   it('alerts instead of invoking Facebook SDK when Facebook is not configured', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    const { getByLabelText } = render(<AuthScreen />);
+    const { getByLabelText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByLabelText('Continue with Facebook'));
+    await fireEvent.press(getByLabelText('Continue with Facebook'));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(
@@ -251,9 +251,9 @@ describe('AuthScreen', () => {
     process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN = 'facebook-client-token';
     mockFacebookLogInWithPermissions.mockResolvedValueOnce({ isCancelled: true });
 
-    const { getByLabelText } = render(<AuthScreen />);
+    const { getByLabelText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByLabelText('Continue with Facebook'));
+    await fireEvent.press(getByLabelText('Continue with Facebook'));
 
     await waitFor(() => {
       expect(mockFacebookLogInWithPermissions).toHaveBeenCalledWith(['public_profile', 'email']);
@@ -268,9 +268,9 @@ describe('AuthScreen', () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     mockFacebookGetCurrentAccessToken.mockResolvedValueOnce(null);
 
-    const { getByLabelText } = render(<AuthScreen />);
+    const { getByLabelText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByLabelText('Continue with Facebook'));
+    await fireEvent.press(getByLabelText('Continue with Facebook'));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(
@@ -287,9 +287,9 @@ describe('AuthScreen', () => {
     const dispatch = jest.fn();
     mockUseAppDispatch.mockReturnValue(dispatch);
 
-    const { getByLabelText } = render(<AuthScreen />);
+    const { getByLabelText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByLabelText('Continue with Facebook'));
+    await fireEvent.press(getByLabelText('Continue with Facebook'));
 
     await waitFor(() => {
       expect(mockFacebookSignIn).toHaveBeenCalledWith('native-facebook-token');
@@ -304,10 +304,10 @@ describe('AuthScreen', () => {
     });
   });
 
-  it('switches to signup fields', () => {
-    const { getAllByText, getByText, getByPlaceholderText } = render(<AuthScreen />);
+  it('switches to signup fields', async () => {
+    const { getAllByText, getByText, getByPlaceholderText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByText('Sign Up'));
+    await fireEvent.press(getByText('Sign Up'));
 
     expect(getByText('Full Name')).toBeTruthy();
     expect(getByPlaceholderText('John Doe')).toBeTruthy();
@@ -315,10 +315,10 @@ describe('AuthScreen', () => {
     expect(getAllByText('Sign Up')).toHaveLength(2);
   });
 
-  it('navigates to forgot password from login mode', () => {
-    const { getByText } = render(<AuthScreen />);
+  it('navigates to forgot password from login mode', async () => {
+    const { getByText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByText('Forgot password?'));
+    await fireEvent.press(getByText('Forgot password?'));
 
     const { CommonActions } = require('@react-navigation/native');
     expect(CommonActions.navigate).toHaveBeenCalledWith({ name: 'ForgotPassword' });
@@ -328,7 +328,7 @@ describe('AuthScreen', () => {
     });
   });
 
-  it('keeps login form visible and shows a busy CTA while auth submits', () => {
+  it('keeps login form visible and shows a busy CTA while auth submits', async () => {
     mockUseAppSelector.mockImplementation((selector) =>
       selector({
         auth: {
@@ -338,7 +338,7 @@ describe('AuthScreen', () => {
       })
     );
 
-    const { getByLabelText, getByPlaceholderText, queryByText } = render(<AuthScreen />);
+    const { getByLabelText, getByPlaceholderText, queryByText } = await render(<AuthScreen />);
     const cta = getByLabelText('Login');
 
     expect(getByPlaceholderText('name@example.com')).toBeTruthy();
@@ -346,7 +346,7 @@ describe('AuthScreen', () => {
     expect(queryByText('Logging in...')).toBeNull();
   });
 
-  it('disables alternate auth actions while auth submits', () => {
+  it('disables alternate auth actions while auth submits', async () => {
     mockUseAppSelector.mockImplementation((selector) =>
       selector({
         auth: {
@@ -356,7 +356,7 @@ describe('AuthScreen', () => {
       })
     );
 
-    const { getByLabelText, getByPlaceholderText } = render(<AuthScreen />);
+    const { getByLabelText, getByPlaceholderText } = await render(<AuthScreen />);
 
     expect(getByLabelText('Sign Up tab').props.accessibilityState.disabled).toBe(true);
     expect(getByLabelText('Forgot password?').props.accessibilityState.disabled).toBe(true);
@@ -365,37 +365,37 @@ describe('AuthScreen', () => {
     expect(getByPlaceholderText('name@example.com').props.editable).toBe(false);
   });
 
-  it('shows a validation error and does not submit signup with a one-character name', () => {
+  it('shows a validation error and does not submit signup with a one-character name', async () => {
     const dispatch = jest.fn(() => ({ unwrap: jest.fn() }));
     mockUseAppDispatch.mockReturnValue(dispatch);
 
-    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = render(<AuthScreen />);
+    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByText('Sign Up'));
-    fireEvent.changeText(getByPlaceholderText('John Doe'), 'A');
-    fireEvent.changeText(getByPlaceholderText('name@example.com'), 'new@example.com');
-    fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
-    fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
-    fireEvent.press(getByLabelText('Sign Up'));
+    await fireEvent.press(getByText('Sign Up'));
+    await fireEvent.changeText(getByPlaceholderText('John Doe'), 'A');
+    await fireEvent.changeText(getByPlaceholderText('name@example.com'), 'new@example.com');
+    await fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
+    await fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
+    await fireEvent.press(getByLabelText('Sign Up'));
 
     expect(getByText('Name must be at least 2 characters')).toBeTruthy();
     expect(dispatch).not.toHaveBeenCalled();
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
-  it('trims signup name and lowercases trimmed email before dispatching', () => {
+  it('trims signup name and lowercases trimmed email before dispatching', async () => {
     const unwrap = jest.fn().mockResolvedValue(undefined);
     const dispatch = jest.fn(() => ({ unwrap }));
     mockUseAppDispatch.mockReturnValue(dispatch);
 
-    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = render(<AuthScreen />);
+    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByText('Sign Up'));
-    fireEvent.changeText(getByPlaceholderText('John Doe'), '  New User  ');
-    fireEvent.changeText(getByPlaceholderText('name@example.com'), '  New.User@Example.COM  ');
-    fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
-    fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
-    fireEvent.press(getByLabelText('Sign Up'));
+    await fireEvent.press(getByText('Sign Up'));
+    await fireEvent.changeText(getByPlaceholderText('John Doe'), '  New User  ');
+    await fireEvent.changeText(getByPlaceholderText('name@example.com'), '  New.User@Example.COM  ');
+    await fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
+    await fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
+    await fireEvent.press(getByLabelText('Sign Up'));
 
     expect(mockSignup).toHaveBeenCalledWith({
       name: 'New User',
@@ -419,21 +419,21 @@ describe('AuthScreen', () => {
     }));
     mockUseAppDispatch.mockReturnValue(dispatch);
 
-    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = render(<AuthScreen />);
+    const { getByLabelText, getByPlaceholderText, getByText, getAllByPlaceholderText } = await render(<AuthScreen />);
 
-    fireEvent.press(getByText('Sign Up'));
-    fireEvent.changeText(getByPlaceholderText('John Doe'), 'New User');
-    fireEvent.changeText(getByPlaceholderText('name@example.com'), 'new@example.com');
-    fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
-    fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
-    fireEvent.press(getByLabelText('Sign Up'));
+    await fireEvent.press(getByText('Sign Up'));
+    await fireEvent.changeText(getByPlaceholderText('John Doe'), 'New User');
+    await fireEvent.changeText(getByPlaceholderText('name@example.com'), 'new@example.com');
+    await fireEvent.changeText(getAllByPlaceholderText('••••••••')[0], 'Password1');
+    await fireEvent.changeText(getAllByPlaceholderText('••••••••')[1], 'Password1');
+    await fireEvent.press(getByLabelText('Sign Up'));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith('Signup Failed', 'User already exists');
     });
   });
 
-  it('renders normalized backend auth errors from state inline', () => {
+  it('renders normalized backend auth errors from state inline', async () => {
     mockUseAppSelector.mockImplementation((selector) =>
       selector({
         auth: {
@@ -443,7 +443,7 @@ describe('AuthScreen', () => {
       })
     );
 
-    const { getByText } = render(<AuthScreen />);
+    const { getByText } = await render(<AuthScreen />);
 
     expect(getByText('User already exists')).toBeTruthy();
   });

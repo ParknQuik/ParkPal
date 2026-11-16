@@ -211,9 +211,9 @@ const setState = (state: any = baseState) => {
   mockUseAppSelector.mockImplementation((selector) => selector(state));
 };
 
-const renderExploreMap = () => {
-  const utils = render(<ExploreMap />);
-  fireEvent(utils.getByTestId('map-view'), 'onMapReady');
+const renderExploreMap = async () => {
+  const utils = await render(<ExploreMap />);
+  await fireEvent(utils.getByTestId('map-view'), 'onMapReady');
   return utils;
 };
 
@@ -234,7 +234,7 @@ describe('ExploreMap location and refresh behavior', () => {
   });
 
   it('centers startup without route params on device GPS context', async () => {
-    renderExploreMap();
+    await renderExploreMap();
 
     await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
       latitude: 14.6,
@@ -250,7 +250,7 @@ describe('ExploreMap location and refresh behavior', () => {
       focusSpotId: 55,
     };
 
-    const { getByLabelText } = renderExploreMap();
+    const { getByLabelText } = await renderExploreMap();
 
     await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
       latitude: 14.51,
@@ -259,7 +259,7 @@ describe('ExploreMap location and refresh behavior', () => {
     }));
     expect(mockLocation.getCurrentPositionAsync).not.toHaveBeenCalled();
 
-    fireEvent.press(getByLabelText('Recenter map to GPS location'));
+    await fireEvent.press(getByLabelText('Recenter map to GPS location'));
 
     await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
       latitude: 14.7,
@@ -271,7 +271,7 @@ describe('ExploreMap location and refresh behavior', () => {
   it('shows a clear state when location permission is denied', async () => {
     mockLocation.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' } as any);
 
-    const { getByText } = renderExploreMap();
+    const { getByText } = await renderExploreMap();
 
     await waitFor(() => {
       expect(getByText('Unable to resolve your GPS position. Enable location services or search an area.')).toBeTruthy();
@@ -283,10 +283,10 @@ describe('ExploreMap location and refresh behavior', () => {
       latitude: 14.51,
       longitude: 121.01,
     };
-    const { getByLabelText, getByTestId } = renderExploreMap();
+    const { getByLabelText, getByTestId } = await renderExploreMap();
 
     await waitFor(() => expect(mockSearchListings).toHaveBeenCalledTimes(1));
-    fireEvent(getByTestId('map-view'), 'onRegionChangeComplete', {
+    await fireEvent(getByTestId('map-view'), 'onRegionChangeComplete', {
       latitude: 14.52,
       longitude: 121.02,
       latitudeDelta: 0.01,
@@ -295,8 +295,8 @@ describe('ExploreMap location and refresh behavior', () => {
     await waitFor(() => expect(getByLabelText('Search this area for parking spots')).toBeTruthy());
 
     const searchAreaButton = getByLabelText('Search this area for parking spots');
-    fireEvent.press(searchAreaButton);
-    fireEvent.press(searchAreaButton);
+    await fireEvent.press(searchAreaButton);
+    await fireEvent.press(searchAreaButton);
 
     await waitFor(() => expect(mockSearchListings).toHaveBeenCalledTimes(2));
   });
@@ -321,7 +321,7 @@ describe('ExploreMap location and refresh behavior', () => {
       jest.fn().mockRejectedValue(new Error('Request failed with status code 429'))
     ));
 
-    const { getByLabelText, getByText } = renderExploreMap();
+    const { getByLabelText, getByText } = await renderExploreMap();
 
     await waitFor(() => expect(getByLabelText('Existing Garage: ₱50 per hour')).toBeTruthy());
     await waitFor(() => {

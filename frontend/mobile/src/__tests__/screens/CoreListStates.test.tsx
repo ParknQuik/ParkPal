@@ -223,6 +223,7 @@ describe('core mobile list loading and failure states', () => {
   });
 
   it('shows parking skeletons and retries loading nearby parking', async () => {
+    mockGetDiscoveryCandidates.mockResolvedValue({ data: { data: [] } });
     setState({
       marketplace: {
         ...baseState.marketplace,
@@ -230,7 +231,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByLabelText, getAllByTestId, rerender } = render(<HomeDashboard />);
+    const { getByLabelText, getAllByTestId, rerender } = await render(<HomeDashboard />);
 
     expect(getByLabelText('Loading nearby parking')).toBeTruthy();
     expect(getAllByTestId('parking-skeleton-card')).toHaveLength(3);
@@ -241,9 +242,9 @@ describe('core mobile list loading and failure states', () => {
         error: 'Network request failed',
       },
     });
-    rerender(<HomeDashboard />);
+    await rerender(<HomeDashboard />);
 
-    fireEvent.press(getByLabelText('Retry loading parking spots'));
+    await fireEvent.press(getByLabelText('Retry loading parking spots'));
 
     await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
       latitude: 14.5995,
@@ -262,7 +263,7 @@ describe('core mobile list loading and failure states', () => {
       createRejectedAction('location/getCurrentLocation/rejected', new Error('permission denied'))
     );
 
-    const { getByText } = render(<HomeDashboard />);
+    const { getByText } = await render(<HomeDashboard />);
 
     await waitFor(() => expect(getByText('Enable location or search an area to find nearby parking.')).toBeTruthy());
     expect(mockSearchListings).not.toHaveBeenCalled();
@@ -285,7 +286,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    render(<HomeDashboard />);
+    await render(<HomeDashboard />);
 
     await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
       latitude: 37.3323,
@@ -342,7 +343,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByText, getAllByText } = render(<HomeDashboard />);
+    const { getByText, getAllByText } = await render(<HomeDashboard />);
 
     await waitFor(() => expect(getByText('Candidate Lot')).toBeTruthy());
     expect(getByText('Bookable Garage')).toBeTruthy();
@@ -352,7 +353,7 @@ describe('core mobile list loading and failure states', () => {
     expect(getByText('2')).toBeTruthy();
   });
 
-  it('shows account-standing warning on Home when renter has strikes', () => {
+  it('shows account-standing warning on Home when renter has strikes', async () => {
     setState({
       behavior: {
         ...baseState.behavior,
@@ -375,7 +376,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByTestId, getByText } = render(<HomeDashboard />);
+    const { getByTestId, getByText } = await render(<HomeDashboard />);
 
     expect(getByTestId('home-account-standing-banner')).toBeTruthy();
     expect(getByText('Warning')).toBeTruthy();
@@ -425,13 +426,13 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByLabelText } = render(<HomeDashboard />);
+    const { getByLabelText } = await render(<HomeDashboard />);
 
-    fireEvent.press(getByLabelText('Bookable Garage'));
+    await fireEvent.press(getByLabelText('Bookable Garage'));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('ParkingDetail', { spotId: '10' }));
 
     await waitFor(() => expect(getByLabelText('Candidate Lot. Preview parking candidate, not bookable')).toBeTruthy());
-    fireEvent.press(getByLabelText('Candidate Lot. Preview parking candidate, not bookable'));
+    await fireEvent.press(getByLabelText('Candidate Lot. Preview parking candidate, not bookable'));
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Explore', {
       candidateId: 99,
@@ -467,14 +468,14 @@ describe('core mobile list loading and failure states', () => {
     });
     mockGetDiscoveryCandidates.mockRejectedValue(new Error('candidate fetch failed'));
 
-    const { getByText, queryByText } = render(<HomeDashboard />);
+    const { getByText, queryByText } = await render(<HomeDashboard />);
 
     await waitFor(() => expect(mockGetDiscoveryCandidates).toHaveBeenCalled());
     expect(getByText('Bookable Garage')).toBeTruthy();
     expect(queryByText('Not bookable yet')).toBeNull();
   });
 
-  it('shows booking skeletons and retries loading bookings', () => {
+  it('shows booking skeletons and retries loading bookings', async () => {
     setState({
       marketplace: {
         ...baseState.marketplace,
@@ -482,7 +483,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByLabelText, getAllByTestId, rerender } = render(<MyBookingsScreen />);
+    const { getByLabelText, getAllByTestId, rerender } = await render(<MyBookingsScreen />);
 
     expect(getByLabelText('Loading bookings')).toBeTruthy();
     expect(getAllByTestId('booking-skeleton-card')).toHaveLength(3);
@@ -493,14 +494,14 @@ describe('core mobile list loading and failure states', () => {
         error: 'Network request failed',
       },
     });
-    rerender(<MyBookingsScreen />);
+    await rerender(<MyBookingsScreen />);
 
-    fireEvent.press(getByLabelText('Retry loading bookings'));
+    await fireEvent.press(getByLabelText('Retry loading bookings'));
 
     expect(mockGetMyBookings).toHaveBeenCalled();
   });
 
-  it('groups expired bookings under completed without completed-only actions', () => {
+  it('groups expired bookings under completed without completed-only actions', async () => {
     setState({
       marketplace: {
         ...baseState.marketplace,
@@ -521,9 +522,9 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByText, queryByText } = render(<MyBookingsScreen />);
+    const { getByText, queryByText } = await render(<MyBookingsScreen />);
 
-    fireEvent.press(getByText('Completed'));
+    await fireEvent.press(getByText('Completed'));
 
     expect(getByText('Expired Garage')).toBeTruthy();
     expect(getByText('Expired')).toBeTruthy();
@@ -534,7 +535,7 @@ describe('core mobile list loading and failure states', () => {
     expect(queryByText(/Cancellation unavailable/)).toBeNull();
   });
 
-  it('does not show expired bookings under cancelled', () => {
+  it('does not show expired bookings under cancelled', async () => {
     setState({
       marketplace: {
         ...baseState.marketplace,
@@ -555,15 +556,15 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByText, queryByText } = render(<MyBookingsScreen />);
+    const { getByText, queryByText } = await render(<MyBookingsScreen />);
 
-    fireEvent.press(getByText('Cancelled'));
+    await fireEvent.press(getByText('Cancelled'));
 
     expect(queryByText('Expired Garage')).toBeNull();
     expect(queryByText('Expired')).toBeNull();
   });
 
-  it('shows vehicle skeletons and retries loading vehicles', () => {
+  it('shows vehicle skeletons and retries loading vehicles', async () => {
     setState({
       vehicles: {
         ...baseState.vehicles,
@@ -571,7 +572,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByLabelText, getAllByTestId, rerender } = render(<MyVehiclesScreen />);
+    const { getByLabelText, getAllByTestId, rerender } = await render(<MyVehiclesScreen />);
 
     expect(getByLabelText('Loading vehicles')).toBeTruthy();
     expect(getAllByTestId('vehicle-skeleton-card')).toHaveLength(3);
@@ -582,14 +583,14 @@ describe('core mobile list loading and failure states', () => {
         error: 'Network request failed',
       },
     });
-    rerender(<MyVehiclesScreen />);
+    await rerender(<MyVehiclesScreen />);
 
-    fireEvent.press(getByLabelText('Retry loading vehicles'));
+    await fireEvent.press(getByLabelText('Retry loading vehicles'));
 
     expect(mockGetVehicles).toHaveBeenCalled();
   });
 
-  it('shows the My Vehicles empty state action', () => {
+  it('shows the My Vehicles empty state action', async () => {
     setState({
       vehicles: {
         ...baseState.vehicles,
@@ -597,13 +598,13 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByText } = render(<MyVehiclesScreen />);
+    const { getByText } = await render(<MyVehiclesScreen />);
 
     expect(getByText('No vehicles yet')).toBeTruthy();
     expect(getByText('Add Your First Vehicle')).toBeTruthy();
   });
 
-  it('renders polished vehicle cards with details and actions', () => {
+  it('renders polished vehicle cards with details and actions', async () => {
     setState({
       vehicles: {
         ...baseState.vehicles,
@@ -638,7 +639,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByText, getAllByText, queryAllByText } = render(<MyVehiclesScreen />);
+    const { getByText, getAllByText, queryAllByText } = await render(<MyVehiclesScreen />);
 
     expect(getByText('2024 Toyota Corolla Hybrid')).toBeTruthy();
     expect(getByText('ABC-1234')).toBeTruthy();
@@ -652,7 +653,7 @@ describe('core mobile list loading and failure states', () => {
     expect(queryAllByText('Set Default')).toHaveLength(1);
   });
 
-  it('sets a non-default vehicle as default through the existing thunk', () => {
+  it('sets a non-default vehicle as default through the existing thunk', async () => {
     setState({
       vehicles: {
         ...baseState.vehicles,
@@ -674,14 +675,14 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByText } = render(<MyVehiclesScreen />);
+    const { getByText } = await render(<MyVehiclesScreen />);
 
-    fireEvent.press(getByText('Set Default'));
+    await fireEvent.press(getByText('Set Default'));
 
     expect(mockSetDefaultVehicle).toHaveBeenCalledWith(2);
   });
 
-  it('shows transaction skeletons and retries loading points history', () => {
+  it('shows transaction skeletons and retries loading points history', async () => {
     setState({
       points: {
         ...baseState.points,
@@ -689,7 +690,7 @@ describe('core mobile list loading and failure states', () => {
       },
     });
 
-    const { getByLabelText, getAllByTestId, rerender } = render(<PointsHistoryScreen />);
+    const { getByLabelText, getAllByTestId, rerender } = await render(<PointsHistoryScreen />);
 
     expect(getByLabelText('Loading points history')).toBeTruthy();
     expect(getAllByTestId('transaction-skeleton-row')).toHaveLength(3);
@@ -700,9 +701,9 @@ describe('core mobile list loading and failure states', () => {
         error: 'Network request failed',
       },
     });
-    rerender(<PointsHistoryScreen />);
+    await rerender(<PointsHistoryScreen />);
 
-    fireEvent.press(getByLabelText('Retry loading points history'));
+    await fireEvent.press(getByLabelText('Retry loading points history'));
 
     expect(mockFetchHistory).toHaveBeenCalledWith({ page: 1, limit: 50 });
   });

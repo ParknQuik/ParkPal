@@ -5,14 +5,12 @@ const mockNativeModule = {
   addListener: jest.fn(),
 };
 const mockRequireOptionalNativeModule = jest.fn((_moduleName: string) => mockNativeModule);
-let api: typeof import('..');
 
-beforeAll(() => {
-  jest.doMock('expo-modules-core', () => ({
-    requireOptionalNativeModule: (moduleName: string) => mockRequireOptionalNativeModule(moduleName),
-  }));
-  api = require('..');
-});
+jest.mock('expo-modules-core', () => ({
+  requireOptionalNativeModule: mockRequireOptionalNativeModule,
+}));
+
+const api = require('..') as typeof import('..');
 
 describe('parking activity recognition bridge', () => {
   const remove = jest.fn();

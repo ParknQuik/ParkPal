@@ -292,7 +292,7 @@ export const QRScannerScreen: React.FC = () => {
       alignItems: 'center',
     },
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
     },
     headerSafeArea: {
@@ -377,7 +377,7 @@ export const QRScannerScreen: React.FC = () => {
       shadowRadius: 4,
     },
     loadingContainer: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: 'rgba(0, 0, 0, 0.3)',
@@ -601,7 +601,7 @@ export const QRScannerScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar barStyle={`${statusBarStyle}-content`} />
 
       <CameraView
         style={StyleSheet.absoluteFill}

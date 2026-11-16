@@ -518,7 +518,6 @@ export const ListYourSpot: React.FC = () => {
     <View style={styles.container}>
       <StatusBar
         barStyle={`${statusBarStyle}-content`}
-        backgroundColor={colors.appHeaderBackground}
       />
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>

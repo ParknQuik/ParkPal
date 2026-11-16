@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import api from './api';
 
 // Use the same API URL configuration as the main api.ts
@@ -63,16 +64,22 @@ export const mediaAPI = {
   ): Promise<void> {
     // Convert local URI to blob
     const response = await fetch(imageUri);
+    if (!response.ok) {
+      throw new Error(`Failed to read image (${response.status})`);
+    }
     const blob = await response.blob();
 
     // Upload to GCS
-    await fetch(uploadUrl, {
+    const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': contentType,
       },
       body: blob,
     });
+    if (!uploadResponse.ok) {
+      throw new Error(`Image upload failed (${uploadResponse.status})`);
+    }
   },
 
   /**
@@ -87,9 +94,13 @@ export const mediaAPI = {
   /**
    * Get signed URL for uploading a listing photo
    */
-  async getListingPhotoUploadUrl(listingId: number, fileName: string): Promise<UploadUrlResponse> {
+  async getListingPhotoUploadUrl(
+    listingId: number,
+    fileName: string,
+    contentType: string = 'image/jpeg'
+  ): Promise<UploadUrlResponse> {
     const response = await api.get(`/marketplace/listings/${listingId}/photos/upload-url`, {
-      params: { fileName },
+      params: { fileName, contentType },
     });
 
     return response.data;
@@ -100,15 +111,28 @@ export const mediaAPI = {
    */
   async uploadListingPhoto(listingId: number, imageUri: string): Promise<any> {
     try {
-      const { extension, contentType } = getImageUploadMetadata(imageUri);
+      let uploadUri = imageUri;
+      let { extension, contentType } = getImageUploadMetadata(imageUri);
+
+      if (extension === 'heic' || extension === 'heif') {
+        const convertedImage = await ImageManipulator.manipulateAsync(
+          imageUri,
+          [],
+          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        uploadUri = convertedImage.uri;
+        extension = 'jpg';
+        contentType = 'image/jpeg';
+      }
       const fileName = `photo-${Date.now()}.${extension}`;
 
       const { uploadUrl, fileName: gcsFileName } = await this.getListingPhotoUploadUrl(
         listingId,
-        fileName
+        fileName,
+        contentType
       );
 
-      await this.uploadToGCS(uploadUrl, imageUri, contentType);
+      await this.uploadToGCS(uploadUrl, uploadUri, contentType);
 
       const response = await api.post(`/marketplace/listings/${listingId}/photos/confirm`, {
         fileName: gcsFileName,

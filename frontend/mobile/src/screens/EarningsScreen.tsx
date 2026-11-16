@@ -354,7 +354,7 @@ export const EarningsScreen: React.FC = () => {
    if (loading) {
      return (
        <View style={styles.container}>
-         <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.appHeaderBackground} />
+         <StatusBar barStyle={`${statusBarStyle}-content`} />
          <SafeAreaView edges={['top']} style={styles.safeArea}>
            <AppHeader title="Earnings" onBack={handleBack} />
            <View style={styles.contentArea}>
@@ -369,7 +369,7 @@ export const EarningsScreen: React.FC = () => {
 
    return (
      <View style={styles.container}>
-       <StatusBar barStyle={`${statusBarStyle}-content`} backgroundColor={colors.appHeaderBackground} />
+       <StatusBar barStyle={`${statusBarStyle}-content`} />
        <SafeAreaView edges={['top']} style={styles.safeArea}>
          <AppHeader title="Earnings" onBack={handleBack} />
 

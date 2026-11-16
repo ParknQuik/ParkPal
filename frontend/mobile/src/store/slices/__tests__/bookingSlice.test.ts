@@ -7,7 +7,7 @@ import bookingReducer, {
 } from '../bookingSlice';
 import { marketplaceAPI } from '../../../services/api';
 
-// Mock API
+// jest.Mock API
 jest.mock('../../../services/api', () => ({
   marketplaceAPI: {
     getMyBookings: jest.fn(),

@@ -32,7 +32,7 @@ export const QRGeneratorScreen: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [qrData, setQrData] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const qrRef = useRef<View>(null);
+  const qrRef = useRef<React.ElementRef<typeof View>>(null);
   const navigation = useNavigation();
   const { user } = useAppSelector((state) => state.auth);
   const { colors } = useTheme();
@@ -280,7 +280,7 @@ export const QRGeneratorScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title="Generate QR Code" onBack={() => navigation.goBack()} />
       </SafeAreaView>

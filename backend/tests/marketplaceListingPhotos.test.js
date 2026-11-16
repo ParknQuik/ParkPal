@@ -12,6 +12,7 @@ jest.mock('../services/auth', () => ({
     req.user = { id: Number(req.headers['x-test-user-id']) || 1 };
     next();
   },
+  optionalAuthenticate: (req, res, next) => next(),
 }));
 
 jest.mock('../services/mediaService', () => ({
@@ -66,14 +67,14 @@ describe('Marketplace listing photo routes', () => {
 
       const response = await request(app)
         .get('/marketplace/listings/123/photos/upload-url')
-        .query({ fileName: 'space.jpg' })
+        .query({ fileName: 'space.png', contentType: 'image/png' })
         .set('x-test-user-id', '1');
 
       expect(response.status).toBe(200);
       expect(prisma.parkingSlot.findUnique).toHaveBeenCalledWith({
         where: { id: 123 },
       });
-      expect(mediaService.generateListingPhotoUploadUrl).toHaveBeenCalledWith(123, 'space.jpg');
+      expect(mediaService.generateListingPhotoUploadUrl).toHaveBeenCalledWith(123, 'space.png', 'image/png');
       expect(response.body.uploadUrl).toBe('https://storage.googleapis.com/upload-url');
     });
 
@@ -84,6 +85,18 @@ describe('Marketplace listing photo routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('fileName is required');
+      expect(prisma.parkingSlot.findUnique).not.toHaveBeenCalled();
+      expect(mediaService.generateListingPhotoUploadUrl).not.toHaveBeenCalled();
+    });
+
+    it('rejects unsupported image content types before generating a signed URL', async () => {
+      const response = await request(app)
+        .get('/marketplace/listings/123/photos/upload-url')
+        .query({ fileName: 'space.svg', contentType: 'image/svg+xml' })
+        .set('x-test-user-id', '1');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('contentType must be JPEG, PNG, or WebP');
       expect(prisma.parkingSlot.findUnique).not.toHaveBeenCalled();
       expect(mediaService.generateListingPhotoUploadUrl).not.toHaveBeenCalled();
     });

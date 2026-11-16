@@ -300,7 +300,7 @@ export const BookingConfirmed: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title={getHeaderTitle()} onBack={handleClose} />
       </SafeAreaView>
