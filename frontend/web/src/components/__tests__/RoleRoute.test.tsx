@@ -13,6 +13,15 @@ const renderAdminRoute = () => render(<>
   <CurrentPath />
 </>);
 
+const renderMyListingsRoute = () => render(<>
+  <Routes>
+    <Route path="/host-dashboard" element={<RoleRoute roles={['driver', 'host', 'admin']}><div>My Listings</div></RoleRoute>} />
+    <Route path="/login" element={<div>Login</div>} />
+    <Route path="/" element={<div>Public search</div>} />
+  </Routes>
+  <CurrentPath />
+</>);
+
 describe('RoleRoute', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -32,6 +41,14 @@ describe('RoleRoute', () => {
     renderAdminRoute();
     expect(screen.queryByText('Admin tools')).not.toBeInTheDocument();
     expect(screen.getByText('Public search')).toBeInTheDocument();
+  });
+
+  it('allows a signed-in driver to reach My Listings', () => {
+    localStorage.setItem('user', JSON.stringify({ id: 2, email: 'driver@example.com', name: 'Driver', role: 'driver' }));
+    localStorage.setItem('token', 'token');
+    window.history.replaceState({}, '', '/host-dashboard');
+    renderMyListingsRoute();
+    expect(screen.getByText('My Listings')).toBeInTheDocument();
   });
 
   it('preserves the admin return path for a visitor who needs to sign in', () => {

@@ -66,7 +66,7 @@ function MetricCard({ icon, label, value, detail }: { icon: ReactNode; label: st
     <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: '.09em' }}>{label}</Typography>
-        <Box sx={{ color: 'primary.main', bgcolor: '#e7f2ec', borderRadius: 2, width: 38, height: 38, display: 'grid', placeItems: 'center' }}>{icon}</Box>
+        <Box sx={{ color: 'primary.main', bgcolor: 'action.hover', borderRadius: 2, width: 38, height: 38, display: 'grid', placeItems: 'center' }}>{icon}</Box>
       </Stack>
       <Typography variant="h4" sx={{ fontVariantNumeric: 'tabular-nums', mb: 0.6 }}>{value}</Typography>
       {detail}
@@ -111,7 +111,7 @@ export default function AdminMetricsDashboard() {
 
   const overallHealthy = data?.engineering.status === 'operational';
 
-  return <Box sx={{ minHeight: 'calc(100vh - 72px)', background: 'radial-gradient(ellipse at 90% 0%, rgba(193,222,205,.32), transparent 34%), #f5f7f3', py: { xs: 3, md: 5 } }}>
+  return <Box sx={{ minHeight: 'calc(100vh - 72px)', background: (theme) => theme.palette.mode === 'dark' ? 'radial-gradient(ellipse at 90% 0%, rgba(67,119,91,.2), transparent 34%), #111b19' : 'radial-gradient(ellipse at 90% 0%, rgba(193,222,205,.32), transparent 34%), #f5f7f3', py: { xs: 3, md: 5 } }}>
     <Container maxWidth="xl">
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'flex-end' }} gap={2} sx={{ mb: 3.5 }}>
         <Box>
@@ -120,7 +120,7 @@ export default function AdminMetricsDashboard() {
           <Typography color="text.secondary">Marketplace pulse and service health in one place.</Typography>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Select size="small" aria-label="Metrics date range" value={period} onChange={(event) => setPeriod(event.target.value as Period)} sx={{ minWidth: 155, bgcolor: '#fff' }}>
+          <Select size="small" aria-label="Metrics date range" value={period} onChange={(event) => setPeriod(event.target.value as Period)} sx={{ minWidth: 155, bgcolor: 'background.paper' }}>
             {(Object.keys(periodLabels) as Period[]).map((key) => <MenuItem key={key} value={key}>{periodLabels[key]}</MenuItem>)}
           </Select>
           <Button variant="outlined" startIcon={refreshing ? <CircularProgress size={16} /> : <Autorenew />} onClick={() => void load(true)} disabled={loading || refreshing}>Refresh</Button>
@@ -163,7 +163,7 @@ export default function AdminMetricsDashboard() {
               <Stack spacing={1.7}>
                 {bookingRows.map((row) => <Box key={row.name}>
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.55 }}><Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{row.name.replace(/_/g, ' ')}</Typography><Typography variant="body2" fontWeight={700}>{formatNumber(row.count)}</Typography></Stack>
-                  <Box sx={{ height: 8, bgcolor: '#edf1ed', borderRadius: 9, overflow: 'hidden' }}><Box sx={{ height: '100%', width: row.width, bgcolor: '#267458', borderRadius: 9, transition: 'width 450ms ease' }} /></Box>
+                  <Box sx={{ height: 8, bgcolor: 'action.hover', borderRadius: 9, overflow: 'hidden' }}><Box sx={{ height: '100%', width: row.width, bgcolor: 'success.main', borderRadius: 9, transition: 'width 450ms ease' }} /></Box>
                 </Box>)}
               </Stack>
               {bookingRows.every((row) => row.count === 0) && <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No bookings in this period.</Typography>}
@@ -175,8 +175,8 @@ export default function AdminMetricsDashboard() {
               <Typography variant="h6" sx={{ mb: 0.4 }}>Parking supply</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Separate supply types and analytics context.</Typography>
               <Stack spacing={1.5}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: '#edf5ef', borderRadius: 2 }}><Box><Typography fontWeight={700}>Active owner listings</Typography><Typography variant="caption" color="text.secondary">Marketplace supply; individual spaces may be reserved or occupied</Typography></Box><Typography variant="h5" fontWeight={800}>{formatNumber(data.product.supply.activeOwnerListedSpaces)}</Typography></Stack>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: '#f5f2e9', borderRadius: 2 }}><Box><Typography fontWeight={700}>Commercial zones</Typography><Typography variant="caption" color="text.secondary">Analytics coverage; not bookable inventory</Typography></Box><Typography variant="h5" fontWeight={800}>{formatNumber(data.product.supply.activeCommercialZones)}</Typography></Stack>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}><Box><Typography fontWeight={700}>Active owner listings</Typography><Typography variant="caption" color="text.secondary">Marketplace supply; individual spaces may be reserved or occupied</Typography></Box><Typography variant="h5" fontWeight={800}>{formatNumber(data.product.supply.activeOwnerListedSpaces)}</Typography></Stack>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? '#352f24' : '#f5f2e9', borderRadius: 2 }}><Box><Typography fontWeight={700}>Commercial zones</Typography><Typography variant="caption" color="text.secondary">Analytics coverage; not bookable inventory</Typography></Box><Typography variant="h5" fontWeight={800}>{formatNumber(data.product.supply.activeCommercialZones)}</Typography></Stack>
                 <Box sx={{ pt: 0.5 }}><Typography variant="body2" fontWeight={700}>Reported average zone occupancy</Typography><Typography variant="h4" sx={{ my: 0.3 }}>{data.product.zoneAnalytics.averageReportedOccupancyPercent === null ? '—' : `${data.product.zoneAnalytics.averageReportedOccupancyPercent}%`}</Typography><Typography variant="caption" color="text.secondary">{formatNumber(data.product.zoneAnalytics.samples)} zone metric samples · guidance only, not guaranteed availability.</Typography></Box>
               </Stack>
             </CardContent>

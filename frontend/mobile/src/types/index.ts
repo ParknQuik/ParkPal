@@ -275,6 +275,13 @@ export interface ParkingCandidateDiscoveryPin {
   source: 'google_candidate';
   canBook: false;
   canShowAnalytics: boolean;
+  zoneId?: number | null;
+  crowdGuidance?: {
+    circlingTimeSeconds: number;
+    sampleCount: number;
+    windowStart: string;
+    windowEnd: string;
+  } | null;
   isPreview: boolean;
   latitude: number;
   longitude: number;

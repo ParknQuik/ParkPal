@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sessionStorage } from './sessionStorage';
 import { API_BASE_URL } from '../config/api.config';
 import type {
@@ -361,14 +362,19 @@ export const pointsAPI = {
 };
 
 // Analytics endpoints (Phase 6A — Service 1)
+const analyticsConsentConfig = async () => {
+  const consentGranted = (await AsyncStorage.getItem('analytics_opted_in')) === 'true';
+  return consentGranted ? { headers: { 'X-ParkPal-Analytics-Consent': 'granted' } } : {};
+};
+
 export const analyticsAPI = {
   // Notify backend when user enters a parking zone geofence
-  zoneEnter: (data: {
+  zoneEnter: async (data: {
     userId: number;
     zoneId: number;
     latitude: number;
     longitude: number;
-  }) => api.post('/analytics/zone/enter', data),
+  }) => api.post('/analytics/zone/enter', data, await analyticsConsentConfig()),
 
   // Notify backend when user exits a parking zone geofence
   zoneExit: (data: {
@@ -378,14 +384,16 @@ export const analyticsAPI = {
   }) => api.post('/analytics/zone/exit', data),
 
   // Log an activity recognition event during a zone session
-  logActivity: (data: {
+  logActivity: async (data: {
     userId: number;
     sessionId: number;
     activityType: 'IN_VEHICLE' | 'STILL' | 'ON_FOOT' | 'WALKING' | 'RUNNING' | 'ON_BICYCLE';
     confidence: number;
     latitude?: number;
     longitude?: number;
-  }) => api.post('/analytics/activity', data),
+  }) => api.post('/analytics/activity', data, await analyticsConsentConfig()),
+
+  revokeConsent: () => api.post('/analytics/consent/revoke'),
 
   // Get real-time availability + circling time estimate for a zone
   getZoneAvailability: (zoneId: number) =>

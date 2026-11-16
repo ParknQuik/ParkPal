@@ -291,6 +291,16 @@ if (process.env.NODE_ENV !== 'test') {
   const { scheduleGoogleParkingCandidateScan } = require('./services/parkingCandidateScanScheduler');
   scheduleGoogleParkingCandidateScan(cron);
 
+  const { aggregateCompletedCrowdParking } = require('./services/crowdParkingAggregation');
+  cron.schedule('5 * * * *', async () => {
+    try {
+      const result = await aggregateCompletedCrowdParking();
+      logger.info('[Cron] Aggregated external parking guidance', result);
+    } catch (error) {
+      logger.error('[Cron] External parking guidance aggregation failed', { error: error.message });
+    }
+  });
+
   cron.schedule('15 2 * * *', async () => {
     try {
       const result = await pruneWebPerformanceMetrics();

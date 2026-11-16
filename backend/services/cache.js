@@ -121,6 +121,10 @@ function getListingsCacheKey(params) {
     lat,
     lon,
     radius,
+    south,
+    west,
+    north,
+    east,
     minPrice,
     maxPrice,
     amenities,
@@ -140,6 +144,9 @@ function getListingsCacheKey(params) {
     slotType || 'all',
     searchPart,
     lat && lon && radius ? `loc:${parseFloat(lat).toFixed(3)},${parseFloat(lon).toFixed(3)},${radius}` : 'anywhere',
+    south !== undefined && west !== undefined && north !== undefined && east !== undefined
+      ? `viewport:${south},${west},${north},${east}`
+      : '',
     minPrice ? `min:${minPrice}` : '',
     maxPrice ? `max:${maxPrice}` : '',
     amenities ? `am:${amenities}` : '',

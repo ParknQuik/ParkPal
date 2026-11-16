@@ -21,6 +21,7 @@ jest.mock('../../store/slices/analyticsSlice', () => ({
 jest.mock('../../services/api', () => ({
   analyticsAPI: {
     getZones: jest.fn(),
+    revokeConsent: jest.fn(),
   },
 }));
 

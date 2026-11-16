@@ -323,7 +323,13 @@ exports.searchListings = async (req, res, next) => {
       q,
       availableFrom,
       availableTo,
+      south,
+      west,
+      north,
+      east,
     } = req.query;
+
+    const hasViewportBounds = [south, west, north, east].every((value) => value !== undefined);
 
 
 
@@ -344,6 +350,10 @@ exports.searchListings = async (req, res, next) => {
       q,
       availableFrom,
       availableTo,
+      south,
+      west,
+      north,
+      east,
       offset: skip,
       limit: take,
       sort: JSON.stringify(sortOptions),
@@ -418,8 +428,14 @@ exports.searchListings = async (req, res, next) => {
       if (maxPrice) where.price.lte = parseFloat(maxPrice);
     }
 
-    // Apply location filtering in WHERE clause if possible
-    if (lat && lon && radius) {
+     // Apply viewport bounds in SQL so pagination only sees matching listings.
+    if (hasViewportBounds) {
+      where.lat = { gte: parseFloat(south), lte: parseFloat(north) };
+      where.lon = { gte: parseFloat(west), lte: parseFloat(east) };
+    }
+
+    // Radius searches retain their existing post-query distance filtering.
+    if (!hasViewportBounds && lat !== undefined && lon !== undefined && radius) {
       const userLat = parseFloat(lat);
       const userLon = parseFloat(lon);
       const radiusKm = parseFloat(radius);
@@ -515,14 +531,14 @@ exports.searchListings = async (req, res, next) => {
         .slice(0, take);
     };
 
-    if (lat && lon && currentRadius) {
+    if (!hasViewportBounds && lat !== undefined && lon !== undefined && currentRadius) {
       processedSlots = performDistanceFilter(slots, currentRadius);
       if (processedSlots.length > 0) {
       }
     }
 
     // Auto-expand radius fallback: if no results, expand radius and re-query
-    if (lat && lon && requestedRadius && processedSlots.length === 0) {
+    if (!hasViewportBounds && lat !== undefined && lon !== undefined && requestedRadius && processedSlots.length === 0) {
 
       for (const fallbackRadius of RADIUS_FALLBACK_STEPS) {
         if (fallbackRadius <= requestedRadius) continue;
@@ -645,7 +661,7 @@ exports.searchListings = async (req, res, next) => {
     }));
 
     // Use the actual filtered count for pagination
-    const actualTotal = lat && lon && (currentRadius || expandedRadius) ? processedSlots.length : totalCount;
+    const actualTotal = (!hasViewportBounds && lat !== undefined && lon !== undefined && (currentRadius || expandedRadius)) ? processedSlots.length : totalCount;
     const response = req.buildPaginatedResponse
       ? req.buildPaginatedResponse(processedSlots, actualTotal)
       : {
@@ -2460,6 +2476,19 @@ exports.getDiscoveryCandidates = async (req, res, next) => {
       );
     });
 
+    const verifiedZoneIds = [...new Set(filtered
+      .filter((candidate) => candidate.candidateStatus !== 'candidate_preview' && candidate.linkedZoneId != null)
+      .map((candidate) => candidate.linkedZoneId))];
+    const completedWindowEnd = new Date();
+    completedWindowEnd.setUTCMinutes(0, 0, 0);
+    const crowdMetrics = verifiedZoneIds.length
+      ? await prisma.crowdParkingMetric.findMany({
+        where: { zoneId: { in: verifiedZoneIds }, windowEnd: completedWindowEnd, sampleCount: { gte: 3 } },
+        select: { zoneId: true, avgCirclingTimeSeconds: true, sampleCount: true, windowStart: true, windowEnd: true },
+      })
+      : [];
+    const metricByZoneId = new Map(crowdMetrics.map((metric) => [metric.zoneId, metric]));
+
     const result = filtered.map((candidate) => {
       const isPreview = candidate.candidateStatus === 'candidate_preview';
       const hasLinkedZone = !!candidate.linkedZone;
@@ -2470,6 +2499,18 @@ exports.getDiscoveryCandidates = async (req, res, next) => {
         canBook: false,
         // Only show analytics for verified candidates that have a linked zone.
         canShowAnalytics: !isPreview && hasLinkedZone,
+        zoneId: !isPreview && hasLinkedZone ? candidate.linkedZoneId : null,
+        crowdGuidance: !isPreview && hasLinkedZone && metricByZoneId.has(candidate.linkedZoneId)
+          ? (() => {
+            const metric = metricByZoneId.get(candidate.linkedZoneId);
+            return {
+              circlingTimeSeconds: metric.avgCirclingTimeSeconds,
+              sampleCount: metric.sampleCount,
+              windowStart: metric.windowStart,
+              windowEnd: metric.windowEnd,
+            };
+          })()
+          : null,
         isPreview,
         latitude: candidate.draftCenterLat,
         longitude: candidate.draftCenterLon,

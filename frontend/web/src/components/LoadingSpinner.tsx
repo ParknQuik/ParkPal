@@ -24,7 +24,7 @@ export default function LoadingSpinner({ message, size = 40, fullScreen = false 
           left: 0,
           right: 0,
           bottom: 0,
-          bgcolor: 'rgba(255, 255, 255, 0.9)',
+          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(17, 27, 25, 0.92)' : 'rgba(255, 255, 255, 0.9)',
           zIndex: 9999,
         }),
         ...(!fullScreen && {

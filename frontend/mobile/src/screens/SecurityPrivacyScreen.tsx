@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -11,6 +11,9 @@ import { setThemeMode } from '../store/slices/settingsSlice';
 import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { AccountStanding } from '../components/AccountStanding';
+import { setAnalyticsOptIn } from '../store/slices/analyticsSlice';
+import { analyticsAPI } from '../services/api';
+import GeofenceService from '../services/analyticsGeofenceService';
 
 export const SecurityPrivacyScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -19,6 +22,7 @@ export const SecurityPrivacyScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const themeMode = useAppSelector((state) => state.settings.themeMode);
   const behaviorStatus = useAppSelector((state) => state.behavior.status);
+  const analyticsOptedIn = useAppSelector((state) => state.analytics.optedIn);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -34,6 +38,16 @@ export const SecurityPrivacyScreen: React.FC = () => {
 
   const handleThemeChange = (value: 'system' | 'light' | 'dark') => {
     dispatch(setThemeMode(value));
+  };
+
+  const handleAnalyticsConsentChange = (optedIn: boolean) => {
+    if (!optedIn) {
+      GeofenceService.stop();
+      dispatch(setAnalyticsOptIn(false));
+      void analyticsAPI.revokeConsent().catch(() => undefined);
+      return;
+    }
+    dispatch(setAnalyticsOptIn(true));
   };
 
   const handleBack = () => {
@@ -144,6 +158,24 @@ export const SecurityPrivacyScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Parking Analytics</Text>
+          <Text style={styles.text}>
+            Share foreground location and motion activity inside verified commercial parking areas
+            to improve recent circling time estimates. Raw session signals are used for anonymous
+            hourly summaries and then deleted. This does not show open spaces or guarantee availability.
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+            <Text style={styles.text}>Contribute parking analytics</Text>
+            <Switch
+              accessibilityLabel="Contribute parking analytics"
+              value={analyticsOptedIn}
+              onValueChange={handleAnalyticsConsentChange}
+              trackColor={{ true: colors.primary }}
+            />
           </View>
         </View>
 

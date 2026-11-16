@@ -24,6 +24,7 @@ const {
 const { asyncHandler } = require('../middleware/errorHandler');
 const Joi = require('joi');
 const { recordWebPerformanceMetric } = require('../services/webPerformanceMetrics');
+const { deleteUserCrowdParkingData } = require('../services/crowdParkingAggregation');
 
 const performanceMetricSchema = Joi.object({
   name: Joi.string().valid('LCP', 'FID', 'CLS', 'TTFB').required(),
@@ -63,11 +64,21 @@ router.post('/analytics/zone/enter', authenticate, validateBody(zoneEnterSchema)
 
     // Verify zone exists
     const zone = await prisma.zone.findUnique({
-      where: { id: parseInt(zoneId) }
+      where: { id: parseInt(zoneId) },
+      include: { linkedCandidates: { select: { candidateStatus: true } } },
     });
 
     if (!zone) {
       return res.status(404).json({ error: 'Zone not found' });
+    }
+
+    const isVerifiedExternal = zone.linkedCandidates.some(({ candidateStatus }) =>
+      ['geofence_verified', 'commercial_verified'].includes(candidateStatus));
+    if (zone.linkedCandidates.length > 0 && !isVerifiedExternal) {
+      return res.status(403).json({ error: 'Unverified parking zones do not collect analytics' });
+    }
+    if (isVerifiedExternal && req.get('X-ParkPal-Analytics-Consent') !== 'granted') {
+      return res.status(403).json({ error: 'Optional analytics consent is required' });
     }
 
     // Verify point is actually in zone
@@ -139,6 +150,22 @@ router.post('/analytics/activity', authenticate, validateBody(activityLogSchema)
       });
     }
 
+    const session = await prisma.parkingSession.findUnique({
+      where: { id: parseInt(sessionId) },
+      include: { zone: { include: { linkedCandidates: { select: { candidateStatus: true } } } } },
+    });
+    if (!session || session.userId !== Number(userId)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    const isVerifiedExternal = session.zone?.linkedCandidates.some(({ candidateStatus }) =>
+      ['geofence_verified', 'commercial_verified'].includes(candidateStatus)) ?? false;
+    if (session.zone?.linkedCandidates.length > 0 && !isVerifiedExternal) {
+      return res.status(403).json({ error: 'Unverified parking zones do not collect analytics' });
+    }
+    if (isVerifiedExternal && req.get('X-ParkPal-Analytics-Consent') !== 'granted') {
+      return res.status(403).json({ error: 'Optional analytics consent is required' });
+    }
+
     // Log activity
     const activityEvent = await ParkingSessionTracking.logActivity(
       parseInt(userId),
@@ -172,6 +199,11 @@ router.post('/analytics/zone/exit', authenticate, validateBody(zoneExitSchema), 
       return res.status(400).json({ error: 'Missing required field: sessionId' });
     }
 
+    const session = await prisma.parkingSession.findUnique({ where: { id: parseInt(sessionId) } });
+    if (!session || session.userId !== Number(req.user.id)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
     const exitTimestamp = exitTime ? new Date(exitTime) : new Date();
 
     await ParkingSessionTracking.handleZoneExit(
@@ -187,6 +219,20 @@ router.post('/analytics/zone/exit', authenticate, validateBody(zoneExitSchema), 
   } catch (error) {
     console.error('Zone exit error:', error);
     res.status(500).json({ error: 'Failed to process zone exit' });
+  }
+});
+
+/**
+ * POST /api/v1/analytics/consent/revoke
+ * Delete unaggregated user-linked external-facility signals after opt-out.
+ */
+router.post('/analytics/consent/revoke', authenticate, async (req, res) => {
+  try {
+    const deletedSessions = await deleteUserCrowdParkingData(req.user.id);
+    res.json({ status: 'revoked', deletedSessions });
+  } catch (error) {
+    console.error('Analytics consent revocation error:', error);
+    res.status(500).json({ error: 'Failed to delete unaggregated analytics data' });
   }
 });
 
@@ -387,6 +433,10 @@ router.get('/analytics/zones', authenticate, validateQuery(zonesListQuerySchema)
     const zones = await prisma.zone.findMany({
       where,
       include: {
+        linkedCandidates: {
+          where: { candidateStatus: { in: ['geofence_verified', 'commercial_verified'] } },
+          select: { id: true },
+        },
         _count: {
           select: {
             parkingSlots: true,
@@ -406,6 +456,18 @@ router.get('/analytics/zones', authenticate, validateQuery(zonesListQuerySchema)
         city: z.city,
         centroidLat: z.centerLat,
         centroidLon: z.centerLon,
+        geofencePolygon: (() => {
+          try {
+            const parsed = JSON.parse(z.geofencePolygon);
+            const ring = parsed?.type === 'Polygon' ? parsed.coordinates?.[0] : null;
+            return Array.isArray(ring)
+              ? ring.map(([longitude, latitude]) => ({ latitude, longitude }))
+              : [];
+          } catch (_error) {
+            return [];
+          }
+        })(),
+        isVerifiedExternal: z.linkedCandidates.length > 0,
         totalCapacity: z.totalCapacity,
         pricePerHour: z.pricePerHour,
         totalSlots: z._count.parkingSlots,

@@ -35,7 +35,15 @@ Google Places is an additive discovery source for known parking facilities, not 
 
 Analytics starts only after an admin/operator verifies the candidate geofence and links it to a ParknQuik-owned `Zone`.
 
-After verification, the existing opt-in movement loop can create zone-entry, zone-exit, parking-session, circling-time, and `ZoneMetrics` records against the verified zone.
+After verification, signed-in drivers who opt in can contribute foreground-only zone-entry, activity, and exit signals to the linked zone. External-facility guidance is a separate aggregate: it reports recent circling-time estimates only, never open-space counts or managed-slot occupancy. Collection is limited to verified geofences; an unverified candidate preview does not collect or receive analytics.
+
+### Verified external-facility guidance
+
+- Mobile collection runs only while the signed-in app is foregrounded, the driver has opted in, and foreground location permission is granted. Leaving the foreground, opting out, or losing permission stops collection.
+- Geofence events and native activity signals are used to identify completed parking-search sessions. Android uses Google Play Services Activity Recognition; iOS uses Core Motion. Both normalize to the shared activity event types.
+- A local hourly PostgreSQL aggregation stores only the zone, completed-hour window, aggregate circling time, and sample count. It removes contributing user-linked activity and session rows after aggregation. Opt-out also deletes unaggregated external-zone records.
+- Explore may show a completed estimate only when the latest hourly window contains at least three completed sessions. The result includes its sample count and freshness. Missing, old, or undersampled windows return no current estimate.
+- This estimate is guidance, not a guarantee of availability, price, exact capacity, or a bookable ParkPal space. Do not infer external-facility occupancy from managed-slot data.
 
 ---
 
@@ -43,7 +51,7 @@ After verification, the existing opt-in movement loop can create zone-entry, zon
 
 | Component | Technology |
 |-----------|-----------|
-| Data collection | Google Activity Recognition API (mobile) |
+| Data collection | Google Play Services Activity Recognition (Android) + Core Motion (iOS), within opted-in foreground verified zones |
 | Data storage | PostgreSQL (operational) + GCP Cloud Storage (data lake) |
 | Analytics platform | Databricks on GCP |
 | Processing | Hourly batch (Bronze → Silver → Gold) |
@@ -217,7 +225,11 @@ if (
 }
 ```
 
-### Step 4: Hourly Aggregation (Databricks)
+### Step 4: Hourly Aggregation
+
+The current local MVP aggregates verified external-zone sessions in PostgreSQL. The existing Databricks design below describes a later analytics pipeline; it is not required for this feature slice. External facility serving follows the three-session threshold described above, and the contributing user-linked raw records are deleted after the aggregate is written.
+
+#### Later Databricks pipeline design
 
 Runs at:05 past every hour.
 

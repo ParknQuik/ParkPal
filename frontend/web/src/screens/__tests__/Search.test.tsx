@@ -3,6 +3,8 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom';
 import Search from '../Search';
 import { loadGoogleMaps } from '../../utils/googleMaps';
+import { ThemeProvider } from '@mui/material/styles';
+import { createAppTheme } from '../../theme/theme';
 
 vi.mock('../../utils/googleMaps', () => ({ loadGoogleMaps: vi.fn() }));
 const mockNavigate = vi.fn();
@@ -21,7 +23,7 @@ class FakePlaceAutocompleteElement extends HTMLElement {
 		input.setAttribute('aria-label', 'Location');
 	}
 }
-const renderSearch = () => render(<BrowserRouter><Search /></BrowserRouter>);
+const renderSearch = (mode: 'light' | 'dark' = 'light') => render(<ThemeProvider theme={createAppTheme(mode)}><BrowserRouter><Search /></BrowserRouter></ThemeProvider>);
 
 describe('Search Places autocomplete', () => {
 	beforeEach(() => {
@@ -31,6 +33,20 @@ describe('Search Places autocomplete', () => {
 		vi.mocked(loadGoogleMaps).mockResolvedValue({ maps: { places: { PlaceAutocompleteElement: FakePlaceAutocompleteElement } } } as never);
 	});
 	afterEach(() => { vi.unstubAllGlobals(); });
+
+	it('gives both date fields accessible external labels styled like the location label', () => {
+		renderSearch();
+		const locationLabel = screen.getByText('Where do you need parking?');
+		const checkInLabel = screen.getByText('Check-in');
+		const checkOutLabel = screen.getByText('Check-out');
+
+		expect(screen.getByLabelText('Check-in')).toHaveAttribute('type', 'datetime-local');
+		expect(screen.getByLabelText('Check-out')).toHaveAttribute('type', 'datetime-local');
+		expect(checkInLabel.className).toBe(locationLabel.className);
+		expect(checkOutLabel.className).toBe(locationLabel.className);
+		expect(checkInLabel).toHaveStyle({ marginBottom: '8px' });
+		expect(checkOutLabel).toHaveStyle({ marginBottom: '8px' });
+	});
 
 	it('restricts suggestions to the Philippines and saves selected address and coordinates', async () => {
 		const view = renderSearch();
@@ -64,5 +80,18 @@ describe('Search Places autocomplete', () => {
 		const view = renderSearch();
 		expect(await screen.findByText(/Maps unavailable/)).toBeInTheDocument();
 		view.unmount();
+	});
+
+	it('sets the Places field color scheme from the active theme', async () => {
+		const lightView = renderSearch('light');
+		await waitFor(() => expect(widgetInstance).toBeDefined());
+		let generatedStyles = Array.from(document.querySelectorAll('style')).map((style) => style.textContent).join(' ');
+		expect(generatedStyles).toContain('color-scheme:light');
+		lightView.unmount();
+
+		renderSearch('dark');
+		await waitFor(() => expect(widgetInstance).toBeDefined());
+		generatedStyles = Array.from(document.querySelectorAll('style')).map((style) => style.textContent).join(' ');
+		expect(generatedStyles).toContain('color-scheme:dark');
 	});
 });

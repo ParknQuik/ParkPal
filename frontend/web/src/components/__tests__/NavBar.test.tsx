@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../../test/utils';
+import { render, screen, waitFor, within } from '../../test/utils';
 import userEvent from '@testing-library/user-event';
 import { NavBar } from '../NavBar';
 import { AuthProvider } from '../../contexts/AuthContext';
@@ -104,6 +104,25 @@ describe('NavBar', () => {
 
     expect(screen.getByText('Profile')).toBeInTheDocument();
     expect(screen.getByText('Logout')).toBeInTheDocument();
+  });
+
+  it('should show a calendar icon beside My bookings', async () => {
+    const user = userEvent.setup();
+    const mockUser: User = {
+      id: 1,
+      email: 'test@example.com',
+      name: 'John Doe',
+      role: 'driver',
+      createdAt: '2025-01-01',
+      updatedAt: '2025-01-01',
+    };
+
+    renderNavBar(mockUser);
+    await user.click(screen.getByLabelText(/account of current user/i));
+
+    const bookingsItem = screen.getByText('My bookings').closest('li');
+    expect(bookingsItem).not.toBeNull();
+    expect(within(bookingsItem as HTMLElement).getByTestId('CalendarMonthIcon')).toBeInTheDocument();
   });
 
   it('should show dashboard menu item for host users', async () => {

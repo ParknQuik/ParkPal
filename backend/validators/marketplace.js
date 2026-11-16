@@ -226,6 +226,10 @@ exports.searchListingsSchema = Joi.object({
   q: Joi.string().optional(),  // Add search query
   lat: Joi.number().min(-90).max(90).optional(),
   lon: Joi.number().min(-180).max(180).optional(),
+  south: Joi.number().min(-90).max(90).optional(),
+  west: Joi.number().min(-180).max(180).optional(),
+  north: Joi.number().min(-90).max(90).optional(),
+  east: Joi.number().min(-180).max(180).optional(),
   radius: Joi.number().min(0).max(50).default(5).optional(),
   minPrice: Joi.number().min(0).optional(),
   maxPrice: Joi.number().max(10000).optional(),
@@ -240,7 +244,17 @@ exports.searchListingsSchema = Joi.object({
   status: Joi.string().valid('available', 'occupied', 'reserved').optional(),
   page: Joi.number().integer().min(1).default(1).optional(),
   limit: Joi.number().integer().min(1).max(100).default(20).optional()
-});
+}).custom((query, helpers) => {
+  const bounds = ['south', 'west', 'north', 'east'];
+  const supplied = bounds.filter((key) => query[key] !== undefined);
+  if (supplied.length > 0 && supplied.length !== bounds.length) {
+    return helpers.error('any.invalid', { message: 'All four viewport bounds are required' });
+  }
+  if (supplied.length === bounds.length && (query.south >= query.north || query.west >= query.east)) {
+    return helpers.error('any.invalid', { message: 'Viewport bounds must be ordered south < north and west < east' });
+  }
+  return query;
+}, 'viewport bounds validation');
 
 // QR Code validation schemas
 exports.qrCheckinSchema = Joi.object({
