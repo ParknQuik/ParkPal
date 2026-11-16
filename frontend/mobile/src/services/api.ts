@@ -168,9 +168,10 @@ export const marketplaceAPI = {
   createBookingMarketplace: (data: {
     slotId: number;
     startTime: string;
-    endTime: string;
+    endTime?: string;
     rentalMode?: 'fixed' | 'open';
     maxDuration?: number;
+    vehicleId?: number;
   }) => api.post('/marketplace/bookings', data),
 
   getMyBookings: () => api.get('/marketplace/bookings'),

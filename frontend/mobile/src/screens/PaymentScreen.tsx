@@ -30,7 +30,7 @@ export const PaymentScreen: React.FC = () => {
   const route = useRoute();
   const { colors } = useTheme();
   const statusBarStyle = useStatusBarStyle();
-  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, createBookingOnSuccess, rentalMode, maxDuration } = route.params as {
+  const { bookingId, amount, spotId, spotName, spotAddress, startTime, endTime, createBookingOnSuccess, rentalMode, maxDuration, vehicleId } = route.params as {
     bookingId?: number;
     amount: number;
     spotId?: number | string;
@@ -41,6 +41,7 @@ export const PaymentScreen: React.FC = () => {
     createBookingOnSuccess?: boolean;
     rentalMode?: 'fixed' | 'open';
     maxDuration?: number;
+    vehicleId?: number;
   };
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
@@ -70,7 +71,7 @@ export const PaymentScreen: React.FC = () => {
     total: (amount || 0) + Math.round((amount || 0) * 0.05),
   };
   const cashPolicyNote = rentalMode === 'open'
-    ? 'Cash bookings still reserve the spot now. Cancel at least 1 hour before start to avoid a strike, and check in within 30 minutes of your start time.'
+    ? 'Cash bookings reserve the spot now. Your actual-use amount is recorded at QR checkout for the host to collect and confirm. Cancel at least 1 hour before start to avoid a strike, and check in within 30 minutes of your start time.'
     : 'Cash bookings still reserve the spot now. Cancel at least 1 hour before start to avoid a strike, and check in during your reserved time.';
 
   const extractBookingId = (payload: any): number | undefined => {
@@ -94,6 +95,7 @@ export const PaymentScreen: React.FC = () => {
         endTime: endTime!,
         rentalMode: rentalMode as 'fixed' | 'open',
         maxDuration: rentalMode === 'open' ? maxDuration : undefined,
+        vehicleId,
       });
       return extractBookingId(createResponse.data);
     }

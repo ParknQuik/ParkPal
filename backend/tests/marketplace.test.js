@@ -648,7 +648,65 @@ describe('Marketplace API Tests', () => {
       expect(response.body.booking.rentalMode).toBe('open');
       expect(response.body.booking.endTime).toBeNull();
       expect(response.body.booking.maxDuration).toBe(12);
-      expect(response.body.booking.authAmount).toBeTruthy();
+      expect(response.body.booking.authAmount).toBe(900);
+      expect(response.body.booking.platformFee).toBe(0);
+      expect(response.body.booking.authAmount).toBe(50 * 12 * 1.5);
+    });
+
+    it('stores an owned vehicle on the booking', async () => {
+      const vehicle = await prisma.vehicle.create({ data: {
+        userId: testData.users.driver.id, make: 'Toyota', model: 'Vios', year: 2023,
+        color: 'Silver', licensePlate: 'WEB-123',
+      } });
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          vehicleId: vehicle.id,
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.booking.vehicleId).toBe(vehicle.id);
+      expect(response.body.booking.vehicle.licensePlate).toBe('WEB-123');
+    });
+
+    it('rejects a vehicle owned by another account', async () => {
+      const vehicle = await prisma.vehicle.create({ data: {
+        userId: testData.users.host.id, make: 'Honda', model: 'City', year: 2022,
+        color: 'Blue', licensePlate: 'HOST-22',
+      } });
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          vehicleId: vehicle.id,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('active vehicle');
+    });
+
+    it('rejects open-time bookings longer than twelve hours', async () => {
+      const response = await request(app)
+        .post('/api/v1/marketplace/bookings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({
+          slotId: testData.slot.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          rentalMode: 'open',
+          maxDuration: 13,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.details).toEqual(expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining('12 hours') })
+      ]));
     });
 
     it('should require endTime for fixed rental mode', async () => {
