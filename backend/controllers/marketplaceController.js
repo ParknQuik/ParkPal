@@ -138,10 +138,13 @@ exports.createListing = async (req, res, next) => {
 exports.getListingPhotoUploadUrl = async (req, res, next) => {
   try {
     const listingId = parseInt(req.params.id);
-    const { fileName } = req.query;
+    const { fileName, contentType = 'image/jpeg' } = req.query;
     
     if (!fileName) {
       return res.status(400).json({ error: 'fileName is required' });
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {
+      return res.status(400).json({ error: 'contentType must be JPEG, PNG, or WebP' });
     }
 
     // Verify slot exists and user owns it
@@ -159,7 +162,8 @@ exports.getListingPhotoUploadUrl = async (req, res, next) => {
 
     const result = await mediaService.generateListingPhotoUploadUrl(
       listingId,
-      fileName
+      fileName,
+      contentType
     );
 
     res.json(result);
