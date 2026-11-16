@@ -133,7 +133,7 @@ const authenticatedRoutes: ScreenRoute[] = [
 
 const roleRestrictedRoutes: RoleRestrictedRoute[] = [
   { path: '/list-slot', Screen: ListSlot, roles: ['driver', 'host', 'admin'] },
-  { path: '/host-dashboard', Screen: HostDashboard, roles: ['driver', 'host', 'admin'] },
+  { path: '/host-dashboard', Screen: HostDashboard, roles: ['host', 'admin'] },
   { path: '/admin-dashboard', Screen: AdminDashboard, roles: ['admin'] },
   { path: '/admin-dashboard/metrics', Screen: AdminMetricsDashboard, roles: ['admin'] },
 ];
