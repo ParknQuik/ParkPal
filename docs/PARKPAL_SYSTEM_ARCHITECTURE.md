@@ -223,13 +223,17 @@ Aggregation:
 ```
 1. Search for parking (location, date, time)
 2. Browse available spots with photos/reviews
-3. Book and pay (held in escrow)
-4. Arrive at spot
-5. Scan QR code → Check-in
-6. Park
-7. Leave and scan QR → Check-out
-8. Payment released to host (5-7% commission to platform)
+3. Choose a saved vehicle and fixed-time or open-time rental
+4. Submit a cash or digital payment method; this creates the pending booking
+5. For open-time digital rentals, authorize 1.5× the 12-hour parking estimate
+6. Arrive at spot and use the mobile app to scan the QR code for check-in
+7. Leave and use the mobile app to scan the QR code for check-out
+8. Digital open-time payments capture actual use; cash open-time checkout records the actual amount due for host collection
 ```
+
+Web supports vehicle management, reservation, payment, and booking details. QR check-in and checkout stay in the mobile app. Web booking details show booking/payment state and direct drivers to scan with mobile.
+
+Commercial-facility candidate pins are view-only guidance. Show circling-time estimates, sample count, and completed-window freshness only for verified candidates linked to a zone with at least three sessions in the latest completed hourly window. Never show these facilities as bookable or describe guidance as available spaces, capacity, or price.
 
 **Driver Flow (Walk-up):**
 ```
@@ -366,6 +370,16 @@ See complete schema in `backend/prisma/schema.prisma`
   totalAmount, status
 }
 ```
+
+**Booking** - Driver reservation for a host-listed space
+```javascript
+{
+  id, slotId, userId, vehicleId,
+  startTime, endTime, rentalMode, maxDuration,
+  price, platformFee, hostEarnings, status
+}
+```
+`vehicleId` is optional for older records and references a vehicle owned by the driver. Deleting a vehicle clears the booking reference while retaining booking history.
 
 **ActivityEvent** - User activity log (Service 1)
 ```javascript
@@ -553,17 +567,22 @@ Response: [{
 POST /api/marketplace/bookings
 {
   slotId: 999,
+  vehicleId: 42,
   startTime: "2025-10-06T08:00:00",
-  endTime: "2025-10-06T16:00:00"
+  endTime: "2025-10-06T16:00:00",
+  rentalMode: "fixed"
 }
-Response: {
-  bookingId: 12345,
-  qrCode: "QR-HOST-456-SLOT-1",
-  amount: 240,
-  instructions: "Scan QR when you arrive"
-}
+// Open-time rentals omit endTime, set rentalMode="open", and use maxDuration <= 12.
+// The client creates this pending booking only after the driver submits a payment method.
+// The server validates vehicle ownership and calculates all prices.
 
-// QR check-in
+POST /api/payments/intent { bookingId: 12345, paymentMethod: "cash" | "gcash" | "card" | "grab_pay" | "paymaya" }
+// Cash confirms the reservation and records cash due. Digital payment confirms only after PayMongo verifies it.
+
+GET /api/marketplace/discovery/candidates?lat=14.5990&lon=120.9842&radius=5
+// Candidate pins are non-bookable. Crowd circling guidance is returned only when the latest completed hour has >= 3 sessions.
+
+// Mobile-only QR check-in
 POST /api/marketplace/qr/checkin
 {
   qrCode: "QR-HOST-456-SLOT-1",

@@ -12,7 +12,7 @@ import {
   FormControl,
   Select,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard, CalendarMonth } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard, CalendarMonth, DirectionsCar } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../theme/ThemeModeProvider';
@@ -129,6 +129,11 @@ export const NavBar: React.FC = () => {
               <MenuItem onClick={handleBookings}>
                 <CalendarMonth sx={{ mr: 1 }} />
                 My bookings
+              </MenuItem>
+
+              <MenuItem onClick={() => { handleClose(); navigate('/vehicles'); }}>
+                <DirectionsCar sx={{ mr: 1 }} />
+                My vehicles
               </MenuItem>
 
               {user.role !== 'admin' && (

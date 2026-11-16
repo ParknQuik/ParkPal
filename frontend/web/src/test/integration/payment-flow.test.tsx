@@ -13,7 +13,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('PayMongo checkout flow', () => {
-  beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); });
+  beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); vi.mocked(api.get).mockResolvedValue({ data: {} } as never); });
 
   it('attaches the public payment method and only navigates after backend confirmation', async () => {
     vi.mocked(api.post).mockResolvedValueOnce({ data: { paymentIntentId: 'pi_sandbox', clientKey: 'client_key', publicKey: 'pk_test' } } as never)
@@ -25,7 +25,7 @@ describe('PayMongo checkout flow', () => {
 
     render(<BrowserRouter><Payment /></BrowserRouter>);
     expect(screen.getByText('₱52.50')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Pay ₱52.50' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve and pay · ₱52.50' }));
 
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/payments/intent', { bookingId: 123, paymentMethod: 'gcash' }));
     expect(browserFetch).toHaveBeenCalledTimes(2);
@@ -40,7 +40,7 @@ describe('PayMongo checkout flow', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { id: 'pm_sandbox' } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { attributes: { status: 'processing' } } }) }));
     render(<BrowserRouter><Payment /></BrowserRouter>);
-    fireEvent.click(screen.getByRole('button', { name: 'Pay ₱52.50' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve and pay · ₱52.50' }));
     expect(await screen.findByText(/Payment is still pending/)).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });

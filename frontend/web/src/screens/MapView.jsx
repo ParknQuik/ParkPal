@@ -53,6 +53,8 @@ const MapView = () => {
 	const [slots, setSlots] = useState([]);
 	const [filteredSlots, setFilteredSlots] = useState([]);
 	const [selectedSlot, setSelectedSlot] = useState(null);
+	const [candidatePins, setCandidatePins] = useState([]);
+	const [selectedCandidate, setSelectedCandidate] = useState(null);
 	const [searchQuery, setSearchQuery] = useState(query.get('location') || '');
 	const [userLocation, setUserLocation] = useState(null);
 	const [searchCenter, setSearchCenter] = useState(null); // Where to search (can be different from user location)
@@ -96,7 +98,7 @@ const MapView = () => {
 
 	useEffect(() => {
 		if (mapLoaded) updateMarkers();
-	}, [mapLoaded, filteredSlots, userLocation]);
+	}, [mapLoaded, filteredSlots, candidatePins, userLocation]);
 
 	useEffect(() => {
 		// Debounce search filtering
@@ -179,6 +181,10 @@ const MapView = () => {
 					} : {}),
 				},
 			});
+			const candidateResponse = await api.get('/marketplace/discovery/candidates', {
+				params: { lat: center.lat, lon: center.lng || center.lon, radius },
+			}).catch(() => null);
+			setCandidatePins(candidateResponse?.data?.data || []);
 			// Handle v1 API response format: { data: [...], pagination: {...} }
 			const slotsData = response.data?.data || response.data?.listings || response.data || [];
 			setSlots(slotsData);
@@ -313,6 +319,41 @@ const MapView = () => {
 			} catch (err) {
 				console.error('Error creating slot marker:', err);
 			}
+		});
+
+		candidatePins.forEach((candidate) => {
+			const hasCurrentGuidance = candidate.canShowAnalytics && candidate.crowdGuidance?.sampleCount >= 3;
+			const pin = document.createElement('div');
+			pin.textContent = hasCurrentGuidance
+				? `${Math.max(1, Math.round(candidate.crowdGuidance.circlingTimeSeconds / 60))}m`
+				: candidate.isPreview ? '?' : 'P';
+			pin.style.minWidth = '30px';
+			pin.style.height = '30px';
+			pin.style.padding = '0 7px';
+			pin.style.display = 'grid';
+			pin.style.placeItems = 'center';
+			pin.style.borderRadius = '16px 16px 16px 4px';
+			pin.style.transform = 'rotate(-45deg)';
+			pin.style.background = hasCurrentGuidance ? '#176b5b' : candidate.isPreview ? '#a65b12' : '#2c6154';
+			pin.style.color = '#fff';
+			pin.style.border = '2px solid #fff';
+			pin.style.boxShadow = '0 2px 6px rgba(0,0,0,.28)';
+			pin.style.fontSize = '11px';
+			pin.style.fontWeight = '700';
+			pin.style.cursor = 'pointer';
+			const marker = new window.google.maps.marker.AdvancedMarkerElement({
+				map,
+				position: { lat: candidate.latitude, lng: candidate.longitude },
+				content: pin,
+				title: `${candidate.title}. ${hasCurrentGuidance ? `${Math.round(candidate.crowdGuidance.circlingTimeSeconds / 60)} minute estimated circling time, guidance only, not bookable.` : 'Commercial parking guidance, not bookable.'}`,
+				gmpClickable: true,
+			});
+			marker.addEventListener('gmp-click', () => {
+				setSelectedSlot(null);
+				setSelectedCandidate(candidate);
+				map.panTo({ lat: candidate.latitude, lng: candidate.longitude });
+			});
+			markersRef.current.push(marker);
 		});
 
 	};
@@ -482,6 +523,7 @@ const MapView = () => {
 											button
 											onClick={() => {
 												setSelectedSlot(slot);
+											setSelectedCandidate(null);
 												if (googleMapRef.current) {
 													googleMapRef.current.panTo({
 														lat: slot.lat,
@@ -551,6 +593,28 @@ const MapView = () => {
 								))}
 							</List>
 						)}
+						{candidatePins.length > 0 && <Box sx={{ mt: 2 }}>
+							<Divider sx={{ mb: 1.5 }} />
+							<Typography variant="overline" color="primary.main" fontWeight={800}>COMMERCIAL GUIDANCE · NOT BOOKABLE</Typography>
+							<List disablePadding>
+								{candidatePins.map((candidate) => {
+									const guidance = candidate.canShowAnalytics && candidate.crowdGuidance?.sampleCount >= 3 ? candidate.crowdGuidance : null;
+									return <ListItem key={`candidate-${candidate.id}`} button selected={selectedCandidate?.id === candidate.id} onClick={() => {
+										setSelectedSlot(null);
+										setSelectedCandidate(candidate);
+										if (googleMapRef.current) {
+											googleMapRef.current.panTo({ lat: candidate.latitude, lng: candidate.longitude });
+											googleMapRef.current.setZoom(16);
+										}
+									}} sx={{ mb: 1, border: '1px solid', borderColor: selectedCandidate?.id === candidate.id ? 'primary.main' : 'divider', borderRadius: 1 }}>
+										<ListItemText primary={candidate.title} secondary={guidance
+											? `~${Math.max(1, Math.round(guidance.circlingTimeSeconds / 60))} min circling estimate · ${guidance.sampleCount} sessions`
+											: candidate.isPreview ? 'Candidate preview · no estimate' : 'No current crowd estimate'} />
+										<Chip size="small" label={candidate.isPreview ? 'Preview' : 'Guide'} color={candidate.isPreview ? 'warning' : 'success'} variant="outlined" />
+									</ListItem>;
+								})}
+							</List>
+						</Box>}
 					</Box>
 				</Paper>
 
@@ -631,6 +695,23 @@ const MapView = () => {
 					)}
 
 					{/* Selected Slot Details Card */}
+						{selectedCandidate && <Card sx={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', width: { xs: 'calc(100% - 24px)', sm: 420 }, maxWidth: 500, boxShadow: 3 }}>
+							<CardContent>
+								<Box display="flex" justifyContent="space-between" alignItems="start" gap={1}>
+									<Box><Typography variant="h6">{selectedCandidate.title}</Typography><Typography variant="body2" color="text.secondary">{selectedCandidate.address || 'Commercial parking facility'}</Typography></Box>
+									<IconButton size="small" aria-label="Close guidance details" onClick={() => setSelectedCandidate(null)}><Close /></IconButton>
+								</Box>
+								<Chip size="small" sx={{ my: 1 }} label={selectedCandidate.isPreview ? 'Candidate preview · not verified' : 'Verified facility guidance'} color={selectedCandidate.isPreview ? 'warning' : 'success'} variant="outlined" />
+								{selectedCandidate.canShowAnalytics && selectedCandidate.crowdGuidance?.sampleCount >= 3 ? <>
+									<Typography variant="h5" fontWeight={800}>~{Math.max(1, Math.round(selectedCandidate.crowdGuidance.circlingTimeSeconds / 60))} min</Typography>
+									<Typography variant="body2">Recent average circling time · {selectedCandidate.crowdGuidance.sampleCount} sessions</Typography>
+									<Typography variant="caption" color="text.secondary">Completed hourly window ending {new Date(selectedCandidate.crowdGuidance.windowEnd).toLocaleString()}</Typography>
+								</> : <Typography variant="body2" color="text.secondary">No current estimate is available for this facility.</Typography>}
+								<Alert severity="info" sx={{ mt: 1.5 }}>Guidance only. This facility is not bookable through ParknQuik, and this estimate does not confirm spaces, availability, capacity, or price.</Alert>
+								<Button component="a" href={`https://www.google.com/maps/dir/?api=1&destination=${selectedCandidate.latitude},${selectedCandidate.longitude}`} target="_blank" rel="noreferrer" fullWidth sx={{ mt: 1 }}>Get directions</Button>
+							</CardContent>
+						</Card>}
+
 					{selectedSlot && (
 						<Card
 							sx={{

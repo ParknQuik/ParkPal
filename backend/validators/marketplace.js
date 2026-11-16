@@ -169,9 +169,11 @@ exports.createBookingSchema = Joi.object({
   maxDuration: Joi.number()
     .integer()
     .positive()
+    .max(12)
     .optional()
     .messages({
-      'number.positive': 'Max duration must be a positive number'
+      'number.positive': 'Max duration must be a positive number',
+      'number.max': 'Open-time bookings are limited to 12 hours'
     }),
 
   vehicleType: Joi.string()
@@ -185,7 +187,8 @@ exports.createBookingSchema = Joi.object({
     .messages({
       'string.pattern.base': 'Invalid license plate format (use uppercase letters, numbers, and hyphens only)',
       'string.max': 'License plate must be less than 15 characters'
-    })
+    }),
+  vehicleId: Joi.number().integer().positive().optional()
 });
 
 exports.reviewSchema = Joi.object({

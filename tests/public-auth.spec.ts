@@ -4,11 +4,14 @@ const listing = { id: 'space-7', title: 'Harbor Garage', address: '12 Test Stree
 
 test('public search opens the map and listing details without a Google Maps dependency', async ({ unauthenticatedPage: page }) => {
   await page.route('**/api/v1/marketplace/search**', (route) => route.fulfill({ json: { data: [listing] } }));
+  await page.route('**/api/v1/marketplace/discovery/candidates**', (route) => route.fulfill({ json: { data: [] } }));
   await page.route('**/api/v1/marketplace/listings/space-7', (route) => route.fulfill({ json: listing }));
   await page.goto('/search');
   await expect(page.getByRole('heading', { name: 'Your next stop, minus the parking hunt.' })).toBeVisible();
+  const mapSearch = page.waitForResponse((response) => response.url().includes('/api/v1/marketplace/search'));
   await page.getByRole('button', { name: 'Browse Map' }).click();
   await expect(page).toHaveURL(/\/map\?/);
+  expect((await mapSearch).ok()).toBe(true);
   await expect(page.getByText('12 Test Street, Manila')).toBeVisible();
   await page.getByRole('button', { name: /12 Test Street, Manila/ }).click();
   await page.getByRole('button', { name: 'View listing details' }).click();
@@ -22,7 +25,10 @@ test('public search opens the map and listing details without a Google Maps depe
 
 test('search shows an empty map result and privacy and terms are public', async ({ unauthenticatedPage: page }) => {
   await page.route('**/api/v1/marketplace/search**', (route) => route.fulfill({ json: { data: [] } }));
+  await page.route('**/api/v1/marketplace/discovery/candidates**', (route) => route.fulfill({ json: { data: [] } }));
+  const emptyMapSearch = page.waitForResponse((response) => response.url().includes('/api/v1/marketplace/search'));
   await page.goto('/map');
+  expect((await emptyMapSearch).ok()).toBe(true);
   await expect(page.getByText('No parking slots found')).toBeVisible();
   await page.goto('/privacy');
   await expect(page.getByRole('heading', { name: /privacy policy/i })).toBeVisible();

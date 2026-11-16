@@ -44,6 +44,7 @@ After verification, signed-in drivers who opt in can contribute foreground-only 
 - A local hourly PostgreSQL aggregation stores only the zone, completed-hour window, aggregate circling time, and sample count. It removes contributing user-linked activity and session rows after aggregation. Opt-out also deletes unaggregated external-zone records.
 - Explore may show a completed estimate only when the latest hourly window contains at least three completed sessions. The result includes its sample count and freshness. Missing, old, or undersampled windows return no current estimate.
 - This estimate is guidance, not a guarantee of availability, price, exact capacity, or a bookable ParkPal space. Do not infer external-facility occupancy from managed-slot data.
+- Web Explore uses the same public candidate-discovery response for verified off-platform facility pins and details. It displays estimate, sample count, and completed-window freshness only when `crowdGuidance` is present; web does not request location permission or collect signal data.
 
 ---
 

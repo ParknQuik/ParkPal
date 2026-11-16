@@ -715,7 +715,7 @@ exports.searchListings = async (req, res, next) => {
  */
 exports.createBooking = async (req, res, next) => {
   try {
-    const { slotId, startTime, endTime, rentalMode = 'fixed', maxDuration } = req.body;
+    const { slotId, startTime, endTime, rentalMode = 'fixed', maxDuration, vehicleId } = req.body;
     const userId = req.user.id;
 
     // Check if user is suspended from booking
@@ -778,6 +778,10 @@ exports.createBooking = async (req, res, next) => {
       });
     }
 
+    if (rentalMode === 'open' && Number(maxDuration) > 12) {
+      return res.status(400).json({ error: 'Open-time bookings are limited to 12 hours' });
+    }
+
     // Validate rental mode value
     if (rentalMode !== 'fixed' && rentalMode !== 'open') {
       return res.status(400).json({ 
@@ -792,6 +796,14 @@ exports.createBooking = async (req, res, next) => {
 
     if (!slot) {
       return res.status(404).json({ error: 'Parking slot not found' });
+    }
+
+    if (vehicleId !== undefined) {
+      const vehicle = await prisma.vehicle.findFirst({
+        where: { id: Number(vehicleId), userId, isActive: true },
+        select: { id: true },
+      });
+      if (!vehicle) return res.status(400).json({ error: 'Select an active vehicle from your account' });
     }
 
     if (slot.ownerId === req.user.id) {
@@ -840,9 +852,10 @@ exports.createBooking = async (req, res, next) => {
       totalPrice = authAmount; // Initial charge is the pre-auth amount
     }
 
-    // Calculate platform fee (5% commission)
+    // Keep an open-mode authorization at exactly 1.5x the maximum parking price.
+    // Its platform fee is settled from actual usage at QR checkout.
     const platformFeeRate = 0.05;
-    const platformFee = totalPrice * platformFeeRate;
+    const platformFee = rentalMode === 'open' ? 0 : totalPrice * platformFeeRate;
     const hostEarnings = totalPrice - platformFee;
 
     // Create booking within transaction to prevent TOCTOU race conditions
@@ -868,6 +881,7 @@ exports.createBooking = async (req, res, next) => {
         data: {
           slotId: parseInt(slotId),
           userId,
+          ...(vehicleId !== undefined && { vehicleId: Number(vehicleId) }),
           startTime: start,
           endTime: end, // null for open mode
           rentalMode,
@@ -889,6 +903,7 @@ exports.createBooking = async (req, res, next) => {
           user: {
             select: { id: true, name: true, email: true },
           },
+          vehicle: true,
         },
       });
 
@@ -1267,28 +1282,69 @@ exports.qrCheckOut = async (req, res, next) => {
 
     // Update booking to completed if it exists
     if (session.bookingId) {
-      await prisma.booking.update({
+        await prisma.booking.update({
         where: { id: session.bookingId },
         data: { 
           status: 'completed',
-          endTime: checkOutTime
+            endTime: checkOutTime,
+            ...(session.booking?.rentalMode === 'open' ? {
+              price: totalAmount,
+              platformFee: Number((totalAmount * 0.05).toFixed(2)),
+              hostEarnings: Number((totalAmount * 0.95).toFixed(2)),
+            } : {}),
         },
       });
     }
 
-    // Create payment record only if not already handled by authorization capture
+    // Reconcile the reservation payment with the completed QR checkout.
     let payment = null;
     if (!captureResult) {
-      payment = await prisma.payment.create({
-        data: {
-          userId,
-          sessionId: session.id,
-          bookingId: session.bookingId,
-          amount: totalAmount,
-          paymentMethod: 'pending',
-          status: 'pending',
-        },
-      });
+      const existingBookingPayment = session.bookingId
+        ? await prisma.payment.findFirst({
+          where: { bookingId: session.bookingId, purpose: 'booking' },
+          orderBy: { createdAt: 'desc' },
+        })
+        : null;
+      if (existingBookingPayment?.paymentMethod === 'cash') {
+        const actualPlatformFee = Number((totalAmount * 0.05).toFixed(2));
+        payment = await prisma.payment.update({
+          where: { id: existingBookingPayment.id },
+          data: {
+            sessionId: session.id,
+            ...(session.booking?.rentalMode === 'open' ? {
+              amount: Number((totalAmount + actualPlatformFee).toFixed(2)),
+              capturedParkingAmount: totalAmount,
+              platformFeeAmount: actualPlatformFee,
+            } : {}),
+          },
+        });
+        if (session.booking?.rentalMode === 'open') {
+          await prisma.booking.update({
+            where: { id: session.bookingId },
+            data: {
+              price: totalAmount,
+              platformFee: actualPlatformFee,
+              hostEarnings: Number((totalAmount - actualPlatformFee).toFixed(2)),
+            },
+          });
+        }
+      } else if (existingBookingPayment) {
+        payment = await prisma.payment.update({
+          where: { id: existingBookingPayment.id },
+          data: { sessionId: session.id },
+        });
+      } else {
+        payment = await prisma.payment.create({
+          data: {
+            userId,
+            sessionId: session.id,
+            bookingId: session.bookingId,
+            amount: totalAmount,
+            paymentMethod: 'pending',
+            status: 'pending',
+          },
+        });
+      }
     } else {
       // Find the existing payment that was captured
       payment = await prisma.payment.findFirst({
@@ -1331,6 +1387,7 @@ exports.qrCheckOut = async (req, res, next) => {
       session: updatedSession,
       payment,
       totalAmount,
+      cashDueAmount: payment?.paymentMethod === 'cash' && payment.status === 'pending' ? payment.amount : null,
       durationMinutes,
     });
   } catch (error) {
@@ -1507,6 +1564,7 @@ exports.getHostEarnings = async (req, res, next) => {
         user: {
           select: { id: true, name: true, email: true },
         },
+        vehicle: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -1700,6 +1758,12 @@ exports.getBookingById = async (req, res, next) => {
             name: true,
             email: true,
           },
+        },
+        vehicle: true,
+        payments: {
+          where: { purpose: 'booking' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
         },
       },
     });

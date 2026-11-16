@@ -61,4 +61,39 @@ describe('MapView', () => {
 			params: expect.objectContaining({ ...expectedBounds, minPrice: '50' }),
 		})));
 	});
+
+	it('shows current crowd guidance for verified candidate pins without booking claims', async () => {
+		const markerInstances: Array<{ options: Record<string, unknown>; handlers: Record<string, () => void> }> = [];
+		class Marker {
+			map: unknown;
+			options: Record<string, unknown>;
+			handlers: Record<string, () => void> = {};
+			constructor(options: Record<string, unknown>) { this.options = options; this.map = options.map; markerInstances.push(this); }
+			addEventListener(name: string, handler: () => void) { this.handlers[name] = handler; }
+		}
+		class GoogleMap { panTo() {} setZoom() {} constructor() { return this; } }
+		Object.defineProperty(window, 'google', { configurable: true, value: { maps: { Map: GoogleMap, marker: { AdvancedMarkerElement: Marker } } } });
+		vi.mocked(loadGoogleMaps).mockResolvedValue({} as typeof google);
+		vi.mocked(api.get).mockImplementation(async (path) => path === '/marketplace/discovery/candidates'
+			? { data: { data: [{
+				id: 5, title: 'Central Market Garage', address: 'Central Market', latitude: 14.6, longitude: 120.98,
+				canBook: false, canShowAnalytics: true, isPreview: false,
+				crowdGuidance: { circlingTimeSeconds: 420, sampleCount: 8, windowStart: '2026-11-15T14:00:00Z', windowEnd: '2026-11-15T15:00:00Z' },
+			}] } }
+			: { data: { data: [], pagination: {} } });
+
+		render(<MemoryRouter><MapView /></MemoryRouter>);
+		await screen.findByText('Central Market Garage');
+		await screen.findByRole('button', { name: 'Search This Area' });
+		let marker: typeof markerInstances[number] | undefined;
+		await waitFor(() => {
+			marker = markerInstances.find((item) => String(item.options.title).includes('7 minute estimated circling time'));
+			expect(marker).toBeDefined();
+		});
+		expect(marker).toBeDefined();
+		marker?.handlers['gmp-click']();
+		expect(await screen.findByText('Recent average circling time · 8 sessions')).toBeInTheDocument();
+		expect(screen.getByText(/Guidance only/)).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Reserve Now' })).not.toBeInTheDocument();
+	});
 });

@@ -25,6 +25,7 @@ const AdminMetricsDashboard = lazy(() => import('./screens/AdminMetricsDashboard
 const ListingDetail = lazy(() => import('./screens/ListingDetail.jsx'));
 const BookingList = lazy(() => import('./screens/BookingList.jsx'));
 const BookingDetail = lazy(() => import('./screens/BookingDetail.jsx'));
+const Vehicles = lazy(() => import('./screens/Vehicles.jsx'));
 const NotFound = lazy(() => import('./screens/NotFound'));
 const PrivacyPolicy = lazy(() => import('./screens/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./screens/TermsOfService'));
@@ -37,6 +38,7 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
   '/reserve': { title: 'Reserve parking | ParknQuik', description: 'Review your parking details and reserve a space with ParknQuik.' },
   '/payment': { title: 'Parking payment | ParknQuik', description: 'Complete payment for your ParknQuik parking reservation.' },
   '/profile': { title: 'Your profile | ParknQuik', description: 'Review and update your ParknQuik account details.' },
+  '/vehicles': { title: 'Your vehicles | ParknQuik', description: 'Manage the vehicles you use for ParknQuik bookings.' },
   '/list-slot': { title: 'List a parking space | ParknQuik', description: 'Create a parking listing for drivers to find and book.' },
   '/host-dashboard': { title: 'Host dashboard | ParknQuik', description: 'Manage your parking listings and reservations.' },
   '/admin-dashboard': { title: 'Admin dashboard | ParknQuik', description: 'Review ParknQuik operations and parking listings.' },
@@ -127,11 +129,13 @@ const authenticatedRoutes: ScreenRoute[] = [
   { path: '/reserve', Screen: Reservation },
   { path: '/payment', Screen: Payment },
   { path: '/profile', Screen: Profile },
+  { path: '/vehicles', Screen: Vehicles },
   { path: '/bookings', Screen: BookingList },
   { path: '/bookings/:id', Screen: BookingDetail },
 ];
 
 const roleRestrictedRoutes: RoleRestrictedRoute[] = [
+  // Host management stays limited to host and admin accounts.
   { path: '/list-slot', Screen: ListSlot, roles: ['driver', 'host', 'admin'] },
   { path: '/host-dashboard', Screen: HostDashboard, roles: ['host', 'admin'] },
   { path: '/admin-dashboard', Screen: AdminDashboard, roles: ['admin'] },

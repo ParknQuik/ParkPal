@@ -237,6 +237,7 @@ model Booking {
   id                 Int              @id @default(autoincrement())
   slotId             Int              @map("slot_id")
   userId             Int              @map("user_id")
+  vehicleId          Int?             @map("vehicle_id")
   startTime          DateTime         @map("start_time")
   endTime            DateTime?        @map("end_time")
   price              Float
@@ -257,6 +258,7 @@ model Booking {
   lastExtendedAt     DateTime?        @map("last_extended_at")
   slot               ParkingSlot      @relation(fields: [slotId], references: [id])
   user               User             @relation(fields: [userId], references: [id])
+  vehicle            Vehicle?         @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   sessions           ParkingSession[]
   payments           Payment[]
   review             Review?          @relation("BookingReview")
@@ -266,6 +268,7 @@ model Booking {
   @@index([status])
   @@index([startTime, endTime])
   @@index([createdAt])
+  @@index([vehicleId])
   @@map("bookings")
 }
 
@@ -346,6 +349,7 @@ model Vehicle {
   isActive     Boolean  @default(true) @map("is_active")
   imageUrl     String?  @map("image_url")
   user         User     @relation(fields: [userId], references: [id])
+  bookings     Booking[]
 
   @@map("vehicles")
 }

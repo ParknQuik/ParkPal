@@ -198,6 +198,7 @@ export const ReserveSpot: React.FC = () => {
         endTime: endDate.toISOString(),
         rentalMode,
         maxDuration: rentalMode === 'open' ? MAX_DURATION_HOURS : undefined,
+        vehicleId: Number(selectedVehicle),
         createBookingOnSuccess: true, // Flag to create booking after payment
       });
     } catch (err: any) {

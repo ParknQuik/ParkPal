@@ -3,13 +3,21 @@
   "description": "Curated source ownership and routing hints for high-traffic ParkPal implementation areas. This is not full source-code indexing.",
   "entries": [
     {
-      "id": "mobile-payment-flow",
-      "title": "Mobile payment flow and cash booking confirmation",
+      "id": "web-mobile-booking-payment-flow",
+      "title": "Web and mobile booking, vehicle, and payment flow",
       "subsystem": "payments",
       "priority": "high",
       "knowledgeStatus": "current",
       "sourcePaths": [
+        "frontend/web/src/screens/Reservation.jsx",
+        "frontend/web/src/screens/Payment.jsx",
+        "frontend/web/src/screens/BookingDetail.jsx",
+        "frontend/web/src/screens/BookingList.jsx",
+        "frontend/web/src/screens/Vehicles.jsx",
+        "frontend/web/src/screens/MapView.jsx",
+        "frontend/web/src/components/NavBar.tsx",
         "frontend/mobile/src/screens/PaymentScreen.tsx",
+        "frontend/mobile/src/screens/ReserveSpot.tsx",
         "frontend/mobile/src/screens/PaymentFailedScreen.tsx",
         "frontend/mobile/src/screens/PaymentMethodsScreen.tsx",
         "backend/controllers/paymentsController.js",
@@ -27,17 +35,31 @@
         "PaymentFailed",
         "PayMongo",
         "payment intent",
-        "confirmation"
+        "confirmation",
+        "web booking",
+        "booking vehicle selection",
+        "vehicleId booking",
+        "fixed rental extension",
+        "open time booking web",
+        "cash due at QR checkout",
+        "commercial crowd guidance web",
+        "web Explore candidate pin"
       ],
       "relatedApis": [
         "confirm payment intent",
         "create booking",
         "payment method selection",
-        "cash booking confirmation"
+        "cash booking confirmation",
+        "web vehicle selection and management",
+        "fixed and open booking",
+        "mobile QR scan for booking check-in and checkout",
+        "commercial crowd guidance via discovery candidates"
       ],
       "validationCommands": [
+        "cd frontend/web && npm test -- --run src/screens/__tests__/Reservation.test.tsx src/screens/__tests__/Payment.test.tsx src/screens/__tests__/BookingDetail.test.tsx src/screens/__tests__/MapView.test.tsx",
+        "cd frontend/web && npm run type-check",
         "cd frontend/mobile && npx tsc --noEmit",
-        "cd backend && npm test -- payments.test.js"
+        "cd backend && npm test -- --watchman=false tests/marketplace.test.js tests/payments.test.js"
       ],
       "knownFailurePatterns": [
         "Cash booking returns 403 before canonical confirmation completes.",
