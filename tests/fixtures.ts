@@ -17,7 +17,7 @@ async function isolateNetwork(page: Page) {
 async function seed(page: Page, role?: Role) {
   await isolateNetwork(page);
   if (role === 'driver') {
-    // Drivers need a saved vehicle before the reservation action is enabled.
+    // Reservation E2E flows must seed a saved vehicle before the action is enabled.
     await page.route('**/api/v1/vehicles', (route) => route.fulfill({ json: [
       { id: 7, make: 'Toyota', model: 'Vios', year: 2023, color: 'Silver', licensePlate: 'ABC-1234', isDefault: true },
     ] }));
