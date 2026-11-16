@@ -76,7 +76,7 @@ export const AuthTransitionScreen: React.FC<AuthTransitionScreenProps> = ({
         colors={colors.gradientSecondary}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
       <View style={styles.content}>
         <View

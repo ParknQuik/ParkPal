@@ -598,7 +598,7 @@ export const ReserveSpot: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+        <StatusBar style={statusBarStyle} />
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
         </SafeAreaView>
@@ -620,7 +620,7 @@ export const ReserveSpot: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader title="Reserve Spot" onBack={() => navigation.goBack()} />
       </SafeAreaView>

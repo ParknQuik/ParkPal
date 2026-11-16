@@ -50,7 +50,7 @@ jest.mock('expo-image', () => ({
   Image: 'Image',
 }));
 
-jest.mock('react-native-qrcode-svg', () => 'QRCode');
+jest.mock('react-native-qrcode-svg', () => ({ default: 'QRCode' }));
 
 jest.mock('../../components/SkeletonLoader', () => {
   const React = require('react');
@@ -95,14 +95,14 @@ describe('MyListingsScreen states', () => {
     mockUseAppDispatch.mockReturnValue(mockDispatch);
   });
 
-  it('shows skeleton listing outlines during initial load', () => {
+  it('shows skeleton listing outlines during initial load', async () => {
     setMarketplaceState({
       myListings: [],
       loading: true,
       error: null,
     });
 
-    const { getByLabelText, getAllByTestId, queryByText } = render(<MyListingsScreen />);
+    const { getByLabelText, getAllByTestId, queryByText } = await render(<MyListingsScreen />);
 
     expect(getByLabelText('Loading listings')).toBeTruthy();
     expect(getAllByTestId('listing-skeleton-card')).toHaveLength(3);
@@ -119,12 +119,12 @@ describe('MyListingsScreen states', () => {
       error: 'Network request failed',
     });
 
-    const { getByText, getByLabelText } = render(<MyListingsScreen />);
+    const { getByText, getByLabelText } = await render(<MyListingsScreen />);
 
     expect(getByText('Unable to load listings')).toBeTruthy();
     expect(getByText('Network request failed')).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Retry loading listings'));
+    await fireEvent.press(getByLabelText('Retry loading listings'));
 
     await waitFor(() => {
       expect(marketplaceAPI.getMyListings).toHaveBeenCalledTimes(1);
@@ -153,9 +153,9 @@ describe('MyListingsScreen states', () => {
       error: null,
     });
 
-    const { getByText } = render(<MyListingsScreen />);
+    const { getByText } = await render(<MyListingsScreen />);
 
-    fireEvent.press(getByText('Activate'));
+    await fireEvent.press(getByText('Activate'));
 
     await waitFor(() => {
       expect(marketplaceAPI.toggleListingAvailability).toHaveBeenCalledWith(21, true);
@@ -192,9 +192,9 @@ describe('MyListingsScreen states', () => {
       error: null,
     });
 
-    const { getByText } = render(<MyListingsScreen />);
+    const { getByText } = await render(<MyListingsScreen />);
 
-    fireEvent.press(getByText('more-horiz'));
+    await fireEvent.press(getByText('more-horiz'));
 
     await waitFor(() => {
       expect(marketplaceAPI.toggleListingAvailability).toHaveBeenCalledWith(22, false);
@@ -225,11 +225,11 @@ describe('MyListingsScreen states', () => {
       error: null,
     });
 
-    const { getByText } = render(<MyListingsScreen />);
+    const { getByText } = await render(<MyListingsScreen />);
     const activateButton = getByText('Activate');
 
-    fireEvent.press(activateButton);
-    fireEvent.press(activateButton);
+    const firstPress = fireEvent.press(activateButton);
+    const secondPress = fireEvent.press(activateButton);
 
     await waitFor(() => {
       expect(marketplaceAPI.toggleListingAvailability).toHaveBeenCalledTimes(1);
@@ -238,5 +238,6 @@ describe('MyListingsScreen states', () => {
     await act(async () => {
       resolveToggle({ data: { listing: { id: 23, isActive: true, availability: true } } });
     });
+    await Promise.all([firstPress, secondPress]);
   });
 });

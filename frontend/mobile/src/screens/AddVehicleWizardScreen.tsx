@@ -564,7 +564,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
       width: '100%',
     },
     loadingOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.overlay,
       alignItems: 'center',
       justifyContent: 'center',
@@ -1233,7 +1233,7 @@ export const AddVehicleWizardScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={statusBarStyle} backgroundColor={colors.appHeaderBackground} />
+      <StatusBar style={statusBarStyle} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
       <AppHeader
         title={vehicleId ? 'Edit Vehicle' : 'Add Vehicle'}

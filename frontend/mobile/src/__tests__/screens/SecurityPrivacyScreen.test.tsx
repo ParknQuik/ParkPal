@@ -34,9 +34,9 @@ describe('SecurityPrivacyScreen analytics consent', () => {
     }));
   });
 
-  it('stops tracking and requests deletion when analytics consent is revoked', () => {
-    const { getByLabelText } = render(<SecurityPrivacyScreen />);
-    fireEvent(getByLabelText('Contribute parking analytics'), 'valueChange', false);
+  it('stops tracking and requests deletion when analytics consent is revoked', async () => {
+    const { getByLabelText } = await render(<SecurityPrivacyScreen />);
+    await fireEvent(getByLabelText('Contribute parking analytics'), 'valueChange', false);
 
     expect(GeofenceService.stop).toHaveBeenCalled();
     expect(setAnalyticsOptIn).toHaveBeenCalledWith(false);

@@ -5,8 +5,14 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { MyBookingsScreen } from '../../screens/MyBookingsScreen';
 import marketplaceReducer, { getMyBookings } from '../../store/slices/marketplaceSlice';
+import { marketplaceAPI, paymentAPI } from '../../services/api';
+import { completePayMongoCheckout } from '../../services/paymongoCheckout';
 
-// Mock the API
+const mockedMarketplaceAPI = marketplaceAPI as unknown as Record<string, jest.Mock>;
+const mockedPaymentAPI = paymentAPI as unknown as Record<string, jest.Mock>;
+const mockedCompletePayMongoCheckout = completePayMongoCheckout as jest.Mock;
+
+// jest.Mock the API
 jest.mock('../../services/api', () => ({
   marketplaceAPI: {
     getMyBookings: jest.fn(),
@@ -15,9 +21,12 @@ jest.mock('../../services/api', () => ({
     cancelBooking: jest.fn(),
   },
   paymentAPI: {
-    createPaymentIntent: jest.fn(),
-    confirmPayment: jest.fn(),
+    createExtensionIntent: jest.fn(),
   },
+}));
+
+jest.mock('../../services/paymongoCheckout', () => ({
+  completePayMongoCheckout: jest.fn(),
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -30,12 +39,12 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
 }));
 
-// Mock SafeAreaView
+// jest.Mock SafeAreaView
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => children,
 }));
 
-// Mock expo-image
+// jest.Mock expo-image
 jest.mock('expo-image', () => ({
   Image: 'Image',
 }));
@@ -78,14 +87,13 @@ describe('MyBookingsScreen - Extension Feature', () => {
     jest.clearAllMocks();
     store = createTestStore();
     
-    const { marketplaceAPI } = require('../../services/api');
-    marketplaceAPI.getMyBookings.mockResolvedValue({
+    mockedMarketplaceAPI.getMyBookings.mockResolvedValue({
       data: [mockBooking],
     });
   });
 
-  const renderWithStore = (component: React.ReactElement) => {
-    return render(
+  const renderWithStore = async (component: React.ReactElement) => {
+    return await render(
       <Provider store={store}>
         {component}
       </Provider>
@@ -93,7 +101,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
   };
 
   it('should show extend button for fixed duration bookings', async () => {
-    const { getByText } = renderWithStore(<MyBookingsScreen />);
+    const { getByText } = await renderWithStore(<MyBookingsScreen />);
 
     // Manually dispatch to load bookings
     await act(async () => {
@@ -112,7 +120,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
       endTime: null,
     };
 
-    const { queryByText } = renderWithStore(<MyBookingsScreen />);
+    const { queryByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [openModeBooking] });
@@ -129,7 +137,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
       endTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
     };
 
-    const { queryByText } = renderWithStore(<MyBookingsScreen />);
+    const { queryByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [pastBooking] });
@@ -141,8 +149,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
   });
 
   it('should open extension modal when extend button is pressed', async () => {
-    const { marketplaceAPI } = require('../../services/api');
-    marketplaceAPI.checkExtensionAvailability.mockResolvedValue({
+    mockedMarketplaceAPI.checkExtensionAvailability.mockResolvedValue({
       data: {
         available: true,
         extensionHours: 1,
@@ -156,7 +163,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
       },
     });
 
-    const { getByText } = renderWithStore(<MyBookingsScreen />);
+    const { getByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [mockBooking] });
@@ -167,7 +174,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend'));
+      await fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -178,8 +185,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
   });
 
   it('should check availability when hour selection changes', async () => {
-    const { marketplaceAPI } = require('../../services/api');
-    marketplaceAPI.checkExtensionAvailability.mockResolvedValue({
+    mockedMarketplaceAPI.checkExtensionAvailability.mockResolvedValue({
       data: {
         available: true,
         extensionHours: 2,
@@ -193,14 +199,14 @@ describe('MyBookingsScreen - Extension Feature', () => {
       },
     });
 
-    const { getByText } = renderWithStore(<MyBookingsScreen />);
+    const { getByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [mockBooking] });
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend'));
+      await fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -208,7 +214,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('+2hrs'));
+      await fireEvent.press(getByText('+2hrs'));
     });
 
     await waitFor(() => {
@@ -220,8 +226,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
   });
 
   it('should show unavailable message when slot is booked', async () => {
-    const { marketplaceAPI } = require('../../services/api');
-    marketplaceAPI.checkExtensionAvailability
+    mockedMarketplaceAPI.checkExtensionAvailability
       .mockResolvedValueOnce({
         data: {
           available: true,
@@ -244,14 +249,14 @@ describe('MyBookingsScreen - Extension Feature', () => {
         },
       });
 
-    const { getByText } = renderWithStore(<MyBookingsScreen />);
+    const { getByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [mockBooking] });
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend'));
+      await fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -259,7 +264,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('+2hrs'));
+      await fireEvent.press(getByText('+2hrs'));
     });
 
     await waitFor(() => {
@@ -269,9 +274,8 @@ describe('MyBookingsScreen - Extension Feature', () => {
   });
 
   it('should process extension payment and refresh bookings', async () => {
-    const { marketplaceAPI, paymentAPI } = require('../../services/api');
     
-    marketplaceAPI.checkExtensionAvailability.mockResolvedValue({
+    mockedMarketplaceAPI.checkExtensionAvailability.mockResolvedValue({
       data: {
         available: true,
         extensionHours: 1,
@@ -285,15 +289,20 @@ describe('MyBookingsScreen - Extension Feature', () => {
       },
     });
 
-    paymentAPI.createPaymentIntent.mockResolvedValue({
-      data: { paymentIntentId: 'test_intent_123' },
+    mockedPaymentAPI.createExtensionIntent.mockResolvedValue({
+      data: {
+        paymentIntentId: 'test_intent_123',
+        clientKey: 'test_client_key',
+        publicKey: 'test_public_key',
+        status: 'pending',
+      },
     });
 
-    paymentAPI.confirmPayment.mockResolvedValue({
-      data: { status: 'completed' },
+    mockedCompletePayMongoCheckout.mockResolvedValue({
+      status: 'completed',
     });
 
-    marketplaceAPI.extendBooking.mockResolvedValue({
+    mockedMarketplaceAPI.extendBooking.mockResolvedValue({
       data: {
         booking: {
           ...mockBooking,
@@ -302,14 +311,14 @@ describe('MyBookingsScreen - Extension Feature', () => {
       },
     });
 
-    const { getByText } = renderWithStore(<MyBookingsScreen />);
+    const { getByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [mockBooking] });
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend'));
+      await fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -317,13 +326,13 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText(/Extend & Pay/));
+      await fireEvent.press(getByText(/Extend & Pay/));
     });
 
     await waitFor(() => {
-      expect(paymentAPI.createPaymentIntent).toHaveBeenCalled();
-      expect(paymentAPI.confirmPayment).toHaveBeenCalled();
-      expect(marketplaceAPI.extendBooking).toHaveBeenCalled();
+      expect(mockedPaymentAPI.createExtensionIntent).toHaveBeenCalled();
+      expect(mockedCompletePayMongoCheckout).toHaveBeenCalled();
+      expect(mockedMarketplaceAPI.extendBooking).toHaveBeenCalled();
       expect(mockAlert).toHaveBeenCalledWith(
         'Booking Extended!',
         expect.any(String)
@@ -332,9 +341,8 @@ describe('MyBookingsScreen - Extension Feature', () => {
   });
 
   it('should handle extension errors gracefully', async () => {
-    const { marketplaceAPI, paymentAPI } = require('../../services/api');
     
-    marketplaceAPI.checkExtensionAvailability.mockResolvedValue({
+    mockedMarketplaceAPI.checkExtensionAvailability.mockResolvedValue({
       data: {
         available: true,
         extensionHours: 1,
@@ -348,18 +356,18 @@ describe('MyBookingsScreen - Extension Feature', () => {
       },
     });
 
-    paymentAPI.createPaymentIntent.mockRejectedValue({
+    mockedPaymentAPI.createExtensionIntent.mockRejectedValue({
       response: { data: { error: 'Payment failed' } },
     });
 
-    const { getByText } = renderWithStore(<MyBookingsScreen />);
+    const { getByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [mockBooking] });
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend'));
+      await fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {
@@ -367,7 +375,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText(/Extend & Pay/));
+      await fireEvent.press(getByText(/Extend & Pay/));
     });
 
     await waitFor(() => {
@@ -379,8 +387,7 @@ describe('MyBookingsScreen - Extension Feature', () => {
   });
 
   it('should display pricing breakdown in modal', async () => {
-    const { marketplaceAPI } = require('../../services/api');
-    marketplaceAPI.checkExtensionAvailability.mockResolvedValue({
+    mockedMarketplaceAPI.checkExtensionAvailability.mockResolvedValue({
       data: {
         available: true,
         extensionHours: 1,
@@ -394,14 +401,14 @@ describe('MyBookingsScreen - Extension Feature', () => {
       },
     });
 
-    const { getByText } = renderWithStore(<MyBookingsScreen />);
+    const { getByText } = await renderWithStore(<MyBookingsScreen />);
 
     await act(async () => {
       await store.dispatch({ type: 'marketplace/getMyBookings/fulfilled', payload: [mockBooking] });
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Extend'));
+      await fireEvent.press(getByText('Extend'));
     });
 
     await waitFor(() => {

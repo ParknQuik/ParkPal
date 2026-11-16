@@ -67,7 +67,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       justifyContent: 'flex-end',
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     sheet: {
       backgroundColor: colors.white,

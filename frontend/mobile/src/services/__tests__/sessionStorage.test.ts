@@ -3,7 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 import { sessionStorage } from '../sessionStorage';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn(),
+  __esModule: true,
+  default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() },
 }));
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(), setItemAsync: jest.fn(), deleteItemAsync: jest.fn(),

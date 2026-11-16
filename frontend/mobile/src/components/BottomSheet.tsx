@@ -86,10 +86,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       flex: 1,
     },
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     overlayBg: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.overlay,
     },
     sheet: {
