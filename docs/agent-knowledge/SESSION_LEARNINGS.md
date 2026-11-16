@@ -132,3 +132,12 @@ replacement for reading live code before edits.
  `backend/validators/marketplace.js`, and
  `backend/controllers/marketplaceController.js`, not
  `frontend/mobile/src/screens/MyListingsScreen.tsx` alone.
+
+## 2026-11-16 - GitHub Actions after connector-driven PR rewrites
+
+- PR/session: #201
+- Summary: During the PR #201 rebase workflow, GitHub create_commit plus update_ref did not start Actions runs; an actual file-content update through the GitHub Contents API did start checks.
+- Lessons:
+  - When rewriting a PR branch through the GitHub connector, poll Actions for the exact head SHA after ref updates. Do not treat missing workflow runs as passed; in this observed workflow, checks appeared only after a real Contents API file update.
+- Verification:
+  - `PR #201 Playwright, Pull Request Checks, and Mobile Environment Check runs appeared after a real file update; earlier create_commit/update_ref-only ref changes had no runs.`
