@@ -702,3 +702,6 @@ Response: { reviewId: 555 }
 
 See `DEVELOPMENT_ROADMAP.md` for implementation phases.
 
+
+
+Regional OSM discovery and verified facility-level operator occupancy are implemented separately from crowd circling metrics. See [regional directory operations](REGIONAL_PARKING_DIRECTORY.md). Sensor/MQTT adapters remain future work.

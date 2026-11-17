@@ -86,8 +86,8 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
   const pricePerHour = listing?.pricePerHour != null ? `₱${listing.pricePerHour}` : '—';
   const amenities = listing?.amenities || [];
   const canBook = listing?.canBook !== false;
-  const isPreviewCandidate = listing?.source === 'google_candidate' && listing?.isPreview;
-  const crowdGuidance = listing?.source === 'google_candidate' && listing?.canShowAnalytics
+  const isPreviewCandidate = ['google_candidate', 'osm'].includes(listing?.source) && listing?.isPreview;
+  const crowdGuidance = ['google_candidate', 'osm'].includes(listing?.source) && listing?.canShowAnalytics
     ? listing?.crowdGuidance
     : null;
 
@@ -249,6 +249,10 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
             </ScrollView>
           </View>
         )}
+        {listing?.partnerAvailability && (
+          <Text>{listing.partnerAvailability.availableCount} spaces reported available · Verified partner: {listing.partnerAvailability.partner} · Updated {new Date(listing.partnerAvailability.updatedAt).toLocaleTimeString()}</Text>
+        )}
+        {listing?.source === 'osm' && <Text>© OpenStreetMap contributors · ODbL</Text>}
         {crowdGuidance ? (
           <View style={styles.zoneAvailability} accessibilityLabel="Crowdsourced circling guidance">
             <View style={styles.circlingRow}>
@@ -264,7 +268,7 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
               Updated {new Date(crowdGuidance.windowEnd).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
             </Text>
           </View>
-        ) : zoneAvailability && listing?.source !== 'google_candidate' && (
+        ) : zoneAvailability && !['google_candidate', 'osm'].includes(listing?.source) && (
           <View style={styles.zoneAvailability}>
             <View style={styles.availInfoRow}>
               <View style={[styles.availBadge, getAvailabilityStyle()]}>

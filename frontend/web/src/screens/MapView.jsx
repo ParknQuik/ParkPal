@@ -702,7 +702,9 @@ const MapView = () => {
 									<IconButton size="small" aria-label="Close guidance details" onClick={() => setSelectedCandidate(null)}><Close /></IconButton>
 								</Box>
 								<Chip size="small" sx={{ my: 1 }} label={selectedCandidate.isPreview ? 'Candidate preview · not verified' : 'Verified facility guidance'} color={selectedCandidate.isPreview ? 'warning' : 'success'} variant="outlined" />
-								{selectedCandidate.canShowAnalytics && selectedCandidate.crowdGuidance?.sampleCount >= 3 ? <>
+								{selectedCandidate.partnerAvailability && <Typography>{selectedCandidate.partnerAvailability.availableCount} spaces reported available · Verified partner: {selectedCandidate.partnerAvailability.partner} · Updated {new Date(selectedCandidate.partnerAvailability.updatedAt).toLocaleString()}</Typography>}
+                                {selectedCandidate.source === 'osm' && <Typography variant="caption">© OpenStreetMap contributors · ODbL</Typography>}
+                                {selectedCandidate.canShowAnalytics && selectedCandidate.crowdGuidance?.sampleCount >= 3 ? <>
 									<Typography variant="h5" fontWeight={800}>~{Math.max(1, Math.round(selectedCandidate.crowdGuidance.circlingTimeSeconds / 60))} min</Typography>
 									<Typography variant="body2">Recent average circling time · {selectedCandidate.crowdGuidance.sampleCount} sessions</Typography>
 									<Typography variant="caption" color="text.secondary">Completed hourly window ending {new Date(selectedCandidate.crowdGuidance.windowEnd).toLocaleString()}</Typography>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MapView from '../MapView';
@@ -93,6 +93,47 @@ describe('MapView', () => {
 		expect(marker).toBeDefined();
 		marker?.handlers['gmp-click']();
 		expect(await screen.findByText('Recent average circling time · 8 sessions')).toBeInTheDocument();
+		expect(screen.getByText(/Guidance only/)).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Reserve Now' })).not.toBeInTheDocument();
+	});
+	it('renders OSM partner counts with source and timestamp without a reservation action', async () => {
+		const markerInstances: Array<{ options: Record<string, unknown>; handlers: Record<string, () => void> }> = [];
+		class Marker {
+			map: unknown;
+			options: Record<string, unknown>;
+			handlers: Record<string, () => void> = {};
+			constructor(options: Record<string, unknown>) { this.options = options; this.map = options.map; markerInstances.push(this); }
+			addEventListener(name: string, handler: () => void) { this.handlers[name] = handler; }
+		}
+		class GoogleMap {
+            panTo() {} setZoom() {}
+            getBounds() { return {
+                getSouthWest: () => ({ lat: () => 14.59, lng: () => 120.97 }),
+                getNorthEast: () => ({ lat: () => 14.61, lng: () => 120.99 }),
+            }; }
+        }
+		Object.defineProperty(window, 'google', { configurable: true, value: { maps: { Map: GoogleMap, marker: { AdvancedMarkerElement: Marker } } } });
+		vi.mocked(loadGoogleMaps).mockResolvedValue({} as typeof google);
+		vi.mocked(api.get).mockImplementation(async (path) => path === '/marketplace/discovery/candidates'
+			? { data: { data: [{
+				id: 'osm-5', source: 'osm', attribution: '© OpenStreetMap contributors', partnerAvailability: { partner: 'Test Operator', availableCount: 12, occupiedCount: 38, updatedAt: new Date().toISOString() }, title: 'Central Market Garage', address: 'Central Market', latitude: 14.6, longitude: 120.98,
+				canBook: false, canShowAnalytics: false, isPreview: true,
+				crowdGuidance: { circlingTimeSeconds: 420, sampleCount: 8, windowStart: '2026-11-15T14:00:00Z', windowEnd: '2026-11-15T15:00:00Z' },
+			}] } }
+			: { data: { data: [], pagination: {} } });
+
+		render(<MemoryRouter><MapView /></MemoryRouter>);
+		await screen.findByText('Central Market Garage');
+		await screen.findByRole('button', { name: 'Search This Area' });
+		let marker: typeof markerInstances[number] | undefined;
+		await waitFor(() => {
+			marker = markerInstances.find((item) => String(item.options.title).includes('Central Market Garage'));
+			expect(marker).toBeDefined();
+		});
+		expect(marker).toBeDefined();
+		act(() => marker?.handlers['gmp-click']());
+		expect(await screen.findByText(/12 spaces reported available · Verified partner: Test Operator · Updated/)).toBeInTheDocument();
+        expect(screen.getAllByText(/OpenStreetMap contributors/).length).toBeGreaterThan(0);
 		expect(screen.getByText(/Guidance only/)).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Reserve Now' })).not.toBeInTheDocument();
 	});

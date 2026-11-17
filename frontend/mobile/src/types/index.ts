@@ -271,8 +271,10 @@ export interface MarketplaceListing {
 }
 
 export interface ParkingCandidateDiscoveryPin {
-  id: number;
-  source: 'google_candidate';
+  id: number | string;
+  source: 'google_candidate' | 'osm';
+  attribution?: string;
+  partnerAvailability?: { partner: string; availableCount: number; occupiedCount: number; updatedAt: string } | null;
   canBook: false;
   canShowAnalytics: boolean;
   zoneId?: number | null;

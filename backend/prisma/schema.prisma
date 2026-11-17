@@ -605,3 +605,41 @@ model WebPerformanceMetric {
   @@index([recordedAt])
   @@map("web_performance_metrics")
 }
+
+model ParkingPartner {
+  id              Int                      @id @default(autoincrement())
+  name            String
+  apiKeyHash      String                   @unique @map("api_key_hash")
+  isVerified      Boolean                  @default(false) @map("is_verified")
+  isActive        Boolean                  @default(true) @map("is_active")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  facilities      RegionalParkingFacility[]
+
+  @@map("parking_partners")
+}
+
+model RegionalParkingFacility {
+  id                Int             @id @default(autoincrement())
+  regionCode        String          @map("region_code")
+  source            String
+  sourceId          String          @map("source_id")
+  name              String
+  latitude          Float
+  longitude         Float
+  address           String?
+  capacity          Int?
+  access             String?
+  sourceUpdatedAt   DateTime?       @map("source_updated_at")
+  importedAt        DateTime        @default(now()) @map("imported_at")
+  isActive          Boolean         @default(true) @map("is_active")
+  partnerId         Int?            @map("partner_id")
+  partnerUpdatedAt  DateTime?       @map("partner_updated_at")
+  availableCount    Int?            @map("available_count")
+  occupiedCount     Int?            @map("occupied_count")
+  partner           ParkingPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@unique([source, sourceId])
+  @@index([regionCode, isActive])
+  @@index([partnerId, partnerUpdatedAt])
+  @@map("regional_parking_facilities")
+}

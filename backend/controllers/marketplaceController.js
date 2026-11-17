@@ -2587,7 +2587,8 @@ exports.getDiscoveryCandidates = async (req, res, next) => {
       };
     });
 
-    res.json({ data: result });
+    const directory = await require('../services/regionalParkingService').discoverRegional(prisma, { lat: userLat, lon: userLon, radiusMeters: radiusKm * 1000 });
+    res.json({ data: [...result, ...directory] });
   } catch (error) {
     logger.error('Public candidate discovery error:', error);
     next(error);

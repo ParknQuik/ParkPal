@@ -658,3 +658,6 @@ After beta data starts flowing, build the processing layer.
 | Mobile geofencing + activity recognition (6A Week 3-4) | Bryan | May 28, 2026 |
 | Beta launch with analytics live | Bryan | May 28, 2026 |
 | Data pipeline + operator portal (6B) | Bryan | Jun 28, 2026 |
+
+
+Regional OSM discovery and verified facility-level operator occupancy are implemented separately from crowd circling metrics. See [regional directory operations](../REGIONAL_PARKING_DIRECTORY.md). Sensor/MQTT adapters remain future work.
