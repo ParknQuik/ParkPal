@@ -32,7 +32,7 @@ jobs:
 
     services:
       postgres:
-        image: pgvector/pgvector:pg15
+        image: postgres:16
         env:
           POSTGRES_USER: parkpal
           POSTGRES_PASSWORD: testpassword
@@ -44,6 +44,20 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+
+      knowledge-postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parknquik_knowledge_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
 
       redis:
         image: redis:7-alpine
@@ -70,18 +84,24 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
+      - name: Generate Prisma clients
+        working-directory: ./backend
+        run: npm run prisma:generate
+
       - name: Setup database
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          KNOWLEDGE_DATABASE_URL: postgresql://parkpal:testpassword@localhost:5433/parknquik_knowledge_test
         run: |
-          npx prisma migrate deploy
+          npm run db:migrate
           npm run seed || echo "⚠️ No seed script available - using empty database"
 
       - name: Start backend server
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          KNOWLEDGE_DATABASE_URL: postgresql://parkpal:testpassword@localhost:5433/parknquik_knowledge_test
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key-for-performance-testing-only
           QR_SECRET: test-qr-secret-for-performance-testing-only-64-character-hex-string
@@ -151,7 +171,7 @@ jobs:
 
     services:
       postgres:
-        image: pgvector/pgvector:pg15
+        image: postgres:16
         env:
           POSTGRES_USER: parkpal
           POSTGRES_PASSWORD: testpassword
@@ -163,6 +183,20 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+
+      knowledge-postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parknquik_knowledge_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
 
       redis:
         image: redis:7-alpine
@@ -187,18 +221,24 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
+      - name: Generate Prisma clients
+        working-directory: ./backend
+        run: npm run prisma:generate
+
       - name: Setup database
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          KNOWLEDGE_DATABASE_URL: postgresql://parkpal:testpassword@localhost:5433/parknquik_knowledge_test
         run: |
-          npx prisma migrate deploy
+          npm run db:migrate
           npm run seed || echo "⚠️ No seed script available - using empty database"
 
       - name: Start backend server
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          KNOWLEDGE_DATABASE_URL: postgresql://parkpal:testpassword@localhost:5433/parknquik_knowledge_test
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key-for-performance-testing-only
           QR_SECRET: test-qr-secret-for-performance-testing-only-64-character-hex-string

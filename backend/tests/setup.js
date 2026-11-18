@@ -10,6 +10,9 @@ if (result.error) {
 }
 
 process.env.NODE_ENV = 'test';
+// Test accounts are local fixtures; production MFA enforcement is covered by unit policy checks.
+process.env.ADMIN_MFA_LOCAL_BYPASS = 'true';
+process.env.ADMIN_MFA_ENCRYPTION_KEY ||= Buffer.alloc(32, 7).toString('base64');
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
@@ -40,6 +43,8 @@ const TEST_USERS = {
 
 async function cleanDatabase() {
   // Clean in order of dependencies
+  await prisma.adminAccessAudit.deleteMany();
+  await prisma.adminInvitation.deleteMany();
   await prisma.review.deleteMany();
   await prisma.payout.deleteMany();
   await prisma.payment.deleteMany();

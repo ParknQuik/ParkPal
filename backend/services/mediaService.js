@@ -233,14 +233,16 @@ async function processProfileImage(originalFileName, userId) {
     const originalFile = bucket.file(originalFileName);
 
     const [imageBuffer] = await originalFile.download();
-
-    // Clean up old original files for this user (keep only the latest)
-    await cleanupOldProfileFiles(userId, originalFileName);
-
-    const resizedBuffer = await sharp(imageBuffer)
-      .resize(200, 200, { fit: 'cover', position: 'center' })
-      .jpeg({ quality: 85, progressive: true })
-      .toBuffer();
+    let resizedBuffer;
+    try {
+      resizedBuffer = await sharp(imageBuffer)
+        .resize(200, 200, { fit: 'cover', position: 'center' })
+        .jpeg({ quality: 85, progressive: true })
+        .toBuffer();
+    } catch (error) {
+      logger.warn('Rejected unsupported profile image data:', error.message);
+      throw Object.assign(new Error('Unsupported or invalid image data'), { statusCode: 400 });
+    }
 
     const resizedFileName = `profiles/${userId}/profile_200x200.jpg`;
     const resizedFile = bucket.file(resizedFileName);
@@ -256,11 +258,15 @@ async function processProfileImage(originalFileName, userId) {
 
     const publicUrl = await getPublicUrl(resizedFileName);
 
+    // Retain the previous originals unless decoding and publishing the new image succeeded.
+    await cleanupOldProfileFiles(userId, originalFileName);
+
     logger.info(`Processed profile image for user ${userId}`);
 
     return publicUrl;
   } catch (error) {
     logger.error('Error processing profile image:', error);
+    if (error.statusCode === 400) throw error;
     throw new Error('Failed to process profile image');
   }
 }

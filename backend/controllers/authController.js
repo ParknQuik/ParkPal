@@ -3,6 +3,8 @@ const logger = require('../config/logger');
 const crypto = require('crypto');
 const { generateToken, hashPassword, comparePassword, validatePassword } = require('../services/auth');
 const { sendPasswordResetEmail } = require('../services/email');
+const { generateSecret, matchedTotpCounter, generateRecoveryCodes, encryptTotpSecret, decryptTotpSecret, hashRecoveryCode, localMfaBypass } = require('../services/adminMfa');
+const QRCode = require('qrcode');
 
 exports.register = async (req, res, next) => {
   try {
@@ -40,7 +42,8 @@ exports.register = async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        canHost: user.canHost ?? false
       },
       token
     };
@@ -76,6 +79,10 @@ exports.changePassword = async (req, res, next) => {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
+    if (await comparePassword(newPassword, user.password)) {
+      return res.status(400).json({ error: 'New password must be different from your current password' });
+    }
+
     // Validate new password (for breached password check)
     const passwordValidation = await validatePassword(newPassword);
     if (!passwordValidation.valid) {
@@ -88,6 +95,7 @@ exports.changePassword = async (req, res, next) => {
       where: { id: userId },
       data: {
         password: hashedPassword,
+        mustChangePassword: false,
         updatedAt: new Date()
       }
     });
@@ -120,13 +128,17 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    if (!user.isActive) return res.status(401).json({ error: 'Invalid credentials' });
+
     const isValidPassword = await comparePassword(password, user.password);
 
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = await generateToken(user);
+    const isAdmin = user.role === 'admin';
+    const mfaRequired = isAdmin && !localMfaBypass();
+    const token = await generateToken(user, { mfaVerified: !mfaRequired });
 
     res.json({
       user: {
@@ -134,14 +146,85 @@ exports.login = async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        canHost: user.canHost ?? false,
+        isPlatformOwner: user.isPlatformOwner ?? false,
+        mfaEnabled: user.mfaEnabled ?? false,
+        mustChangePassword: user.mustChangePassword ?? false,
         phone: user.phone ?? null,
         profileImageUrl: user.profileImageUrl ?? null,
       },
-      token
+      token,
+      mfaRequired: mfaRequired && user.mfaEnabled,
+      mfaEnrollmentRequired: mfaRequired && !user.mfaEnabled,
+      mustChangePassword: user.mustChangePassword ?? false,
     });
   } catch (error) {
     next(error);
   }
+};
+
+exports.beginAdminMfa = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+    const current = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!current || current.mfaEnabled) return res.status(409).json({ error: 'MFA is already enrolled for this account' });
+    const secret = generateSecret();
+    const uri = `otpauth://totp/ParknQuik:${encodeURIComponent(req.user.email)}?secret=${secret}&issuer=ParknQuik&digits=6&period=30`;
+    const qrCode = await QRCode.toDataURL(uri);
+    await prisma.user.update({ where: { id: req.user.id }, data: { mfaSecret: encryptTotpSecret(secret), mfaEnabled: false, lastMfaCounter: null } });
+    return res.json({ secret, qrCode });
+  } catch (error) { return next(error); }
+};
+
+exports.verifyAdminMfa = async (req, res, next) => {
+  try {
+    const { code } = req.body || {};
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const counter = user?.mfaSecret ? matchedTotpCounter(decryptTotpSecret(user.mfaSecret), code) : null;
+    if (!user || user.role !== 'admin' || user.mfaEnabled || counter === null) {
+      return res.status(400).json({ error: 'Invalid authenticator code' });
+    }
+    const recoveryCodes = generateRecoveryCodes();
+    const enrolled = await prisma.user.updateMany({
+      where: { id: user.id, role: 'admin', mfaEnabled: false, mfaSecret: user.mfaSecret },
+      data: { mfaEnabled: true, mfaRecoveryCodes: recoveryCodes.map(hashRecoveryCode), lastMfaCounter: counter },
+    });
+    if (enrolled.count !== 1) return res.status(409).json({ error: 'MFA enrollment has already been completed' });
+    const token = await generateToken(user, { mfaVerified: true });
+    return res.json({ token, recoveryCodes });
+  } catch (error) { return next(error); }
+};
+
+exports.challengeAdminMfa = async (req, res, next) => {
+  try {
+    const { code } = req.body || {};
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user || user.role !== 'admin' || !user.mfaEnabled) return res.status(400).json({ error: 'MFA is not enrolled' });
+    const counter = matchedTotpCounter(decryptTotpSecret(user.mfaSecret), code);
+    let valid = false;
+    if (counter !== null) {
+      const consumed = await prisma.user.updateMany({
+        where: { id: user.id, mfaEnabled: true, OR: [{ lastMfaCounter: null }, { lastMfaCounter: { lt: counter } }] },
+        data: { lastMfaCounter: counter },
+      });
+      valid = consumed.count === 1;
+    }
+    const recoveryCodes = user.mfaRecoveryCodes || [];
+    if (!valid && typeof code === 'string') {
+      const hashedCode = hashRecoveryCode(code);
+      const index = recoveryCodes.indexOf(hashedCode);
+      if (index >= 0) {
+        const consumed = await prisma.user.updateMany({
+          where: { id: user.id, mfaRecoveryCodes: { has: hashedCode } },
+          data: { mfaRecoveryCodes: recoveryCodes.filter((_, item) => item !== index) },
+        });
+        valid = consumed.count === 1;
+      }
+    }
+    if (!valid) return res.status(400).json({ error: 'Invalid authenticator code' });
+    const token = await generateToken(user, { mfaVerified: true });
+    return res.json({ token });
+  } catch (error) { return next(error); }
 };
 
 /**
@@ -156,6 +239,9 @@ exports.getCurrentUser = async (req, res, next) => {
         email: true,
         name: true,
         role: true,
+        canHost: true,
+        isPlatformOwner: true,
+        mfaEnabled: true,
         phone: true,
         profileImageUrl: true,
         createdAt: true

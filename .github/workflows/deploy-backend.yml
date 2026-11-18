@@ -89,6 +89,10 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Require production knowledge database secret
+        if: steps.env-vars.outputs.ENVIRONMENT == 'production'
+        run: gcloud secrets describe knowledge-database-url --project ${{ env.PROJECT_ID }} >/dev/null
+
       - name: Configure Docker for GCR
         run: |
           gcloud auth configure-docker
@@ -112,13 +116,13 @@ jobs:
           gcloud run jobs create ${{ env.SERVICE_NAME }}-migrate-${{ steps.env-vars.outputs.SERVICE_SUFFIX }}-${{ github.run_number }} \
             --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             --region ${{ env.REGION }} \
-            --set-secrets DATABASE_URL=DATABASE_URL:latest \
+            --set-secrets DATABASE_URL=DATABASE_URL:latest,KNOWLEDGE_DATABASE_URL=knowledge-database-url:latest \
             --set-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
             --service-account parkpal-backend-service@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --execute-now \
             --wait \
-            --command "npx" \
-            --args "prisma,migrate,deploy" \
+            --command "node" \
+            --args "scripts/migrate-databases.js" \
             --project ${{ env.PROJECT_ID }}
 
       - name: Deploy to Cloud Run
@@ -131,7 +135,7 @@ jobs:
             --service-account parkpal-backend-service@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:parkpal-db \
             --set-env-vars NODE_ENV=${{ steps.env-vars.outputs.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCS_BUCKET_NAME=${{ steps.env-vars.outputs.GCS_BUCKET_NAME }} \
-            --set-secrets DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest \
+            --set-secrets DATABASE_URL=DATABASE_URL:latest,KNOWLEDGE_DATABASE_URL=knowledge-database-url:latest,JWT_SECRET=JWT_SECRET:latest,ADMIN_MFA_ENCRYPTION_KEY=ADMIN_MFA_ENCRYPTION_KEY:latest,REDIS_URL=REDIS_URL:latest,PAYMONGO_SECRET_KEY=PAYMONGO_SECRET_KEY:latest,PAYMONGO_PUBLIC_KEY=PAYMONGO_PUBLIC_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest,RESEND_API_KEY=RESEND_API_KEY:latest \
             --min-instances ${{ steps.env-vars.outputs.MIN_INSTANCES }} \
             --max-instances ${{ steps.env-vars.outputs.MAX_INSTANCES }} \
             --memory ${{ steps.env-vars.outputs.MEMORY }} \

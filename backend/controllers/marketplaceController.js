@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { getDriverDiscoveryCandidates, isInsideViewport } = require('../services/parkingCandidateScanService');
 const { applyStrike, checkSuspension } = require('../services/penaltyService');
 const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../services/qrcode');
@@ -126,7 +127,13 @@ exports.createListing = async (req, res, next) => {
     await cache.invalidateListingsCache();
 
     broadcast({ type: 'listing_created', listing: updatedSlot });
-    res.status(201).json(updatedSlot);
+    const owner = await prisma.user.update({
+      where: { id: ownerId },
+      data: { canHost: true },
+      select: { canHost: true },
+    });
+
+    res.status(201).json({ ...updatedSlot, canHost: owner.canHost });
    } catch (error) {
      next(error);
    }
@@ -364,7 +371,7 @@ exports.searchListings = async (req, res, next) => {
     });
 
     // Try to get from cache first (5 minute TTL)
-    const cachedResult = await cache.get(cacheKey);
+    const cachedResult = req.query.refresh ? null : await cache.get(cacheKey);
     if (cachedResult) {
 
       return res.json(cachedResult);
@@ -676,8 +683,9 @@ exports.searchListings = async (req, res, next) => {
           expandedRadius: expandedRadius,
         };
 
-    // Cache the result (5 minute TTL)
-    await cache.set(cacheKey, response, cache.CACHE_TTL.MEDIUM);
+    // Browsing uses a one-minute local-data freshness window.
+    response.discovery = { truncated: skip + processedSlots.length < actualTotal };
+    await cache.set(cacheKey, response, cache.CACHE_TTL.SHORT);
 
     res.json(response);
   } catch (error) {
@@ -2487,109 +2495,45 @@ exports.extendBooking = async (req, res, next) => {
 };
 
 /**
- * Public parking-candidate discovery endpoint.
- *
- * GET /marketplace/discovery/candidates?lat=<lat>&lon=<lon>&radius=<km>
- *
- * Returns ParkingCandidate records whose draftCenterLat/draftCenterLon fall
- * within `radius` km of the caller's coordinates.  No bearer token is required.
- *
- * Output fields per candidate:
- *   - id, source ('google_candidate'), canBook (false),
- *     canShowAnalytics (true ⇐ linked zone present),
- *     isPreview (true ⇐ candidate_preview status, false ⇐ geofence_verified),
- *     latitude, longitude, title, address
+ * Read-only local facility and eligible community guidance discovery.
+ * Google previews are available only through the explicit POST action below.
  */
 exports.getDiscoveryCandidates = async (req, res, next) => {
   try {
-    const { lat, lon, radius } = req.query;
-    const userLat = parseFloat(lat);
-    const userLon = parseFloat(lon);
-    const radiusKm = parseFloat(radius ?? '5');
-
-    // Fetch preview and verified candidates. Rejected candidates never appear
-    // in public discovery.
-    const candidates = await prisma.parkingCandidate.findMany({
-      where: {
-        candidateStatus: { in: ['candidate_preview', 'geofence_verified', 'commercial_verified'] },
-        draftCenterLat: { not: null },
-        draftCenterLon: { not: null },
-      },
-      select: {
-        id: true,
-        googlePlaceId: true,
-        candidateStatus: true,
-        draftCenterLat: true,
-        draftCenterLon: true,
-        scanArea: true,
-        linkedZoneId: true,
-        linkedZone: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-          },
-        },
-      },
+    const regional = require('../services/regionalParkingService');
+    const area = require('../services/parkingCandidateScanService').getDiscoveryArea(req.query);
+    const directory = await regional.discoverRegional(prisma, area);
+    const bounds = area.bounds || { south: area.lat - area.radiusMeters / 111000, north: area.lat + area.radiusMeters / 111000,
+      west: area.lon - area.radiusMeters / (111000 * Math.cos(area.lat * Math.PI / 180)), east: area.lon + area.radiusMeters / (111000 * Math.cos(area.lat * Math.PI / 180)) };
+    const candidates = await prisma.parkingCandidate.findMany({ where: { candidateStatus: { in: ['geofence_verified', 'commercial_verified'] },
+      linkedZone: { isActive: true, centerLat: { gte: bounds.south, lte: bounds.north },
+        ...(bounds.west <= bounds.east ? { centerLon: { gte: bounds.west, lte: bounds.east } }
+          : { OR: [{ centerLon: { gte: bounds.west } }, { centerLon: { lte: bounds.east } }] }) } },
+      include: { linkedZone: true }, take: 26, orderBy: { id: 'asc' } });
+    const end = new Date(); end.setUTCMinutes(0, 0, 0);
+    const inBounds = candidates.filter(candidate => candidate.linkedZone && isInsideViewport(bounds, candidate.linkedZone.centerLat, candidate.linkedZone.centerLon));
+    const communityTruncated = inBounds.length > 25;
+    const metrics = inBounds.length ? await prisma.crowdParkingMetric.findMany({ where: {
+      zoneId: { in: inBounds.slice(0, 25).map(c => c.linkedZoneId) }, windowEnd: end, sampleCount: { gte: 3 } } }) : [];
+    const pins = inBounds.slice(0, 25).flatMap(candidate => {
+      const zone = candidate.linkedZone;
+      if (!zone || !isInsideViewport(bounds, zone.centerLat, zone.centerLon)) return [];
+      const metric = metrics.find(m => m.zoneId === zone.id);
+      return [{ id: 'zone-' + zone.id, source: 'crowd_guidance', category: 'commercial_guidance', canBook: false,
+        canShowAnalytics: true, isPreview: false, zoneId: zone.id, latitude: zone.centerLat, longitude: zone.centerLon,
+        title: zone.name, address: zone.address, attribution: 'ParkPal community',
+        crowdGuidance: metric ? { circlingTimeSeconds: metric.avgCirclingTimeSeconds,
+          sampleCount: metric.sampleCount, windowStart: metric.windowStart, windowEnd: metric.windowEnd } : null }];
     });
+    res.json({ data: [...pins, ...directory], discovery: { provider: 'local', truncated: directory.truncated || communityTruncated } });
+  } catch (error) { next(error); }
+};
 
-    // Post-filter by distance so the Service Workers / database layer
-    // does not need spatial extension support.
-    const filtered = candidates.filter((c) => {
-      if (c.draftCenterLat == null || c.draftCenterLon == null) {
-        return false;
-      }
-      return (
-        calculateDistance(userLat, userLon, c.draftCenterLat, c.draftCenterLon) <= radiusKm
-      );
-    });
-
-    const verifiedZoneIds = [...new Set(filtered
-      .filter((candidate) => candidate.candidateStatus !== 'candidate_preview' && candidate.linkedZoneId != null)
-      .map((candidate) => candidate.linkedZoneId))];
-    const completedWindowEnd = new Date();
-    completedWindowEnd.setUTCMinutes(0, 0, 0);
-    const crowdMetrics = verifiedZoneIds.length
-      ? await prisma.crowdParkingMetric.findMany({
-        where: { zoneId: { in: verifiedZoneIds }, windowEnd: completedWindowEnd, sampleCount: { gte: 3 } },
-        select: { zoneId: true, avgCirclingTimeSeconds: true, sampleCount: true, windowStart: true, windowEnd: true },
-      })
-      : [];
-    const metricByZoneId = new Map(crowdMetrics.map((metric) => [metric.zoneId, metric]));
-
-    const result = filtered.map((candidate) => {
-      const isPreview = candidate.candidateStatus === 'candidate_preview';
-      const hasLinkedZone = !!candidate.linkedZone;
-
-      return {
-        id: candidate.id,
-        source: 'google_candidate',
-        canBook: false,
-        // Only show analytics for verified candidates that have a linked zone.
-        canShowAnalytics: !isPreview && hasLinkedZone,
-        zoneId: !isPreview && hasLinkedZone ? candidate.linkedZoneId : null,
-        crowdGuidance: !isPreview && hasLinkedZone && metricByZoneId.has(candidate.linkedZoneId)
-          ? (() => {
-            const metric = metricByZoneId.get(candidate.linkedZoneId);
-            return {
-              circlingTimeSeconds: metric.avgCirclingTimeSeconds,
-              sampleCount: metric.sampleCount,
-              windowStart: metric.windowStart,
-              windowEnd: metric.windowEnd,
-            };
-          })()
-          : null,
-        isPreview,
-        latitude: candidate.draftCenterLat,
-        longitude: candidate.draftCenterLon,
-        title: candidate.linkedZone?.name || `Parking candidate ${candidate.id}`,
-        address: candidate.linkedZone?.address || null,
-      };
-    });
-
-    res.json({ data: result });
-  } catch (error) {
-    logger.error('Public candidate discovery error:', error);
-    next(error);
-  }
+exports.getGoogleDiscovery = async (req, res, next) => {
+  try {
+    const identity = req.user?.id ? 'account:' + req.user.id : 'ip:' + req.ip;
+    const result = await getDriverDiscoveryCandidates(req.body, identity);
+    res.set('Cache-Control', 'no-store');
+    res.json({ data: result.candidates, discovery: result.metadata });
+  } catch (error) { next(error); }
 };

@@ -1,7 +1,8 @@
 const { authenticate } = require('../services/auth');
 const { validateBody, validateParams, validateQuery } = require('../middleware/validation');
 const adminController = require('../controllers/adminController');
-const { requireAdmin } = require('../middleware/adminGuard');
+const { requireAdmin, requirePlatformOwner } = require('../middleware/adminGuard');
+const adminAccessController = require('../controllers/adminAccessController');
 const {
   parkingCandidateGeofenceSchema,
   parkingCandidateIdSchema,
@@ -15,6 +16,12 @@ const {
  * All routes require authentication and admin role
  */
 module.exports = (app) => {
+
+app.post('/admin-invitations/accept', adminAccessController.acceptInvitation);
+app.get('/admin/access', authenticate, requirePlatformOwner, adminAccessController.list);
+app.post('/admin/access/invitations', authenticate, requirePlatformOwner, adminAccessController.invite);
+app.delete('/admin/access/invitations/:id', authenticate, requirePlatformOwner, adminAccessController.revokeInvitation);
+app.patch('/admin/access/admins/:id', authenticate, requirePlatformOwner, adminAccessController.setActive);
 
 /**
  * POST /admin/parking-candidates/google/scan

@@ -8,18 +8,22 @@ const logger = require('./logger');
 const REQUIRED_VARS = {
   production: [
     'DATABASE_URL',
+    'KNOWLEDGE_DATABASE_URL',
     'GCS_BUCKET_NAME',
     'JWT_SECRET',
+    'ADMIN_MFA_ENCRYPTION_KEY',
     'NODE_ENV',
     'PORT',
   ],
   development: [
     'DATABASE_URL',
+    'KNOWLEDGE_DATABASE_URL',
     'GCS_BUCKET_NAME',
     'JWT_SECRET',
   ],
   test: [
     'DATABASE_URL',
+    'KNOWLEDGE_DATABASE_URL',
     'JWT_SECRET',
   ],
 };
@@ -35,6 +39,7 @@ const RECOMMENDED_VARS = [
 
 const SECRET_VARS = [
   'JWT_SECRET',
+  'ADMIN_MFA_ENCRYPTION_KEY',
   'QR_SECRET',
   'PAYMONGO_SECRET_KEY',
   'PAYMONGO_WEBHOOK_SECRET',
@@ -154,6 +159,13 @@ function validateEnvironment() {
       }
     }
 
+    if (varName === 'ADMIN_MFA_ENCRYPTION_KEY') {
+      const key = Buffer.from(value, 'base64');
+      if (key.length !== 32 || key.toString('base64') !== value) {
+        errors.push('ADMIN_MFA_ENCRYPTION_KEY must be a base64 encoded 32-byte key');
+      }
+    }
+
     if (varName === 'DATABASE_URL') {
       if (!validateDatabaseUrl(value)) {
         if (env === 'production') {
@@ -246,7 +258,6 @@ function printEnvironmentSummary() {
   logger.info(`  Google Maps: ${process.env.GOOGLE_MAPS_API_KEY ? 'Configured' : 'Not configured'}`);
   logger.info(`  Google Places: ${process.env.GOOGLE_PLACES_API_KEY ? 'Configured' : 'Not configured'}`);
   logger.info(`  Google Auth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
-  logger.info(`  Google Parking Scan: ${process.env.GOOGLE_PARKING_SCAN_ENABLED === 'true' ? 'Enabled' : 'Disabled'}`);
 }
 
 module.exports = {

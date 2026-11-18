@@ -16,7 +16,7 @@ COPY prisma ./prisma/
 RUN npm ci
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npx prisma generate && npx prisma generate --schema prisma/knowledge/schema.prisma
 
 # Copy application code
 COPY . .
@@ -31,6 +31,7 @@ RUN apk add --no-cache dumb-init openssl libc6-compat
 # Copy node_modules and generated Prisma client from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/generated ./generated
 
 # Copy application code
 COPY --from=builder /app/package*.json ./

@@ -17,6 +17,26 @@ const {
 const { asyncHandler } = require('../middleware/errorHandler');
 
 module.exports = (app) => {
+  app.post('/marketplace/discovery/google', optionalAuthenticate,
+    validateBody(discoveryCandidatesSchema.fork(['south', 'west', 'north', 'east'], schema => schema.required())),
+    asyncHandler(marketplaceController.getGoogleDiscovery));
+  const regional = require('../services/regionalParkingService');
+  const db = require('../config/prisma');
+  app.get('/marketplace/directory/:region', asyncHandler(async (req, res) => {
+    regional.regionFor(req.params.region);
+    const facilities = await db.regionalParkingFacility.findMany({ where: { regionCode: req.params.region, isActive: true }, include: { partner: true }, take: 1000, orderBy: { id: 'asc' } });
+    res.json({ data: facilities.map(facility => regional.presentFacility(facility)) });
+  }));
+  app.put('/marketplace/directory/:id/availability', asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid facility id' });
+    try {
+      res.json(await regional.updatePartner(db, req.get('authorization')?.replace(/^Bearer /, ''), id, req.body));
+    } catch (error) {
+      res.status(error.message === 'Invalid partner credentials' ? 401 : 400).json({ error: error.message });
+    }
+  }));
+
   /**
    * @swagger
    * /api/marketplace/listings:
@@ -632,21 +652,21 @@ app.get(
    *     parameters:
    *       - in: query
    *         name: lat
-   *         required: true
+   *         required: false
    *         schema:
    *           type: number
    *           minimum: -90
    *           maximum: 90
-   *         description: Centre latitude for the bounding-box search
+   *         description: Centre latitude (required with lon when bounds are omitted)
    *         example: 14.5995
    *       - in: query
    *         name: lon
-   *         required: true
+   *         required: false
    *         schema:
    *           type: number
    *           minimum: -180
    *           maximum: 180
-   *         description: Centre longitude for the bounding-box search
+   *         description: Centre longitude (required with lat when bounds are omitted)
    *         example: 120.9842
    *       - in: query
    *         name: radius
@@ -657,9 +677,25 @@ app.get(
    *           maximum: 50
    *         description: Search radius in kilometres
    *         example: 5
+   *       - in: query
+   *         name: south
+   *         schema: { type: number, minimum: -90, maximum: 90 }
+   *         description: Viewport south latitude; requires west, north and east
+   *       - in: query
+   *         name: west
+   *         schema: { type: number, minimum: -180, maximum: 180 }
+   *         description: Viewport west longitude; west greater than east crosses the antimeridian
+   *       - in: query
+   *         name: north
+   *         schema: { type: number, minimum: -90, maximum: 90 }
+   *         description: Viewport north latitude, greater than south
+   *       - in: query
+   *         name: east
+   *         schema: { type: number, minimum: -180, maximum: 180 }
+   *         description: Viewport east longitude
    *     responses:
    *       200:
-   *         description: List of parking candidate preview pins
+   *         description: Non-bookable facilities in data, with additive discovery coverage metadata
    *       400:
    *         description: Missing or invalid query parameters
    */

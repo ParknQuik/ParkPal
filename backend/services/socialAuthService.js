@@ -7,6 +7,7 @@ const buildUserResponse = (user) => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  canHost: user.canHost ?? false,
   phone: user.phone,
   profileImageUrl: user.profileImageUrl,
 });

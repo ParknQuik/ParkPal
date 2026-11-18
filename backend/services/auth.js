@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const secretManager = require('../config/secretManager');
+const prisma = require('../config/prisma');
+const { localMfaBypass } = require('./adminMfa');
 
 // Optional: Load hibp package for breached password checking
 let pwnedPassword;
@@ -46,14 +48,35 @@ exports.authenticate = async (req, res, next) => {
 
     const jwtSecret = await getJwtSecret();
 
-    jwt.verify(token, jwtSecret, (err, decoded) => {
+    jwt.verify(token, jwtSecret, async (err, decoded) => {
       if (err) {
         const error = new Error('Invalid token');
         error.statusCode = 401;
         return next(error);
       }
-      req.user = decoded;
-      next();
+      try {
+        const current = await prisma.user.findUnique({
+          where: { id: Number(decoded.id) },
+          select: { id: true, email: true, role: true, isActive: true, isPlatformOwner: true, mfaEnabled: true, mustChangePassword: true },
+        });
+        if (!current || !current.isActive) {
+          const error = new Error('Account is inactive or unavailable');
+          error.statusCode = 401;
+          return next(error);
+        }
+        req.user = {
+          ...current,
+          mfaVerified: decoded.mfaVerified === true || localMfaBypass(),
+        };
+        if (current.mustChangePassword && !req.path.endsWith('/auth/password')) {
+          const error = new Error('Change your temporary password before continuing');
+          error.statusCode = 403;
+          return next(error);
+        }
+        return next();
+      } catch (error) {
+        return next(error);
+      }
     });
   } catch (error) {
     console.error('Authentication error:', error.message);
@@ -79,11 +102,11 @@ exports.optionalAuthenticate = async (req, res, next) => {
   }
 };
 
-exports.generateToken = async (user) => {
+exports.generateToken = async (user, claims = {}) => {
   const jwtSecret = await getJwtSecret();
 
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, mfaVerified: claims.mfaVerified === true },
     jwtSecret,
     { expiresIn: '24h' }
   );
