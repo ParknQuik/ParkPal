@@ -7,6 +7,7 @@ const CurrentPath = () => { const location = useLocation(); return <div data-tes
 const renderAdminRoute = () => render(<>
   <Routes>
     <Route path="/admin-dashboard" element={<RoleRoute roles={['admin']}><div>Admin tools</div></RoleRoute>} />
+    <Route path="/admin-mfa" element={<div>Admin MFA</div>} />
     <Route path="/login" element={<div>Login</div>} />
     <Route path="/" element={<div>Public search</div>} />
   </Routes>
@@ -15,7 +16,7 @@ const renderAdminRoute = () => render(<>
 
 const renderMyListingsRoute = () => render(<>
   <Routes>
-    <Route path="/host-dashboard" element={<RoleRoute roles={['driver', 'host', 'admin']}><div>My Listings</div></RoleRoute>} />
+    <Route path="/host-dashboard" element={<RoleRoute roles={['driver', 'host', 'admin']} requiresHostCapability><div>My Listings</div></RoleRoute>} />
     <Route path="/login" element={<div>Login</div>} />
     <Route path="/" element={<div>Public search</div>} />
   </Routes>
@@ -31,8 +32,16 @@ describe('RoleRoute', () => {
   it('allows an admin into candidate operations', () => {
     localStorage.setItem('user', JSON.stringify({ id: 1, email: 'admin@example.com', name: 'Admin', role: 'admin' }));
     localStorage.setItem('token', 'token');
+    sessionStorage.setItem('admin-mfa-verified', 'true');
     renderAdminRoute();
     expect(screen.getByText('Admin tools')).toBeInTheDocument();
+  });
+
+  it('requires MFA before an admin reaches candidate operations', () => {
+    localStorage.setItem('user', JSON.stringify({ id: 1, email: 'admin@example.com', name: 'Admin', role: 'admin' }));
+    localStorage.setItem('token', 'token');
+    renderAdminRoute();
+    expect(screen.getByText('Admin MFA')).toBeInTheDocument();
   });
 
   it('sends a signed-in driver away from admin operations', () => {
@@ -43,8 +52,17 @@ describe('RoleRoute', () => {
     expect(screen.getByText('Public search')).toBeInTheDocument();
   });
 
-  it('allows a signed-in driver to reach My Listings', () => {
+  it('redirects a driver without host capability away from My Listings', () => {
     localStorage.setItem('user', JSON.stringify({ id: 2, email: 'driver@example.com', name: 'Driver', role: 'driver' }));
+    localStorage.setItem('token', 'token');
+    window.history.replaceState({}, '', '/host-dashboard');
+    renderMyListingsRoute();
+    expect(screen.queryByText('My Listings')).not.toBeInTheDocument();
+    expect(screen.getByText('Public search')).toBeInTheDocument();
+  });
+
+  it('allows a driver with host capability to reach My Listings', () => {
+    localStorage.setItem('user', JSON.stringify({ id: 2, email: 'driver@example.com', name: 'Driver', role: 'driver', canHost: true }));
     localStorage.setItem('token', 'token');
     window.history.replaceState({}, '', '/host-dashboard');
     renderMyListingsRoute();

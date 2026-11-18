@@ -1,0 +1,110 @@
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import api from '../../api';
+import { useViewportDiscovery } from '../useViewportDiscovery';
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const bounds = { south: 14.59, west: 120.97, north: 14.61, east: 120.99 };
+const later = { ...bounds, north: 14.62 };
+const response = (id: number) => ({ data: { data: [{ id }] } });
+const flush = async () => { await act(async () => { await Promise.resolve(); }); };
+describe('submitted area discovery', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.clearAllMocks(); vi.mocked(api.get).mockResolvedValue(response(1)); });
+  afterEach(() => { vi.useRealTimers(); });
+  it('loads submitted bounds once and clears old viewport results while loading', async () => {
+    const { result, rerender } = renderHook(({ area }) => useViewportDiscovery(area), { initialProps: { area: bounds } });
+    await flush();
+    expect(result.current.pins).toEqual([{ id: 1 }]);
+    rerender({ area: { ...bounds } });
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(1);
+    let reject!: (error: Error) => void;
+    vi.mocked(api.get).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+    rerender({ area: later });
+    expect(result.current.pins).toEqual([]);
+    await act(async () => { reject(new Error('offline')); });
+    expect(result.current.status).toBe('error');
+    expect(result.current.pins).toEqual([]);
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { data: [] } });
+    act(() => result.current.retry());
+    await flush();
+    expect(result.current.pins).toEqual([]);
+  });
+  it('ignores superseded responses and deduplicates requests in flight', async () => {
+    let finish!: (value: any) => void;
+    vi.mocked(api.get).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const { result, rerender } = renderHook(({ area }) => useViewportDiscovery(area), { initialProps: { area: bounds } });
+    rerender({ area: later });
+    await flush();
+    rerender({ area: bounds });
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2);
+    await act(async () => { finish(response(2)); });
+    expect(result.current.pins).toEqual([{ id: 2 }]);
+    rerender({ area: later });
+    await flush();
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2);
+    expect(result.current.pins).toEqual([{ id: 1 }]);
+  });
+  it('reuses results for 60 seconds and explicit refresh bypasses cache with a five-second cooldown', async () => {
+    const { result, rerender } = renderHook(({ area }) => useViewportDiscovery(area), { initialProps: { area: bounds } });
+    await flush();
+    const first = result.current.pins[0];
+    act(() => result.current.retry());
+    await flush();
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2);
+    expect(result.current.pins[0]).toBe(first);
+    act(() => result.current.retry());
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2);
+    await act(async () => { vi.advanceTimersByTime(60001); });
+    rerender({ area: later });
+    await flush();
+    rerender({ area: bounds });
+    await flush();
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(4);
+  });
+  it('evicts areas beyond the eight-area session limit', async () => {
+    const { rerender } = renderHook(({ area }) => useViewportDiscovery(area), { initialProps: { area: bounds } });
+    await flush();
+    for (let i = 1; i <= 8; i++) {
+      rerender({ area: { ...bounds, north: bounds.north + i / 100 } });
+      await flush();
+    }
+    rerender({ area: bounds });
+    await flush();
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(10);
+  });
+  it('calls Google only for an explicit action using submitted bounds', async () => {
+    vi.mocked(api.post).mockResolvedValue(response(9));
+    const { result, rerender } = renderHook(({ area }) => useViewportDiscovery(area), { initialProps: { area: bounds } });
+    await flush();
+    act(() => result.current.retry());
+    rerender({ area: later });
+    await flush();
+    expect(vi.mocked(api.post)).not.toHaveBeenCalled();
+    await act(async () => { await result.current.findMore(); });
+    expect(api.post).toHaveBeenCalledWith('/marketplace/discovery/google', later);
+    expect(result.current.pins).toEqual([{ id: 1 }, { id: 9 }]);
+    await act(async () => { await result.current.findMore(); });
+    expect(vi.mocked(api.post)).toHaveBeenCalledTimes(1);
+  });
+  it('does not request when disabled, clears results, and ignores late responses after disable', async () => {
+    let finish!: (value: any) => void;
+    vi.mocked(api.get).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const { result, rerender } = renderHook(({ enabled }) => useViewportDiscovery(bounds, enabled), { initialProps: { enabled: true } });
+    rerender({ enabled: false });
+    await flush();
+    await act(async () => { finish(response(99)); });
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(1);
+    expect(result.current.pins).toEqual([]);
+    expect(result.current.status).toBe('idle');
+    rerender({ enabled: true });
+    await flush();
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2);
+  });
+  it('expires partner counts locally without removing pins or requesting discovery', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { data: [{ id: 1, partnerAvailability: { expiresAt: new Date(Date.now() + 1000).toISOString() } }] } });
+    const { result } = renderHook(() => useViewportDiscovery(bounds));
+    await flush();
+    await act(async () => { vi.advanceTimersByTime(1002); });
+    expect(result.current.pins).toEqual([{ id: 1, partnerAvailability: null }]);
+    expect(vi.mocked(api.get)).toHaveBeenCalledTimes(1);
+  });
+});

@@ -22,6 +22,10 @@ const ListSlot = lazy(() => import('./screens/ListSlot.jsx'));
 const HostDashboard = lazy(() => import('./screens/HostDashboard.jsx'));
 const AdminDashboard = lazy(() => import('./screens/AdminDashboard.jsx'));
 const AdminMetricsDashboard = lazy(() => import('./screens/AdminMetricsDashboard'));
+const AdminMfa = lazy(() => import('./screens/AdminMfa'));
+const AdminBootstrapPassword = lazy(() => import('./screens/AdminBootstrapPassword'));
+const AdminAccess = lazy(() => import('./screens/AdminAccess'));
+const AcceptAdminInvitation = lazy(() => import('./screens/AcceptAdminInvitation'));
 const ListingDetail = lazy(() => import('./screens/ListingDetail.jsx'));
 const BookingList = lazy(() => import('./screens/BookingList.jsx'));
 const BookingDetail = lazy(() => import('./screens/BookingDetail.jsx'));
@@ -43,6 +47,7 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
   '/host-dashboard': { title: 'Host dashboard | ParknQuik', description: 'Manage your parking listings and reservations.' },
   '/admin-dashboard': { title: 'Admin dashboard | ParknQuik', description: 'Review ParknQuik operations and parking listings.' },
   '/admin-dashboard/metrics': { title: 'Metrics & health | ParknQuik', description: 'Review ParknQuik product metrics and engineering health.' },
+  '/admin-access': { title: 'Administrator access | ParknQuik', description: 'Manage administrator accounts and invitations.' },
   '/privacy': { title: 'Privacy policy | ParknQuik', description: 'Read how ParknQuik handles account, booking, and optional analytics information.' },
   '/terms': { title: 'Terms of service | ParknQuik', description: 'Review the draft terms for using ParknQuik parking search and booking services.' },
 };
@@ -115,6 +120,7 @@ type ScreenRoute = {
 
 type RoleRestrictedRoute = ScreenRoute & {
   roles: string[];
+  requiresHostCapability?: boolean;
 };
 
 const publicRoutes: ScreenRoute[] = [
@@ -123,6 +129,7 @@ const publicRoutes: ScreenRoute[] = [
   { path: '/login', Screen: Login },
   { path: '/listing/:id', Screen: ListingDetail },
   { path: '/map', Screen: MapView },
+  { path: '/accept-admin-invitation', Screen: AcceptAdminInvitation },
 ];
 
 const authenticatedRoutes: ScreenRoute[] = [
@@ -135,11 +142,12 @@ const authenticatedRoutes: ScreenRoute[] = [
 ];
 
 const roleRestrictedRoutes: RoleRestrictedRoute[] = [
-  // Host management stays limited to host and admin accounts.
+  // Listing creation is open to signed-in drivers; dashboard access requires host capability.
   { path: '/list-slot', Screen: ListSlot, roles: ['driver', 'host', 'admin'] },
-  { path: '/host-dashboard', Screen: HostDashboard, roles: ['host', 'admin'] },
+  { path: '/host-dashboard', Screen: HostDashboard, roles: ['driver', 'host', 'admin'], requiresHostCapability: true },
   { path: '/admin-dashboard', Screen: AdminDashboard, roles: ['admin'] },
   { path: '/admin-dashboard/metrics', Screen: AdminMetricsDashboard, roles: ['admin'] },
+  { path: '/admin-access', Screen: AdminAccess, roles: ['admin'] },
 ];
 
 function renderRoutes(
@@ -173,11 +181,13 @@ function App() {
                 {renderRoutes(publicRoutes)}
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/admin-mfa" element={<ProtectedRoute><AdminMfa /></ProtectedRoute>} />
+                <Route path="/admin-password" element={<ProtectedRoute><AdminBootstrapPassword /></ProtectedRoute>} />
                 {renderRoutes(authenticatedRoutes, (_route, screen) => (
                   <ProtectedRoute>{screen}</ProtectedRoute>
                 ))}
                 {renderRoutes(roleRestrictedRoutes, (route, screen) => (
-                  <RoleRoute roles={(route as RoleRestrictedRoute).roles}>
+                  <RoleRoute roles={(route as RoleRestrictedRoute).roles} requiresHostCapability={(route as RoleRestrictedRoute).requiresHostCapability}>
                     {screen}
                   </RoleRoute>
                 ))}

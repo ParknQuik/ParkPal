@@ -1,3 +1,4 @@
+import { useViewportDiscovery } from '../hooks/useViewportDiscovery';
 // Cache bust: Force rebuild with env vars
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -19,11 +20,12 @@ import {
 	Divider,
 	Alert,
 	CircularProgress,
-	Slider,
 	FormControl,
+	FormControlLabel,
 	InputLabel,
 	Select,
 	MenuItem,
+	Switch,
 } from '@mui/material';
 import {
 	Add,
@@ -48,23 +50,35 @@ const MapView = () => {
 	const checkOut = query.get('checkOut') || '';
 	const mapRef = useRef(null);
 	const googleMapRef = useRef(null);
-	const markersRef = useRef([]);
+	const markersRef = useRef(new Map());
+	const slotRequests = useRef(new Map());
+	const slotCache = useRef(new Map());
+	const slotSequence = useRef(0);
+	const refreshAt = useRef(-Infinity);
+	const updateMarkersRef = useRef(() => {});
+	const mapListenersRef = useRef([]);
+	useEffect(() => () => {
+		mapListenersRef.current.forEach((listener) => listener.remove());
+		markersRef.current.forEach(({ marker }) => { marker.map = null; });
+	}, []);
 
 	const [slots, setSlots] = useState([]);
 	const [filteredSlots, setFilteredSlots] = useState([]);
 	const [selectedSlot, setSelectedSlot] = useState(null);
-	const [candidatePins, setCandidatePins] = useState([]);
+	const [discoveryBounds, setDiscoveryBounds] = useState(null);
+	const [viewportBounds, setViewportBounds] = useState(null);
+	const [externalFacilitiesEnabled, setExternalFacilitiesEnabled] = useState(false);
+	const facilityDiscovery = useViewportDiscovery(discoveryBounds, externalFacilitiesEnabled);
+	const candidatePins = facilityDiscovery.pins;
 	const [selectedCandidate, setSelectedCandidate] = useState(null);
 	const [searchQuery, setSearchQuery] = useState(query.get('location') || '');
 	const [userLocation, setUserLocation] = useState(null);
-	const [searchCenter, setSearchCenter] = useState(null); // Where to search (can be different from user location)
-	const [viewportBounds, setViewportBounds] = useState(null);
-	const [radius, setRadius] = useState(5); // Search radius in km (default 5km)
+	const searchCenter = viewportBounds ? { lat: (viewportBounds.south + viewportBounds.north) / 2, lng: (viewportBounds.west + viewportBounds.east) / 2 } : null;
+
+	const radius = 5;
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [mapLoaded, setMapLoaded] = useState(false);
-	const [autoRefresh, setAutoRefresh] = useState(true); // Auto-refresh toggle
-	const [lastRefresh, setLastRefresh] = useState(Date.now());
 	const [minPrice, setMinPrice] = useState('');
 	const [maxPrice, setMaxPrice] = useState('');
 	const [slotType, setSlotType] = useState('');
@@ -75,18 +89,32 @@ const MapView = () => {
 	const defaultCenter = { lat: 14.5995, lng: 120.9842 };
 
 	useEffect(() => {
-		// Start loading slots immediately with default location
-		fetchSlots();
+		// Resolve the initial focus before loading local parking.
 		loadGoogleMapsScript();
 		getUserLocation();
 	}, []);
 
-	// Fetch slots when user location is available or search center changes
 	useEffect(() => {
-		if (userLocation || searchCenter) {
+		setSelectedCandidate(previous => previous ? candidatePins.find(pin => pin.id === previous.id) || null : null);
+	}, [candidatePins]);
+
+	useEffect(() => {
+		if (userLocation && !searchCenter && !requestedCenter) googleMapRef.current?.panTo?.(userLocation);
+	}, [userLocation]);
+
+	useEffect(() => {
+        if (!userLocation) return;
+        const center = requestedCenter || userLocation;
+        setViewportBounds(previous => previous || { south: center.lat - 0.045, north: center.lat + 0.045,
+          west: center.lng - 0.045 / Math.cos(center.lat * Math.PI / 180), east: center.lng + 0.045 / Math.cos(center.lat * Math.PI / 180) });
+    }, [userLocation]);
+
+	// Only submitted bounds and filters trigger local parking requests.
+	useEffect(() => {
+		if (viewportBounds) {
 			fetchSlots();
 		}
-	}, [userLocation, searchCenter, viewportBounds, radius, checkIn, checkOut]);
+	}, [viewportBounds, checkIn, checkOut]);
 
 	useEffect(() => {
 		if (mapLoaded) {
@@ -98,31 +126,19 @@ const MapView = () => {
 
 	useEffect(() => {
 		if (mapLoaded) updateMarkers();
-	}, [mapLoaded, filteredSlots, candidatePins, userLocation]);
+		}, [mapLoaded, filteredSlots, candidatePins, userLocation]);
 
 	useEffect(() => {
 		// Debounce search filtering
 		const timer = setTimeout(() => filterSlots(), 300);
 		return () => clearTimeout(timer);
-	}, [searchQuery, slots, minPrice, maxPrice, slotType, amenity, sortBy, userLocation, searchCenter]);
+	}, [searchQuery, slots, minPrice, maxPrice, slotType, amenity, sortBy, userLocation, viewportBounds]);
 
 	useEffect(() => {
+		if (!viewportBounds) return;
 		const timer = setTimeout(() => fetchSlots(), 250);
 		return () => clearTimeout(timer);
 	}, [minPrice, maxPrice, slotType, amenity]);
-
-	// Auto-refresh parking slots every 30 seconds
-	useEffect(() => {
-		if (!autoRefresh) return;
-
-		const interval = setInterval(() => {
-			console.log('[MapView] Auto-refreshing parking slots...');
-			fetchSlots();
-			setLastRefresh(Date.now());
-		}, 30000); // 30 seconds
-
-		return () => clearInterval(interval);
-	}, [autoRefresh, userLocation, searchCenter, viewportBounds, radius]);
 
 	const loadGoogleMapsScript = () => {
 		loadGoogleMaps(['marker'])
@@ -158,14 +174,15 @@ const MapView = () => {
 		}
 	};
 
-	const fetchSlots = async () => {
+	const fetchSlots = async (force = false) => {
+		if (!viewportBounds) return;
+		const sequence = ++slotSequence.current;
 		try {
 			setLoading(true);
 			// Use searchCenter if set (user moved map), otherwise use userLocation
 			const center = searchCenter || requestedCenter || userLocation || defaultCenter;
 
-			const response = await api.get('/marketplace/search', {
-				params: {
+			const params = {
 					lat: center.lat,
 					lon: center.lng || center.lon,
 					radius: radius, // User-adjustable radius
@@ -179,21 +196,35 @@ const MapView = () => {
 						availableFrom: new Date(checkIn).toISOString(),
 						availableTo: new Date(checkOut).toISOString(),
 					} : {}),
-				},
-			});
-			const candidateResponse = await api.get('/marketplace/discovery/candidates', {
-				params: { lat: center.lat, lon: center.lng || center.lon, radius },
-			}).catch(() => null);
-			setCandidatePins(candidateResponse?.data?.data || []);
+            };
+            const key = JSON.stringify(params);
+            const cached = slotCache.current.get(key);
+            let response;
+            if (!force && cached && Date.now() - cached.at < 60000) response = cached.response;
+            else {
+              let request = slotRequests.current.get(key);
+              if (!request) {
+                request = api.get('/marketplace/search', { params: { ...params, ...(force ? { refresh: true } : {}) } });
+                slotRequests.current.set(key, request);
+                const remove = () => { if (slotRequests.current.get(key) === request) slotRequests.current.delete(key); };
+                request.then(remove, remove);
+              }
+              response = await request;
+              slotCache.current.delete(key);
+              slotCache.current.set(key, { response, at: Date.now() });
+              while (slotCache.current.size > 8) slotCache.current.delete(slotCache.current.keys().next().value);
+            }
+            if (sequence !== slotSequence.current) return;
+            setError(response.data.discovery?.truncated ? 'Zoom in to see more host spaces.' : '');
 			// Handle v1 API response format: { data: [...], pagination: {...} }
 			const slotsData = response.data?.data || response.data?.listings || response.data || [];
 			setSlots(slotsData);
 			setFilteredSlots(slotsData);
 		} catch (error) {
 			console.error('Error fetching slots:', error);
-			setError('Failed to load parking slots');
+			if (sequence === slotSequence.current) setError('Failed to load parking slots. Showing previous results.');
 		} finally {
-			setLoading(false);
+			if (sequence === slotSequence.current) setLoading(false);
 		}
 	};
 
@@ -228,142 +259,70 @@ const MapView = () => {
 				streetViewControl: false,
 				fullscreenControl: false,
 			});
+			const captureBounds = () => {
+				const bounds = googleMapRef.current?.getBounds?.();
+				if (!bounds) return;
+				const sw = bounds.getSouthWest();
+				const ne = bounds.getNorthEast();
+				const next = { south: sw.lat(), west: sw.lng(), north: ne.lat(), east: ne.lng() };
+				setDiscoveryBounds((previous) => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+			};
+			mapListenersRef.current = ['idle'].map((event) => googleMapRef.current.addListener?.(event, captureBounds)).filter(Boolean);
+			captureBounds();
 		}
-		updateMarkers();
+		updateMarkersRef.current();
 	};
 
 	const updateMarkers = () => {
 		const map = googleMapRef.current;
 		if (!map || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
 
-		// Clear existing markers
-		markersRef.current.forEach((marker) => {
-			if (marker.map) marker.map = null;
-		});
-		markersRef.current = [];
-
-		// Create pin element for user location
-		if (userLocation) {
-			try {
-				const userPin = document.createElement('div');
-				userPin.style.width = '16px';
-				userPin.style.height = '16px';
-				userPin.style.borderRadius = '50%';
-				userPin.style.backgroundColor = '#4285F4';
-				userPin.style.border = '3px solid white';
-				userPin.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-
-				const userMarker = new window.google.maps.marker.AdvancedMarkerElement({
-					map,
-					position: userLocation,
-					content: userPin,
-					title: 'Your Location',
-				});
-
-				markersRef.current.push(userMarker);
-			} catch (err) {
-				console.error('Error creating user marker:', err);
-			}
-		}
-
-		// Add parking slot markers using Advanced Markers
-		filteredSlots.forEach((slot) => {
-			const position = { lat: slot.lat, lng: slot.lon };
-
-			try {
-				// Create custom pin element
-				const pin = document.createElement('div');
-				pin.style.width = '20px';
-				pin.style.height = '20px';
-				pin.style.borderRadius = '50%';
-				pin.style.backgroundColor = slot.status === 'available' ? '#4CAF50' : '#F44336';
-				pin.style.border = '3px solid white';
-				pin.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-				pin.style.cursor = 'pointer';
-
-				// Add price label
-				const priceLabel = document.createElement('div');
-				priceLabel.textContent = `₱${slot.price}`;
-				priceLabel.style.position = 'absolute';
-				priceLabel.style.top = '-25px';
-				priceLabel.style.left = '50%';
-				priceLabel.style.transform = 'translateX(-50%)';
-				priceLabel.style.backgroundColor = 'white';
-				priceLabel.style.padding = '2px 6px';
-				priceLabel.style.borderRadius = '4px';
-				priceLabel.style.fontSize = '11px';
-				priceLabel.style.fontWeight = 'bold';
-				priceLabel.style.boxShadow = '0 1px 4px rgba(0,0,0,0.2)';
-				priceLabel.style.whiteSpace = 'nowrap';
-
-				const markerContent = document.createElement('div');
-				markerContent.style.position = 'relative';
-				markerContent.appendChild(priceLabel);
-				markerContent.appendChild(pin);
-
-				const marker = new window.google.maps.marker.AdvancedMarkerElement({
-					map,
-					position,
-					content: markerContent,
-					title: slot.address,
-					gmpClickable: true,
-				});
-
-				// Advanced Markers use the DOM gmp-click event.
-				marker.addEventListener('gmp-click', () => {
-					setSelectedSlot(slot);
-					map.panTo(position);
-				});
-
-				markersRef.current.push(marker);
-			} catch (err) {
-				console.error('Error creating slot marker:', err);
-			}
-		});
-
-		candidatePins.forEach((candidate) => {
-			const hasCurrentGuidance = candidate.canShowAnalytics && candidate.crowdGuidance?.sampleCount >= 3;
-			const pin = document.createElement('div');
-			pin.textContent = hasCurrentGuidance
-				? `${Math.max(1, Math.round(candidate.crowdGuidance.circlingTimeSeconds / 60))}m`
-				: candidate.isPreview ? '?' : 'P';
-			pin.style.minWidth = '30px';
-			pin.style.height = '30px';
-			pin.style.padding = '0 7px';
-			pin.style.display = 'grid';
-			pin.style.placeItems = 'center';
-			pin.style.borderRadius = '16px 16px 16px 4px';
-			pin.style.transform = 'rotate(-45deg)';
-			pin.style.background = hasCurrentGuidance ? '#176b5b' : candidate.isPreview ? '#a65b12' : '#2c6154';
-			pin.style.color = '#fff';
-			pin.style.border = '2px solid #fff';
-			pin.style.boxShadow = '0 2px 6px rgba(0,0,0,.28)';
-			pin.style.fontSize = '11px';
-			pin.style.fontWeight = '700';
-			pin.style.cursor = 'pointer';
-			const marker = new window.google.maps.marker.AdvancedMarkerElement({
-				map,
-				position: { lat: candidate.latitude, lng: candidate.longitude },
-				content: pin,
-				title: `${candidate.title}. ${hasCurrentGuidance ? `${Math.round(candidate.crowdGuidance.circlingTimeSeconds / 60)} minute estimated circling time, guidance only, not bookable.` : 'Commercial parking guidance, not bookable.'}`,
-				gmpClickable: true,
-			});
-			marker.addEventListener('gmp-click', () => {
-				setSelectedSlot(null);
-				setSelectedCandidate(candidate);
-				map.panTo({ lat: candidate.latitude, lng: candidate.longitude });
-			});
-			markersRef.current.push(marker);
-		});
+        const wanted = new Set();
+        const reconcile = (key, record, position, label, color, select) => {
+          wanted.add(key);
+          const title = record.title ? record.title + (record.crowdGuidance?.sampleCount >= 3 ? '. ' + Math.round(record.crowdGuidance.circlingTimeSeconds / 60) + ' minute estimated circling time, guidance only, not bookable.' : '. Commercial parking guidance, not bookable.') : record.address || label;
+          const signature = JSON.stringify({ position, label, color, title });
+          let entry = markersRef.current.get(key);
+          if (!entry) {
+            const content = document.createElement('div');
+            content.style.cssText = 'padding:6px 9px;border:2px solid white;border-radius:16px;box-shadow:0 2px 6px #0004;cursor:pointer;font-weight:700';
+            const marker = new window.google.maps.marker.AdvancedMarkerElement({ map, position, content, title, gmpClickable: true });
+            entry = { marker, content, record, signature: null };
+            marker.addEventListener('gmp-click', () => select(entry.record));
+            markersRef.current.set(key, entry);
+          }
+          entry.record = record;
+          if (entry.signature !== signature) {
+            entry.marker.position = position;
+            entry.marker.title = title;
+            entry.content.textContent = label;
+            entry.content.style.background = color;
+            entry.signature = signature;
+          }
+        };
+        if (userLocation) reconcile('user', {}, userLocation, '●', '#4285f4', () => {});
+        filteredSlots.forEach(slot => reconcile('host-' + slot.id, slot, { lat: slot.lat, lng: slot.lon },
+          '₱' + slot.price, slot.status === 'available' ? '#bdebd5' : '#f8b6b6',
+          current => { setSelectedSlot(current); setSelectedCandidate(null); }));
+        candidatePins.forEach(pin => reconcile(pin.source + '-' + pin.id, pin,
+          { lat: pin.latitude, lng: pin.longitude },
+          pin.canShowAnalytics && pin.crowdGuidance?.sampleCount >= 3
+            ? Math.max(1, Math.round(pin.crowdGuidance.circlingTimeSeconds / 60)) + 'm' : pin.isPreview ? '?' : 'P',
+          pin.isPreview ? '#f8ddb2' : '#bdebd5',
+          current => { setSelectedCandidate(current); setSelectedSlot(null); }));
+        markersRef.current.forEach((entry, key) => {
+          if (!wanted.has(key)) { entry.marker.map = null; markersRef.current.delete(key); }
+        });
 
 	};
+
+	updateMarkersRef.current = updateMarkers;
 
 	const handleRecenterMap = () => {
 		if (googleMapRef.current && userLocation) {
 			googleMapRef.current.panTo(userLocation);
 			googleMapRef.current.setZoom(15);
-			setSearchCenter(null); // Reset to user location
-			setViewportBounds(null);
+
 		}
 	};
 
@@ -430,46 +389,61 @@ const MapView = () => {
 						/>
 					</Box>
 
-					{/* Radius Control */}
+					<Card variant="outlined" sx={{ mx: 2, mb: 1.5, borderRadius: 2 }}>
+						<CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+							<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+								<Box>
+									<Typography variant="subtitle2" fontWeight={700}>Nearby facilities</Typography>
+									<Typography variant="caption" color="text.secondary">Optional, non-bookable facility and community guidance for this map area.</Typography>
+								</Box>
+								<Switch inputProps={{ 'aria-label': 'Nearby facilities' }} checked={externalFacilitiesEnabled} onChange={(event) => setExternalFacilitiesEnabled(event.target.checked)} />
+							</Box>
+							{externalFacilitiesEnabled && <Box sx={{ mt: 1.25 }}>
+								<Typography variant="body2" role="status" aria-live="polite">
+									{!discoveryBounds || facilityDiscovery.status === 'loading' ? 'Loading nearby facility guidance…'
+										: facilityDiscovery.status === 'error' ? 'Facility guidance could not load.'
+										: facilityDiscovery.notice || (candidatePins.length === 0 ? 'No facilities found in this map area.' : `${candidatePins.length} facility ${candidatePins.length === 1 ? 'guide' : 'guides'} · not bookable`)}
+								</Typography>
+								{(facilityDiscovery.status === 'error' || facilityDiscovery.notice?.includes('unavailable')) && <Button size="small" onClick={facilityDiscovery.retry}>Retry local guidance</Button>}
+								<Divider sx={{ my: 1 }} />
+								<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>Google Places previews are separate and are not bookable.</Typography>
+								<Button size="small" variant="outlined" onClick={facilityDiscovery.findMore} disabled={!discoveryBounds || facilityDiscovery.googleLoading}>
+									{facilityDiscovery.googleLoading ? 'Searching Google Places…' : 'Search Google Places'}
+								</Button>
+							</Box>}
+						</CardContent>
+					</Card>
+                    {/* Radius Control */}
 					<Box sx={{ px: 2, pb: 2 }}>
 						<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
 							<Typography variant="caption" color="text.secondary">
-								Search Radius: {radius} km
+								Focused map area
 							</Typography>
 							<Button
 								size="small"
 								startIcon={<Refresh />}
 								onClick={() => {
-									fetchSlots();
-									setLastRefresh(Date.now());
+                                    if (Date.now() - refreshAt.current < 5000) return;
+                                    refreshAt.current = Date.now();
+                                    fetchSlots(true);
+									if (externalFacilitiesEnabled) facilityDiscovery.retry();
 								}}
 								disabled={loading}
 							>
 								Refresh
 							</Button>
 						</Box>
-						<Slider
-							value={radius}
-							onChange={(e, newValue) => setRadius(newValue)}
-							min={1}
-							max={20}
-							step={1}
-							marks={[
-								{ value: 1, label: '1km' },
-								{ value: 5, label: '5km' },
-								{ value: 10, label: '10km' },
-								{ value: 20, label: '20km' },
-							]}
-							valueLabelDisplay="auto"
-							size="small"
-						/>
 						<Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
 							Showing {filteredSlots.length} parking spot{filteredSlots.length !== 1 ? 's' : ''}
-							{autoRefresh && ' • Auto-refresh: 30s'}
+
 						</Typography>
 					</Box>
 
 					<Divider />
+					<Box sx={{ px: 2, pt: 1.5 }}>
+						<Typography variant="subtitle2" fontWeight={800}>Host spaces</Typography>
+						<Typography variant="caption" color="text.secondary">Bookable spaces listed by hosts</Typography>
+					</Box>
 					<Box sx={{ px: 2, py: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
 						<TextField size="small" label="Min ₱/hr" type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} inputProps={{ min: 0 }} />
 						<TextField size="small" label="Max ₱/hr" type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} inputProps={{ min: 0 }} />
@@ -497,7 +471,7 @@ const MapView = () => {
 
 					{/* Slots List */}
 					<Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-						{loading ? (
+						{loading && filteredSlots.length === 0 ? (
 							<Box display="flex" justifyContent="center" py={4}>
 								<CircularProgress />
 							</Box>
@@ -593,6 +567,10 @@ const MapView = () => {
 								))}
 							</List>
 						)}
+						{externalFacilitiesEnabled && discoveryBounds && <Box role="status" sx={{ mt: 2 }}>
+							<Typography variant="body2">{facilityDiscovery.status === 'loading' ? 'Finding parking facilities…'
+								  : facilityDiscovery.notice || (candidatePins.length === 0 ? 'No external parking facilities found in this area.' : 'Facility guidance · not bookable')}</Typography>
+                        </Box>}
 						{candidatePins.length > 0 && <Box sx={{ mt: 2 }}>
 							<Divider sx={{ mb: 1.5 }} />
 							<Typography variant="overline" color="primary.main" fontWeight={800}>COMMERCIAL GUIDANCE · NOT BOOKABLE</Typography>
@@ -626,11 +604,12 @@ const MapView = () => {
 								ref={mapRef}
 								style={{ width: '100%', height: '100%' }}
 							/>
-							{/* Search This Area Button */}
+							{/* Camera movement reveals this action without sending requests. */}
 							<Button
 								variant="contained"
 								startIcon={<Refresh />}
 								sx={{
+									display: discoveryBounds && JSON.stringify(discoveryBounds) !== JSON.stringify(viewportBounds) ? 'inline-flex' : 'none',
 									position: 'absolute',
 									top: 16,
 									left: '50%',
@@ -644,6 +623,7 @@ const MapView = () => {
 									boxShadow: 3,
 									zIndex: 1,
 								}}
+								disabled={!discoveryBounds || loading}
 								onClick={handleSearchThisArea}
 							>
 								Search This Area
@@ -702,12 +682,15 @@ const MapView = () => {
 									<IconButton size="small" aria-label="Close guidance details" onClick={() => setSelectedCandidate(null)}><Close /></IconButton>
 								</Box>
 								<Chip size="small" sx={{ my: 1 }} label={selectedCandidate.isPreview ? 'Candidate preview · not verified' : 'Verified facility guidance'} color={selectedCandidate.isPreview ? 'warning' : 'success'} variant="outlined" />
-								{selectedCandidate.canShowAnalytics && selectedCandidate.crowdGuidance?.sampleCount >= 3 ? <>
+								{selectedCandidate.partnerAvailability && <Typography>{selectedCandidate.partnerAvailability.availableCount} spaces reported available · Verified partner: {selectedCandidate.partnerAvailability.partner} · Updated {new Date(selectedCandidate.partnerAvailability.updatedAt).toLocaleString()}</Typography>}
+                                {selectedCandidate.source === 'osm' && <Typography variant="caption">© OpenStreetMap contributors · ODbL</Typography>}
+                                {selectedCandidate.canShowAnalytics && selectedCandidate.crowdGuidance?.sampleCount >= 3 ? <>
 									<Typography variant="h5" fontWeight={800}>~{Math.max(1, Math.round(selectedCandidate.crowdGuidance.circlingTimeSeconds / 60))} min</Typography>
 									<Typography variant="body2">Recent average circling time · {selectedCandidate.crowdGuidance.sampleCount} sessions</Typography>
 									<Typography variant="caption" color="text.secondary">Completed hourly window ending {new Date(selectedCandidate.crowdGuidance.windowEnd).toLocaleString()}</Typography>
 								</> : <Typography variant="body2" color="text.secondary">No current estimate is available for this facility.</Typography>}
 								<Alert severity="info" sx={{ mt: 1.5 }}>Guidance only. This facility is not bookable through ParknQuik, and this estimate does not confirm spaces, availability, capacity, or price.</Alert>
+								<Typography variant="caption" color="text.secondary" translate="no" sx={{ display: 'block', mt: 1, whiteSpace: 'nowrap' }}>{selectedCandidate?.attribution || 'Google Maps'}</Typography>
 								<Button component="a" href={`https://www.google.com/maps/dir/?api=1&destination=${selectedCandidate.latitude},${selectedCandidate.longitude}`} target="_blank" rel="noreferrer" fullWidth sx={{ mt: 1 }}>Get directions</Button>
 							</CardContent>
 						</Card>}

@@ -19,7 +19,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUserProfile, setUser } from '../store/slices/authSlice';
-import { userAPI } from '../services/api';
+import { uploadProfilePhoto } from '../services/profilePhotoUpload';
 import { Card } from '../components/Card';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
@@ -38,11 +38,6 @@ export const EditProfileScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(user?.profileImageUrl || null);
   const [uploading, setUploading] = useState(false);
-
-  const getFileName = (uri: string): string => {
-    const parts = uri.split('/');
-    return parts[parts.length - 1] || `profile_${Date.now()}.jpg`;
-  };
 
   const handleImagePicker = () => {
     const options = ['Take Photo', 'Choose from Gallery', 'Cancel'];
@@ -111,36 +106,9 @@ export const EditProfileScreen: React.FC = () => {
   const uploadImage = async (uri: string) => {
     try {
       setUploading(true);
-      const fileName = getFileName(uri);
+      const responseData = await uploadProfilePhoto(uri);
 
-      const { data: { uploadUrl, fileName: gcsFileName } } = await userAPI.getProfileUploadUrl(fileName);
-
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      // Upload to GCS with proper error handling
-      const uploadResult = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: {
-          'Content-Type': 'image/jpeg',
-        },
-      });
-
-      if (!uploadResult.ok) {
-        const errorText = await uploadResult.text();
-        ;
-        throw new Error(`Upload failed: ${uploadResult.status} - ${errorText}`);
-      }
-
-      // Small delay to ensure GCS has processed the file
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const processResult = await userAPI.uploadProfilePicture(gcsFileName);
-
-      // The API returns the user object in processResult.data
-      const responseData = processResult.data;
-
+      // The API returns the updated user from the processing step.
       // Extract profileImageUrl from the response - it's the resized image URL
       const newImageUrl = responseData?.profileImageUrl;
 

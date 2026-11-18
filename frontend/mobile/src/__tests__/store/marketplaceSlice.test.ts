@@ -1,8 +1,9 @@
-import { createListing, getMyListings } from '../../store/slices/marketplaceSlice';
+import reducer, { searchListings, createListing, getMyListings } from '../../store/slices/marketplaceSlice';
 import { marketplaceAPI } from '../../services/api';
 
 jest.mock('../../services/api', () => ({
   marketplaceAPI: {
+    searchListings: jest.fn(),
     createListing: jest.fn(),
     getMyListings: jest.fn(),
   },
@@ -114,5 +115,44 @@ describe('marketplaceSlice getMyListings', () => {
       availability: false,
       status: 'available',
     }));
+  });
+});
+
+
+describe('marketplace area search coordination', () => {
+  it('ignores superseded successes and failures, retains pins pending and preserves unchanged references', () => {
+    const first = { id: 9, address: 'Host', latitude: 14.6, longitude: 121, pricePerHour: 50 } as any;
+    let state = reducer(undefined, { type: 'init' });
+    state = reducer(state, searchListings.pending('first', {}));
+    state = reducer(state, searchListings.fulfilled([first], 'first', {}));
+    const reference = state.listings[0];
+    state = reducer(state, searchListings.pending('old', {}));
+    expect(state.listings[0]).toBe(reference);
+    state = reducer(state, searchListings.pending('new', {}));
+    state = reducer(state, searchListings.fulfilled([], 'old', {}));
+    expect(state.listings[0]).toBe(reference);
+    state = reducer(state, searchListings.rejected(new Error('offline'), 'old', {}));
+    expect(state.loading).toBe(true);
+    state = reducer(state, searchListings.fulfilled([{ ...first }], 'new', {}));
+    expect(state.listings[0]).toBe(reference);
+    state = reducer(state, searchListings.pending('empty', {}));
+    state = reducer(state, searchListings.fulfilled([], 'empty', {}));
+    expect(state.listings).toEqual([]);
+  });
+  it('deduplicates identical requests, caches successes and forwards explicit refresh to the API', async () => {
+    const get = marketplaceAPI.searchListings as jest.Mock;
+    let finish!: (response: any) => void;
+    get.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const params = { latitude: 14.62, longitude: 121.03 };
+    const first = searchListings(params)(jest.fn(), jest.fn(), undefined);
+    const second = searchListings(params)(jest.fn(), jest.fn(), undefined);
+    expect(get).toHaveBeenCalledTimes(1);
+    finish({ data: { data: [] } });
+    await Promise.all([first, second]);
+    await searchListings(params)(jest.fn(), jest.fn(), undefined);
+    expect(get).toHaveBeenCalledTimes(1);
+    get.mockResolvedValueOnce({ data: { data: [] } });
+    await searchListings({ ...params, forceRefresh: true })(jest.fn(), jest.fn(), undefined);
+    expect(get).toHaveBeenLastCalledWith({ lat: 14.62, lon: 121.03, refresh: true });
   });
 });

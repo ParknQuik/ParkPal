@@ -271,8 +271,9 @@ export interface MarketplaceListing {
 }
 
 export interface ParkingCandidateDiscoveryPin {
-  id: number;
-  source: 'google_candidate';
+  id: number | string;
+  source: 'google_candidate' | 'osm' | 'crowd_guidance';
+  partnerAvailability?: { partner: string; availableCount: number; occupiedCount: number; expiresAt?: string; updatedAt: string } | null;
   canBook: false;
   canShowAnalytics: boolean;
   zoneId?: number | null;
@@ -287,6 +288,7 @@ export interface ParkingCandidateDiscoveryPin {
   longitude: number;
   title: string;
   address: string | null;
+  attribution: string;
   distance?: number;
 }
 

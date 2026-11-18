@@ -236,11 +236,11 @@ describe('ExploreMap location and refresh behavior', () => {
   it('centers startup without route params on device GPS context', async () => {
     await renderExploreMap();
 
-    await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
+    await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith(expect.objectContaining({
       latitude: 14.6,
       longitude: 120.98,
       radius: 3,
-    }));
+    })));
   });
 
   it('focuses route coordinates once, while the location button recenters to GPS', async () => {
@@ -252,20 +252,17 @@ describe('ExploreMap location and refresh behavior', () => {
 
     const { getByLabelText } = await renderExploreMap();
 
-    await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
+    await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith(expect.objectContaining({
       latitude: 14.51,
       longitude: 121.01,
       radius: 3,
-    }));
+    })));
     expect(mockLocation.getCurrentPositionAsync).not.toHaveBeenCalled();
 
     await fireEvent.press(getByLabelText('Recenter map to GPS location'));
 
-    await waitFor(() => expect(mockSearchListings).toHaveBeenCalledWith({
-      latitude: 14.7,
-      longitude: 120.99,
-      radius: 3,
-    }));
+    await waitFor(() => expect(mockLocation.getCurrentPositionAsync).toHaveBeenCalled());
+    expect(mockSearchListings).toHaveBeenCalledTimes(1);
   });
 
   it('shows a clear state when location permission is denied', async () => {
@@ -328,4 +325,48 @@ describe('ExploreMap location and refresh behavior', () => {
       expect(getByText('Map refreshes are busy. Showing the latest parking results we already have.')).toBeTruthy();
     });
   });
+  const externalFacility = {
+    id: 8, title: 'External Garage', latitude: 14.6, longitude: 120.98,
+    source: 'google_candidate', isPreview: true, canBook: false, canShowAnalytics: false,
+    attribution: 'Google Maps',
+  };
+
+  it('discovers external facilities on open despite a failed host search', async () => {
+    mockSearchListings.mockImplementation((payload) => createAction(payload, jest.fn().mockRejectedValue(new Error('host failed'))));
+    mockGetDiscoveryCandidates.mockResolvedValue({ data: { data: [externalFacility] } });
+    const { getByLabelText, getByText } = await renderExploreMap();
+    await waitFor(() => expect(getByLabelText('External Garage. Nearby facility preview, not bookable.')).toBeTruthy(), { timeout: 2000 });
+    expect(mockGetDiscoveryCandidates).toHaveBeenCalledWith(expect.objectContaining({ south: expect.closeTo(14.595), north: expect.closeTo(14.605) }));
+    expect(getByText(/Google Maps/)).toBeTruthy();
+  });
+
+  it('keeps discovery stable during camera movement until Search this area', async () => {
+    const { getByTestId, getByText } = await renderExploreMap();
+    await waitFor(() => expect(mockGetDiscoveryCandidates).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    const region = { latitude: 14.62, longitude: 120.99, latitudeDelta: 0.02, longitudeDelta: 0.03 };
+    await fireEvent(getByTestId('map-view'), 'onRegionChangeComplete', region);
+    expect(mockGetDiscoveryCandidates).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(getByText('Search this area')).toBeTruthy());
+    await fireEvent.press(getByText('Search this area'));
+    await waitFor(() => expect(mockGetDiscoveryCandidates).toHaveBeenCalledTimes(2), { timeout: 2000 });
+    expect(mockGetDiscoveryCandidates).toHaveBeenLastCalledWith(expect.objectContaining({ south: expect.closeTo(14.61), north: expect.closeTo(14.63) }));
+    await fireEvent(getByTestId('map-view'), 'onRegionChangeComplete', { ...region });
+    expect(mockGetDiscoveryCandidates).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains host pins on discovery failure and distinguishes retry success from failure', async () => {
+    setState({ ...baseState, marketplace: { ...baseState.marketplace, listings: [{
+      id: 1, title: 'Host Garage', latitude: 14.6, longitude: 120.98, pricePerHour: 50,
+    }] } });
+    mockGetDiscoveryCandidates.mockRejectedValueOnce(new Error('provider failed')).mockResolvedValue({ data: { data: [] } });
+    const { getByLabelText, getByText, queryByText } = await renderExploreMap();
+    expect(queryByText(/No external parking facilities/)).toBeNull();
+    await waitFor(() => expect(getByLabelText('Retry parking facility discovery')).toBeTruthy(), { timeout: 2000 });
+    expect(getByLabelText('Host Garage: ₱50 per hour')).toBeTruthy();
+    expect(queryByText(/No external parking facilities/)).toBeNull();
+    await fireEvent.press(getByLabelText('Retry parking facility discovery'));
+    await waitFor(() => expect(getByText(/No external parking facilities found/)).toBeTruthy(), { timeout: 2000 });
+    expect(getByLabelText('Host Garage: ₱50 per hour')).toBeTruthy();
+  });
+
 });

@@ -9,7 +9,7 @@ import {
 } from '../../types';
 import { marketplaceAPI } from '../../services/api';
 
-const initialState: MarketplaceState = {
+const initialState: MarketplaceState & { searchRequestId?: string } = {
   listings: [],
   selectedListing: null,
   myListings: [],
@@ -48,13 +48,24 @@ const getHostListingAvailability = (listing: any) => {
   return listing.status === 'available';
 };
 
+// Session-only cache. Google previews never enter this listing path.
+const searchCache = new Map<string, { at: number; listings: any[] }>();
+const searchRequests = new Map<string, Promise<any[]>>();
+
 // Async thunks
 export const searchListings = createAsyncThunk(
   'marketplace/searchListings',
-  async (params?: SearchFilters) => {
+  async (params?: SearchFilters & { forceRefresh?: boolean }) => {
+    const { forceRefresh, ...input } = params || {};
+    const key = JSON.stringify(input);
+    const cached = searchCache.get(key);
+    if (!forceRefresh && cached && Date.now() - cached.at < 60000) return cached.listings;
+    const existing = searchRequests.get(key);
+    if (existing) return existing;
+    const request = (async () => {
     // Map frontend field names to backend API expected params
-    const { latitude, longitude, ...rest } = params || {};
-    const apiParams: Record<string, any> = { ...rest };
+    const { latitude, longitude, ...rest } = input;
+    const apiParams: Record<string, any> = { ...rest, ...(forceRefresh ? { refresh: true } : {}) };
     if (latitude !== undefined) apiParams.lat = latitude;
     if (longitude !== undefined) apiParams.lon = longitude;
     ;
@@ -91,6 +102,7 @@ export const searchListings = createAsyncThunk(
       availability: listing.status === 'available',
       status: listing.status,
       slotType: listing.slotType,
+      searchTruncated: response.data?.discovery?.truncated || false,
     }));
 
     ;
@@ -103,7 +115,14 @@ export const searchListings = createAsyncThunk(
       ;
     }
 
+    searchCache.delete(key);
+    searchCache.set(key, { at: Date.now(), listings: transformed });
+    while (searchCache.size > 8) searchCache.delete(searchCache.keys().next().value!);
     return transformed;
+    })();
+    searchRequests.set(key, request);
+    try { return await request; }
+    finally { if (searchRequests.get(key) === request) searchRequests.delete(key); }
   }
 );
 
@@ -341,15 +360,19 @@ const marketplaceSlice = createSlice({
   },
   extraReducers: (builder) => {
     // Search listings
-    builder.addCase(searchListings.pending, (state) => {
+    builder.addCase(searchListings.pending, (state, action) => {
+      state.searchRequestId = action.meta.requestId;
       state.loading = true;
       state.error = null;
     });
     builder.addCase(searchListings.fulfilled, (state, action) => {
+      if (state.searchRequestId !== action.meta.requestId) return;
       state.loading = false;
-      state.listings = action.payload;
+      state.listings = action.payload.map((listing: any) => state.listings.find(old =>
+        old.id === listing.id && JSON.stringify(old) === JSON.stringify(listing)) || listing);
     });
     builder.addCase(searchListings.rejected, (state, action) => {
+      if (state.searchRequestId !== action.meta.requestId) return;
       state.loading = false;
       state.error = action.error.message || 'Failed to search listings';
     });

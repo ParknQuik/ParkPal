@@ -8,7 +8,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<'password' | 'mfa' | null>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<'password' | 'mfa' | null> => {
     setIsLoading(true);
     try {
       const { data } = await api.post<AuthResponse>('/auth/login', {
@@ -48,6 +48,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(data.token);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      const needsMfa = Boolean(data.mfaRequired || data.mfaEnrollmentRequired);
+      sessionStorage.setItem('admin-mfa-required', String(needsMfa));
+      if (needsMfa) sessionStorage.removeItem('admin-mfa-verified');
+      else sessionStorage.setItem('admin-mfa-verified', 'true');
+      if (data.mustChangePassword) return 'password';
+      return needsMfa ? 'mfa' : null;
     } catch (error) {
       const axiosError = error as AxiosError<{ error: string }>;
       throw new Error(authErrorMessage(axiosError, 'Login failed'));
@@ -86,6 +92,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('admin-mfa-verified');
+    sessionStorage.removeItem('admin-mfa-required');
   };
 
   const updateUser = (updatedUser: User): void => {

@@ -158,11 +158,19 @@ export const marketplaceAPI = {
     q?: string;
   }) => api.get('/marketplace/search', { params }),
 
+  getGoogleDiscovery: (bounds: { south: number; west: number; north: number; east: number }) =>
+    api.post<{ data: ParkingCandidateDiscoveryPin[]; discovery?: { providerLimited?: boolean } }>('/marketplace/discovery/google', bounds),
   getDiscoveryCandidates: (params: {
-    lat: number;
-    lon: number;
+    lat?: number;
+    lon?: number;
     radius?: number;
-  }) => api.get<{ data: ParkingCandidateDiscoveryPin[] }>('/marketplace/discovery/candidates', { params }),
+    south?: number;
+    west?: number;
+    north?: number;
+    east?: number;
+  }) => api.get<{ data: ParkingCandidateDiscoveryPin[]; discovery?: {
+    viewportTooLarge?: boolean; truncated?: boolean; providerLimited?: boolean; detailsUnavailable?: boolean;
+  } }>('/marketplace/discovery/candidates', { params }),
 
   // Bookings
   createBookingMarketplace: (data: {

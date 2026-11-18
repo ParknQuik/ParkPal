@@ -200,7 +200,7 @@ describe('NavBar', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/host-dashboard');
   });
 
-  it('should let a signed-in driver open My Listings', async () => {
+  it('should let a signed-in driver start a listing without host capability', async () => {
     const user = userEvent.setup();
     const mockUser: User = {
       id: 2,
@@ -213,8 +213,19 @@ describe('NavBar', () => {
 
     renderNavBar(mockUser);
     await user.click(screen.getByLabelText(/account of current user/i));
-    await user.click(screen.getByText('My Listings'));
+    expect(screen.queryByText('My Listings')).not.toBeInTheDocument();
+    await user.click(screen.getByText('List a space'));
 
+    expect(mockNavigate).toHaveBeenCalledWith('/list-slot');
+  });
+
+  it('shows My Listings to a driver after host capability is granted', async () => {
+    const user = userEvent.setup();
+    const mockUser: User = { id: 2, email: 'driver@example.com', name: 'Driver User', role: 'driver', canHost: true, createdAt: '2025-01-01', updatedAt: '2025-01-01' };
+    renderNavBar(mockUser);
+    await user.click(screen.getByLabelText(/account of current user/i));
+    expect(screen.getByText('My Listings')).toBeInTheDocument();
+    await user.click(screen.getByText('My Listings'));
     expect(mockNavigate).toHaveBeenCalledWith('/host-dashboard');
   });
 

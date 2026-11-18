@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import api from '../api';
 import { loadGoogleMaps } from '../utils/googleMaps';
+import { useAuth } from '../contexts/AuthContext';
 
 const SLOT_TYPES = [
 	{ value: 'roadside_qr', label: 'Roadside (QR)' },
@@ -36,6 +37,7 @@ const AMENITIES = [
 
 const ListSlot = () => {
 	const navigate = useNavigate();
+	const { user, updateUser } = useAuth();
 	const [searchParams] = useSearchParams();
 	const editId = searchParams.get('edit');
 	const [formData, setFormData] = useState({
@@ -136,7 +138,11 @@ const ListSlot = () => {
 			};
 			let listingId = editId;
 			if (editId) await api.put(`/marketplace/listings/${editId}`, payload);
-			else { const response = await api.post('/marketplace/listings', payload); listingId = response.data?.id || response.data?.data?.id; }
+			else {
+				const response = await api.post('/marketplace/listings', payload);
+				listingId = response.data?.id || response.data?.data?.id;
+				if (response.data?.canHost && user) updateUser({ ...user, canHost: true });
+			}
 			const uploaded = [];
 			const photoFailures = [];
 			for (const file of photoFiles) {
