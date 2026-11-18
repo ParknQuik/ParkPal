@@ -27,6 +27,11 @@ node_modules
 .agents/knowledge/knowledge.db
 .agents/knowledge/knowledge.db-*
 
+# Local data extracts and generated outputs
+/backend/.parking-data/
+/backend/generated/
+/playwright-report/
+
 # macOS system files
 .DS_Store
 
