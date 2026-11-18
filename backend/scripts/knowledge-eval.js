@@ -2,7 +2,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const prisma = require('../config/prisma');
+const prisma = require('../config/knowledgePrisma');
 const redisClient = require('../config/redis');
 const { retrieve } = require('../services/knowledge/retrieval');
 
@@ -44,7 +44,7 @@ async function closeResources() {
   ]);
 }
 
-async function runEvaluation(dataset) {
+async function runEvaluation(dataset, retrieveFn = retrieve) {
   let recall = 0;
   let reciprocalRank = 0;
   let noAnswerCorrect = 0;
@@ -54,7 +54,7 @@ async function runEvaluation(dataset) {
   const rows = [];
 
   for (const item of dataset) {
-    const result = await retrieve(item.query, { role: item.role || 'user' });
+    const result = await retrieveFn(item.query, { role: item.role || 'user' });
     const row = evaluateResult(item, result);
     rows.push(row);
 

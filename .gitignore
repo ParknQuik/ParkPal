@@ -27,6 +27,11 @@ node_modules
 .agents/knowledge/knowledge.db
 .agents/knowledge/knowledge.db-*
 
+# Local data extracts and generated outputs
+/backend/.parking-data/
+/backend/generated/
+/playwright-report/
+
 # macOS system files
 .DS_Store
 
@@ -37,10 +42,3 @@ node_modules
 # Local Codex/Claude hooks can auto-stage or auto-commit; keep them local-only.
 .codex/hooks.json
 .Codex/hooks.json
-
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/

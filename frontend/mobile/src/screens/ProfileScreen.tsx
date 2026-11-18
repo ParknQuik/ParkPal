@@ -19,7 +19,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppSelector, useAppDispatch } from '../store';
 import { logout, checkAuth, updateUserProfile } from '../store/slices/authSlice';
 import { setThemeMode } from '../store/slices/settingsSlice';
-import { userAPI } from '../services/api';
+import { uploadProfilePhoto } from '../services/profilePhotoUpload';
 import { typography, spacing, borderRadius } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 
@@ -63,12 +63,6 @@ export const ProfileScreen: React.FC = () => {
       setRefreshing(false);
     }
   }, [dispatch]);
-
-  const getFileName = (uri: string) => {
-    const timestamp = Date.now();
-    const ext = uri.split('.').pop() || 'jpg';
-    return `profile-${timestamp}.${ext}`;
-  };
 
   const handleChangePhoto = useCallback(() => {
     if (Platform.OS === 'ios') {
@@ -126,19 +120,7 @@ export const ProfileScreen: React.FC = () => {
   const uploadImage = async (imageUri: string) => {
     try {
       setUploading(true);
-      const fileName = getFileName(imageUri);
-
-      const { uploadUrl, fileName: gcsFileName } = await userAPI.getProfileUploadUrl(fileName).then(res => res.data);
-
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-      await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'image/jpeg' },
-        body: blob,
-      });
-
-      const updatedUser = await userAPI.uploadProfilePicture(gcsFileName).then(res => res.data);
+      const updatedUser = await uploadProfilePhoto(imageUri);
 
       await dispatch(updateUserProfile({
         name: user?.name || '',

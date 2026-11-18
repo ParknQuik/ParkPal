@@ -44,8 +44,8 @@ const Login: React.FC = () => {
 		setError('');
 
 		try {
-			await login(data.email, data.password);
-			navigate(new URLSearchParams(location.search).get('returnTo') || '/', { replace: true });
+			const nextStep = await login(data.email, data.password);
+			navigate(nextStep === 'password' ? '/admin-password' : nextStep === 'mfa' ? '/admin-mfa' : (new URLSearchParams(location.search).get('returnTo') || '/'), { replace: true });
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Login failed');
 		}

@@ -102,6 +102,10 @@ module.exports = (app, authLimiter) => {
    */
   app.post('/auth/login', authLimiter.login, validateBody(loginSchema), asyncHandler(authController.login));
 
+  app.post('/auth/admin-mfa/setup', authenticate, asyncHandler(authController.beginAdminMfa));
+  app.post('/auth/admin-mfa/verify', authLimiter.login, authenticate, asyncHandler(authController.verifyAdminMfa));
+  app.post('/auth/admin-mfa/challenge', authLimiter.login, authenticate, asyncHandler(authController.challengeAdminMfa));
+
   /**
    * @swagger
    * /api/auth/password:

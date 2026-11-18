@@ -4,18 +4,13 @@
       "name": "product-docs",
       "type": "markdown",
       "include": [
-        "../README.md",
-        "../ROADMAP.md",
         "backend/API_VERSIONING_GUIDE.md",
-        "docs/**/*.md",
-        "backend/docs/**/*.md"
-      ],
-      "exclude": [
-        "node_modules/**",
-        ".git/**",
-        ".agents/**",
-        "docs/plans/**",
-        "docs/agent-knowledge/**"
+        "docs/PARKING_PRODUCT_TYPES.md",
+        "docs/PARKPAL_SYSTEM_ARCHITECTURE.md",
+        "docs/ENVIRONMENTS.md",
+        "docs/PAYMONGO.md",
+        "docs/GOOGLE_MAPS_SETUP.md",
+        "backend/docs/KNOWLEDGE_RETRIEVAL.md"
       ]
     }
   ]

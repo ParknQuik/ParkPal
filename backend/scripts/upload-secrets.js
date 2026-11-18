@@ -27,6 +27,7 @@ const SECRETS_TO_UPLOAD = {
   'PAYMONGO_WEBHOOK_SECRET': 'paymongo-webhook-secret',
   'JWT_SECRET': 'jwt-secret',
   'DATABASE_URL': 'database-url',
+  'KNOWLEDGE_DATABASE_URL': 'knowledge-database-url',
   'REDIS_URL': 'redis-url',
   'GOOGLE_MAPS_API_KEY': 'google-maps-api-key',
   'GOOGLE_PLACES_API_KEY': 'google-places-api-key',

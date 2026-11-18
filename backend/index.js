@@ -242,6 +242,14 @@ websocketService.init(server);
 
 // Auto-checkout cron job setup
 if (process.env.NODE_ENV !== 'test') {
+  cron.schedule('0 3 * * 1', async () => {
+    const { refreshRegions } = require('./services/regionalParkingRefresh');
+    const results = await refreshRegions(require('./config/prisma'), process.env.PARKING_EXTRACT_DIRECTORY);
+    for (const result of results) {
+      if (result.error) logger.error('Regional parking refresh failed', result);
+      else logger.info('Regional parking refresh completed', result);
+    }
+  }, { timezone: 'UTC', noOverlap: true });
   const { autoCheckoutExpiredSessions } = require('./services/autoCheckout');
   
   // Schedule auto-checkout job - runs every 30 minutes
@@ -287,9 +295,15 @@ if (process.env.NODE_ENV !== 'test') {
   
   logger.info('Booking expiry cron jobs scheduled (expire: every 5min, reminders: every 10min)');
 
-  // Google parking candidate discovery cron job
-  const { scheduleGoogleParkingCandidateScan } = require('./services/parkingCandidateScanScheduler');
-  scheduleGoogleParkingCandidateScan(cron);
+  // Google Places coordinates are retained for no more than 30 days.
+  const { expireOldCandidateCoordinates } = require('./services/parkingCandidateScanService');
+  cron.schedule('30 2 * * *', async () => {
+    try {
+      await expireOldCandidateCoordinates();
+    } catch (error) {
+      logger.error('[Cron] Candidate coordinate cleanup failed:', error);
+    }
+  });
 
   const { aggregateCompletedCrowdParking } = require('./services/crowdParkingAggregation');
   cron.schedule('5 * * * *', async () => {

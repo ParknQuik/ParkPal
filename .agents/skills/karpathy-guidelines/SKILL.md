@@ -19,7 +19,7 @@ Use judgment: these guidelines favor careful work over speed on consequential ta
 
 ## Simplicity First
 
-- Build only what the request needs; avoid speculative features and abstractions for one-off use.
+- Build only what the request needs; avoid speculative features and abstractions for one-off us
 - Prefer the smallest implementation that remains clear and maintainable.
 - Add error handling for realistic failure cases, not impossible scenarios.
 - Before finishing, simplify any part that adds complexity without improving the requested result.

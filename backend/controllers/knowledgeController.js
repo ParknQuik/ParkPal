@@ -1,4 +1,4 @@
-const prisma = require('../config/prisma');
+const prisma = require('../config/knowledgePrisma');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { indexKnowledge } = require('../services/knowledge/indexer');
 const { retrieve, groundedPrompt } = require('../services/knowledge/retrieval');

@@ -148,6 +148,21 @@ describe('Marketplace API Tests', () => {
       expect(response.body.address).toBe('New Test Parking Slot');
       expect(response.body.price).toBe(60);
       expect(response.body.owner.id).toBe(testData.users.host.id);
+      expect(response.body.canHost).toBe(true);
+      expect((await prisma.user.findUnique({ where: { id: testData.users.host.id } })).canHost).toBe(true);
+    });
+
+    it('grants host capability to a driver after the first listing is saved', async () => {
+      const driver = await prisma.user.findUnique({ where: { id: testData.users.driver.id } });
+      expect(driver.canHost).toBe(false);
+      const response = await request(app)
+        .post('/api/v1/marketplace/listings')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({ lat: 14.532, lon: 120.985, price: 60, title: 'Driver first listing', address: 'Driver first listing address', slotType: 'roadside_qr' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.canHost).toBe(true);
+      expect((await prisma.user.findUnique({ where: { id: testData.users.driver.id } })).canHost).toBe(true);
     });
 
     it('should fail without authentication', async () => {
@@ -167,7 +182,7 @@ describe('Marketplace API Tests', () => {
     it('should fail with missing required fields', async () => {
       const response = await request(app)
         .post('/api/v1/marketplace/listings')
-        .set('Authorization', `Bearer ${authTokens.host}`)
+        .set('Authorization', `Bearer ${authTokens.admin}`)
         .send({
           lat: 14.5320,
           // Missing lon, price, address, slotType
@@ -175,6 +190,7 @@ describe('Marketplace API Tests', () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('error');
+      expect((await prisma.user.findUnique({ where: { id: testData.users.admin.id } })).canHost).toBe(false);
     });
   });
 

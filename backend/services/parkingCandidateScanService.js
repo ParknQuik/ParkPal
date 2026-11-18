@@ -5,19 +5,8 @@ const { ApiError } = require('../middleware/errorHandler');
 const GOOGLE_PLACES_NEARBY_URL = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
 const GOOGLE_SCAN_SOURCE = 'google_places';
 const MAX_GOOGLE_RADIUS_METERS = 50000;
-const DEFAULT_MAX_PAGES = 1;
-const GOOGLE_PAGE_TOKEN_DELAY_MS = 2000;
 const GOOGLE_NON_ERROR_STATUSES = new Set(['OK', 'ZERO_RESULTS']);
 
-const DEFAULT_METRO_MANILA_SCAN_POINTS = [
-  { label: 'Makati CBD', lat: 14.5547, lon: 121.0244, radius: 2500, type: 'parking' },
-  { label: 'BGC', lat: 14.5503, lon: 121.0497, radius: 2500, type: 'parking' },
-  { label: 'Ortigas Center', lat: 14.5869, lon: 121.0614, radius: 2500, type: 'parking' },
-  { label: 'Quezon City Triangle', lat: 14.6507, lon: 121.0494, radius: 3000, type: 'parking' },
-  { label: 'Manila Bay Area', lat: 14.5361, lon: 120.9822, radius: 3000, type: 'parking' },
-];
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getGooglePlacesApiKey = () => {
   return process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
@@ -57,18 +46,7 @@ const clampRadius = (radius) => {
   return Math.min(parseInt(radius, 10), MAX_GOOGLE_RADIUS_METERS);
 };
 
-const clampMaxPages = (maxPages = DEFAULT_MAX_PAGES) => {
-  const parsed = parseInt(maxPages, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    return DEFAULT_MAX_PAGES;
-  }
-
-  return Math.min(parsed, 3);
-};
-
-const buildScanArea = (lat, lon) => `POINT(${lat} ${lon})`;
-
-const fetchGoogleNearbyPage = async ({ lat, lon, radius, type, pageToken }) => {
+const fetchGoogleNearbyPage = async ({ lat, lon, radius, type }) => {
   const key = getGooglePlacesApiKey();
   if (!key) {
     throw new ApiError(500, 'Google Places API key is not configured', {
@@ -77,9 +55,7 @@ const fetchGoogleNearbyPage = async ({ lat, lon, radius, type, pageToken }) => {
     });
   }
 
-  const params = pageToken
-    ? { pagetoken: pageToken, key }
-    : {
+  const params = {
         location: `${lat},${lon}`,
         radius: clampRadius(radius),
         type,
@@ -88,7 +64,7 @@ const fetchGoogleNearbyPage = async ({ lat, lon, radius, type, pageToken }) => {
 
   let response;
   try {
-    response = await axios.get(GOOGLE_PLACES_NEARBY_URL, { params });
+    response = await axios.get(GOOGLE_PLACES_NEARBY_URL, { params, timeout: 10000 });
   } catch (error) {
     throw buildGooglePlacesError({
       googleStatus: error.response?.data?.status,
@@ -101,145 +77,83 @@ const fetchGoogleNearbyPage = async ({ lat, lon, radius, type, pageToken }) => {
   return normalizeGooglePlacesResponse(response.data);
 };
 
-const upsertGooglePlaceCandidate = async ({ place, lat, lon, radius }) => {
-  if (!place.place_id) {
-    return { candidate: null, action: 'skipped' };
-  }
-
-  let candidate = await prisma.parkingCandidate.findUnique({
-    where: { googlePlaceId: place.place_id },
-  });
-
-  const scanArea = buildScanArea(lat, lon);
-  const placeLat = place.geometry?.location?.lat;
-  const placeLon = place.geometry?.location?.lng;
-
-  if (candidate) {
-    candidate = await prisma.parkingCandidate.update({
-      where: { id: candidate.id },
-      data: {
-        scanArea,
-        scanSource: GOOGLE_SCAN_SOURCE,
-        scanTimestamp: new Date(),
-        draftCenterLat: typeof placeLat === 'number' ? placeLat : candidate.draftCenterLat,
-        draftCenterLon: typeof placeLon === 'number' ? placeLon : candidate.draftCenterLon,
-        draftRadiusMeters: clampRadius(radius),
-        updatedAt: new Date(),
-      },
-    });
-
-    return { candidate, action: 'updated' };
-  }
-
-  candidate = await prisma.parkingCandidate.create({
-    data: {
-      googlePlaceId: place.place_id,
-      candidateStatus: 'candidate_preview',
-      scanArea,
-      scanSource: GOOGLE_SCAN_SOURCE,
-      scanTimestamp: new Date(),
-      draftCenterLat: typeof placeLat === 'number' ? placeLat : null,
-      draftCenterLon: typeof placeLon === 'number' ? placeLon : null,
-      draftRadiusMeters: clampRadius(radius),
-    },
-  });
-
-  return { candidate, action: 'created' };
+const scanGoogleParkingCandidatesForPoint = async () => {
+  throw new ApiError(410, 'Legacy Google scans are disabled. Use explicit area discovery.');
 };
 
-const scanGoogleParkingCandidatesForPoint = async ({
-  lat,
-  lon,
-  radius,
-  type = 'parking',
-  maxPages = DEFAULT_MAX_PAGES,
-}) => {
-  const pageLimit = clampMaxPages(maxPages);
-  const candidates = [];
-  let createdCount = 0;
-  let updatedCount = 0;
-  let skippedCount = 0;
-  let requestCount = 0;
-  let pageToken = null;
+const distanceMeters = (lat1, lon1, lat2, lon2) => {
+  const rad = (value) => value * Math.PI / 180;
+  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2
+    + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
+  return 6371000 * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
+};
 
-  for (let pageIndex = 0; pageIndex < pageLimit; pageIndex += 1) {
-    if (pageToken) {
-      await sleep(GOOGLE_PAGE_TOKEN_DELAY_MS);
-    }
+const isInsideViewport = ({ south, west, north, east }, lat, lon) =>
+  lat >= south && lat <= north && (west <= east
+    ? lon >= west && lon <= east : lon >= west || lon <= east);
 
-    const data = await fetchGoogleNearbyPage({
-      lat,
-      lon,
-      radius,
-      type,
-      pageToken,
-    });
-
-    requestCount += 1;
-
-    for (const place of data.results || []) {
-      const { candidate, action } = await upsertGooglePlaceCandidate({ place, lat, lon, radius });
-      if (action === 'created') {
-        createdCount += 1;
-      } else if (action === 'updated') {
-        updatedCount += 1;
-      } else {
-        skippedCount += 1;
-      }
-
-      if (candidate) {
-        candidates.push(candidate);
-      }
-    }
-
-    pageToken = data.next_page_token || null;
-    if (!pageToken) {
-      break;
-    }
-  }
-
-  return {
-    candidates,
-    requestCount,
-    createdCount,
-    updatedCount,
-    skippedCount,
+const getDiscoveryArea = (params) => {
+  if (params.south === undefined) return {
+    lat: Number(params.lat), lon: Number(params.lon),
+    radiusMeters: clampRadius(Number(params.radius ?? 5) * 1000), bounds: null,
+    viewportTooLarge: false,
   };
+  const bounds = Object.fromEntries(['south', 'west', 'north', 'east'].map((key) => [key, Number(params[key])]));
+  const { south, west, north, east } = bounds;
+  const lat = (south + north) / 2;
+  const span = east >= west ? east - west : east + 360 - west;
+  const lon = ((west + span / 2 + 540) % 360) - 180;
+  // Include the farthest corners, rounding up so edge coordinates remain covered.
+  const enclosingRadius = Math.ceil(Math.max(distanceMeters(lat, lon, south, west), distanceMeters(lat, lon, north, east)));
+  return { lat, lon, bounds, radiusMeters: Math.max(1, Math.min(enclosingRadius, MAX_GOOGLE_RADIUS_METERS)),
+    viewportTooLarge: span > 180 || enclosingRadius > MAX_GOOGLE_RADIUS_METERS };
 };
 
-const scanGoogleParkingCandidatesForPoints = async ({
-  points = DEFAULT_METRO_MANILA_SCAN_POINTS,
-  maxPages = DEFAULT_MAX_PAGES,
-} = {}) => {
-  const totals = {
-    candidates: [],
-    requestCount: 0,
-    createdCount: 0,
-    updatedCount: 0,
-    skippedCount: 0,
-  };
-
-  for (const point of points) {
-    const result = await scanGoogleParkingCandidatesForPoint({
-      ...point,
-      maxPages,
-    });
-
-    totals.candidates.push(...result.candidates);
-    totals.requestCount += result.requestCount;
-    totals.createdCount += result.createdCount;
-    totals.updatedCount += result.updatedCount;
-    totals.skippedCount += result.skippedCount;
-  }
-
-  return totals;
+const getDriverDiscoveryCandidates = async (params, identity) => {
+  const area = getDiscoveryArea(params);
+  const metadata = { provider: GOOGLE_SCAN_SOURCE, providerLimited: false, viewportTooLarge: area.viewportTooLarge };
+  if (area.viewportTooLarge) return { candidates: [], metadata, area };
+  if (!getGooglePlacesApiKey()) throw new ApiError(503, 'Google discovery is not configured');
+  await require('./googleDiscoveryQuota').reserve(identity);
+  const data = await fetchGoogleNearbyPage({ lat: area.lat, lon: area.lon, radius: area.radiusMeters, type: 'parking' });
+  metadata.providerLimited = !!data.next_page_token;
+  const places = (data.results || []).slice(0, 20).filter(place => place.place_id);
+  const mappings = places.length ? await prisma.parkingCandidate.findMany({
+    where: { googlePlaceId: { in: places.map(place => place.place_id) } },
+    include: { linkedZone: true },
+  }) : [];
+  const byId = new Map(mappings.map(candidate => [candidate.googlePlaceId, candidate]));
+  const candidates = places.flatMap(place => {
+    const candidate = byId.get(place.place_id);
+    const latitude = place.geometry?.location?.lat;
+    const longitude = place.geometry?.location?.lng;
+    if (candidate?.candidateStatus === 'rejected' || !Number.isFinite(latitude) || !Number.isFinite(longitude)
+      || (area.bounds && !isInsideViewport(area.bounds, latitude, longitude))) return [];
+    const verified = ['geofence_verified', 'commercial_verified'].includes(candidate?.candidateStatus) && !!candidate.linkedZone;
+    return [{ id: 'google-' + place.place_id, source: 'google_candidate', category: 'external_preview',
+      canBook: false, canShowAnalytics: verified, isPreview: !verified, latitude, longitude,
+      title: place.name || 'Parking facility', address: place.vicinity || null, attribution: 'Google Maps',
+      zoneId: verified ? candidate.linkedZoneId : null }];
+  });
+  return { candidates, metadata, area };
 };
+
+const expireOldCandidateCoordinates = async () => prisma.parkingCandidate.updateMany({
+  where: {
+    // A 29-day cutoff leaves a full-day buffer for the once-daily cleanup job.
+    scanTimestamp: { lt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000) },
+    OR: [{ draftCenterLat: { not: null } }, { draftCenterLon: { not: null } }],
+  },
+  data: { draftCenterLat: null, draftCenterLon: null },
+});
 
 module.exports = {
-  DEFAULT_METRO_MANILA_SCAN_POINTS,
+  getDiscoveryArea,
+  isInsideViewport,
+  expireOldCandidateCoordinates,
   GOOGLE_SCAN_SOURCE,
   getGooglePlacesApiKey,
   normalizeGooglePlacesResponse,
   scanGoogleParkingCandidatesForPoint,
-  scanGoogleParkingCandidatesForPoints,
+  getDriverDiscoveryCandidates,
 };

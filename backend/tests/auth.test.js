@@ -49,6 +49,7 @@ describe('Auth API Tests', () => {
       expect(response.body.user.email).toBe(testUser.email);
       expect(response.body.user.name).toBe(testUser.name);
       expect(response.body.user.role).toBe(testUser.role);
+      expect(response.body.user.canHost).toBe(false);
       expect(response.body.user).not.toHaveProperty('password');
     });
 
@@ -109,10 +110,20 @@ describe('Auth API Tests', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.user.role).toBe('driver');
+      expect(response.body.user.canHost).toBe(false);
     });
   });
 
   describe('POST /api/v1/auth/login', () => {
+    it('passes the local bootstrap email through validation to credential checking', async () => {
+      const response = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'admin@localhost.test', password: 'wrong-password' });
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toContain('Invalid');
+    });
+
     it('should login successfully with correct credentials', async () => {
       const response = await request(app)
         .post('/api/v1/auth/login')

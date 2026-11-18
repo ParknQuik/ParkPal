@@ -87,6 +87,22 @@ exports.sendPasswordResetEmail = async (email, name, resetToken) => {
   }
 };
 
+exports.sendAdminInvitationEmail = async (email, invitationToken) => {
+  const inviteUrl = `${process.env.FRONTEND_URL}/accept-admin-invitation#token=${encodeURIComponent(invitationToken)}`;
+  const client = resend || fallbackLogger;
+  try {
+    const response = await client.emails.send({
+      from: 'ParkPal <noreply@parknquik.com>', to: email,
+      subject: 'Your ParknQuik administrator invitation',
+      html: `<p>You were invited to administer ParknQuik.</p><p><a href="${inviteUrl}">Accept invitation and set your password</a></p><p>This single-use link expires in 48 hours.</p>`,
+    });
+    if (response.error) throw new Error('Invitation delivery failed');
+    return { success: true, messageId: response.data?.id || response.id };
+  } catch {
+    throw new Error('Failed to send administrator invitation email');
+  }
+};
+
 /**
  * Send booking confirmation email (for future use)
  */

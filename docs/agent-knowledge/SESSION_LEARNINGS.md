@@ -141,3 +141,16 @@ replacement for reading live code before edits.
   - When rewriting a PR branch through the GitHub connector, poll Actions for the exact head SHA after ref updates. Do not treat missing workflow runs as passed; in this observed workflow, checks appeared only after a real Contents API file update.
 - Verification:
   - `PR #201 Playwright, Pull Request Checks, and Mobile Environment Check runs appeared after a real file update; earlier create_commit/update_ref-only ref changes had no runs.`
+
+## 2026-11-17 - Separate app and RAG database migrations
+
+- Summary: Separated app data from the pgvector-backed knowledge index and preserved existing RAG records.
+- Lessons:
+  - When removing a legacy RAG migration from the app schema, keep its existing SQL unchanged for checksum compatibility. Before marking it applied in an app database, verify all three RAG tables are absent; then deploy the app migrations and the dedicated knowledge migration against their respective databases.
+- Relevant files:
+  - `backend/scripts/migrate-databases.js`
+  - `backend/prisma/schema.prisma`
+  - `backend/prisma/knowledge/schema.prisma`
+- Verification:
+  - `App DB at localhost:5432/parknquik has no vector extension or RAG tables and Prisma reports migrations up to date.`
+  - `Knowledge DB at localhost:55432/parknquik_knowledge has vector enabled; 79 documents, 2,840 chunks, and 4 runs copied, with five sample embeddings matching the source.`

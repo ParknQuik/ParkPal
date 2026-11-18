@@ -37,4 +37,8 @@ Generate it with `rtk npm run knowledge:model-routing -- "<intent>"`. Routing is
 advisory: Codex cannot self-switch from repo code; ParkPal has no app/server LLM
 routing.
 
+When explicitly asked to start a new Codex task from a completed plan, follow
+`docs/agent-knowledge/CODEX_TASK_HANDOFF.md`. Presenting a plan alone does not
+authorize creating a task.
+
 Before committing or pushing, summarize the changes and ask for approval.

@@ -226,6 +226,7 @@ exports.reviewSchema = Joi.object({
 });
 
 exports.searchListingsSchema = Joi.object({
+  refresh: Joi.boolean().optional(),
   q: Joi.string().optional(),  // Add search query
   lat: Joi.number().min(-90).max(90).optional(),
   lon: Joi.number().min(-180).max(180).optional(),
@@ -333,33 +334,19 @@ exports.hostEarningsQuerySchema = Joi.object({
 
 /**
  * Query schema for the public discovery endpoint.
- * Accepts a centre point (lat/lon) and a radius in kilometres.
+ * Accepts a complete viewport or a centre point (lat/lon) and radius in kilometres.
  */
 exports.discoveryCandidatesSchema = Joi.object({
-  lat: Joi.number()
-    .min(-90)
-    .max(90)
-    .required()
-    .messages({
-      'number.min': 'Latitude must be between -90 and 90',
-      'number.max': 'Latitude must be between -90 and 90',
-      'any.required': 'Query parameter "lat" is required'
-    }),
-  lon: Joi.number()
-    .min(-180)
-    .max(180)
-    .required()
-    .messages({
-      'number.min': 'Longitude must be between -180 and 180',
-      'number.max': 'Longitude must be between -180 and 180',
-      'any.required': 'Query parameter "lon" is required'
-    }),
-  radius: Joi.number()
-    .min(0.1)
-    .max(50)
-    .optional()
-    .messages({
-      'number.min': 'Radius must be at least 0.1 kilometres',
-      'number.max': 'Radius cannot exceed 50 kilometres'
-    }),
+  lat: Joi.number().min(-90).max(90),
+  lon: Joi.number().min(-180).max(180),
+  radius: Joi.number().min(0.1).max(50),
+  south: Joi.number().min(-90).max(90),
+  west: Joi.number().min(-180).max(180),
+  north: Joi.number().min(-90).max(90).greater(Joi.ref('south')),
+  east: Joi.number().min(-180).max(180),
+}).and('south', 'west', 'north', 'east').and('lat', 'lon').custom((value, helpers) => {
+  if (value.south === undefined && value.lat === undefined) return helpers.error('any.invalid');
+  if (value.west !== undefined && value.west === value.east) return helpers.error('any.invalid');
+  // west > east describes a viewport crossing the antimeridian.
+  return value;
 });

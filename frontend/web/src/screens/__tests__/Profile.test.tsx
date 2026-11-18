@@ -97,6 +97,101 @@ describe('Profile Component', () => {
     });
   });
 
+  describe('Profile editor', () => {
+    it('opens with account details and saves changes', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      vi.mocked(mockApi.patch).mockResolvedValue({ data: { ...mockUser, name: 'Jane Doe', phone: '12345' } });
+      render(<Profile />);
+      await user.click(await screen.findByRole('button', { name: /edit profile/i }));
+      expect(screen.getByRole('dialog', { name: /edit profile/i })).toBeInTheDocument();
+      expect(screen.getByLabelText('Email')).toBeDisabled();
+      await user.clear(screen.getByLabelText(/name/i));
+      await user.type(screen.getByLabelText(/name/i), 'Jane Doe');
+      await user.type(screen.getByLabelText(/phone/i), '12345');
+      await user.click(screen.getByRole('button', { name: /save changes/i }));
+      await waitFor(() => expect(mockApi.patch).toHaveBeenCalledWith('/users/profile', { name: 'Jane Doe', phone: '12345' }));
+      expect(await screen.findByText('Profile updated successfully')).toBeInTheDocument();
+      expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    });
+
+    it('validates the name and reports save errors', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      vi.mocked(mockApi.patch).mockRejectedValue({ response: { data: { error: 'Unable to save' } } });
+      render(<Profile />);
+      await user.click(await screen.findByRole('button', { name: /edit profile/i }));
+      await user.clear(screen.getByLabelText(/name/i));
+      await user.click(screen.getByRole('button', { name: /save changes/i }));
+      expect(await screen.findByText('Name is required')).toBeInTheDocument();
+      expect(mockApi.patch).not.toHaveBeenCalled();
+      await user.type(screen.getByLabelText(/name/i), 'Jane');
+      await user.click(screen.getByRole('button', { name: /save changes/i }));
+      expect(await screen.findByText('Unable to save')).toBeInTheDocument();
+    });
+
+    it('reports an invalid photo selection', async () => {
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      render(<Profile />);
+      const input = await screen.findByLabelText('Choose profile photo');
+      const { fireEvent } = await import('@testing-library/react');
+      fireEvent.change(input, { target: { files: [new File(['text'], 'bad.txt', { type: 'text/plain' })] } });
+      expect(await screen.findByText('Choose a valid image file.')).toBeInTheDocument();
+    });
+
+    it('uploads a photo, announces progress, and updates the profile on success', async () => {
+      const { fireEvent } = await import('@testing-library/react');
+      const originalImage = globalThis.Image;
+      URL.createObjectURL = vi.fn().mockReturnValue('blob:profile-photo');
+      URL.revokeObjectURL = vi.fn();
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn() } as never);
+      vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['jpeg'], { type: 'image/jpeg' })));
+      globalThis.Image = class extends originalImage {
+        set src(_value: string) { this.onload?.call(this, new Event('load')); }
+      } as typeof Image;
+      let finishUpload: (() => void) | undefined;
+      let progressHandler: ((event: ProgressEvent) => void) | null = null;
+      const upload = Object.defineProperty({}, 'onprogress', {
+        get: () => progressHandler,
+        set: (handler: ((event: ProgressEvent) => void) | null) => { progressHandler = handler; }
+      });
+      const request = { onload: null as (() => void) | null };
+      const send = vi.fn(() => { finishUpload = () => request.onload?.(); });
+      const open = vi.fn();
+      const setRequestHeader = vi.fn();
+      vi.stubGlobal('XMLHttpRequest', vi.fn(function () {
+        return { open, setRequestHeader, send, upload, get onload() { return request.onload; }, set onload(value) { request.onload = value; }, status: 200 };
+      }));
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      vi.mocked(mockApi.get).mockImplementation(async (url) => url === '/users/profile/upload-url'
+        ? { data: { uploadUrl: 'https://storage.example/upload', fileName: 'profile.jpg' } }
+        : { data: [] } as never);
+      vi.mocked(mockApi.patch).mockResolvedValue({ data: { ...mockUser, profileImageUrl: 'https://cdn.example/profile.jpg' } });
+
+      try {
+        render(<Profile />);
+        const input = await screen.findByLabelText('Choose profile photo');
+        fireEvent.change(input, { target: { files: [new File(['image'], 'profile.png', { type: 'image/png' })] } });
+        await waitFor(() => expect(send).toHaveBeenCalled());
+        (progressHandler as ((event: ProgressEvent) => void) | null)?.({ lengthComputable: true, loaded: 1, total: 1 } as ProgressEvent);
+        await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('100%'));
+        finishUpload?.();
+        expect(await screen.findByText('Profile photo updated.')).toBeInTheDocument();
+        expect(mockApi.get).toHaveBeenCalledWith('/users/profile/upload-url', expect.objectContaining({
+          params: expect.objectContaining({ contentType: 'image/jpeg' })
+        }));
+        expect(open).toHaveBeenCalledWith('PUT', 'https://storage.example/upload');
+        expect(setRequestHeader).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
+        expect(send).toHaveBeenCalledWith(expect.any(Blob));
+        expect(mockApi.patch).toHaveBeenCalledWith('/users/profile/upload', { fileName: 'profile.jpg' });
+      } finally {
+        globalThis.Image = originalImage;
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+      }
+    });
+  });
+
   describe('Bookings', () => {
     it('should fetch and display bookings', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
@@ -181,6 +276,16 @@ describe('Profile Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Host Dashboard')).toBeInTheDocument();
       });
+    });
+
+    it('shows host stats and dashboard link for a driver with host capability', async () => {
+      localStorage.setItem('user', JSON.stringify({ ...mockUser, canHost: true }));
+      vi.mocked(mockApi.get)
+        .mockResolvedValueOnce({ data: mockBookings })
+        .mockResolvedValueOnce({ data: { totalBookings: 2, activeBookings: 1, completedBookings: 1, totalSpent: 80, totalListings: 1, totalEarnings: 0, totalHostBookings: 0 } });
+      render(<Profile />);
+      await waitFor(() => expect(screen.getByText('Host Dashboard')).toBeInTheDocument());
+      expect(screen.getByText('Listings')).toBeInTheDocument();
     });
 
     it('should not show host dashboard button for driver users', async () => {

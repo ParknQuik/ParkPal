@@ -1,3 +1,4 @@
+import { useViewportDiscovery } from '../hooks/useViewportDiscovery';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -22,7 +23,6 @@ import { searchListings } from '../store/slices/marketplaceSlice';
 import { fetchZoneAvailability } from '../store/slices/analyticsSlice';
 import { useTheme } from '../context/ThemeContext';
 import { analyticsService } from '../services/analytics';
-import { marketplaceAPI } from '../services/api';
 import { ListingBottomSheet } from '../components/ListingBottomSheet';
 import { FilterModal, FilterConfig } from '../components/FilterModal';
 import { FilterChips, SortOption } from '../components/FilterChips';
@@ -37,7 +37,7 @@ import type { ParkingCandidateDiscoveryPin } from '../types';
 const { width, height } = Dimensions.get('window');
 
 const CACHE_KEY = 'parkpal_cached_listings';
-const MAP_REFRESH_COOLDOWN_MS = 1500;
+const MAP_REFRESH_COOLDOWN_MS = 5000;
 const MAP_RATE_LIMIT_NOTICE = 'Map refreshes are busy. Showing the latest parking results we already have.';
 const LOCATION_UNAVAILABLE_NOTICE = 'Unable to resolve your GPS position. Enable location services or search an area.';
 const NEUTRAL_REGION = {
@@ -106,6 +106,11 @@ const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: 
   occupancyColor: string | null;
 }) => {
   const [tracksChanges, setTracksChanges] = React.useState(true);
+  useEffect(() => {
+    setTracksChanges(true);
+    const timer = setTimeout(() => setTracksChanges(false), 150);
+    return () => clearTimeout(timer);
+  }, [selected, listing.pricePerHour, occupancyColor]);
   const price = listing.pricePerHour != null ? `₱${listing.pricePerHour}` : '₱—';
   const bg = selected ? '#10b77f' : '#ffffff';
   const textColor = selected ? '#ffffff' : '#10b77f';
@@ -212,6 +217,11 @@ const CandidateMarker = React.memo(({ candidate, selected, onPress }: {
   onPress: (candidateKey: string) => void;
 }) => {
   const [tracksChanges, setTracksChanges] = React.useState(true);
+  useEffect(() => {
+    setTracksChanges(true);
+    const timer = setTimeout(() => setTracksChanges(false), 150);
+    return () => clearTimeout(timer);
+  }, [selected, candidate.isPreview, candidate.title]);
   const markerKey = `candidate-${candidate.id}`;
   const bg = selected ? '#f59e0b' : '#ffffff';
   const iconColor = selected ? '#ffffff' : '#f59e0b';
@@ -227,8 +237,8 @@ const CandidateMarker = React.memo(({ candidate, selected, onPress }: {
       <View
         accessible
         accessibilityLabel={candidate.isPreview
-          ? `${candidate.title}. Preview parking candidate, not bookable.`
-          : `${candidate.title}. Verified commercial parking guidance, not bookable.`}
+          ? `${candidate.title}. Nearby facility preview, not bookable.`
+          : `${candidate.title}. Verified parking facility guidance, not bookable.`}
         accessibilityRole="button"
         collapsable={false}
         style={{
@@ -274,12 +284,12 @@ export const ExploreMap: React.FC = () => {
   const initialCenterHandledRef = useRef(false);
   const hasFocusedRef = useRef(false);
   const initializeMapCenterRef = useRef<() => void>(() => {});
-  const centerOnDeviceLocationRef = useRef<(preferFresh?: boolean) => void>(() => {});
+  const centerOnDeviceLocationRef = useRef<(preferFresh?: boolean, refreshLocal?: boolean) => void>(() => {});
   const listingFetchesRef = useRef(new Map<string, Promise<void>>());
-  const candidateFetchesRef = useRef(new Map<string, Promise<void>>());
   const deviceLocationRequestRef = useRef<Promise<Location.LocationObject | null> | null>(null);
+  const activeListingKeyRef = useRef("");
   const lastListingFetchRef = useRef<{ key: string; timestamp: number } | null>(null);
-  const lastManualRefreshRef = useRef(0);
+  const lastManualRefreshRef = useRef(-Infinity);
   const [selectedMarker, setSelectedMarker] = useState<string | number | null>(null);
   const [nearbyResultsVisible, setNearbyResultsVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -297,7 +307,6 @@ export const ExploreMap: React.FC = () => {
   const [zoneOccupancyMap, setZoneOccupancyMap] = useState<Record<string, number>>({});
   const [zoneAvailabilityMap, setZoneAvailabilityMap] = useState<Record<string, any>>({});
   const [cachedListings, setCachedListings] = useState<any[]>([]);
-  const [candidatePins, setCandidatePins] = useState<ParkingCandidateDiscoveryPin[]>([]);
   const insets = useSafeAreaInsets();
   const { history, addToHistory, clearHistory, removeFromHistory } = useSearchHistory();
   const { isConnected } = useNetworkStatus();
@@ -316,6 +325,22 @@ export const ExploreMap: React.FC = () => {
   const [locationReady, setLocationReady] = useState(hasRouteLocation);
   const [hasLocationContext, setHasLocationContext] = useState(hasRouteLocation);
   const [mapReady, setMapReady] = useState(false);
+  const submittedRegionRef = useRef<any>(null);
+  const [submittedRegion, setSubmittedRegion] = useState<any>(hasRouteLocation ? region : null);
+  submittedRegionRef.current = submittedRegion;
+  const submitRegion = (next: typeof region) => {
+    submittedRegionRef.current = next;
+    setSubmittedRegion(next);
+  };
+  const focusedCandidateRouteRef = useRef<string | null>(null);
+
+  const facilityDiscovery = useViewportDiscovery(hasLocationContext && submittedRegion ? {
+    south: Math.max(-90, submittedRegion.latitude - submittedRegion.latitudeDelta / 2),
+    west: submittedRegion.longitudeDelta >= 360 ? -180 : ((submittedRegion.longitude - submittedRegion.longitudeDelta / 2 + 540) % 360) - 180,
+    north: Math.min(90, submittedRegion.latitude + submittedRegion.latitudeDelta / 2),
+    east: submittedRegion.longitudeDelta >= 360 ? 180 : ((submittedRegion.longitude + submittedRegion.longitudeDelta / 2 + 540) % 360) - 180,
+  } : null, isConnected);
+  const candidatePins = facilityDiscovery.pins;
 
   const { listings, loading } = useAppSelector((state) => state.marketplace);
   const { zoneAvailability, activeZoneId, activeSession } = useAppSelector((state) => state.analytics);
@@ -451,43 +476,13 @@ export const ExploreMap: React.FC = () => {
 
   const displayListings = isConnected ? listings : cachedListings;
 
-  const fetchCandidatePins = useCallback(async (lat: number, lon: number) => {
-    if (!isConnected) return;
-
-    const requestKey = JSON.stringify({
-      lat: Math.round(lat * 10000) / 10000,
-      lon: Math.round(lon * 10000) / 10000,
-      radius: 3,
-    });
-    const inFlight = candidateFetchesRef.current.get(requestKey);
-
-    if (inFlight) {
-      return inFlight;
-    }
-
-    const request = (async () => {
-      try {
-        const response = await marketplaceAPI.getDiscoveryCandidates({ lat, lon, radius: 3 });
-        setCandidatePins(response.data?.data || []);
-      } catch (err) {
-        if (isRateLimitError(err)) {
-          setMapNotice(MAP_RATE_LIMIT_NOTICE);
-        }
-      } finally {
-        candidateFetchesRef.current.delete(requestKey);
-      }
-    })();
-
-    candidateFetchesRef.current.set(requestKey, request);
-    return request;
-  }, [isConnected]);
-
   useEffect(() => {
-    if (!candidateId) return;
+    if (!candidateId || focusedCandidateRouteRef.current === `${candidateId}:${latitude}:${longitude}`) return;
     const candidateMarkerId = `candidate-${candidateId}`;
-    const focusedCandidate = candidatePins.find((candidate) => candidate.id === Number(candidateId));
+    const focusedCandidate = candidatePins.find((candidate) => String(candidate.id) === String(candidateId));
     if (!focusedCandidate) return;
 
+    focusedCandidateRouteRef.current = `${candidateId}:${latitude}:${longitude}`;
     setSelectedMarker(candidateMarkerId);
     mapRef.current?.animateToRegion({
       latitude: focusedCandidate.latitude,
@@ -495,7 +490,7 @@ export const ExploreMap: React.FC = () => {
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
     }, 500);
-  }, [candidateId, candidatePins]);
+  }, [candidateId, candidatePins, latitude, longitude]);
 
   const sortedListings = useMemo(() => {
     if (!activeSort || !displayListings.length) return displayListings;
@@ -561,11 +556,19 @@ export const ExploreMap: React.FC = () => {
     return sections.filter((section) => section.data.length > 0);
   }, [bookableListings, commercialZones]);
 
-  const refreshMapData = useCallback(async (lat: number, lon: number, filters?: FilterConfig) => {
+  const refreshMapData = useCallback(async (lat: number, lon: number, filters?: FilterConfig, force = false) => {
+    const area = submittedRegionRef.current;
+    if (!area) return;
+    lat = area.latitude; lon = area.longitude;
     const params: any = {
       latitude: lat,
       longitude: lon,
       radius: 3,
+      south: Math.max(-90, area.latitude - area.latitudeDelta / 2),
+      north: Math.min(90, area.latitude + area.latitudeDelta / 2),
+      west: Math.max(-180, area.longitude - area.longitudeDelta / 2),
+      east: Math.min(180, area.longitude + area.longitudeDelta / 2),
+      forceRefresh: force,
       ...(searchQuery ? { q: searchQuery } : {}),
     };
 
@@ -578,6 +581,7 @@ export const ExploreMap: React.FC = () => {
     }
 
     const requestKey = JSON.stringify(params);
+    activeListingKeyRef.current = requestKey;
     const now = Date.now();
     const lastFetch = lastListingFetchRef.current;
     const inFlight = listingFetchesRef.current.get(requestKey);
@@ -586,18 +590,19 @@ export const ExploreMap: React.FC = () => {
       return inFlight;
     }
 
-    if (lastFetch?.key === requestKey && now - lastFetch.timestamp < MAP_REFRESH_COOLDOWN_MS) {
+    if (!force && lastFetch?.key === requestKey && now - lastFetch.timestamp < 60000) {
       return;
     }
 
     const request = (async () => {
       try {
-        lastListingFetchRef.current = { key: requestKey, timestamp: Date.now() };
         setMapNotice(null);
         const result = await dispatch(searchListings(params)).unwrap();
-        await fetchCandidatePins(lat, lon);
+        if (activeListingKeyRef.current !== requestKey) return;
+        lastListingFetchRef.current = { key: requestKey, timestamp: Date.now() };
+        if (result?.some((item: any) => item.searchTruncated)) setMapNotice("Zoom in to see more host spaces.");
 
-        if (result?.length) {
+        if (Array.isArray(result)) {
           try {
             await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
               listings: result,
@@ -610,6 +615,7 @@ export const ExploreMap: React.FC = () => {
           }
         }
       } catch (err) {
+        if (activeListingKeyRef.current !== requestKey) return;
         if (isRateLimitError(err)) {
           setMapNotice(MAP_RATE_LIMIT_NOTICE);
         } else {
@@ -627,7 +633,7 @@ export const ExploreMap: React.FC = () => {
 
     listingFetchesRef.current.set(requestKey, request);
     return request;
-  }, [dispatch, searchQuery, fetchCandidatePins]);
+  }, [dispatch, searchQuery]);
 
   useEffect(() => {
     if (!isConnected) {
@@ -667,6 +673,7 @@ export const ExploreMap: React.FC = () => {
     };
 
     setRegion(newRegion);
+    submitRegion(newRegion);
     mapRef.current?.animateToRegion(newRegion, 500);
     setHasLocationContext(true);
     setMapNotice(null);
@@ -730,7 +737,7 @@ export const ExploreMap: React.FC = () => {
     }
   }, []);
 
-  const centerOnDeviceLocation = useCallback(async (preferFresh = true) => {
+  const centerOnDeviceLocation = useCallback(async (preferFresh = true, refreshLocal = false) => {
     setLocating(true);
     try {
       const location = await resolveDeviceLocation(preferFresh);
@@ -749,11 +756,13 @@ export const ExploreMap: React.FC = () => {
         longitudeDelta: 0.01,
       };
       setRegion(newRegion);
+      if (!submittedRegionRef.current) submitRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 500);
       setHasLocationContext(true);
       setMapNotice(null);
 
-      if (isConnected) {
+      if (isConnected && (!preferFresh || refreshLocal)) {
+        facilityDiscovery.revalidate();
         await refreshMapData(coords.latitude, coords.longitude);
       }
     } catch {
@@ -783,7 +792,7 @@ export const ExploreMap: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       if (hasFocusedRef.current) {
-        centerOnDeviceLocationRef.current(true);
+        centerOnDeviceLocationRef.current(true, true);
       } else {
         hasFocusedRef.current = true;
         initializeMapCenterRef.current();
@@ -808,7 +817,7 @@ export const ExploreMap: React.FC = () => {
         clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchQuery, isConnected, hasLocationContext, refreshMapData, activeFilters, region.latitude, region.longitude]);
+  }, [searchQuery, isConnected, hasLocationContext, refreshMapData, activeFilters, submittedRegion]);
 
   const handleRefresh = useCallback(async () => {
     const now = Date.now();
@@ -818,7 +827,8 @@ export const ExploreMap: React.FC = () => {
 
     lastManualRefreshRef.current = now;
     setRefreshing(true);
-    await refreshMapData(region.latitude, region.longitude, activeFilters);
+    facilityDiscovery.retry();
+    await refreshMapData(region.latitude, region.longitude, activeFilters, true);
     setRefreshing(false);
   }, [refreshMapData, isConnected, hasLocationContext, refreshing, activeFilters, region.latitude, region.longitude]);
 
@@ -933,10 +943,14 @@ export const ExploreMap: React.FC = () => {
     setRegion(r);
     if (regionChangeDebounceRef.current) clearTimeout(regionChangeDebounceRef.current);
     regionChangeDebounceRef.current = setTimeout(() => {
-      setHasMovedMap(true);
+      setHasMovedMap(JSON.stringify(r) !== JSON.stringify(submittedRegionRef.current));
       resetZoneIndicatorTimer();
     }, 500);
   }, [resetZoneIndicatorTimer]);
+
+  useEffect(() => () => {
+    if (regionChangeDebounceRef.current) clearTimeout(regionChangeDebounceRef.current);
+  }, []);
 
   const handleSearchAreaPress = async () => {
     const now = Date.now();
@@ -946,6 +960,7 @@ export const ExploreMap: React.FC = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch {}
+    submitRegion(region);
     setHasMovedMap(false);
     setHasLocationContext(true);
     setRefreshing(true);
@@ -1156,6 +1171,14 @@ export const ExploreMap: React.FC = () => {
     map: {
       width: '100%',
       height: '100%',
+    },
+    hostLoadingIndicator: {
+      position: 'absolute',
+      top: 100,
+      left: 16,
+      backgroundColor: colors.white,
+      padding: 10,
+      borderRadius: 24,
     },
     loadingOverlay: {
       ...StyleSheet.absoluteFill,
@@ -1427,6 +1450,7 @@ export const ExploreMap: React.FC = () => {
           style={styles.map}
           region={region}
           onMapReady={() => setMapReady(true)}
+
           onRegionChangeComplete={handleRegionChangeComplete}
           showsUserLocation
           showsMyLocationButton={false}
@@ -1554,8 +1578,8 @@ export const ExploreMap: React.FC = () => {
         )}
 
         {loading && isConnected && hasLocationContext && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={colors.primary} />
+          <View style={styles.hostLoadingIndicator} pointerEvents="none">
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         )}
 
@@ -1580,14 +1604,40 @@ export const ExploreMap: React.FC = () => {
           </View>
         )}
 
-        {!loading && isConnected && hasLocationContext && listings.length === 0 && candidatePins.length === 0 && (
+        {isConnected && hasLocationContext && (
+          <TouchableOpacity onPress={facilityDiscovery.findMore} disabled={facilityDiscovery.googleLoading}
+            accessibilityRole="button" accessibilityLabel="Find more facilities"
+            style={{ position: 'absolute', bottom: 140, alignSelf: 'center', backgroundColor: colors.surface, padding: 12, borderRadius: 20 }}>
+            <Text style={{ color: colors.text }}>{facilityDiscovery.googleLoading ? 'Finding facilities…' : 'Find more facilities'}</Text>
+          </TouchableOpacity>
+        )}
+        {!loading && isConnected && hasLocationContext && facilityDiscovery.status === 'success' && !facilityDiscovery.notice && listings.length === 0 && candidatePins.length === 0 && (
           <View style={styles.emptyState} accessibilityLabel="No parking spots found in this area" accessible>
             <MaterialCommunityIcons name="map-marker-off-outline" size={48} color={colors.textSecondary} />
             <Text style={styles.emptyStateText}>No parking spots found</Text>
           </View>
         )}
 
+        {isConnected && hasLocationContext && (
+          <View style={[styles.mapNotice, { bottom: insets.bottom + (mapNotice ? 176 : 112) }]}>
+            <Text style={styles.mapNoticeText} accessibilityLiveRegion="polite">
+              {facilityDiscovery.status === 'loading' ? 'Finding parking facilities…'
+                : facilityDiscovery.notice || (candidatePins.length === 0 ? 'No external parking facilities found in this area.' : 'Facility guidance · not bookable')}
+              {' · Google Maps'}
+            </Text>
+            {(facilityDiscovery.status === 'error' || facilityDiscovery.notice?.includes('unavailable')) && (
+              <TouchableOpacity onPress={facilityDiscovery.retry} accessibilityRole="button" accessibilityLabel="Retry parking facility discovery" style={{ padding: 12, minHeight: 48 }}>
+                <Text style={styles.mapNoticeText}>Retry</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         <View style={styles.mapControls}>
+          <TouchableOpacity style={styles.controlButton} onPress={handleRefresh}
+            disabled={!isConnected || refreshing} accessibilityLabel="Refresh local parking" accessibilityRole="button">
+            <MaterialCommunityIcons name="refresh" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7} accessibilityLabel="Zoom in" accessibilityRole="button">
             <MaterialCommunityIcons name="plus" size={24} color={colors.textSecondary} />
           </TouchableOpacity>

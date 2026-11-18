@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { isVerifiedLocalRuntime } = require('../services/adminMfa');
 
 // Password validation regex - matches backend PASSWORD_POLICY.md requirements
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,72}$/;
@@ -48,7 +49,14 @@ exports.registerSchema = Joi.object({
 
 exports.loginSchema = Joi.object({
   email: Joi.string()
-    .email()
+    .custom((value, helpers) => {
+      const allowLocalAdminEmail = value.toLowerCase().endsWith('@localhost.test') && isVerifiedLocalRuntime();
+      const emailSchema = allowLocalAdminEmail
+        ? Joi.string().email({ tlds: { allow: false } })
+        : Joi.string().email();
+      const { error } = emailSchema.validate(value);
+      return error ? helpers.error('string.email') : value;
+    })
     .required()
     .messages({
       'string.email': 'Invalid email address',

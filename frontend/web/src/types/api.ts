@@ -10,7 +10,12 @@ export interface User {
   email: string;
   name: string;
   phone?: string;
+  profileImageUrl?: string | null;
+  canHost?: boolean;
   role: 'driver' | 'host' | 'admin';
+  isPlatformOwner?: boolean;
+  mfaEnabled?: boolean;
+  mustChangePassword?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,6 +37,9 @@ export interface AuthResponse {
   user: User;
   token: string;
   warnings?: string[];
+  mfaRequired?: boolean;
+  mfaEnrollmentRequired?: boolean;
+  mustChangePassword?: boolean;
 }
 
 export interface PasswordChangeRequest {

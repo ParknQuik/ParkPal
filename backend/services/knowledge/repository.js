@@ -1,4 +1,4 @@
-const prisma = require('../../config/prisma');
+const prisma = require('../../config/knowledgePrisma');
 const { vectorLiteral } = require('./providers');
 
 function json(value) {
@@ -7,25 +7,38 @@ function json(value) {
 
 async function getCurrentVersion(db = prisma) {
   const latest = await db.knowledgeIndexingRun.findFirst({
-    where: { status: 'completed' },
+    where: { status: 'completed', source: null, indexedCount: { gt: 0 } },
     orderBy: { completedAt: 'desc' },
   });
   return latest?.version || null;
 }
 
 async function getStatus(db = prisma) {
-  const [currentRun, latestRun, documentCount, chunkCount] = await Promise.all([
-    db.knowledgeIndexingRun.findFirst({ where: { status: 'completed' }, orderBy: { completedAt: 'desc' } }),
+  const [currentRun, latestRun] = await Promise.all([
+    db.knowledgeIndexingRun.findFirst({ where: { status: 'completed', source: null, indexedCount: { gt: 0 } }, orderBy: { completedAt: 'desc' } }),
     db.knowledgeIndexingRun.findFirst({ orderBy: { startedAt: 'desc' } }),
-    db.knowledgeDocument.count({ where: { status: 'active' } }),
-    db.knowledgeChunk.count({ where: { isActive: true } }),
   ]);
+  const [documentCount, chunkCount] = currentRun ? await Promise.all([
+    db.knowledgeDocument.count({ where: { status: 'active', version: currentRun.version } }),
+    db.knowledgeChunk.count({ where: { isActive: true, version: currentRun.version } }),
+  ]) : [0, 0];
   return {
     currentVersion: currentRun?.version || null,
     latestRun,
     documentCount,
     chunkCount,
   };
+}
+
+async function pruneOldVersions(db = prisma) {
+  const runs = await db.knowledgeIndexingRun.findMany({
+    where: { status: 'completed', source: null, discoveredCount: { gt: 0 }, failedCount: 0, indexedCount: { gt: 0 } },
+    orderBy: { completedAt: 'desc' },
+    select: { version: true },
+  });
+  const retainedVersions = [...new Set(runs.map((run) => run.version))].slice(0, 3);
+  if (!retainedVersions.length) return { count: 0 };
+  return db.knowledgeDocument.deleteMany({ where: { version: { notIn: retainedVersions } } });
 }
 
 async function createRun({ version, source, trigger, metadata }, db = prisma) {
@@ -216,23 +229,34 @@ async function deactivateMissingDocuments({ version, activeSourceIds, source }, 
 
 async function lexicalSearch({ query, version, limit, filters = {} }, db = prisma) {
   const role = filters.role || null;
-  const rows = await db.$queryRawUnsafe(
+  const search = (searchQuery, relaxed = false, excludeIds = []) => db.$queryRawUnsafe(
     `SELECT c.id, c.content, c.section, c.token_count AS "tokenCount", c.metadata, d.title, d.path, d.uri, d.source,
-            ts_rank_cd(to_tsvector('english', c.content), plainto_tsquery('english', $1)) AS score
+            ts_rank_cd(to_tsvector('english', c.content), ${relaxed ? "websearch_to_tsquery('english', $1)" : "plainto_tsquery('english', $1)"}) AS score
        FROM "knowledge_chunks" c
        JOIN "knowledge_documents" d ON d.id = c.document_id
       WHERE c.is_active = true
         AND c.version = $2
-        AND to_tsvector('english', c.content) @@ plainto_tsquery('english', $1)
+        AND to_tsvector('english', c.content) @@ ${relaxed ? "websearch_to_tsquery('english', $1)" : "plainto_tsquery('english', $1)"}
+        AND (cardinality($5::int[]) = 0 OR c.id != ALL($5::int[]))
         AND ($4::text IS NULL OR COALESCE(c.metadata->>'minRole', 'user') IN ('user', $4))
       ORDER BY score DESC, c.id ASC
       LIMIT $3`,
-    query,
+    searchQuery,
     version,
     limit,
-    role
+    role,
+    excludeIds
   );
-  return rows.map((row, index) => ({ ...row, sourceType: 'lexical', rank: index + 1, score: Number(row.score) || 0 }));
+  const exactRows = await search(query);
+  const exact = exactRows.map((row, index) => ({ ...row, sourceType: 'lexical', rank: index + 1, matchType: 'exact', score: Number(row.score) || 0 }));
+  if (exact.length >= 3 || limit <= exact.length) return exact.slice(0, limit);
+
+  const terms = query.match(/[\p{L}\p{N}]+/gu) || [];
+  if (terms.length < 2) return exact;
+  const relaxedQuery = terms.join(' OR ');
+  const relaxedRows = await search(relaxedQuery, true, exact.map((row) => row.id));
+  const relaxed = relaxedRows.map((row, index) => ({ ...row, sourceType: 'lexical', rank: exact.length + index + 1, matchType: 'relaxed', score: Number(row.score) || 0 }));
+  return [...exact, ...relaxed].slice(0, limit);
 }
 
 async function vectorSearch({ embedding, version, limit, filters = {} }, db = prisma) {
@@ -261,6 +285,7 @@ module.exports = {
   getStatus,
   createRun,
   completeRun,
+  pruneOldVersions,
   findReusableDocument,
   cloneDocumentWithChunks,
   upsertDocumentWithChunks,

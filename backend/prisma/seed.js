@@ -7,6 +7,8 @@ async function main() {
   console.log('🌱 Starting database seeding...');
 
   // Clear existing data (in development only)
+  await prisma.adminAccessAudit.deleteMany();
+  await prisma.adminInvitation.deleteMany();
   await prisma.review.deleteMany();
   await prisma.payout.deleteMany();
   await prisma.payment.deleteMany();

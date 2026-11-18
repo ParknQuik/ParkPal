@@ -32,7 +32,7 @@ jobs:
 
     services:
       postgres:
-        image: pgvector/pgvector:pg15
+        image: postgres:16
         env:
           POSTGRES_USER: parkpal
           POSTGRES_PASSWORD: testpassword
@@ -44,6 +44,20 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+
+      knowledge-postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: parkpal
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: parknquik_knowledge_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
 
       redis:
         image: redis:7-alpine
@@ -79,18 +93,30 @@ jobs:
       - name: Generate Prisma Client
         run: |
           cd backend
-          npx prisma generate
+          npm run prisma:generate
+
+      - name: Check missing knowledge database configuration fails clearly
+        working-directory: ./backend
+        run: |
+          if env -u KNOWLEDGE_DATABASE_URL node -e "require('./config/knowledgePrisma')" 2>knowledge-config-error.log; then
+            echo "Expected missing knowledge database configuration to fail"
+            exit 1
+          fi
+          grep -q "KNOWLEDGE_DATABASE_URL is required" knowledge-config-error.log
 
       - name: Setup database
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
-        run: npx prisma migrate deploy
+          KNOWLEDGE_DATABASE_URL: postgresql://parkpal:testpassword@localhost:5433/parknquik_knowledge_test
+        run: |
+          npm run db:migrate
 
       - name: Run tests
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://parkpal:testpassword@localhost:5432/parkpal_test
+          KNOWLEDGE_DATABASE_URL: postgresql://parkpal:testpassword@localhost:5433/parknquik_knowledge_test
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key-for-pr-checks
           QR_SECRET: test-qr-secret-for-pr-checks-only-64-character-hex-string-value

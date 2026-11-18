@@ -9,11 +9,15 @@
     "start": "FORCE_COLOR=0 node index.js",
     "dev": "FORCE_COLOR=0 nodemon index.js",
     "seed": "node prisma/seed.js",
+    "admin:bootstrap-owner": "node scripts/provision-platform-owner.js",
     "test": "NODE_ENV=test jest --detectOpenHandles --forceExit",
     "test:watch": "NODE_ENV=test jest --watch",
     "test:coverage": "NODE_ENV=test jest --coverage --detectOpenHandles --forceExit",
     "knowledge:index": "node scripts/knowledge-index.js",
-    "knowledge:evaluate": "node scripts/knowledge-eval.js"
+    "knowledge:evaluate": "node scripts/knowledge-eval.js",
+    "prisma:generate": "prisma generate && prisma generate --schema prisma/knowledge/schema.prisma",
+    "db:migrate": "node scripts/migrate-databases.js",
+    "knowledge:migrate": "prisma migrate deploy --schema prisma/knowledge/schema.prisma"
   },
   "jest": {
     "testEnvironment": "node",

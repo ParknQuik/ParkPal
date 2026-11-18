@@ -27,6 +27,7 @@ async function seed(page: Page, role?: Role) {
     if (user) {
       localStorage.setItem('token', 'e2e-token');
       localStorage.setItem('user', JSON.stringify(user));
+      if (user.role === 'admin') sessionStorage.setItem('admin-mfa-verified', 'true');
     } else {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

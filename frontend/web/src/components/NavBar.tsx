@@ -101,7 +101,7 @@ export const NavBar: React.FC = () => {
               onClick={handleMenu}
               color="inherit"
             >
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+              <Avatar src={user.profileImageUrl || undefined} sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
                 {getInitials(user.name)}
               </Avatar>
             </IconButton>
@@ -136,7 +136,7 @@ export const NavBar: React.FC = () => {
                 My vehicles
               </MenuItem>
 
-              {user.role !== 'admin' && (
+              {(user.canHost || user.role === 'host') && user.role !== 'admin' && (
                 <MenuItem onClick={handleDashboard}>
                   <Dashboard sx={{ mr: 1 }} />
                   My Listings
@@ -148,10 +148,21 @@ export const NavBar: React.FC = () => {
                   My Listings
                 </MenuItem>
               )}
+              {!user.canHost && user.role === 'driver' && (
+                <MenuItem onClick={() => { handleClose(); navigate('/list-slot'); }}>
+                  <Dashboard sx={{ mr: 1 }} />
+                  List a space
+                </MenuItem>
+              )}
 
               {user.role === 'admin' && (
                 <MenuItem onClick={() => { handleClose(); navigate('/admin-dashboard/metrics'); }}>
                   Metrics &amp; health
+                </MenuItem>
+              )}
+              {user.role === 'admin' && user.isPlatformOwner && (
+                <MenuItem onClick={() => { handleClose(); navigate('/admin-access'); }}>
+                  Administrator access
                 </MenuItem>
               )}
 

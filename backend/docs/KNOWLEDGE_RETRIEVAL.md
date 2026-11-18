@@ -1,10 +1,12 @@
 # Production Knowledge Retrieval
 
+See [Parking Product Types](../../docs/PARKING_PRODUCT_TYPES.md) for the user-facing rules that indexed answers must preserve.
+
 ParkNQuik production knowledge retrieval is backend-owned and separate from the `.agents/knowledge` developer index. The developer index still supports Codex and agent context. This system supports runtime admin retrieval, source citations, and future grounded answers.
 
 ## Storage
 
-The backend stores indexed documents in PostgreSQL with `pgvector`:
+The backend stores indexed documents in a dedicated PostgreSQL database with `pgvector`:
 
 - `KnowledgeDocument` tracks source metadata, version, status, path, and hashes.
 - `KnowledgeChunk` tracks structure-aware chunks, token counts, metadata, FTS content, and `vector(1536)` embeddings.
@@ -35,6 +37,7 @@ cd backend && npm run knowledge:index -- --source product-docs --retries 2
 Sources are curated in `backend/config/knowledge/sources.json`. Do not point v1 at every source file. Add markdown/docs or source-map style records that should be safe to cite to users.
 
 A new version is activated only after the indexing run completes. Failed runs remain visible through admin status and do not replace the latest completed version.
+After a successful, non-empty full-corpus run, document and chunk data is retained for the latest three successful full-corpus versions. Indexing-run records remain available for audit. Admin status counts refer to the current full-corpus version.
 
 ## Retrieval
 

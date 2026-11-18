@@ -16,6 +16,7 @@ exports.getProfile = async (req, res, next) => {
         name: true,
         phone: true,
         role: true,
+        canHost: true,
         profileImageUrl: true,
         createdAt: true,
       },
@@ -57,6 +58,7 @@ exports.updateProfile = async (req, res, next) => {
         name: true,
         phone: true,
         role: true,
+        canHost: true,
         profileImageUrl: true,
         createdAt: true,
       },
@@ -108,7 +110,8 @@ exports.getUserStats = async (req, res, next) => {
 
     // For hosts: get earnings and listing stats
     let hostStats = null;
-    if (req.user.role === 'host') {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, canHost: true } });
+    if (user?.canHost || user?.role === 'host') {
       const listings = await prisma.parkingSlot.count({
         where: { ownerId: userId },
       });
@@ -205,6 +208,7 @@ exports.uploadProfilePicture = async (req, res, next) => {
         name: true,
         phone: true,
         role: true,
+        canHost: true,
         profileImageUrl: true,
         createdAt: true,
       },

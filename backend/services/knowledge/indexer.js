@@ -165,6 +165,14 @@ async function indexKnowledge(options = {}) {
       errorSummary: summary.errors.slice(0, 5).map((err) => `${err.sourceId}: ${err.message}`).join('\n') || null,
       metadata: { durationMs: Date.now() - started },
     }, options.db);
+    if (
+      !sourceFilter &&
+      summary.discoveredCount > 0 &&
+      summary.failedCount === 0 &&
+      summary.indexedCount === summary.discoveredCount
+    ) {
+      await repository.pruneOldVersions(options.db);
+    }
   }
 
   metrics.recordKnowledgeIndexingDuration?.((Date.now() - started) / 1000, summary.failedCount > 0 ? 'failed' : 'completed');
