@@ -5,6 +5,8 @@
 
 ParkPal is a full-stack parking management app. Users find, book, and manage parking spots. Hosts list available spaces.
 
+ParkNQuik distinguishes bookable host listings from non-bookable commercial facility guidance. See [Parking Product Types](docs/PARKING_PRODUCT_TYPES.md) for availability and circling-time rules.
+
 ## 📄 Research Background
 
 This project is based on the research paper: **"ParknQuik: a park sharing and crowdsource park monitoring mobile application"**
@@ -13,8 +15,8 @@ This project is based on the research paper: **"ParknQuik: a park sharing and cr
 
 The application implements a peer-to-peer parking space sharing platform with crowdsourced monitoring capabilities, allowing:
 - Private parking space owners to monetize unused spots
-- Drivers to find and reserve available parking in real-time
-- Community-driven updates on parking availability
+- Drivers to find and reserve host-listed spaces when their requested time is available
+- Commercial parking guidance based on verified crowd-reported circling-time estimates
 - Reduced urban parking congestion through efficient space utilization
 
 ## 🏗️ Project Structure

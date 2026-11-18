@@ -21,6 +21,8 @@
 
 ParknQuik has two smart parking services:
 
+See [Parking Product Types](PARKING_PRODUCT_TYPES.md) for the distinction between bookable host listings and non-bookable commercial facility guidance.
+
 1. **Service 1: Smart Parking Analytics** - Opt-in, foreground geofencing and native activity signals support circling-time analytics for verified external parking facilities. Operator-provided occupancy data remains separate from crowd guidance.
 
 2. **Service 2: P2P Parking Marketplace** - Airbnb-style marketplace where hosts rent out private parking spaces (driveways, garages, roadside spots) to drivers via QR code check-in/checkout.
@@ -28,8 +30,8 @@ ParknQuik has two smart parking services:
 ### Key Value Propositions
 
 **For Drivers:**
-- Real-time parking availability
-- Predicted circling/search time
+- Bookable host-listed spaces with requested-time availability
+- Circling-time guidance for verified commercial facilities when the sample threshold is met
 - Cheaper parking options (marketplace 20-40% below commercial rates)
 - Navigate to less crowded zones
 
@@ -41,7 +43,7 @@ ParknQuik has two smart parking services:
 **For Hosts (Marketplace):**
 - Monetize unused parking spaces
 - Passive income stream
-- Flexible availability control
+- Control listing availability for driver reservations
 
 **For Cities/Governments:**
 - City-wide parking analytics
@@ -56,7 +58,7 @@ ParknQuik has two smart parking services:
 
 **Parking Pain Points:**
 - Drivers waste 7-12 minutes circling for parking in busy areas
-- No visibility into parking availability before arrival
+- Limited visibility into bookable owner-listed spaces and commercial parking-search guidance before arrival
 - Commercial parking is expensive
 - Unused private parking spaces sit idle
 - Operators lack data-driven insights
@@ -234,6 +236,7 @@ Aggregation:
 Web supports vehicle management, reservation, payment, and booking details. QR check-in and checkout stay in the mobile app. Web booking details show booking/payment state and direct drivers to scan with mobile.
 
 Commercial-facility candidate pins are view-only guidance. Show circling-time estimates, sample count, and completed-window freshness only for verified candidates linked to a zone with at least three sessions in the latest completed hourly window. Never show these facilities as bookable or describe guidance as available spaces, capacity, or price.
+See [Parking Product Types](PARKING_PRODUCT_TYPES.md) for the rules governing both result types.
 
 **Driver Flow (Walk-up):**
 ```
@@ -580,7 +583,11 @@ POST /api/payments/intent { bookingId: 12345, paymentMethod: "cash" | "gcash" | 
 // Cash confirms the reservation and records cash due. Digital payment confirms only after PayMongo verifies it.
 
 GET /api/marketplace/discovery/candidates?lat=14.5990&lon=120.9842&radius=5
-// Candidate pins are non-bookable. Crowd circling guidance is returned only when the latest completed hour has >= 3 sessions.
+// Automatic clients send south/west/north/east bounds; legacy center/radius queries remain supported.
+// Matching Place IDs are cached for 15 minutes, including viewport bounds in the key.
+// Facilities are non-bookable guidance, not confirmation of open spaces. Display names and addresses are fetched live.
+// Google Place coordinates are cleared after 30 days; display name/address are not stored. Show Google Maps attribution.
+// Crowd circling guidance requires a verified candidate linked to a zone and >= 3 sessions in the latest completed hour.
 
 // Mobile-only QR check-in
 POST /api/marketplace/qr/checkin
@@ -618,6 +625,33 @@ POST /api/marketplace/reviews
 Response: { reviewId: 555 }
 ```
 
+### Automatic viewport facility discovery
+
+Mobile Explore and web Map discover external parking independently of host listing search.
+On location resolution and after the visible bounds stop changing for 750 ms, clients call
+`GET /marketplace/discovery/candidates?south=14.59&west=120.97&north=14.61&east=121.00`.
+Marker selection and rerenders do not refresh an unchanged viewport. Moving the map clears
+previous facility results, cancels scheduled work, and invalidates older responses. Facility
+loading, errors with retry, and successful empty results have separate states from host search.
+Host filters and manual host-area search retain their existing behavior; GPS tab recentering
+and route initialization remain in place.
+
+The endpoint also accepts legacy `lat`, `lon`, and kilometre `radius` requests and preserves
+`{ data: [...] }`. For bounds it derives the midpoint and enclosing corner radius, then filters
+live facility coordinates to the rectangle (including antimeridian crossing). Viewports needing
+more than the provider's 50 km radius return no facilities and `discovery.viewportTooLarge`,
+so clients display “Zoom in to discover parking in this area”. Nearby Search retrieves up to
+three pages with a two-second token delay. `discovery.providerLimited` indicates a remaining
+page token at the cap; `discovery.detailsUnavailable` indicates partial detail failures. Total
+detail failure is an error rather than a successful empty search.
+
+“All parking” means provider-known facilities in the viewport, not exhaustive coverage or
+confirmed vacant stalls. External pins are accessible, carry Google Maps attribution, and remain
+non-bookable guidance. Matching Place IDs and coverage flags are cached for 15 minutes with
+viewport bounds in the key; display details are fetched live. Review state, linked zones, rejected
+candidate exclusion, coordinate expiry, and verified-zone/current-hour/three-session guidance
+requirements are preserved. See [Google Nearby Search pagination](https://developers.google.com/maps/documentation/places/web-service/legacy/search-nearby).
+
 ---
 
 ## Monetization Strategy
@@ -644,7 +678,7 @@ Response: { reviewId: 555 }
 ### Pricing Strategy
 
 **Service 1 (Free tier):**
-- Basic availability map
+- Host-listing availability for requested booking times
 - Zone occupancy view
 
 **Service 1 (Premium - ₱99/month):**
@@ -702,3 +736,6 @@ Response: { reviewId: 555 }
 
 See `DEVELOPMENT_ROADMAP.md` for implementation phases.
 
+
+
+Regional OSM discovery and verified facility-level operator occupancy are implemented separately from crowd circling metrics. See [regional directory operations](REGIONAL_PARKING_DIRECTORY.md). Sensor/MQTT adapters remain future work.

@@ -1,5 +1,7 @@
 # Service 1: Smart Parking Analytics
 
+For the distinction between bookable host listings and non-bookable commercial guidance, see [Parking Product Types](../PARKING_PRODUCT_TYPES.md).
+
 **Last Updated:** May 24, 2026
 **Status:** Local MVP analytics foundation in progress; beta/deployment evidence remains deferred
 **Timeline:** Local validation first, then beta MVP scope and launch gates
@@ -13,7 +15,7 @@
 
 Service 1 is ParkPal's **B2B/B2G revenue engine**. While Service 2 is the P2P parking marketplace (current focus), Service 1 provides:
 
-- Real-time parking availability via crowdsourced data
+- Circling-time guidance from verified crowdsourced sessions; this does not report external open-space availability
 - Circling time calculation and predictions
 - Occupancy analytics for parking operators
 - City-wide congestion insights for governments
@@ -31,11 +33,40 @@ Service 1 is ParkPal's **B2B/B2G revenue engine**. While Service 2 is the P2P pa
 
 ### Google Parking Facility Discovery
 
-Google Places is an additive discovery source for known parking facilities, not a source of ParknQuik analytics or live availability. Server-side scans create internal `ParkingCandidate` records keyed by `googlePlaceId` and review metadata. Public Explore can show limited preview pins, but those pins must remain non-bookable and must not show pricing guarantees, occupancy, or circling-time estimates.
+Google Places is an additive discovery source for nearby parking facilities, not a source of ParknQuik analytics or live availability. Explore and Map automatically request visible bounds after a 750 ms debounce, independently of host search; legacy callers may still send a center and radius. Place IDs are cached per matching search for 15 minutes and upserted into internal `ParkingCandidate` records with review state and zone links preserved. Public results include only facilities from that search and exclude rejected candidates. Display name and address are fetched live and are not persisted; stored Google coordinates are cleared within 30 days. Public clients show Google Maps attribution. Candidate facilities remain non-bookable and must not imply open spaces, pricing, or occupancy.
+
+Scheduled fixed-location Metro Manila scans are not a source of public candidates. Admins may still explicitly scan operator-selected locations for review. Driver-search candidates use the same admin review and geofence workflows.
 
 Analytics starts only after an admin/operator verifies the candidate geofence and links it to a ParknQuik-owned `Zone`.
 
 After verification, signed-in drivers who opt in can contribute foreground-only zone-entry, activity, and exit signals to the linked zone. External-facility guidance is a separate aggregate: it reports recent circling-time estimates only, never open-space counts or managed-slot occupancy. Collection is limited to verified geofences; an unverified candidate preview does not collect or receive analytics.
+
+### Automatic viewport facility discovery
+
+Mobile Explore and web Map discover external parking independently of host listing search.
+On location resolution and after the visible bounds stop changing for 750 ms, clients call
+`GET /marketplace/discovery/candidates?south=14.59&west=120.97&north=14.61&east=121.00`.
+Marker selection and rerenders do not refresh an unchanged viewport. Moving the map clears
+previous facility results, cancels scheduled work, and invalidates older responses. Facility
+loading, errors with retry, and successful empty results have separate states from host search.
+Host filters and manual host-area search retain their existing behavior; GPS tab recentering
+and route initialization remain in place.
+
+The endpoint also accepts legacy `lat`, `lon`, and kilometre `radius` requests and preserves
+`{ data: [...] }`. For bounds it derives the midpoint and enclosing corner radius, then filters
+live facility coordinates to the rectangle (including antimeridian crossing). Viewports needing
+more than the provider's 50 km radius return no facilities and `discovery.viewportTooLarge`,
+so clients display “Zoom in to discover parking in this area”. Nearby Search retrieves up to
+three pages with a two-second token delay. `discovery.providerLimited` indicates a remaining
+page token at the cap; `discovery.detailsUnavailable` indicates partial detail failures. Total
+detail failure is an error rather than a successful empty search.
+
+“All parking” means provider-known facilities in the viewport, not exhaustive coverage or
+confirmed vacant stalls. External pins are accessible, carry Google Maps attribution, and remain
+non-bookable guidance. Matching Place IDs and coverage flags are cached for 15 minutes with
+viewport bounds in the key; display details are fetched live. Review state, linked zones, rejected
+candidate exclusion, coordinate expiry, and verified-zone/current-hour/three-session guidance
+requirements are preserved. See [Google Nearby Search pagination](https://developers.google.com/maps/documentation/places/web-service/legacy/search-nearby).
 
 ### Verified external-facility guidance
 
@@ -438,7 +469,7 @@ class ParkingDetectionService {
 
 ## Why Hourly Batch (Not Real-Time)
 
-**User behavior:** Drivers check parking availability before driving, not while actively circling. 1-hour-old data is perfectly useful. Real-time data would actually be noisier with fewer samples.
+**User behavior:** Drivers can consult recent circling-time guidance before driving. Show an estimate only when the latest completed hourly window has at least three sessions; this guidance does not establish whether an external facility has an open space.
 
 | Window | Sample size | Confidence | Value |
 |--------|------------|-----------|-------|
@@ -658,3 +689,6 @@ After beta data starts flowing, build the processing layer.
 | Mobile geofencing + activity recognition (6A Week 3-4) | Bryan | May 28, 2026 |
 | Beta launch with analytics live | Bryan | May 28, 2026 |
 | Data pipeline + operator portal (6B) | Bryan | Jun 28, 2026 |
+
+
+Regional OSM discovery and verified facility-level operator occupancy are implemented separately from crowd circling metrics. See [regional directory operations](../REGIONAL_PARKING_DIRECTORY.md). Sensor/MQTT adapters remain future work.
