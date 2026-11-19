@@ -371,6 +371,16 @@ const Profile: React.FC = () => {
 			</Card>
 
 			<Card sx={{ mt: 3 }}>
+				<CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+					<Box>
+						<Typography variant="h6">Perks</Typography>
+						<Typography variant="body2" color="text.secondary">See your points, activity, and referral details.</Typography>
+					</Box>
+					<Button variant="outlined" onClick={() => navigate('/perks')}>View perks</Button>
+				</CardContent>
+			</Card>
+
+			<Card sx={{ mt: 3 }}>
 				<CardContent>
 					<Typography variant="h6" gutterBottom>
 						My Bookings

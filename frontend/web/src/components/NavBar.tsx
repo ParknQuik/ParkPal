@@ -9,18 +9,14 @@ import {
   MenuItem,
   Avatar,
   Box,
-  FormControl,
-  Select,
 } from '@mui/material';
-import { AccountCircle, Logout, Dashboard, CalendarMonth, DirectionsCar } from '@mui/icons-material';
+import { AccountCircle, Logout, Dashboard, CalendarMonth, DirectionsCar, Stars, Settings as SettingsIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useThemeMode } from '../theme/ThemeModeProvider';
 
 export const NavBar: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { preference, setPreference } = useThemeMode();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -73,20 +69,6 @@ export const NavBar: React.FC = () => {
           <Box component="span">ParknQuik</Box>
         </Button>
 
-        <FormControl size="small" sx={{ minWidth: { xs: 92, sm: 112 }, mr: { xs: 0.5, sm: 1 } }}>
-          <Select
-            native
-            value={preference}
-            onChange={(event) => setPreference(event.target.value as 'system' | 'light' | 'dark')}
-            inputProps={{ 'aria-label': 'Color theme' }}
-            sx={{ height: 40, borderRadius: 2, '& .MuiSelect-select': { py: 1, px: 1.25 }, '& fieldset': { borderColor: 'divider' } }}
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </Select>
-        </FormControl>
-
         {user && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ mr: 1 }}>
@@ -124,6 +106,16 @@ export const NavBar: React.FC = () => {
               <MenuItem onClick={handleProfile}>
                 <AccountCircle sx={{ mr: 1 }} />
                 Profile
+              </MenuItem>
+
+              <MenuItem onClick={() => { handleClose(); navigate('/perks'); }}>
+                <Stars sx={{ mr: 1 }} />
+                Perks
+              </MenuItem>
+
+              <MenuItem onClick={() => { handleClose(); navigate('/settings'); }}>
+                <SettingsIcon sx={{ mr: 1 }} />
+                Settings
               </MenuItem>
 
               <MenuItem onClick={handleBookings}>

@@ -33,6 +33,8 @@ const Vehicles = lazy(() => import('./screens/Vehicles.jsx'));
 const NotFound = lazy(() => import('./screens/NotFound'));
 const PrivacyPolicy = lazy(() => import('./screens/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./screens/TermsOfService'));
+const Settings = lazy(() => import('./screens/Settings'));
+const Perks = lazy(() => import('./screens/Perks'));
 
 const pageMetadata: Record<string, { title: string; description: string }> = {
   '/': { title: 'Find parking near you | ParknQuik', description: 'Search bookable parking spaces near your destination and reserve ahead with ParknQuik.' },
@@ -42,6 +44,7 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
   '/reserve': { title: 'Reserve parking | ParknQuik', description: 'Review your parking details and reserve a space with ParknQuik.' },
   '/payment': { title: 'Parking payment | ParknQuik', description: 'Complete payment for your ParknQuik parking reservation.' },
   '/profile': { title: 'Your profile | ParknQuik', description: 'Review and update your ParknQuik account details.' },
+  '/perks': { title: 'Your perks | ParknQuik', description: 'View your ParknQuik points, activity, and referral details.' },
   '/vehicles': { title: 'Your vehicles | ParknQuik', description: 'Manage the vehicles you use for ParknQuik bookings.' },
   '/list-slot': { title: 'List a parking space | ParknQuik', description: 'Create a parking listing for drivers to find and book.' },
   '/host-dashboard': { title: 'Host dashboard | ParknQuik', description: 'Manage your parking listings and reservations.' },
@@ -50,6 +53,7 @@ const pageMetadata: Record<string, { title: string; description: string }> = {
   '/admin-access': { title: 'Administrator access | ParknQuik', description: 'Manage administrator accounts and invitations.' },
   '/privacy': { title: 'Privacy policy | ParknQuik', description: 'Read how ParknQuik handles account, booking, and optional analytics information.' },
   '/terms': { title: 'Terms of service | ParknQuik', description: 'Review the draft terms for using ParknQuik parking search and booking services.' },
+  '/settings': { title: 'Settings | ParknQuik', description: 'Manage appearance, privacy choices, and account destinations on ParknQuik.' },
 };
 
 function SiteMetadata() {
@@ -106,6 +110,7 @@ function PrivacyControls() {
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         <MuiLink component={Link} to="/privacy">Privacy</MuiLink>
         <MuiLink component={Link} to="/terms">Terms</MuiLink>
+        <MuiLink component={Link} to="/settings">Settings</MuiLink>
         <Button size="small" onClick={() => { try { window.localStorage.removeItem(consentKey); } catch { /* ignore storage errors */ } setChoice(null); }}>Privacy choices</Button>
       </Box>
       <Button component={Link} to="/search" variant="contained">Find parking</Button>
@@ -127,6 +132,7 @@ const publicRoutes: ScreenRoute[] = [
   { path: '/', Screen: Search },
   { path: '/search', Screen: Search },
   { path: '/login', Screen: Login },
+  { path: '/settings', Screen: Settings },
   { path: '/listing/:id', Screen: ListingDetail },
   { path: '/map', Screen: MapView },
   { path: '/accept-admin-invitation', Screen: AcceptAdminInvitation },
@@ -136,6 +142,7 @@ const authenticatedRoutes: ScreenRoute[] = [
   { path: '/reserve', Screen: Reservation },
   { path: '/payment', Screen: Payment },
   { path: '/profile', Screen: Profile },
+  { path: '/perks', Screen: Perks },
   { path: '/vehicles', Screen: Vehicles },
   { path: '/bookings', Screen: BookingList },
   { path: '/bookings/:id', Screen: BookingDetail },

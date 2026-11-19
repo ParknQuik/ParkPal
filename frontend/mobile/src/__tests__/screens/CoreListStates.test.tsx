@@ -3,13 +3,11 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { HomeDashboard } from '../../screens/HomeDashboard';
 import { MyBookingsScreen } from '../../screens/MyBookingsScreen';
 import { MyVehiclesScreen } from '../../screens/MyVehiclesScreen';
-import { PointsHistoryScreen } from '../../screens/PointsHistoryScreen';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { searchListings, getMyBookings } from '../../store/slices/marketplaceSlice';
 import { fetchBehaviorStatus } from '../../store/slices/behaviorSlice';
 import { getCurrentLocation } from '../../store/slices/locationSlice';
 import { getVehicles, setDefaultVehicle } from '../../store/slices/vehiclesSlice';
-import { fetchHistory } from '../../store/slices/pointsSlice';
 
 const mockNavigate = jest.fn();
 
@@ -37,9 +35,6 @@ jest.mock('../../store/slices/vehiclesSlice', () => ({
   setDefaultVehicle: jest.fn(),
 }));
 
-jest.mock('../../store/slices/pointsSlice', () => ({
-  fetchHistory: jest.fn(),
-}));
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
@@ -107,7 +102,6 @@ const mockFetchBehaviorStatus = fetchBehaviorStatus as unknown as jest.Mock;
 const mockGetCurrentLocation = getCurrentLocation as unknown as jest.Mock;
 const mockGetVehicles = getVehicles as unknown as jest.Mock;
 const mockSetDefaultVehicle = setDefaultVehicle as unknown as jest.Mock;
-const mockFetchHistory = fetchHistory as unknown as jest.Mock;
 const { marketplaceAPI } = require('../../services/api');
 const mockGetDiscoveryCandidates = marketplaceAPI.getDiscoveryCandidates as jest.Mock;
 
@@ -157,14 +151,6 @@ const baseState: any = {
     loading: false,
     error: null,
   },
-  points: {
-    transactions: [],
-    loading: false,
-    balance: null,
-    referralStats: null,
-    referralCode: null,
-    error: null,
-  },
 };
 
 const setState = (overrides: Partial<typeof baseState>) => {
@@ -191,10 +177,6 @@ const setState = (overrides: Partial<typeof baseState>) => {
       ...baseState.vehicles,
       ...overrides.vehicles,
     },
-    points: {
-      ...baseState.points,
-      ...overrides.points,
-    },
   };
 
   mockUseAppSelector.mockImplementation((selector) => selector(state));
@@ -218,7 +200,6 @@ describe('core mobile list loading and failure states', () => {
     }));
     mockGetVehicles.mockImplementation(() => createAction('vehicles/getVehicles'));
     mockSetDefaultVehicle.mockImplementation((payload) => createAction('vehicles/setDefaultVehicle', payload));
-    mockFetchHistory.mockImplementation((payload) => createAction('points/fetchHistory', payload));
     mockGetDiscoveryCandidates.mockReturnValue(new Promise(() => {}));
   });
 
@@ -698,29 +679,4 @@ describe('core mobile list loading and failure states', () => {
     expect(mockSetDefaultVehicle).toHaveBeenCalledWith(2);
   });
 
-  it('shows transaction skeletons and retries loading points history', async () => {
-    setState({
-      points: {
-        ...baseState.points,
-        loading: true,
-      },
-    });
-
-    const { getByLabelText, getAllByTestId, rerender } = await render(<PointsHistoryScreen />);
-
-    expect(getByLabelText('Loading points history')).toBeTruthy();
-    expect(getAllByTestId('transaction-skeleton-row')).toHaveLength(3);
-
-    setState({
-      points: {
-        ...baseState.points,
-        error: 'Network request failed',
-      },
-    });
-    await rerender(<PointsHistoryScreen />);
-
-    await fireEvent.press(getByLabelText('Retry loading points history'));
-
-    expect(mockFetchHistory).toHaveBeenCalledWith({ page: 1, limit: 50 });
-  });
 });

@@ -184,14 +184,8 @@ export const ProfileScreen: React.FC = () => {
         {
           icon: 'star-circle-outline' as const,
           iconColor: colors.accentYellow,
-          label: 'Points History',
-          onPress: () => navigation.navigate('PointsHistory' ),
-        },
-        {
-          icon: 'account-multiple-outline' as const,
-          iconColor: colors.info,
-          label: 'Referrals',
-          onPress: () => navigation.navigate('Referral' ),
+          label: 'Perks',
+          onPress: () => navigation.navigate('Perks' ),
         },
       ],
     },
@@ -466,7 +460,7 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <TouchableOpacity
               style={styles.perksButton}
-              onPress={() => navigation.navigate('Earnings' )}
+              onPress={() => navigation.navigate('Perks' )}
             >
               <Text style={styles.perksButtonText}>Perks</Text>
             </TouchableOpacity>

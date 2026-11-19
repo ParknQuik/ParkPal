@@ -362,7 +362,7 @@ export const pointsAPI = {
     api.post('/points/redeem', { amount, bookingId }),
   getHistory: (page: number, limit: number) =>
     api.get<PointsHistoryResponse>('/points/history', { params: { page, limit } }),
-  generateReferralCode: () => api.post<{ code: string }>('/referrals/generate'),
+  generateReferralCode: () => api.post<{ referralCode: string }>('/referrals/generate'),
   validateReferralCode: (referralCode: string) =>
     api.post<{ valid: boolean; message?: string }>('/referrals/validate', { referralCode }),
   getReferralStats: () => api.get<ReferralStats>('/referrals/stats'),
