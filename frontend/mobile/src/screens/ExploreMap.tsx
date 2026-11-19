@@ -31,8 +31,9 @@ import { useAutocomplete } from '../hooks/useAutocomplete';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { clusterMarkers, ClusteredMarker } from '../utils/clusterMarkers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
+import { haptics } from '../utils/haptics';
 import type { ParkingCandidateDiscoveryPin } from '../types';
+import { getGoogleMapId } from '../utils/googleMapId';
 
 const { width, height } = Dimensions.get('window');
 
@@ -112,9 +113,9 @@ const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: 
     return () => clearTimeout(timer);
   }, [selected, listing.pricePerHour, occupancyColor]);
   const price = listing.pricePerHour != null ? `₱${listing.pricePerHour}` : '₱—';
-  const bg = selected ? '#10b77f' : '#ffffff';
-  const textColor = selected ? '#ffffff' : '#10b77f';
-  const borderColor = selected ? '#059669' : '#10b77f';
+  const bg = selected ? '#075f43' : '#10b77f';
+  const textColor = '#ffffff';
+  const borderColor = selected ? '#ffffff' : '#075f43';
 
   return (
     <Marker
@@ -125,21 +126,21 @@ const PriceMarker = React.memo(({ listing, selected, onPress, occupancyColor }: 
     >
       <View
         accessible
-        accessibilityLabel={`${listing.title || listing.address}: ${price} per hour`}
+        accessibilityLabel={`${listing.title || listing.address}: bookable host space, ${price} per hour${selected ? ', selected' : ''}`}
         accessibilityRole="button"
         collapsable={false}
         style={{
           backgroundColor: bg,
-          borderWidth: 2,
+          borderWidth: selected ? 3 : 2,
           borderColor,
           borderRadius: 10,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
+          paddingHorizontal: selected ? 13 : 10,
+          paddingVertical: selected ? 6 : 4,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
+          shadowOpacity: selected ? 0.38 : 0.24,
           shadowRadius: 3,
-          elevation: 3,
+          elevation: selected ? 6 : 4,
         }}
         onLayout={() => setTracksChanges(false)}
       >
@@ -223,9 +224,9 @@ const CandidateMarker = React.memo(({ candidate, selected, onPress }: {
     return () => clearTimeout(timer);
   }, [selected, candidate.isPreview, candidate.title]);
   const markerKey = `candidate-${candidate.id}`;
-  const bg = selected ? '#f59e0b' : '#ffffff';
-  const iconColor = selected ? '#ffffff' : '#f59e0b';
-  const borderColor = candidate.isPreview ? '#f59e0b' : '#10b77f';
+  const bg = selected ? '#475569' : candidate.isPreview ? '#f8f5ed' : '#f1f5f4';
+  const iconColor = selected ? '#ffffff' : candidate.isPreview ? '#98764b' : '#64748b';
+  const borderColor = selected ? '#ffffff' : candidate.isPreview ? '#b69d78' : '#94a3a8';
 
   return (
     <Marker
@@ -242,9 +243,9 @@ const CandidateMarker = React.memo(({ candidate, selected, onPress }: {
         accessibilityRole="button"
         collapsable={false}
         style={{
-          width: 42,
-          height: 42,
-          borderRadius: 21,
+          width: selected ? 38 : 32,
+          height: selected ? 38 : 32,
+          borderRadius: selected ? 19 : 16,
           backgroundColor: bg,
           borderWidth: 2,
           borderColor,
@@ -252,15 +253,15 @@ const CandidateMarker = React.memo(({ candidate, selected, onPress }: {
           alignItems: 'center',
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
+          shadowOpacity: selected ? 0.25 : 0.12,
           shadowRadius: 4,
-          elevation: 4,
+          elevation: selected ? 4 : 2,
         }}
         onLayout={() => setTracksChanges(false)}
       >
         <MaterialCommunityIcons
           name={candidate.isPreview ? 'map-marker-question' : 'map-marker-radius'}
-          size={22}
+          size={selected ? 19 : 16}
           color={iconColor}
         />
       </View>
@@ -275,6 +276,7 @@ export const ExploreMap: React.FC = () => {
   const hasRouteLocation = typeof latitude === 'number' && typeof longitude === 'number';
   const dispatch = useAppDispatch();
   const { colors, isDark } = useTheme();
+  const googleMapId = getGoogleMapId();
   const mapRef = useRef<MapView>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
@@ -301,8 +303,6 @@ export const ExploreMap: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<FilterConfig>({});
   const [activeSort, setActiveSort] = useState<SortOption>(null);
   const [isFocused, setIsFocused] = useState(false);
-  const [showZoneOverlays, setShowZoneOverlays] = useState(false);
-  const [showHeatmap, setShowHeatmap] = useState(false);
   const [zoneIndicatorVisible, setZoneIndicatorVisible] = useState(true);
   const [zoneOccupancyMap, setZoneOccupancyMap] = useState<Record<string, number>>({});
   const [zoneAvailabilityMap, setZoneAvailabilityMap] = useState<Record<string, any>>({});
@@ -343,7 +343,7 @@ export const ExploreMap: React.FC = () => {
   const candidatePins = facilityDiscovery.pins;
 
   const { listings, loading } = useAppSelector((state) => state.marketplace);
-  const { zoneAvailability, activeZoneId, activeSession } = useAppSelector((state) => state.analytics);
+  const { zoneAvailability, activeZoneId } = useAppSelector((state) => state.analytics);
 
   const suggestions = useAutocomplete(searchQuery, listings);
 
@@ -385,7 +385,6 @@ export const ExploreMap: React.FC = () => {
   }, [analyticsZones]);
 
   const currentZone = activeZoneId == null ? null : analyticsZones.find((zone) => zone.id === activeZoneId) ?? null;
-  const sessionId = activeSession?.id ?? null;
 
   useEffect(() => {
     if (currentZone) {
@@ -654,9 +653,7 @@ export const ExploreMap: React.FC = () => {
 
   const handleApplyFilters = (filters: FilterConfig) => {
     if (!isConnected || !hasLocationContext) return;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
+    void haptics.light();
     setActiveFilters(filters);
     refreshMapData(region.latitude, region.longitude, filters);
   };
@@ -719,18 +716,21 @@ export const ExploreMap: React.FC = () => {
       })();
       deviceLocationRequestRef.current = request;
     }
-    if (!preferFresh) return request;
+    if (!preferFresh) {
+      const recent = await Location.getLastKnownPositionAsync({ maxAge: 30000 });
+      if (recent) return recent;
+    }
 
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       return await Promise.race([
         request,
         new Promise<null>((resolve) => {
-          timeout = setTimeout(() => resolve(null), 8000);
+          timeout = setTimeout(() => resolve(null), 5000);
         }),
       ]).then(async (location) => {
         if (location) return location;
-        return Location.getLastKnownPositionAsync({});
+        return Location.getLastKnownPositionAsync({ maxAge: 300000 });
       });
     } finally {
       if (timeout) clearTimeout(timeout);
@@ -744,7 +744,6 @@ export const ExploreMap: React.FC = () => {
       const coords = getLocationCoords(location);
 
       if (!coords) {
-        setHasLocationContext(false);
         setMapNotice(LOCATION_UNAVAILABLE_NOTICE);
         return;
       }
@@ -766,7 +765,6 @@ export const ExploreMap: React.FC = () => {
         await refreshMapData(coords.latitude, coords.longitude);
       }
     } catch {
-      setHasLocationContext(false);
       setMapNotice(LOCATION_UNAVAILABLE_NOTICE);
     } finally {
       setLocating(false);
@@ -819,59 +817,26 @@ export const ExploreMap: React.FC = () => {
     };
   }, [searchQuery, isConnected, hasLocationContext, refreshMapData, activeFilters, submittedRegion]);
 
-  const handleRefresh = useCallback(async () => {
-    const now = Date.now();
-    if (!isConnected || !hasLocationContext || refreshing || now - lastManualRefreshRef.current < MAP_REFRESH_COOLDOWN_MS) {
-      return;
-    }
-
-    lastManualRefreshRef.current = now;
-    setRefreshing(true);
-    facilityDiscovery.retry();
-    await refreshMapData(region.latitude, region.longitude, activeFilters, true);
-    setRefreshing(false);
-  }, [refreshMapData, isConnected, hasLocationContext, refreshing, activeFilters, region.latitude, region.longitude]);
-
   const handleRecenter = useCallback(() => {
     centerOnDeviceLocation(true);
   }, [centerOnDeviceLocation]);
 
-  const handleZoomIn = () => {
-    const newRegion = {
-      ...region,
-      latitudeDelta: region.latitudeDelta * 0.5,
-      longitudeDelta: region.longitudeDelta * 0.5,
-    };
-    mapRef.current?.animateToRegion(newRegion, 300);
-    setRegion(newRegion);
-  };
-
-  const handleZoomOut = () => {
-    const newRegion = {
-      ...region,
-      latitudeDelta: Math.min(region.latitudeDelta * 2, 180),
-      longitudeDelta: Math.min(region.longitudeDelta * 2, 360),
-    };
-    mapRef.current?.animateToRegion(newRegion, 300);
-    setRegion(newRegion);
-  };
-
   const handleMarkerPress = useCallback((markerId: string | number) => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {}
+    void haptics.medium();
     setSelectedMarker(markerId);
     resetZoneIndicatorTimer();
     const listing = typeof markerId === 'string' && markerId.startsWith('candidate-')
       ? candidatePins.find((candidate) => `candidate-${candidate.id}` === markerId)
       : (isConnected ? listings : cachedListings).find((l: any) => l.id === markerId);
     if (listing) {
-      mapRef.current?.animateToRegion({
+      const focusedRegion = {
         latitude: listing.latitude,
         longitude: listing.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      }, 500);
+      };
+      setRegion(focusedRegion);
+      mapRef.current?.animateToRegion(focusedRegion, 500);
     }
   }, [listings, cachedListings, candidatePins, isConnected, resetZoneIndicatorTimer]);
 
@@ -907,9 +872,7 @@ export const ExploreMap: React.FC = () => {
 
   const handleClearFilters = () => {
     if (!isConnected || !hasLocationContext) return;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
+    void haptics.light();
     setActiveFilters({});
     refreshMapData(region.latitude, region.longitude);
   };
@@ -957,9 +920,7 @@ export const ExploreMap: React.FC = () => {
     if (!isConnected || refreshing || now - lastManualRefreshRef.current < MAP_REFRESH_COOLDOWN_MS) return;
 
     lastManualRefreshRef.current = now;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    } catch {}
+    void haptics.heavy();
     submitRegion(region);
     setHasMovedMap(false);
     setHasLocationContext(true);
@@ -1445,6 +1406,7 @@ export const ExploreMap: React.FC = () => {
 
       <View style={styles.mapContainer} removeClippedSubviews>
         <MapView
+          key={`${Platform.OS}-${googleMapId || 'default'}-${isDark ? 'dark' : 'light'}`}
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
           style={styles.map}
@@ -1454,7 +1416,9 @@ export const ExploreMap: React.FC = () => {
           onRegionChangeComplete={handleRegionChangeComplete}
           showsUserLocation
           showsMyLocationButton={false}
-          customMapStyle={isDark ? DARK_MAP_STYLE : []}
+          googleMapId={googleMapId}
+          userInterfaceStyle={isDark ? 'dark' : 'light'}
+          customMapStyle={googleMapId ? undefined : (isDark ? DARK_MAP_STYLE : [])}
         >
           {clustered.map((cm: ClusteredMarker) => {
             if (cm.isCluster) {
@@ -1509,51 +1473,6 @@ export const ExploreMap: React.FC = () => {
               strokeWidth={2}
             />
           )}
-          {showZoneOverlays && analyticsZones.map((zone: any) => {
-            const occupancy = zoneOccupancyMap[zone.id] ?? 50;
-            const isActive = currentZone?.id === zone.id;
-            return (
-              <React.Fragment key={zone.id}>
-                <Circle
-                  center={{
-                    latitude: zone.centroidLat,
-                    longitude: zone.centroidLon,
-                  }}
-                  radius={300}
-                  fillColor={isActive ? 'rgba(16, 183, 127, 0.2)' : 'rgba(100, 116, 139, 0.1)'}
-                  strokeColor={isActive ? 'rgba(16, 183, 127, 0.7)' : 'rgba(100, 116, 139, 0.4)'}
-                  strokeWidth={isActive ? 3 : 2}
-                />
-                <Marker
-                  coordinate={{
-                    latitude: zone.centroidLat,
-                    longitude: zone.centroidLon,
-                  }}
-                  title={zone.name}
-                  description={isActive ? `Active session: ${sessionId}` : 'Tap for availability'}
-                />
-              </React.Fragment>
-            );
-          })}
-          {showHeatmap && showZoneOverlays && analyticsZones.map((zone: any) => {
-            const occupancy = zoneOccupancyMap[zone.id] ?? 50;
-            const fillOpacity = 0.15 + (occupancy / 100) * 0.25;
-            const fillColor = occupancy >= 80
-              ? `rgba(239, 68, 68, ${fillOpacity})`
-              : occupancy >= 50
-                ? `rgba(245, 158, 11, ${fillOpacity})`
-                : `rgba(16, 183, 127, ${fillOpacity})`;
-            return (
-              <Circle
-                key={`heatmap-${zone.id}`}
-                center={{ latitude: zone.centroidLat, longitude: zone.centroidLon }}
-                radius={500}
-                fillColor={fillColor}
-                strokeColor="transparent"
-                strokeWidth={0}
-              />
-            );
-          })}
         </MapView>
 
         {hasMovedMap && (
@@ -1607,6 +1526,7 @@ export const ExploreMap: React.FC = () => {
         {isConnected && hasLocationContext && (
           <TouchableOpacity onPress={facilityDiscovery.findMore} disabled={facilityDiscovery.googleLoading}
             accessibilityRole="button" accessibilityLabel="Find more facilities"
+            accessibilityState={{ disabled: facilityDiscovery.googleLoading, busy: facilityDiscovery.googleLoading }}
             style={{ position: 'absolute', bottom: 140, alignSelf: 'center', backgroundColor: colors.surface, padding: 12, borderRadius: 20 }}>
             <Text style={{ color: colors.text }}>{facilityDiscovery.googleLoading ? 'Finding facilities…' : 'Find more facilities'}</Text>
           </TouchableOpacity>
@@ -1621,8 +1541,9 @@ export const ExploreMap: React.FC = () => {
         {isConnected && hasLocationContext && (
           <View style={[styles.mapNotice, { bottom: insets.bottom + (mapNotice ? 176 : 112) }]}>
             <Text style={styles.mapNoticeText} accessibilityLiveRegion="polite">
-              {facilityDiscovery.status === 'loading' ? 'Finding parking facilities…'
-                : facilityDiscovery.notice || (candidatePins.length === 0 ? 'No external parking facilities found in this area.' : 'Facility guidance · not bookable')}
+              {facilityDiscovery.googleStatus === 'loading' ? 'Finding more facilities…'
+                : facilityDiscovery.googleNotice || (facilityDiscovery.status === 'loading' ? 'Finding parking facilities…'
+                  : facilityDiscovery.notice || (candidatePins.length === 0 ? 'No external parking facilities found in this area.' : 'Facility guidance · not bookable'))}
               {' · Google Maps'}
             </Text>
             {(facilityDiscovery.status === 'error' || facilityDiscovery.notice?.includes('unavailable')) && (
@@ -1634,16 +1555,6 @@ export const ExploreMap: React.FC = () => {
         )}
 
         <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.controlButton} onPress={handleRefresh}
-            disabled={!isConnected || refreshing} accessibilityLabel="Refresh local parking" accessibilityRole="button">
-            <MaterialCommunityIcons name="refresh" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7} accessibilityLabel="Zoom in" accessibilityRole="button">
-            <MaterialCommunityIcons name="plus" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.controlButton, styles.controlBorder]} onPress={handleZoomOut} activeOpacity={0.7} accessibilityLabel="Zoom out" accessibilityRole="button">
-            <MaterialCommunityIcons name="minus" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.controlButton, styles.myLocationButton, locating && styles.filterButtonDisabled]}
             onPress={handleRecenter}
@@ -1654,43 +1565,22 @@ export const ExploreMap: React.FC = () => {
           >
             <MaterialCommunityIcons name={locating ? "crosshairs-question" : "crosshairs-gps"} size={20} color={colors.white} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.controlButton, showZoneOverlays && { backgroundColor: colors.primary + '15' }]}
-            onPress={() => setShowZoneOverlays(!showZoneOverlays)}
-            activeOpacity={0.7}
-            accessibilityLabel={showZoneOverlays ? "Hide zone overlays" : "Show zone overlays"}
-            accessibilityRole="button"
-          >
-            <MaterialCommunityIcons name="layers" size={20} color={showZoneOverlays ? colors.primary : colors.textSecondary} />
-          </TouchableOpacity>
-          {showZoneOverlays && (
-            <TouchableOpacity
-              style={[styles.controlButton, showHeatmap && { backgroundColor: colors.primary + '15' }]}
-              onPress={() => setShowHeatmap(!showHeatmap)}
-              activeOpacity={0.7}
-              accessibilityLabel={showHeatmap ? "Hide heatmap" : "Show heatmap"}
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons name="gradient-vertical" size={20} color={showHeatmap ? colors.primary : colors.textSecondary} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
-      <ListingBottomSheet
+      {selectedMapEntity && <ListingBottomSheet
+        key={String(selectedMarker)}
         listing={selectedMapEntity}
         zoneAvailability={selectedListing ? selectedZoneAvail : null}
         onViewDetails={handleViewDetails}
         onDirections={handleDirections}
         onQuickBook={() => {
           if (!selectedListing) return;
-          try {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } catch {}
+          void haptics.success();
           navigation.navigate('ParkingDetail', { spotId: selectedListing?.id, quickBook: true });
         }}
-        onClose={() => setSelectedMarker(null)}
-      />
+        onClose={() => setSelectedMarker(current => current === selectedMarker ? null : current)}
+      />}
 
       <FilterModal
         visible={filterModalVisible}

@@ -52,15 +52,27 @@ describe('Search Places autocomplete', () => {
 		const view = renderSearch();
 		await waitFor(() => expect(widgetInstance).toBeDefined());
 		expect(widgetInstance?.options.includedRegionCodes).toEqual(['ph']);
-		const place = { formattedAddress: 'Makati, Metro Manila, Philippines', location: { lat: 14.5547, lng: 121.0244 }, fetchFields: vi.fn().mockResolvedValue(undefined) };
+		const place = { formattedAddress: 'Makati, Metro Manila, Philippines', location: { lat: () => 14.5547, lng: () => 121.0244 }, fetchFields: vi.fn().mockResolvedValue(undefined) };
 		widgetInstance?.dispatchEvent(Object.assign(new Event('gmp-select'), { placePrediction: { toPlace: () => place } }));
 		await waitFor(() => expect(screen.getByRole('button', { name: 'Search Parking' })).toBeEnabled());
 		fireEvent.click(screen.getByRole('button', { name: 'Search Parking' }));
 		expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('location=Makati'));
-		expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('lat=14.5547'));
+		const destination = mockNavigate.mock.lastCall?.[0] as string;
+		const params = new URLSearchParams(destination.split('?')[1]);
+		expect(params.get('lat')).toBe('14.5547');
+		expect(params.get('lng')).toBe('121.0244');
 		expect(place.fetchFields).toHaveBeenCalledWith({ fields: ['formattedAddress', 'displayName', 'location'] });
 		view.unmount();
 		expect(widgetInstance?.isConnected).toBe(false);
+	});
+
+	it('disables parking search when a selected place has invalid coordinates', async () => {
+		renderSearch();
+		await waitFor(() => expect(widgetInstance).toBeDefined());
+		const place = { location: { lat: () => Number.NaN, lng: () => 121.0244 }, fetchFields: vi.fn().mockResolvedValue(undefined) };
+		widgetInstance?.dispatchEvent(Object.assign(new Event('gmp-select'), { placePrediction: { toPlace: () => place } }));
+		await screen.findByText(/selected location has invalid coordinates/i);
+		expect(screen.getByRole('button', { name: 'Search Parking' })).toBeDisabled();
 	});
 
 	it('clears selected coordinates when the widget input changes and preserves popular locations', async () => {

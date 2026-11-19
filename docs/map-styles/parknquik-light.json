@@ -1,0 +1,8 @@
+[
+  {"featureType":"poi","stylers":[{"visibility":"off"}]},
+  {"featureType":"transit","stylers":[{"visibility":"off"}]},
+  {"featureType":"road","elementType":"geometry","stylers":[{"color":"#e7ece8"}]},
+  {"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#4b6257"}]},
+  {"featureType":"water","stylers":[{"color":"#c9e0dc"}]},
+  {"featureType":"landscape","stylers":[{"color":"#f3f5f0"}]}
+]

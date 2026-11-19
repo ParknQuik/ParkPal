@@ -11,13 +11,21 @@ export function useViewportDiscovery(bounds: DiscoveryBounds | null, enabled = t
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<STATE>({ pins: [], status: 'loading', notice: null });
   const [google, setGoogle] = useState<PINS>([]);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState<'idle' | 'loading' | 'success' | 'empty' | 'error'>('idle');
+  const [googleNotice, setGoogleNotice] = useState<string | null>(null);
+  const googleLoading = googleStatus === 'loading';
   const requests = useRef(new Map<string, ReturnType<typeof marketplaceAPI.getDiscoveryCandidates>>());
   const cache = useRef(new Map<string, { at: number; response: Awaited<ReturnType<typeof marketplaceAPI.getDiscoveryCandidates>> }>());
   const refreshAt = useRef(-Infinity);
   const googleAt = useRef(-Infinity);
   const latest = useRef(key);
   latest.current = key;
+  useEffect(() => {
+    setGoogle([]);
+    setGoogleStatus('idle');
+    setGoogleNotice(null);
+    googleAt.current = -Infinity;
+  }, [key]);
   const reconcile = (previous: PINS, next: PINS) => {
     const existing = new Map(previous.map(pin => [pin.id, pin]));
     return next.map(raw => {
@@ -79,18 +87,28 @@ export function useViewportDiscovery(bounds: DiscoveryBounds | null, enabled = t
   const findMore = async () => {
     if (!key || googleLoading || Date.now() - googleAt.current < 60000) return;
     googleAt.current = Date.now();
-    setGoogleLoading(true);
+    setGoogleStatus('loading');
+    setGoogleNotice(null);
     const submitted = key;
     try {
       const response = await marketplaceAPI.getGoogleDiscovery(JSON.parse(key));
       if (latest.current === submitted) {
-        setGoogle(previous => reconcile(previous, response.data.data || []));
-        setResult(previous => ({ ...previous, notice: response.data.discovery?.providerLimited ? 'Zoom in for more facilities. Google Maps previews.' : 'Google Maps previews · not bookable' }));
+        if (!Array.isArray(response.data.data)) throw new Error('Invalid facility response');
+        const found = response.data.data.length;
+        setGoogle(previous => reconcile(previous, response.data.data));
+        setGoogleStatus(found ? 'success' : 'empty');
+        setGoogleNotice(found
+          ? `${found} more ${found === 1 ? 'facility' : 'facilities'} shown on map. Guidance only; not bookable.${response.data.discovery?.providerLimited ? ' Zoom in for more.' : ''}`
+          : 'No more facilities found in this area. Local parking remains available.');
       }
     } catch {
-      if (latest.current === submitted) setResult(previous => ({ ...previous, notice: 'Unable to find more facilities. Local parking remains available.' }));
-    } finally { setGoogleLoading(false); }
+      if (latest.current === submitted) {
+        googleAt.current = -Infinity;
+        setGoogleStatus('error');
+        setGoogleNotice('Unable to find more facilities. Local parking remains available. Tap Find more facilities to retry.');
+      }
+    }
   };
   const pins = useMemo(() => [...result.pins, ...google], [result.pins, google]);
-  return { ...result, pins, retry, revalidate: () => setAttempt(value => value + 1), findMore, googleLoading };
+  return { ...result, pins, retry, revalidate: () => setAttempt(value => value + 1), findMore, googleLoading, googleStatus, googleNotice };
 }

@@ -1,5 +1,5 @@
 const mockDb = {
-  parkingCandidate: { findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
+  parkingCandidate: { findMany: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn() },
   regionalParkingFacility: { findMany: jest.fn() },
   crowdParkingMetric: { findMany: jest.fn() },
 };
@@ -36,6 +36,7 @@ test('local discovery performs no provider requests or candidate writes and pres
   expect(axios.get).not.toHaveBeenCalled();
   expect(redis.eval).not.toHaveBeenCalled();
   expect(mockDb.parkingCandidate.create).not.toHaveBeenCalled();
+  expect(mockDb.parkingCandidate.createMany).not.toHaveBeenCalled();
   expect(mockDb.parkingCandidate.update).not.toHaveBeenCalled();
 });
 test('explicit discovery reserves once, makes one page request, uses returned display fields and stable Place identities', async () => {
@@ -48,8 +49,25 @@ test('explicit discovery reserves once, makes one page request, uses returned di
   expect(axios.get).toHaveBeenCalledTimes(1);
   expect(axios.get.mock.calls[0][0]).toContain('nearbysearch');
   expect(redis.eval).toHaveBeenCalledTimes(1);
-  expect(mockDb.parkingCandidate.create).not.toHaveBeenCalled();
+  expect(mockDb.parkingCandidate.createMany).toHaveBeenCalledWith({
+    data: Array.from({ length: 20 }, (_, i) => ({ googlePlaceId: String(i), scanArea: 'driver_discovery', scanSource: 'google_places' })),
+    skipDuplicates: true,
+  });
+  expect(JSON.stringify(mockDb.parkingCandidate.createMany.mock.calls[0])).not.toContain('Garage');
+  expect(JSON.stringify(mockDb.parkingCandidate.createMany.mock.calls[0])).not.toContain('Street');
   expect(mockDb.parkingCandidate.update).not.toHaveBeenCalled();
+});
+test('concurrent explicit searches share quota reservation, provider request, and Place ID write', async () => {
+  let resolve;
+  axios.get.mockReturnValue(new Promise(done => { resolve = done; }));
+  const first = service.getDriverDiscoveryCandidates(bounds, 'account:1');
+  const second = service.getDriverDiscoveryCandidates(bounds, 'account:1');
+  expect(first).toBe(second);
+  resolve({ data: { status: 'OK', results: [{ place_id: 'shared', name: 'Garage', geometry: { location: { lat: 14.6, lng: 120.98 } } }] } });
+  await Promise.all([first, second]);
+  expect(redis.eval).toHaveBeenCalledTimes(1);
+  expect(axios.get).toHaveBeenCalledTimes(1);
+  expect(mockDb.parkingCandidate.createMany).toHaveBeenCalledTimes(1);
 });
 test('provider failure consumes reservation and is never retried', async () => {
   axios.get.mockRejectedValue(new Error('offline'));

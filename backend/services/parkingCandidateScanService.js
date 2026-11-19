@@ -6,6 +6,7 @@ const GOOGLE_PLACES_NEARBY_URL = 'https://maps.googleapis.com/maps/api/place/nea
 const GOOGLE_SCAN_SOURCE = 'google_places';
 const MAX_GOOGLE_RADIUS_METERS = 50000;
 const GOOGLE_NON_ERROR_STATUSES = new Set(['OK', 'ZERO_RESULTS']);
+const pendingDriverSearches = new Map();
 
 
 const getGooglePlacesApiKey = () => {
@@ -109,7 +110,7 @@ const getDiscoveryArea = (params) => {
     viewportTooLarge: span > 180 || enclosingRadius > MAX_GOOGLE_RADIUS_METERS };
 };
 
-const getDriverDiscoveryCandidates = async (params, identity) => {
+const runDriverDiscovery = async (params, identity) => {
   const area = getDiscoveryArea(params);
   const metadata = { provider: GOOGLE_SCAN_SOURCE, providerLimited: false, viewportTooLarge: area.viewportTooLarge };
   if (area.viewportTooLarge) return { candidates: [], metadata, area };
@@ -123,6 +124,11 @@ const getDriverDiscoveryCandidates = async (params, identity) => {
     include: { linkedZone: true },
   }) : [];
   const byId = new Map(mappings.map(candidate => [candidate.googlePlaceId, candidate]));
+  const newIds = places.map(place => place.place_id).filter(id => !byId.has(id));
+  if (newIds.length) await prisma.parkingCandidate.createMany({
+    data: newIds.map(googlePlaceId => ({ googlePlaceId, scanArea: 'driver_discovery', scanSource: GOOGLE_SCAN_SOURCE })),
+    skipDuplicates: true,
+  });
   const candidates = places.flatMap(place => {
     const candidate = byId.get(place.place_id);
     const latitude = place.geometry?.location?.lat;
@@ -136,6 +142,19 @@ const getDriverDiscoveryCandidates = async (params, identity) => {
       zoneId: verified ? candidate.linkedZoneId : null }];
   });
   return { candidates, metadata, area };
+};
+
+const getDriverDiscoveryCandidates = (params, identity) => {
+  const area = getDiscoveryArea(params);
+  const key = JSON.stringify([identity, area.bounds || [area.lat, area.lon, area.radiusMeters]]);
+  const existing = pendingDriverSearches.get(key);
+  if (existing) return existing;
+  const request = runDriverDiscovery(params, identity);
+  pendingDriverSearches.set(key, request);
+  request.finally(() => {
+    if (pendingDriverSearches.get(key) === request) pendingDriverSearches.delete(key);
+  }).catch(() => {});
+  return request;
 };
 
 const expireOldCandidateCoordinates = async () => prisma.parkingCandidate.updateMany({

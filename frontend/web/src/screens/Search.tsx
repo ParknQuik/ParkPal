@@ -29,6 +29,11 @@ interface SearchParams {
 	checkOut: string;
 }
 
+const hasValidCoordinates = (latitude: number | null, longitude: number | null) =>
+	latitude !== null && longitude !== null &&
+	Number.isFinite(latitude) && Number.isFinite(longitude) &&
+	latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+
 const popularLocations = [
 	'Manila',
 	'Quezon City',
@@ -82,15 +87,23 @@ const Search: React.FC = () => {
 			if (value !== undefined) setSearchParams((previous) => ({ ...previous, location: value, latitude: null, longitude: null }));
 		};
 		const handleSelect = async (event: Event) => {
-			const selection = event as Event & { placePrediction?: { toPlace: () => { fetchFields: (options: { fields: string[] }) => Promise<void>; formattedAddress?: string; displayName?: { text?: string }; location?: { lat: number; lng: number } } } };
+			const selection = event as Event & { placePrediction?: { toPlace: () => { fetchFields: (options: { fields: string[] }) => Promise<void>; formattedAddress?: string; displayName?: { text?: string }; location?: { lat: () => number; lng: () => number } } } };
 			const place = selection.placePrediction?.toPlace();
 			if (!place) return;
 			try {
 				await place.fetchFields({ fields: ['formattedAddress', 'displayName', 'location'] });
 				if (!active || !place.location) return;
+				const latitude = place.location.lat();
+				const longitude = place.location.lng();
+				if (!hasValidCoordinates(latitude, longitude)) {
+					setSearchParams((previous) => ({ ...previous, latitude: null, longitude: null }));
+					setMapsError('The selected location has invalid coordinates.');
+					return;
+				}
 				const location = place.formattedAddress || place.displayName?.text || '';
 				if (widget) widget.value = location;
-				setSearchParams((previous) => ({ ...previous, location, latitude: place.location!.lat, longitude: place.location!.lng }));
+				setMapsError('');
+				setSearchParams((previous) => ({ ...previous, location, latitude, longitude }));
 			} catch {
 				if (active) setMapsError('Could not load the selected location. Choose a popular location below to continue.');
 			}
@@ -116,7 +129,7 @@ const Search: React.FC = () => {
 	}, []);
 
 	const handleSearch = () => {
-		if (searchParams.latitude === null || searchParams.longitude === null) {
+		if (searchParams.latitude === null || searchParams.longitude === null || !hasValidCoordinates(searchParams.latitude, searchParams.longitude)) {
 			alert('Please select a valid location from the suggestions');
 			return;
 		}
@@ -227,7 +240,7 @@ const Search: React.FC = () => {
 										fullWidth
 										startIcon={<SearchIcon />}
 										onClick={handleSearch}
-										disabled={!searchParams.latitude || !searchParams.longitude}
+										disabled={!hasValidCoordinates(searchParams.latitude, searchParams.longitude)}
 										sx={{ py: 1.5 }}
 									>
 										Search Parking
@@ -241,7 +254,7 @@ const Search: React.FC = () => {
 										startIcon={<MapIcon />}
 											onClick={() => navigate(`/map?${new URLSearchParams({
 											location: searchParams.location,
-											...(searchParams.latitude !== null ? { lat: String(searchParams.latitude), lng: String(searchParams.longitude) } : {}),
+											...(hasValidCoordinates(searchParams.latitude, searchParams.longitude) ? { lat: String(searchParams.latitude), lng: String(searchParams.longitude) } : {}),
 											...(searchParams.checkIn ? { checkIn: searchParams.checkIn } : {}),
 											...(searchParams.checkOut ? { checkOut: searchParams.checkOut } : {}),
 										}).toString()}`)}

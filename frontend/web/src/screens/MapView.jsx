@@ -38,13 +38,22 @@ import {
 } from '@mui/icons-material';
 import api from '../api';
 import { loadGoogleMaps } from '../utils/googleMaps';
+import { useTheme } from '@mui/material/styles';
 
 const MapView = () => {
+	const theme = useTheme();
+	const mapMode = theme.palette.mode;
 	const navigate = useNavigate();
 	const location = useLocation();
 	const query = new URLSearchParams(location.search);
-	const requestedCenter = query.has('lat') && query.has('lng')
-		? { lat: Number(query.get('lat')), lng: Number(query.get('lng')) }
+	const latitudeParam = query.get('lat');
+	const longitudeParam = query.get('lng');
+	const latitude = Number(latitudeParam);
+	const longitude = Number(longitudeParam);
+	const requestedCenter = latitudeParam?.trim() && longitudeParam?.trim() &&
+		Number.isFinite(latitude) && Number.isFinite(longitude) &&
+		latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
+		? { lat: latitude, lng: longitude }
 		: null;
 	const checkIn = query.get('checkIn') || '';
 	const checkOut = query.get('checkOut') || '';
@@ -57,6 +66,7 @@ const MapView = () => {
 	const refreshAt = useRef(-Infinity);
 	const updateMarkersRef = useRef(() => {});
 	const mapListenersRef = useRef([]);
+	const mapModeRef = useRef(null);
 	useEffect(() => () => {
 		mapListenersRef.current.forEach((listener) => listener.remove());
 		markersRef.current.forEach(({ marker }) => { marker.map = null; });
@@ -66,18 +76,20 @@ const MapView = () => {
 	const [filteredSlots, setFilteredSlots] = useState([]);
 	const [selectedSlot, setSelectedSlot] = useState(null);
 	const [discoveryBounds, setDiscoveryBounds] = useState(null);
-	const [viewportBounds, setViewportBounds] = useState(null);
+	const [viewportBounds, setViewportBounds] = useState(location.state?.mapBounds || null);
 	const [externalFacilitiesEnabled, setExternalFacilitiesEnabled] = useState(false);
-	const facilityDiscovery = useViewportDiscovery(discoveryBounds, externalFacilitiesEnabled);
+	const facilityDiscovery = useViewportDiscovery(viewportBounds, externalFacilitiesEnabled);
 	const candidatePins = facilityDiscovery.pins;
 	const [selectedCandidate, setSelectedCandidate] = useState(null);
-	const [searchQuery, setSearchQuery] = useState(query.get('location') || '');
+	const [searchQuery, setSearchQuery] = useState('');
 	const [userLocation, setUserLocation] = useState(null);
+	const [locationError, setLocationError] = useState('');
 	const searchCenter = viewportBounds ? { lat: (viewportBounds.south + viewportBounds.north) / 2, lng: (viewportBounds.west + viewportBounds.east) / 2 } : null;
 
 	const radius = 5;
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+	const [mapError, setMapError] = useState('');
 	const [mapLoaded, setMapLoaded] = useState(false);
 	const [minPrice, setMinPrice] = useState('');
 	const [maxPrice, setMaxPrice] = useState('');
@@ -87,6 +99,15 @@ const MapView = () => {
 
 	// Default center (Manila)
 	const defaultCenter = { lat: 14.5995, lng: 120.9842 };
+	const boundsAround = (center) => {
+		const longitudeOffset = Math.min(180, 0.045 / Math.max(Math.abs(Math.cos(center.lat * Math.PI / 180)), 0.000001));
+		return {
+			south: Math.max(-90, center.lat - 0.045),
+			north: Math.min(90, center.lat + 0.045),
+			west: longitudeOffset === 180 ? -180 : Math.max(-180, center.lng - longitudeOffset),
+			east: longitudeOffset === 180 ? 180 : Math.min(180, center.lng + longitudeOffset),
+		};
+	};
 
 	useEffect(() => {
 		// Resolve the initial focus before loading local parking.
@@ -105,8 +126,7 @@ const MapView = () => {
 	useEffect(() => {
         if (!userLocation) return;
         const center = requestedCenter || userLocation;
-        setViewportBounds(previous => previous || { south: center.lat - 0.045, north: center.lat + 0.045,
-          west: center.lng - 0.045 / Math.cos(center.lat * Math.PI / 180), east: center.lng + 0.045 / Math.cos(center.lat * Math.PI / 180) });
+        setViewportBounds(previous => previous || boundsAround(center));
     }, [userLocation]);
 
 	// Only submitted bounds and filters trigger local parking requests.
@@ -122,11 +142,11 @@ const MapView = () => {
 			const timer = setTimeout(() => initializeMap(), 100);
 			return () => clearTimeout(timer);
 		}
-	}, [mapLoaded]);
+	}, [mapLoaded, mapMode]);
 
 	useEffect(() => {
 		if (mapLoaded) updateMarkers();
-		}, [mapLoaded, filteredSlots, candidatePins, userLocation]);
+		}, [mapLoaded, filteredSlots, candidatePins, userLocation, selectedSlot, selectedCandidate, mapMode]);
 
 	useEffect(() => {
 		// Debounce search filtering
@@ -142,18 +162,38 @@ const MapView = () => {
 
 	const loadGoogleMapsScript = () => {
 		loadGoogleMaps(['marker'])
-			.then(() => setMapLoaded(true))
+			.then(() => {
+				setMapError('');
+				setMapLoaded(true);
+			})
 			.catch((loadError) => {
 				console.warn('[MapView] Google Maps unavailable:', loadError);
-				setError(loadError.message || 'Map view unavailable. Check your Google Maps configuration.');
+				setMapError(loadError.message || 'Map view unavailable. Check your Google Maps configuration.');
 				setMapLoaded(false);
 			});
 	};
 
+	const failMap = (failure) => {
+		console.warn('[MapView] Map rendering unavailable:', failure);
+		mapListenersRef.current.forEach((listener) => listener.remove());
+		mapListenersRef.current = [];
+		markersRef.current.forEach(({ marker }) => { marker.map = null; });
+		markersRef.current.clear();
+		googleMapRef.current = null;
+		setMapError('Map view unavailable. Use the sidebar to browse parking spots.');
+		setMapLoaded(false);
+	};
+
 	const getUserLocation = () => {
+		const unavailable = () => {
+			setUserLocation(null);
+			setLocationError(`Your location is unavailable. The map starts ${requestedCenter ? 'at the selected area' : 'in Manila'}; allow location access to use your position.`);
+			setViewportBounds(previous => previous || boundsAround(requestedCenter || defaultCenter));
+		};
 		if (navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(
 				(position) => {
+					setLocationError('');
 					setUserLocation({
 						lat: position.coords.latitude,
 						lng: position.coords.longitude,
@@ -161,7 +201,7 @@ const MapView = () => {
 				},
 				(err) => {
 					console.warn('Geolocation error:', err);
-					setUserLocation(defaultCenter);
+					unavailable();
 				},
 				{
 					timeout: 5000, // 5 second timeout
@@ -170,7 +210,7 @@ const MapView = () => {
 				}
 			);
 		} else {
-			setUserLocation(defaultCenter);
+			unavailable();
 		}
 	};
 
@@ -184,7 +224,7 @@ const MapView = () => {
 
 			const params = {
 					lat: center.lat,
-					lon: center.lng || center.lon,
+					lon: center.lng ?? center.lon,
 					radius: radius, // User-adjustable radius
 					...(viewportBounds || {}),
 					status: 'available',
@@ -247,45 +287,72 @@ const MapView = () => {
 	};
 
 	const initializeMap = async () => {
-		if (!mapRef.current || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
+		if (!mapRef.current) return;
+		if (!window.google?.maps?.Map || !window.google?.maps?.marker?.AdvancedMarkerElement) {
+			failMap(new Error('Google Maps map or advanced markers are unavailable.'));
+			return;
+		}
 
-		const center = searchCenter || requestedCenter || userLocation || defaultCenter;
-		if (!googleMapRef.current) {
-			googleMapRef.current = new window.google.maps.Map(mapRef.current, {
+		const previousMap = googleMapRef.current;
+		const center = previousMap?.getCenter?.()?.toJSON?.() || location.state?.mapCenter || searchCenter || requestedCenter || userLocation || defaultCenter;
+		const zoom = previousMap?.getZoom?.() ?? location.state?.mapZoom ?? 13;
+		try {
+			if (previousMap && mapModeRef.current !== mapMode) {
+				mapListenersRef.current.forEach((listener) => listener.remove());
+				mapListenersRef.current = [];
+				markersRef.current.forEach(({ marker }) => { marker.map = null; });
+				markersRef.current.clear();
+				googleMapRef.current = null;
+			}
+			if (!googleMapRef.current) {
+				googleMapRef.current = new window.google.maps.Map(mapRef.current, {
 				center,
-				zoom: 13,
-				mapId: 'PARKPAL_MAP',
+				zoom,
+				mapId: import.meta.env.VITE_GOOGLE_MAP_ID?.trim() || (import.meta.env.DEV ? 'DEMO_MAP_ID' : 'PARKPAL_MAP'),
+				colorScheme: mapMode === 'dark' ? window.google.maps.ColorScheme?.DARK || 'DARK' : window.google.maps.ColorScheme?.LIGHT || 'LIGHT',
 				mapTypeControl: false,
 				streetViewControl: false,
 				fullscreenControl: false,
-			});
-			const captureBounds = () => {
+				});
+				const captureBounds = () => {
 				const bounds = googleMapRef.current?.getBounds?.();
 				if (!bounds) return;
 				const sw = bounds.getSouthWest();
 				const ne = bounds.getNorthEast();
 				const next = { south: sw.lat(), west: sw.lng(), north: ne.lat(), east: ne.lng() };
 				setDiscoveryBounds((previous) => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
-			};
-			mapListenersRef.current = ['idle'].map((event) => googleMapRef.current.addListener?.(event, captureBounds)).filter(Boolean);
-			captureBounds();
+				};
+				mapListenersRef.current = ['idle'].map((event) => googleMapRef.current.addListener?.(event, captureBounds)).filter(Boolean);
+				mapModeRef.current = mapMode;
+				captureBounds();
+			}
+			updateMarkersRef.current();
+		} catch (failure) {
+			failMap(failure);
 		}
-		updateMarkersRef.current();
 	};
 
 	const updateMarkers = () => {
 		const map = googleMapRef.current;
-		if (!map || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
+		if (!map) return;
+		if (!window.google?.maps?.marker?.AdvancedMarkerElement) {
+			failMap(new Error('Google Maps advanced markers are unavailable.'));
+			return;
+		}
 
+        try {
         const wanted = new Set();
-        const reconcile = (key, record, position, label, color, select) => {
+        const reconcile = (key, record, position, label, kind, selected, select) => {
           wanted.add(key);
-          const title = record.title ? record.title + (record.crowdGuidance?.sampleCount >= 3 ? '. ' + Math.round(record.crowdGuidance.circlingTimeSeconds / 60) + ' minute estimated circling time, guidance only, not bookable.' : '. Commercial parking guidance, not bookable.') : record.address || label;
-          const signature = JSON.stringify({ position, label, color, title });
+          const baseTitle = kind === 'host'
+            ? `${record.address || record.title || 'Host space'}. Bookable host space, ₱${record.price} per hour. ${record.status || 'Available'}.`
+            : kind === 'user' ? 'Your location'
+            : `${record.title || record.address || 'Parking facility'}. ${record.crowdGuidance?.sampleCount >= 3 && record.canShowAnalytics ? Math.round(record.crowdGuidance.circlingTimeSeconds / 60) + ' minute estimated circling time, guidance only, not bookable.' : record.isPreview ? 'Unverified parking preview, not bookable.' : 'Commercial parking guidance, not bookable.'}`;
+          const title = selected ? `${baseTitle} Selected.` : baseTitle;
+          const signature = JSON.stringify({ position, label, kind, selected, title, mode: mapMode, status: record.status });
           let entry = markersRef.current.get(key);
           if (!entry) {
             const content = document.createElement('div');
-            content.style.cssText = 'padding:6px 9px;border:2px solid white;border-radius:16px;box-shadow:0 2px 6px #0004;cursor:pointer;font-weight:700';
             const marker = new window.google.maps.marker.AdvancedMarkerElement({ map, position, content, title, gmpClickable: true });
             entry = { marker, content, record, signature: null };
             marker.addEventListener('gmp-click', () => select(entry.record));
@@ -296,23 +363,42 @@ const MapView = () => {
             entry.marker.position = position;
             entry.marker.title = title;
             entry.content.textContent = label;
-            entry.content.style.background = color;
+            const dark = mapMode === 'dark';
+            const background = kind === 'user' ? '#4285f4' : kind === 'host'
+              ? record.status === 'available' ? (selected ? '#105347' : '#176b5b') : '#a84b43'
+              : kind === 'preview' ? (dark ? '#5b5547' : '#ddd4c3') : (dark ? '#465c55' : '#dce9e2');
+            const foreground = kind === 'user' || kind === 'host' ? '#fff' : dark ? '#e6efea' : '#354b43';
+            Object.assign(entry.content.style, {
+              backgroundColor: background, color: foreground,
+              borderWidth: selected ? '3px' : '2px',
+              borderStyle: 'solid', borderColor: selected ? '#f0b67a' : '#fff',
+              borderRadius: kind === 'host' ? '18px' : '14px',
+              padding: kind === 'host' ? '7px 11px' : '4px 7px',
+              boxShadow: selected ? '0 4px 14px #0008' : '0 2px 6px #0004',
+              cursor: kind === 'user' ? 'default' : 'pointer',
+              fontWeight: '700', fontSize: kind === 'host' ? '14px' : '11px',
+              lineHeight: '1.2', whiteSpace: 'nowrap',
+            });
+            entry.marker.zIndex = selected ? 1000 : kind === 'host' ? 100 : kind === 'user' ? 50 : 10;
             entry.signature = signature;
           }
         };
-        if (userLocation) reconcile('user', {}, userLocation, '●', '#4285f4', () => {});
+        if (userLocation) reconcile('user', {}, userLocation, '●', 'user', false, () => {});
         filteredSlots.forEach(slot => reconcile('host-' + slot.id, slot, { lat: slot.lat, lng: slot.lon },
-          '₱' + slot.price, slot.status === 'available' ? '#bdebd5' : '#f8b6b6',
+          '₱' + slot.price, 'host', selectedSlot?.id === slot.id,
           current => { setSelectedSlot(current); setSelectedCandidate(null); }));
         candidatePins.forEach(pin => reconcile(pin.source + '-' + pin.id, pin,
           { lat: pin.latitude, lng: pin.longitude },
           pin.canShowAnalytics && pin.crowdGuidance?.sampleCount >= 3
             ? Math.max(1, Math.round(pin.crowdGuidance.circlingTimeSeconds / 60)) + 'm' : pin.isPreview ? '?' : 'P',
-          pin.isPreview ? '#f8ddb2' : '#bdebd5',
+          pin.isPreview ? 'preview' : 'facility', selectedCandidate?.id === pin.id,
           current => { setSelectedCandidate(current); setSelectedSlot(null); }));
         markersRef.current.forEach((entry, key) => {
           if (!wanted.has(key)) { entry.marker.map = null; markersRef.current.delete(key); }
         });
+		} catch (failure) {
+			failMap(failure);
+		}
 
 	};
 
@@ -338,6 +424,7 @@ const MapView = () => {
 				north: northEast.lat(),
 				east: northEast.lng(),
 			});
+			if (externalFacilitiesEnabled && JSON.stringify(discoveryBounds) === JSON.stringify(viewportBounds)) facilityDiscovery.retry();
 		}
 	};
 
@@ -396,7 +483,10 @@ const MapView = () => {
 									<Typography variant="subtitle2" fontWeight={700}>Nearby facilities</Typography>
 									<Typography variant="caption" color="text.secondary">Optional, non-bookable facility and community guidance for this map area.</Typography>
 								</Box>
-								<Switch inputProps={{ 'aria-label': 'Nearby facilities' }} checked={externalFacilitiesEnabled} onChange={(event) => setExternalFacilitiesEnabled(event.target.checked)} />
+								<Switch inputProps={{ 'aria-label': 'Nearby facilities' }} checked={externalFacilitiesEnabled} onChange={(event) => {
+                                    if (event.target.checked && discoveryBounds) setViewportBounds(discoveryBounds);
+                                    setExternalFacilitiesEnabled(event.target.checked);
+                                }} />
 							</Box>
 							{externalFacilitiesEnabled && <Box sx={{ mt: 1.25 }}>
 								<Typography variant="body2" role="status" aria-live="polite">
@@ -598,6 +688,9 @@ const MapView = () => {
 
 				{/* Map Container */}
 				<Box sx={{ flex: 1, position: 'relative' }}>
+				{locationError && <Alert severity="info" sx={{ position: 'absolute', top: 16, left: 16, right: 16, maxWidth: 420, zIndex: 2 }}>
+					{locationError}
+				</Alert>}
 					{mapLoaded ? (
 						<>
 							<div
@@ -640,7 +733,9 @@ const MapView = () => {
 									'&:hover': { bgcolor: 'background.paper' },
 								}}
 								onClick={handleRecenterMap}
+								disabled={!userLocation}
 								title="Return to your location"
+								aria-label="Return to your location"
 							>
 								<MyLocation />
 							</IconButton>
@@ -660,14 +755,14 @@ const MapView = () => {
 								Map View Unavailable
 							</Typography>
 							<Typography variant="body2" color="text.secondary" mb={3}>
-								To enable the interactive map, add your Google Maps API key to .env.local:
+								{mapError || 'To enable the interactive map, add your Google Maps API key to .env.local:'}
 							</Typography>
-							<Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'white', fontFamily: 'monospace', mb: 2 }}>
+							{!mapError && <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'white', fontFamily: 'monospace', mb: 2 }}>
 								VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
-							</Paper>
-							<Typography variant="caption" color="text.secondary">
+							</Paper>}
+							{!mapError && <Typography variant="caption" color="text.secondary">
 								Get your API key at: developers.google.com/maps
-							</Typography>
+							</Typography>}
 							<Typography variant="body2" color="text.primary" mt={3}>
 								Use the sidebar to browse available parking spots
 							</Typography>
@@ -683,6 +778,9 @@ const MapView = () => {
 								</Box>
 								<Chip size="small" sx={{ my: 1 }} label={selectedCandidate.isPreview ? 'Candidate preview · not verified' : 'Verified facility guidance'} color={selectedCandidate.isPreview ? 'warning' : 'success'} variant="outlined" />
 								{selectedCandidate.partnerAvailability && <Typography>{selectedCandidate.partnerAvailability.availableCount} spaces reported available · Verified partner: {selectedCandidate.partnerAvailability.partner} · Updated {new Date(selectedCandidate.partnerAvailability.updatedAt).toLocaleString()}</Typography>}
+                                {selectedCandidate.sourceCapacity != null && <Typography variant="body2">Mapped capacity: {selectedCandidate.sourceCapacity} spaces (not live availability)</Typography>}
+                                {selectedCandidate.sourceAccess && <Typography variant="body2">Mapped access: {selectedCandidate.sourceAccess}</Typography>}
+                                {selectedCandidate.possibleMatch && <Typography variant="body2">Possible Google Maps match: {selectedCandidate.possibleMatch.title}. Confirm the facility before relying on these details.</Typography>}
                                 {selectedCandidate.source === 'osm' && <Typography variant="caption">© OpenStreetMap contributors · ODbL</Typography>}
                                 {selectedCandidate.canShowAnalytics && selectedCandidate.crowdGuidance?.sampleCount >= 3 ? <>
 									<Typography variant="h5" fontWeight={800}>~{Math.max(1, Math.round(selectedCandidate.crowdGuidance.circlingTimeSeconds / 60))} min</Typography>
@@ -768,7 +866,7 @@ const MapView = () => {
 									fullWidth
 									variant="contained"
 									onClick={() =>
-										navigate(`/reserve?${new URLSearchParams({ listingId: String(selectedSlot.id), ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}) })}`, { state: { slot: selectedSlot, checkIn, checkOut } })
+										navigate(`/reserve?${new URLSearchParams({ listingId: String(selectedSlot.id), ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}) })}`, { state: { slot: selectedSlot, checkIn, checkOut, mapReturn: `${location.pathname}${location.search}`, mapCenter: googleMapRef.current?.getCenter?.()?.toJSON?.(), mapZoom: googleMapRef.current?.getZoom?.(), mapBounds: viewportBounds } })
 									}
 									disabled={selectedSlot.status !== 'available' && !(checkIn && checkOut)}
 								>

@@ -95,6 +95,21 @@ export function useViewportDiscovery(bounds, enabled = true) {
   useEffect(() => {
     setGoogle([]);
   }, [key]);
-  const pins = useMemo(() => [...result.pins, ...google], [result.pins, google]);
+  const pins = useMemo(() => {
+    const matchedGoogle = new Set();
+    const local = result.pins.map(pin => {
+      if (pin.source !== 'osm' || pin.title !== 'Parking facility') return pin;
+      const nearby = google.filter(place => {
+        if (!Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return false;
+        const north = (place.latitude - pin.latitude) * 111000;
+        const east = (place.longitude - pin.longitude) * 111000 * Math.cos(pin.latitude * Math.PI / 180);
+        return Math.hypot(north, east) <= 75;
+      });
+      if (nearby.length !== 1) return pin;
+      matchedGoogle.add(nearby[0].id);
+      return { ...pin, possibleMatch: { title: nearby[0].title, address: nearby[0].address, placeId: String(nearby[0].id).replace(/^google-/, '') } };
+    });
+    return [...local, ...google.filter(place => !matchedGoogle.has(place.id))];
+  }, [result.pins, google]);
   return { ...result, pins, retry, revalidate: () => setAttempt(value => value + 1), findMore, googleLoading };
 }
