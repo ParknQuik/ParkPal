@@ -29,6 +29,48 @@ the deployed website's HTTP referrer and by the APIs it can call. Never put
 payment-provider secret keys, service-account credentials, or other private
 credentials in a `VITE_` variable. Payment operations must continue through the
 backend API.
+
+## Web social sign-in setup gate
+
+The login and registration tabs always show Google, Apple, and Facebook. A
+disabled option with a setup message means that its public Vite settings are
+missing. A temporary unavailable message means the provider SDK did not load or
+initialize. The Google option uses Google's official button after GIS loads.
+These settings are browser-visible identifiers, not provider secrets. Keep
+Apple and Facebook disabled until their real settings and provider-console
+setup are supplied, and do not deploy placeholder values. Enable each provider
+in an environment only after its real sign-in flow has been tested end to end.
+
+| Provider | Web build settings | Backend settings | Provider console setup |
+| --- | --- | --- | --- |
+| Google | `VITE_GOOGLE_CLIENT_ID` | `GOOGLE_WEB_CLIENT_ID` (same web OAuth client ID; existing `GOOGLE_CLIENT_ID` remains for mobile) | Register the exact web origin in the OAuth client. |
+| Apple | `VITE_APPLE_SERVICES_ID`, `VITE_APPLE_REDIRECT_URI` | `APPLE_WEB_CLIENT_ID` (same Services ID) | Associate a Services ID with the app, register each web domain and exact HTTPS return URL. The return URL must match the browser build. |
+| Facebook | `VITE_FACEBOOK_APP_ID` | `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | Configure Facebook Login for Web, allowed domains and valid OAuth redirect URLs in the Meta app. |
+
+For local Google testing, set `VITE_GOOGLE_CLIENT_ID` to the existing backend
+Google web OAuth client ID in the ignored `frontend/web/.env.local`, restart
+Vite, and register the exact browser origin (including its port) as an
+Authorized JavaScript origin for that OAuth client. If Google rejects the
+origin, remove the local setting until it is registered; the login page will
+keep Google visible but disabled. No secret belongs in `.env.local` under a
+`VITE_` name.
+
+Supply the four `VITE_*` values through the web deployment workflow's GitHub
+secrets and Docker build arguments for each environment. Supply backend IDs and
+secrets only to the backend deployment. For the backend Cloud Run workflow,
+`GOOGLE_CLIENT_ID`, `GOOGLE_WEB_CLIENT_ID`, `APPLE_WEB_CLIENT_ID`, and
+`FACEBOOK_APP_ID` are GitHub environment variables. Keep `GOOGLE_CLIENT_ID`
+configured for mobile Google login across backend redeploys; the optional
+`GOOGLE_WEB_CLIENT_ID` accepts a separate web audience.
+`FACEBOOK_APP_SECRET_NAME` is the optional GCP Secret
+Manager secret name used to inject `FACEBOOK_APP_SECRET`. Never put that secret
+in a `VITE_*` variable.
+
+After configuring an environment, verify each provider on its actual HTTPS
+origin and return URL: complete registration, repeat sign-in, cancel the popup,
+deny email permission where supported, and try an email already registered by
+another method. A mocked browser test does not complete this release gate.
+
 **CI/CD:** GitHub Actions
 
 ---

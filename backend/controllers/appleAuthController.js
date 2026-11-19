@@ -37,10 +37,10 @@ const getApplePublicKey = async (token) => {
   return crypto.createPublicKey({ key: jwk, format: 'jwk' });
 };
 
-const getAppleAudience = () =>
-  process.env.APPLE_CLIENT_ID ||
-  process.env.APPLE_BUNDLE_ID ||
-  DEFAULT_APPLE_AUDIENCE;
+const getAppleAudiences = () => [
+  process.env.APPLE_CLIENT_ID || process.env.APPLE_BUNDLE_ID || DEFAULT_APPLE_AUDIENCE,
+  process.env.APPLE_WEB_CLIENT_ID,
+].filter(Boolean);
 
 exports.appleAuth = async (req, res, next) => {
   try {
@@ -56,7 +56,7 @@ exports.appleAuth = async (req, res, next) => {
       const publicKey = await getApplePublicKey(appleToken);
       appleUser = jwt.verify(appleToken, publicKey, {
         algorithms: ['RS256'],
-        audience: getAppleAudience(),
+        audience: getAppleAudiences(),
         issuer: APPLE_ISSUER,
       });
     } catch (error) {

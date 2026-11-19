@@ -92,7 +92,7 @@ describe('Google Auth API', () => {
       expect(response.body.user.role).toBe('driver');
     });
 
-    it('should link google account to existing user by email', async () => {
+    it('should reject an existing email without linking accounts', async () => {
       mockVerifyIdToken.mockResolvedValueOnce({
         getPayload: () => ({
           sub: 'google-id-existing',
@@ -106,10 +106,10 @@ describe('Google Auth API', () => {
         .post('/api/v1/auth/google')
         .send({ googleToken: 'valid-id-token-existing' });
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('token');
-      expect(response.body.user.email).toBe('test-driver@example.com');
-      expect(response.body.user.id).toBe(testData.users.driver.id);
+      expect(response.status).toBe(409);
+      expect(response.body.error).toMatch(/existing sign-in method/i);
+      const existingUser = await prisma.user.findUnique({ where: { id: testData.users.driver.id } });
+      expect(existingUser.googleId).toBeNull();
     });
 
     it('should return JWT token on success', async () => {

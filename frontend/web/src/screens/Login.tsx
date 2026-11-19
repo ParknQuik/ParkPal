@@ -5,11 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Box, TextField, Button, Typography, Container, Alert, Tab, Tabs } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { loginSchema, registerSchema, LoginFormData, RegisterFormData } from '../schemas/auth.schema';
+import SocialSignIn from '../components/SocialSignIn';
 
 const Login: React.FC = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const { login, register: registerUser, isLoading } = useAuth();
+	const { login, register: registerUser, socialLogin, isLoading } = useAuth();
 	const [tab, setTab] = useState<number>(0);
 	const [error, setError] = useState<string>('');
 
@@ -59,6 +60,19 @@ const Login: React.FC = () => {
 			navigate(new URLSearchParams(location.search).get('returnTo') || '/', { replace: true });
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Registration failed');
+		}
+	};
+
+	const onSocialToken = async (provider: 'google' | 'apple' | 'facebook', token: string, profile?: { fullName?: string; email?: string }) => {
+		setError('');
+		try {
+			const nextStep = await socialLogin(provider, token, profile);
+			if (nextStep === 'password') { navigate('/admin-password', { replace: true }); return; }
+			if (nextStep === 'mfa') { navigate('/admin-mfa', { replace: true }); return; }
+			const returnTo = new URLSearchParams(location.search).get('returnTo');
+			navigate(returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/', { replace: true });
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'Sign-in failed');
 		}
 	};
 
@@ -152,6 +166,7 @@ const Login: React.FC = () => {
 						</Button>
 					</Box>
 				)}
+				<SocialSignIn onToken={onSocialToken} onError={setError} disabled={isLoading} />
 			</Box>
 		</Container>
 	);

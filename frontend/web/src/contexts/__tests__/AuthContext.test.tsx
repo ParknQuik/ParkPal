@@ -197,6 +197,49 @@ describe('AuthContext', () => {
     });
   });
 
+  it('stores a provider session and preserves the existing-account error', async () => {
+    const response = { token: 'social-session', user: { id: 3, name: 'Pat', email: 'pat@example.com', role: 'driver' as const, createdAt: '', updatedAt: '' } };
+    vi.mocked(api.post).mockResolvedValueOnce({ data: response });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => { await result.current.socialLogin('apple', 'apple-token', { fullName: 'Pat', email: 'pat@example.com' }); });
+    expect(api.post).toHaveBeenCalledWith('/auth/apple', { appleToken: 'apple-token', fullName: 'Pat', email: 'pat@example.com' });
+    expect(localStorage.getItem('token')).toBe('social-session');
+    expect(result.current.isAuthenticated).toBe(true);
+
+    vi.mocked(api.post).mockRejectedValueOnce({ response: { status: 409, data: { error: 'An account with this email already exists. Use your existing sign-in method.' } } });
+    await act(async () => {
+      await expect(result.current.socialLogin('facebook', 'facebook-token')).rejects.toThrow('Use your existing sign-in method.');
+    });
+  });
+
+  it('requires MFA for an administrator who signs in through a provider', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: {
+      token: 'admin-social-token',
+      user: { id: 4, name: 'Admin', email: 'admin@example.com', role: 'admin', mfaEnabled: true },
+      mfaRequired: true,
+    } });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      expect(await result.current.socialLogin('google', 'google-token')).toBe('mfa');
+    });
+    expect(sessionStorage.getItem('admin-mfa-required')).toBe('true');
+    expect(sessionStorage.getItem('admin-mfa-verified')).toBeNull();
+  });
+
+  it('requires an administrator password change before MFA after provider sign-in', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: {
+      token: 'admin-social-token',
+      user: { id: 4, name: 'Admin', email: 'admin@example.com', role: 'admin', mustChangePassword: true },
+      mustChangePassword: true,
+      mfaRequired: true,
+    } });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      expect(await result.current.socialLogin('google', 'google-token')).toBe('password');
+    });
+    expect(sessionStorage.getItem('admin-mfa-required')).toBe('true');
+  });
+
   describe('Logout', () => {
     it('should logout and clear state', async () => {
       // First login

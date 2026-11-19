@@ -42,7 +42,8 @@ api.interceptors.response.use(
     const config = error.config as InternalAxiosRequestConfig & RetryConfig;
 
     // Handle 401 Unauthorized - redirect to login
-    if (error.response?.status === 401) {
+    const isPublicAuthRequest = /^\/?auth\/(login|register|google|apple|facebook)$/.test(config?.url || '');
+    if (error.response?.status === 401 && !isPublicAuthRequest) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/';
