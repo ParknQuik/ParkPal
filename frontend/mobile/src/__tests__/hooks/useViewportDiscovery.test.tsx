@@ -87,6 +87,27 @@ describe('submitted area discovery', () => {
     await act(async () => { await result.current.findMore(); });
     expect(google).toHaveBeenCalledTimes(1);
   });
+  it('reports loading, empty, failure, and immediate retry while retaining local pins', async () => {
+    let finish!: (value: any) => void;
+    google.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }))
+      .mockRejectedValueOnce(new Error('provider failed'))
+      .mockResolvedValueOnce(response(9));
+    const { result } = await renderHook(() => useViewportDiscovery(bounds));
+    await flush();
+    await act(() => { void result.current.findMore(); });
+    expect(result.current.googleStatus).toBe('loading');
+    expect(result.current.pins).toEqual([{ id: 1 }]);
+    await act(async () => { finish({ data: { data: [] } }); });
+    expect(result.current.googleStatus).toBe('empty');
+    expect(result.current.googleNotice).toMatch(/No more facilities found/);
+    await act(async () => { jest.advanceTimersByTime(60001); });
+    await act(async () => { await result.current.findMore(); });
+    expect(result.current.googleStatus).toBe('error');
+    expect(result.current.pins).toEqual([{ id: 1 }]);
+    await act(async () => { await result.current.findMore(); });
+    expect(result.current.googleStatus).toBe('success');
+    expect(result.current.pins).toEqual([{ id: 1 }, { id: 9 }]);
+  });
   it('expires partner counts locally without removing pins or requesting discovery', async () => {
     get.mockResolvedValue({ data: { data: [{ id: 1, partnerAvailability: { expiresAt: new Date(Date.now() + 1000).toISOString() } }] } });
     const { result } = await renderHook(() => useViewportDiscovery(bounds));

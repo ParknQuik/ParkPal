@@ -96,6 +96,7 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          VITE_GOOGLE_MAP_ID: ${{ vars.VITE_GOOGLE_MAP_ID }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APPLE_SERVICES_ID: ${{ secrets.VITE_APPLE_SERVICES_ID }}
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI }}
@@ -141,6 +142,7 @@ jobs:
           docker build \
             --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
             --build-arg VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }} \
+            --build-arg VITE_GOOGLE_MAP_ID=${{ vars.VITE_GOOGLE_MAP_ID }} \
             --build-arg "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" \
             --build-arg "VITE_APPLE_SERVICES_ID=$VITE_APPLE_SERVICES_ID" \
             --build-arg "VITE_APPLE_REDIRECT_URI=$VITE_APPLE_REDIRECT_URI" \

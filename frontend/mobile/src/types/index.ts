@@ -273,6 +273,8 @@ export interface ParkingCandidateDiscoveryPin {
   id: number | string;
   source: 'google_candidate' | 'osm' | 'crowd_guidance';
   partnerAvailability?: { partner: string; availableCount: number; occupiedCount: number; expiresAt?: string; updatedAt: string } | null;
+  sourceCapacity?: number | null;
+  sourceAccess?: string | null;
   canBook: false;
   canShowAnalytics: boolean;
   zoneId?: number | null;

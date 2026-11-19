@@ -120,7 +120,9 @@ export default function Reservation() {
       </CardContent></Card>
       <Alert severity="info">Cancel at least one hour before start to avoid a strike. Cancellation closes 30 minutes before start. For open-time bookings, scan in within 30 minutes of your start time; the maximum rental is 12 hours.</Alert>
       <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-        <Button variant="outlined" fullWidth onClick={() => navigate(`/listing/${slot.id}`)}>Back</Button>
+        <Button variant="outlined" fullWidth onClick={() => location.state?.mapReturn
+          ? navigate(location.state.mapReturn, { state: { mapCenter: location.state.mapCenter, mapZoom: location.state.mapZoom, mapBounds: location.state.mapBounds } })
+          : navigate(`/listing/${slot.id}`)}>Back</Button>
         <Button variant="contained" fullWidth disabled={suspended || vehicles.length === 0} onClick={continueToPayment}>Continue to payment choice</Button>
       </Stack>
     </Box>

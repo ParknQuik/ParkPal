@@ -85,6 +85,15 @@ describe('submitted area discovery', () => {
     await act(async () => { await result.current.findMore(); });
     expect(vi.mocked(api.post)).toHaveBeenCalledTimes(1);
   });
+  it('labels a nearby Google result as a possible match for an unnamed OSM facility', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { data: [{ id: 'osm-1', source: 'osm', title: 'Parking facility', latitude: 14.6, longitude: 120.98 }] } });
+    vi.mocked(api.post).mockResolvedValue({ data: { data: [{ id: 'google-abc', title: 'Central Garage', address: 'Main Street', latitude: 14.6001, longitude: 120.98 }] } });
+    const { result } = renderHook(() => useViewportDiscovery(bounds));
+    await flush();
+    await act(async () => { await result.current.findMore(); });
+    expect(result.current.pins).toHaveLength(1);
+    expect(result.current.pins[0]).toMatchObject({ source: 'osm', possibleMatch: { title: 'Central Garage', placeId: 'abc' } });
+  });
   it('does not request when disabled, clears results, and ignores late responses after disable', async () => {
     let finish!: (value: any) => void;
     vi.mocked(api.get).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));

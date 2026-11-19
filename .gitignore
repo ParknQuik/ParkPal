@@ -19,6 +19,8 @@ node_modules
 !tsconfig.json
 !app.json
 !frontend/mobile/eas.json
+!/docs/map-styles/parknquik-light.json
+!/docs/map-styles/parknquik-dark.json
 !backend/config/knowledge/sources.json
 !.agents/knowledge/sources.json
 !.agents/knowledge/source-map.json

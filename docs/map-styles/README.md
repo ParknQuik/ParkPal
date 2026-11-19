@@ -1,0 +1,7 @@
+# ParknQuik map styles
+
+`parknquik-light.json` and `parknquik-dark.json` are the source for Google Cloud map styling. The manual **Sync Google map styles** GitHub Actions workflow validates them, creates or updates the two styles, creates web/Android/iOS Map IDs when missing, and associates each ID with both roadmap variants. It uses the [Map Management API](https://developers.google.com/maps/documentation/mapmanagement/guide-and-examples) v2beta endpoint and fails with the API error if the preview contract changes. The workflow does not build or deploy the app.
+
+The workflow requires `GCP_SA_KEY` with Map Management API permissions, `GH_VARIABLES_TOKEN` with repository Actions variable write permission, and `EXPO_TOKEN`. It checks the GitHub and Expo tokens before creating or changing map resources. It writes the public web Map ID to the repository variable `VITE_GOOGLE_MAP_ID` and the mobile IDs to the EAS `development`, `preview`, and `production` environments. The staging EAS profile currently uses `preview`. Run the workflow before a web or EAS build when styles change. The web build and Docker build both receive the repository variable; mobile builds use their selected EAS environment.
+
+Run `python3 scripts/sync-map-styles.py --validate` and `python3 -m unittest scripts/test_sync_map_styles.py` locally to validate without Google credentials. Check light and dark maps on web and Android/iOS development builds before promotion, including road labels, host and guidance pins, and Google attribution. Cloud style changes can take time to propagate.

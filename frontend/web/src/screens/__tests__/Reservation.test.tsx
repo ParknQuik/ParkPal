@@ -15,6 +15,8 @@ vi.mock('react-router-dom', async () => {
     useLocation: () => ({ state: {
       slot: { id: 41, title: 'Quiet side street', address: '41 Test Road', price: 80 },
       checkIn: '2030-01-01T10:00', checkOut: '2030-01-01T12:00',
+      mapReturn: '/map?lat=14.6&lng=120.98', mapCenter: { lat: 14.62, lng: 120.99 }, mapZoom: 15,
+      mapBounds: { south: 14.61, west: 120.98, north: 14.63, east: 121 },
     }, search: '' }),
   };
 });
@@ -48,5 +50,15 @@ describe('Reservation', () => {
     render(<BrowserRouter><Reservation /></BrowserRouter>);
     expect(await screen.findByText('Booking paused')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue to payment choice' })).toBeDisabled();
+  });
+
+  it('returns to the selected map area from a map reservation', async () => {
+    render(<BrowserRouter><Reservation /></BrowserRouter>);
+    await screen.findByLabelText('Vehicle');
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/map?lat=14.6&lng=120.98', { state: {
+      mapCenter: { lat: 14.62, lng: 120.99 }, mapZoom: 15,
+      mapBounds: { south: 14.61, west: 120.98, north: 14.63, east: 121 },
+    } });
   });
 });

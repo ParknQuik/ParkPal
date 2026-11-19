@@ -13,7 +13,7 @@ import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/botto
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import * as Haptics from 'expo-haptics';
+import { haptics } from '../utils/haptics';
 
 interface ListingBottomSheetProps {
   listing: any | null;
@@ -70,9 +70,7 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
         onClose();
       } else {
         setSnapIndex(index);
-        try {
-          Haptics.selectionAsync();
-        } catch {}
+        void haptics.selection();
       }
     },
     [onClose]
@@ -252,6 +250,8 @@ export const ListingBottomSheet: React.FC<ListingBottomSheetProps> = ({
         {listing?.partnerAvailability && (
           <Text>{listing.partnerAvailability.availableCount} spaces reported available · Verified partner: {listing.partnerAvailability.partner} · Updated {new Date(listing.partnerAvailability.updatedAt).toLocaleTimeString()}</Text>
         )}
+        {listing?.sourceCapacity != null && <Text>Mapped capacity: {listing.sourceCapacity} spaces (not live availability)</Text>}
+        {listing?.sourceAccess && <Text>Mapped access: {listing.sourceAccess}</Text>}
         {listing?.source === 'osm' && <Text>© OpenStreetMap contributors · ODbL</Text>}
         {crowdGuidance ? (
           <View style={styles.zoneAvailability} accessibilityLabel="Crowdsourced circling guidance">
