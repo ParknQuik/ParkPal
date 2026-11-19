@@ -304,6 +304,7 @@ export interface MarketplaceBooking {
   totalAmount: number;
   platformFee: number;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled' | 'expired';
+  vehicle?: Vehicle | null;
   rentalMode: 'fixed' | 'hourly';
   qrCode?: string;
   sessionId?: number;

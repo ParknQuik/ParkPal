@@ -12,7 +12,7 @@ exports.getVehicles = async (req, res, next) => {
     }
 
     const vehicles = await prisma.vehicle.findMany({
-      where: { userId },
+      where: { userId, isActive: true },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -37,6 +37,7 @@ exports.getVehicle = async (req, res, next) => {
       where: {
         id: parseInt(id),
         userId,
+        isActive: true,
       },
     });
 
@@ -79,28 +80,11 @@ exports.createVehicle = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid license plate format' });
     }
 
-    // Check if license plate already exists for this user
-    const existingVehicle = await prisma.vehicle.findFirst({
-      where: {
-        licensePlate,
-        userId,
-      },
-    });
-    if (existingVehicle) {
+    const normalizedPlate = licensePlate.trim().toUpperCase();
+    const existingVehicle = await prisma.vehicle.findUnique({ where: { licensePlate: normalizedPlate } });
+    if (existingVehicle && (existingVehicle.userId !== userId || existingVehicle.isActive)) {
       return res.status(400).json({ error: 'License plate already registered' });
     }
-
-    // If setting as default, unset other defaults
-    if (isDefault) {
-      await prisma.vehicle.updateMany({
-        where: { userId },
-        data: { isDefault: false },
-      });
-    }
-
-    // If this is the first vehicle, make it default
-    const vehicleCount = await prisma.vehicle.count({ where: { userId } });
-    const willBeDefault = isDefault || vehicleCount === 0;
 
     const vehicleData = {
       userId,
@@ -108,14 +92,23 @@ exports.createVehicle = async (req, res, next) => {
       model: model.trim(),
       year: parseInt(year),
       color: color.trim(),
-      licensePlate: licensePlate.trim().toUpperCase(),
+      licensePlate: normalizedPlate,
       imageUrl: imageUrl?.trim() || null,
-      isDefault: willBeDefault,
     };
-
-     const vehicle = await prisma.vehicle.create({
-       data: vehicleData,
-     });
+    const vehicle = await prisma.$transaction(async (tx) => {
+      const vehicleCount = await tx.vehicle.count({ where: { userId, isActive: true } });
+      const willBeDefault = Boolean(isDefault) || vehicleCount === 0;
+      if (willBeDefault) {
+        await tx.vehicle.updateMany({ where: { userId, isActive: true }, data: { isDefault: false } });
+      }
+      if (existingVehicle) {
+        return tx.vehicle.update({
+          where: { id: existingVehicle.id },
+          data: { ...vehicleData, isActive: true, isDefault: willBeDefault },
+        });
+      }
+      return tx.vehicle.create({ data: { ...vehicleData, isDefault: willBeDefault } });
+    });
 
      res.status(201).json(vehicle);
    } catch (error) {
@@ -140,6 +133,7 @@ exports.updateVehicle = async (req, res, next) => {
       where: {
         id: parseInt(id),
         userId,
+        isActive: true,
       },
     });
 
@@ -165,7 +159,7 @@ exports.updateVehicle = async (req, res, next) => {
       // Check if license plate already exists (excluding current vehicle)
       const duplicate = await prisma.vehicle.findFirst({
         where: {
-          licensePlate,
+          licensePlate: licensePlate.trim().toUpperCase(),
           NOT: { id: parseInt(id) },
         },
       });
@@ -178,7 +172,7 @@ exports.updateVehicle = async (req, res, next) => {
     // If setting as default, unset other defaults
     if (isDefault) {
       await prisma.vehicle.updateMany({
-        where: { userId, NOT: { id: parseInt(id) } },
+        where: { userId, isActive: true, NOT: { id: parseInt(id) } },
         data: { isDefault: false },
       });
     }
@@ -204,7 +198,7 @@ exports.updateVehicle = async (req, res, next) => {
 };
 
 /**
- * Delete a vehicle
+ * Archive a vehicle
  */
 exports.deleteVehicle = async (req, res, next) => {
   try {
@@ -214,38 +208,24 @@ exports.deleteVehicle = async (req, res, next) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    // Check ownership
-    const existing = await prisma.vehicle.findFirst({
-      where: {
-        id: parseInt(id),
-        userId,
-      },
+    const archived = await prisma.$transaction(async (tx) => {
+      const existing = await tx.vehicle.findFirst({ where: { id: parseInt(id), userId, isActive: true } });
+      if (!existing) return false;
+      await tx.vehicle.update({ where: { id: existing.id }, data: { isActive: false, isDefault: false } });
+      if (existing.isDefault) {
+        const anotherVehicle = await tx.vehicle.findFirst({
+          where: { userId, isActive: true }, orderBy: { createdAt: 'desc' },
+        });
+        if (anotherVehicle) {
+          await tx.vehicle.update({ where: { id: anotherVehicle.id }, data: { isDefault: true } });
+        }
+      }
+      return true;
     });
-
-    if (!existing) {
+    if (!archived) {
       return res.status(404).json({ error: 'Vehicle not found' });
     }
-
-    await prisma.vehicle.delete({
-      where: { id: parseInt(id) },
-    });
-
-    // If deleted vehicle was default, set another as default
-    if (existing.isDefault) {
-      const anotherVehicle = await prisma.vehicle.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (anotherVehicle) {
-        await prisma.vehicle.update({
-          where: { id: anotherVehicle.id },
-          data: { isDefault: true },
-        });
-      }
-    }
-
-    res.json({ message: 'Vehicle deleted successfully' });
+    res.json({ message: 'Vehicle removed successfully' });
   } catch (error) {
     logger.error('Delete vehicle error:', error);
     next(error);
@@ -268,6 +248,7 @@ exports.setDefaultVehicle = async (req, res, next) => {
       where: {
         id: parseInt(id),
         userId,
+        isActive: true,
       },
     });
 
@@ -277,7 +258,7 @@ exports.setDefaultVehicle = async (req, res, next) => {
 
     // Unset all defaults
     await prisma.vehicle.updateMany({
-      where: { userId },
+      where: { userId, isActive: true },
       data: { isDefault: false },
     });
 

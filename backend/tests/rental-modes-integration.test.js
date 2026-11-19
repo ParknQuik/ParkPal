@@ -160,6 +160,10 @@ describe('Rental Modes Integration Tests', () => {
       expect(confirmPaymentResponse.status).toBe(200);
 
       // Step 4: Check-in via QR code
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { startTime: new Date(Date.now() - 5 * 60 * 1000) }
+      });
       const { generateQRCodeData } = require('../services/qrcode');
       const qrData = await generateQRCodeData(testData.slot.id.toString());
       const checkinResponse = await request(app)
@@ -290,6 +294,10 @@ describe('Rental Modes Integration Tests', () => {
       expect(authorizedPayment.status).toBe('authorized');
 
       // Step 3: Check-in via QR code
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { startTime: new Date(Date.now() - 5 * 60 * 1000) }
+      });
       const { generateQRCodeData } = require('../services/qrcode');
       const qrData = await generateQRCodeData(testData.slot.id.toString());
       const checkinResponse = await request(app)
@@ -405,6 +413,10 @@ describe('Rental Modes Integration Tests', () => {
       const bookingId = bookingResponse.body.booking.id;
 
       // First check-in
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'confirmed', startTime: new Date(Date.now() - 5 * 60 * 1000) }
+      });
       const { generateQRCodeData } = require('../services/qrcode');
       const qrData = await generateQRCodeData(testData.slot.id.toString());
       const firstCheckin = await request(app)
@@ -498,6 +510,10 @@ describe('Rental Modes Integration Tests', () => {
       const bookingAmount = bookingResponse.body.booking.price;
 
       // Complete payment and booking flow
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { status: 'confirmed', startTime: new Date(Date.now() - 5 * 60 * 1000) }
+      });
       const { generateQRCodeData } = require('../services/qrcode');
       const qrData = await generateQRCodeData(testData.slot.id.toString());
       const checkinResponse = await request(app)

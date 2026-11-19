@@ -3,6 +3,7 @@ const { getDriverDiscoveryCandidates, isInsideViewport } = require('../services/
 const { applyStrike, checkSuspension } = require('../services/penaltyService');
 const { broadcast } = require('../services/websocket');
 const { generateQRCodeImage, generateQRCodeData, validateQRCode } = require('../services/qrcode');
+const { fixedCheckInError } = require('../services/checkInWindow');
 const cache = require('../services/cache');
 const mediaService = require('../services/mediaService');
 const paymongoService = require('../services/paymongo');
@@ -999,13 +1000,15 @@ exports.createBooking = async (req, res, next) => {
  *                 description: Optional for pre-booked slots
  *               userLat:
  *                 type: number
- *                 description: User's current latitude
+ *                 description: User's current latitude; required within 100 meters of the slot
  *               userLon:
  *                 type: number
- *                 description: User's current longitude
+ *                 description: User's current longitude; required within 100 meters of the slot
  *     responses:
  *       200:
  *         description: Check-in successful
+ *       400:
+ *         description: Validation, status, or booking timing error. Fixed booking check-in opens 15 minutes before start and closes at end.
  */
 exports.qrCheckIn = async (req, res, next) => {
   try {
@@ -1047,6 +1050,16 @@ exports.qrCheckIn = async (req, res, next) => {
       });
     }
 
+    const activeSession = await prisma.parkingSession.findFirst({
+      where: { userId, slotId: slot.id, status: 'active' },
+    });
+    if (activeSession) {
+      return res.status(400).json({
+        error: 'User already checked in to this parking slot',
+        code: 'ALREADY_CHECKED_IN',
+      });
+    }
+
     // If booking ID provided, verify booking
     if (bookingId) {
       const booking = await prisma.booking.findUnique({
@@ -1057,21 +1070,26 @@ exports.qrCheckIn = async (req, res, next) => {
         return res.status(403).json({ error: 'Invalid booking' });
       }
 
-      // For open mode: require status to be 'confirmed' (not already active/completed)
-      if (booking.rentalMode === 'open') {
-        if (booking.status !== 'confirmed' && booking.status !== 'pending') {
-          return res.status(400).json({ 
-            error: `Cannot check in. Booking status is already '${booking.status}'.` 
-          });
-        }
+      if (booking.status !== 'confirmed') {
+        return res.status(400).json({
+          error: `Cannot check in. Booking must be confirmed (current status: '${booking.status}').`
+        });
+      }
+
+      const now = new Date();
+      const startTime = new Date(booking.startTime);
+      const windowStart = new Date(startTime.getTime() - 15 * 60 * 1000);
+
+      if (booking.rentalMode === 'fixed') {
+        const timingError = fixedCheckInError(booking, now);
+        if (timingError) return res.status(400).json({ error: timingError });
+      } else if (booking.rentalMode === 'open') {
         
         // Check if within allowed time window (start time should be close to now, within maxDuration)
-        const now = new Date();
-        const startTime = new Date(booking.startTime);
         const maxDuration = booking.maxDuration || 4;
         const windowEnd = new Date(startTime.getTime() + maxDuration * 60 * 60 * 1000);
         
-        if (now < new Date(startTime.getTime() - 15 * 60 * 1000)) {
+        if (now < windowStart) {
           return res.status(400).json({ error: 'Check-in not allowed yet. You can check in up to 15 minutes before your booking time.' });
         }
         
@@ -1084,21 +1102,6 @@ exports.qrCheckIn = async (req, res, next) => {
       await prisma.booking.update({
         where: { id: parseInt(bookingId) },
         data: { status: 'active' },
-      });
-    }
-
-    const activeSession = await prisma.parkingSession.findFirst({
-      where: {
-        userId,
-        slotId: slot.id,
-        status: 'active',
-      },
-    });
-
-    if (activeSession) {
-      return res.status(400).json({
-        error: 'User already checked in to this parking slot',
-        code: 'ALREADY_CHECKED_IN',
       });
     }
 
@@ -1703,6 +1706,7 @@ exports.getUserBookings = async (req, res, next) => {
     const bookings = await prisma.booking.findMany({
       where: { userId },
       include: {
+        vehicle: true,
         slot: {
           include: {
             owner: { select: { id: true, name: true, email: true } },

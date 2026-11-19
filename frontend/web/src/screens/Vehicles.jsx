@@ -15,6 +15,7 @@ export default function Vehicles() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dialog, setDialog] = useState(null);
+  const [removing, setRemoving] = useState(null);
 
   const loadVehicles = async () => {
     setLoading(true);
@@ -61,6 +62,7 @@ export default function Vehicles() {
   const deleteVehicle = async (vehicle) => {
     try {
       await api.delete(`/vehicles/${vehicle.id}`);
+      setRemoving(null);
       await loadVehicles();
     } catch (err) {
       setError(err.response?.data?.error || 'Could not remove this vehicle.');
@@ -94,9 +96,14 @@ export default function Vehicles() {
         </Box>
         {!vehicle.isDefault && <IconButton aria-label={`Set ${label(vehicle)} as default`} onClick={() => setDefault(vehicle)}><StarBorder /></IconButton>}
         <IconButton aria-label={`Edit ${label(vehicle)}`} onClick={() => setDialog({ id: vehicle.id, values: { make: vehicle.make, model: vehicle.model, year: String(vehicle.year || ''), color: vehicle.color || '', licensePlate: vehicle.licensePlate } })}><EditOutlined /></IconButton>
-        <IconButton aria-label={`Remove ${label(vehicle)}`} color="error" onClick={() => deleteVehicle(vehicle)}><DeleteOutline /></IconButton>
+        <IconButton aria-label={`Remove ${label(vehicle)}`} color="error" onClick={() => setRemoving(vehicle)}><DeleteOutline /></IconButton>
       </CardContent></Card>)}
     </Stack>}
+    <Dialog open={Boolean(removing)} onClose={() => setRemoving(null)}>
+      <DialogTitle>Remove vehicle?</DialogTitle>
+      <DialogContent><Typography>Remove {removing && label(removing)} from future bookings? Existing bookings keep their vehicle details.</Typography></DialogContent>
+      <DialogActions><Button onClick={() => setRemoving(null)}>Cancel</Button><Button color="error" onClick={() => deleteVehicle(removing)}>Remove</Button></DialogActions>
+    </Dialog>
     <Dialog open={Boolean(dialog)} onClose={() => !saving && setDialog(null)} fullWidth maxWidth="sm">
       <Box component="form" onSubmit={saveVehicle}>
         <DialogTitle>{dialog?.id ? 'Edit vehicle' : 'Add a vehicle'}</DialogTitle>

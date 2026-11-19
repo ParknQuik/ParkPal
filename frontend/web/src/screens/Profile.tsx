@@ -45,6 +45,7 @@ interface Booking {
 	endTime: string;
 	price: number;
 	slot?: BookingSlot;
+	vehicle?: { year?: number | null; make: string; model: string; color?: string | null; licensePlate: string } | null;
 }
 
 interface UserStats {
@@ -391,6 +392,12 @@ const Profile: React.FC = () => {
 													<Typography component="span" variant="body2">
 														Price: ${booking.price}
 													</Typography>
+											<br />
+											<Typography component="span" variant="body2">
+												{booking.vehicle
+													? `Vehicle: ${booking.vehicle.year || ''} ${booking.vehicle.make} ${booking.vehicle.model} · ${booking.vehicle.color || ''} · ${booking.vehicle.licensePlate}`
+													: 'Vehicle details unavailable'}
+											</Typography>
 													<br />
 													<Chip
 														label={booking.status}

@@ -130,7 +130,7 @@ module.exports = (app) => {
    *             schema:
    *               $ref: '#/components/schemas/Vehicle'
    *   delete:
-   *     summary: Delete a vehicle
+   *     summary: Remove a vehicle from future bookings while retaining booking links
    *     tags: [Vehicles]
    *     security:
    *       - bearerAuth: []
@@ -142,7 +142,7 @@ module.exports = (app) => {
    *           type: integer
    *     responses:
    *       200:
-   *         description: Vehicle deleted
+   *         description: Vehicle archived
    */
 
   app.get('/vehicles/:id', authenticate, asyncHandler(vehiclesController.getVehicle));

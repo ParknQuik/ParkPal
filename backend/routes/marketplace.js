@@ -407,6 +407,8 @@ app.get(
    *             type: object
    *             required:
    *               - qrData
+   *               - userLat
+   *               - userLon
    *             properties:
    *               qrData:
    *                 type: string
@@ -415,11 +417,17 @@ app.get(
    *                 type: integer
    *                 description: Optional for pre-booked slots
    *                 example: 5
+   *               userLat:
+   *                 type: number
+   *                 description: Current latitude; check-in requires being within 100 meters of the slot
+   *               userLon:
+   *                 type: number
+   *                 description: Current longitude; check-in requires being within 100 meters of the slot
    *     responses:
    *       200:
    *         description: Check-in successful
    *       400:
-   *         description: Invalid QR code
+   *         description: Invalid QR code, missing location, booking status, or check-in timing. Fixed bookings allow check-in from 15 minutes before start until before end.
    *       403:
    *         description: Invalid booking
    *       404:

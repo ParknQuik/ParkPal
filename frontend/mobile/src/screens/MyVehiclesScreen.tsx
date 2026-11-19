@@ -184,17 +184,17 @@ export const MyVehiclesScreen: React.FC = () => {
 
   const handleDeleteVehicle = React.useCallback((vehicle: Vehicle) => {
     Alert.alert(
-      'Delete Vehicle',
-      `Are you sure you want to delete ${vehicle.year} ${vehicle.make} ${vehicle.model}?`,
+      'Remove Vehicle',
+      `Remove ${vehicle.year} ${vehicle.make} ${vehicle.model} from future bookings? Existing bookings keep their vehicle details.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Remove',
           style: 'destructive',
           onPress: async () => {
             try {
               await dispatch(deleteVehicle(vehicle.id)).unwrap();
-              Alert.alert('Success', 'Vehicle deleted successfully');
+              Alert.alert('Success', 'Vehicle removed from future bookings');
             } catch (err: any) {
               const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to delete vehicle';
               Alert.alert('Error', errorMessage);

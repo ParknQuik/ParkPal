@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { behaviorAPI, marketplaceAPI, vehiclesAPI } from '../services/api';
+import { behaviorAPI, marketplaceAPI } from '../services/api';
+import { useAppDispatch, useAppSelector } from '../store';
+import { getVehicles } from '../store/slices/vehiclesSlice';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
@@ -50,10 +52,11 @@ export const ReserveSpot: React.FC = () => {
   const { spotId } = (route.params || {}) as { spotId?: string };
   const { colors } = useTheme();
   const statusBarStyle = useStatusBarStyle();
+  const dispatch = useAppDispatch();
+  const { vehicles, loading: vehiclesLoading, error: vehiclesError } = useAppSelector((state) => state.vehicles);
 
   const [spot, setSpot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
 
   const now = new Date();
@@ -72,16 +75,8 @@ export const ReserveSpot: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [spotRes, vehiclesRes] = await Promise.all([
-          marketplaceAPI.getListingById(Number(spotId)),
-          vehiclesAPI.getVehicles(),
-        ]);
+        const spotRes = await marketplaceAPI.getListingById(Number(spotId));
         setSpot(spotRes.data?.data || spotRes.data);
-        const vehicleList = vehiclesRes.data?.data || vehiclesRes.data || [];
-        setVehicles(vehicleList);
-        if (vehicleList.length > 0) {
-          setSelectedVehicle(String(vehicleList[0].id));
-        }
         behaviorAPI.getStatus().then((res) => setBehaviorStatus(res.data)).catch(() => undefined);
       } catch (err) {
         ;
@@ -91,6 +86,20 @@ export const ReserveSpot: React.FC = () => {
     };
     if (spotId) fetchData();
   }, [spotId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(getVehicles());
+    }, [dispatch])
+  );
+
+  useEffect(() => {
+    setSelectedVehicle((current) =>
+      vehicles.some((vehicle) => String(vehicle.id) === current)
+        ? current
+        : vehicles.length > 0 ? String(vehicles[0].id) : null
+    );
+  }, [vehicles]);
 
   const openPicker = (target: PickerTarget) => {
     setPickerTarget(target);
@@ -441,6 +450,11 @@ export const ReserveSpot: React.FC = () => {
       textAlign: 'center',
       paddingVertical: 16,
     },
+    retryButton: {
+      alignSelf: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+    },
     addVehicleButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -769,7 +783,26 @@ export const ReserveSpot: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Vehicle</Text>
           <View style={styles.vehicleList}>
-            {vehicles.length === 0 && (
+            {vehiclesLoading && vehicles.length === 0 && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color={colors.primary} />
+                <Text style={styles.loadingText}>Loading vehicles...</Text>
+              </View>
+            )}
+            {vehiclesError && (
+              <View>
+                <Text style={styles.emptyText}>Could not load vehicles. Please try again.</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry loading vehicles"
+                  onPress={() => dispatch(getVehicles())}
+                >
+                  <Text style={styles.addVehicleText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {!vehiclesLoading && !vehiclesError && vehicles.length === 0 && (
               <Text style={styles.emptyText}>
                 No vehicles found. Add a vehicle to continue.
               </Text>
@@ -777,6 +810,9 @@ export const ReserveSpot: React.FC = () => {
             {vehicles.map((vehicle: any) => (
               <TouchableOpacity
                 key={String(vehicle.id)}
+                accessibilityRole="radio"
+                accessibilityLabel={`${vehicle.make} ${vehicle.model}, ${vehicle.licensePlate}`}
+                accessibilityState={{ selected: selectedVehicle === String(vehicle.id) }}
                 style={[
                   styles.vehicleItem,
                   selectedVehicle === String(vehicle.id) &&

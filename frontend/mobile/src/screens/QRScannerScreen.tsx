@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, Camera } from 'expo-camera';
+import * as Location from 'expo-location';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { marketplaceAPI } from '../services/api';
@@ -29,7 +30,7 @@ type ScanMode = 'checkin' | 'checkout' | 'generic';
 type QRScannerParams = {
   QRScanner: {
     mode?: ScanMode;
-    bookingId?: string;
+    bookingId?: string | number;
     sessionId?: string;
   };
 };
@@ -146,9 +147,38 @@ export const QRScannerScreen: React.FC = () => {
 
   const handleCheckIn = async (qrData: string) => {
     try {
+      let permission;
+      try {
+        permission = await Location.requestForegroundPermissionsAsync();
+      } catch {
+        setScanResult({
+          type: 'error', title: 'Location Unavailable',
+          message: 'Could not access your current location. Check your location settings and try again.',
+        });
+        return;
+      }
+      if (permission.status !== 'granted') {
+        setScanResult({
+          type: 'error', title: 'Location Permission Needed',
+          message: 'Allow location access to check in at the parking spot.',
+        });
+        return;
+      }
+      let location;
+      try {
+        location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      } catch {
+        setScanResult({
+          type: 'error', title: 'Location Unavailable',
+          message: 'Could not get your current location. Check your location settings and try again.',
+        });
+        return;
+      }
       const response = await marketplaceAPI.qrCheckIn({
         qrData,
-        bookingId: bookingId ? parseInt(bookingId, 10) : undefined,
+        bookingId: bookingId ? Number(bookingId) : undefined,
+        userLat: location.coords.latitude,
+        userLon: location.coords.longitude,
       });
 
       setScanResult({
@@ -157,8 +187,10 @@ export const QRScannerScreen: React.FC = () => {
         message: `Session ID: ${response.data.session.id}\nYou're all set. Enjoy your parking!`,
       });
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.error || 'Failed to check in. Please try again.';
+      const details = error.response?.data?.details;
+      const errorMessage = Array.isArray(details) && details.length
+        ? details.map((detail: { message?: string }) => detail.message).filter(Boolean).join('\n')
+        : error.response?.data?.error || 'Failed to check in. Please try again.';
       setScanResult({
         type: 'error',
         title: 'Check-in Failed',

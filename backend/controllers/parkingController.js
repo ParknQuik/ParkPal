@@ -164,7 +164,8 @@ exports.getUserBookings = async (req, res, next) => {
     const bookings = await prisma.booking.findMany({
       where: { userId },
       include: {
-        slot: true
+        slot: true,
+        vehicle: true
       },
       orderBy: { createdAt: 'desc' }
     });

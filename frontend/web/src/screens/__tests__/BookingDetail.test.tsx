@@ -44,4 +44,14 @@ describe('BookingDetail', () => {
     expect(api.get).toHaveBeenLastCalledWith('/marketplace/bookings/22/extension-availability', { params: { hours: 1 } });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Pay and extend' })).toBeEnabled());
   });
+
+  it('shows a neutral fallback when the vehicle link is missing', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({ data: {
+      id: 22, rentalMode: 'fixed', status: 'completed',
+      startTime: '2030-01-01T10:00:00Z', endTime: '2030-01-01T12:00:00Z',
+      slot: { address: '22 Market Road' }, vehicle: null,
+    } } as never);
+    renderDetail();
+    expect(await screen.findByText('Vehicle details unavailable')).toBeInTheDocument();
+  });
 });
