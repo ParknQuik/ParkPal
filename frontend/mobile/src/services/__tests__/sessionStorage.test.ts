@@ -51,4 +51,19 @@ describe('sessionStorage', () => {
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith('parkpal.auth.token', 'secure-token');
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith('parkpal.auth.user', '{"id":2}');
   });
+
+  it('updates a memory-only user without saving credentials', async () => {
+    await sessionStorage.save('memory-token', { id: 1 }, false);
+    jest.clearAllMocks();
+    await sessionStorage.updateUser({ id: 1, profileImageUrl: 'photo.jpg' });
+    expect(await sessionStorage.getUser()).toBe('{"id":1,"profileImageUrl":"photo.jpg"}');
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('updates a remembered user without changing its token', async () => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue('secure-token');
+    await sessionStorage.updateUser({ id: 2, profileImageUrl: 'photo.jpg' });
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('parkpal.auth.user', '{"id":2,"profileImageUrl":"photo.jpg"}');
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalledWith('parkpal.auth.token', expect.anything());
+  });
 });

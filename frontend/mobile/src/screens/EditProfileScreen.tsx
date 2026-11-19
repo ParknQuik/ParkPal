@@ -17,8 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { updateUserProfile, setUser } from '../store/slices/authSlice';
+import { updateUserProfile, applyUploadedProfile } from '../store/slices/authSlice';
 import { uploadProfilePhoto } from '../services/profilePhotoUpload';
 import { Card } from '../components/Card';
 import { typography, spacing, borderRadius } from '../theme';
@@ -113,16 +112,12 @@ export const EditProfileScreen: React.FC = () => {
       const newImageUrl = responseData?.profileImageUrl;
 
       if (newImageUrl) {
+        await dispatch(applyUploadedProfile(responseData)).unwrap();
         setProfileImage(newImageUrl);
-
-        // Also persist to AsyncStorage
-        const updatedUser = { ...user!, profileImageUrl: newImageUrl };
-        AsyncStorage.setItem('user', JSON.stringify(updatedUser));
 
         Alert.alert('Success', 'Profile photo updated successfully');
       } else {
-        ;
-        Alert.alert('Error', 'Failed to get profile image URL');
+        Alert.alert('Error', 'Photo upload failed during confirmation. Please try again.');
       }
     } catch (error: any) {
       ;

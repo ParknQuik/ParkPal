@@ -5,6 +5,7 @@ import authReducer, {
   logout,
   checkAuth,
   updateUserProfile,
+  applyUploadedProfile,
   clearError,
 } from '../authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +18,7 @@ jest.mock('@react-native-async-storage/async-storage');
 jest.mock('../../../services/sessionStorage', () => ({
   sessionStorage: {
     save: jest.fn().mockResolvedValue(undefined),
+    updateUser: jest.fn().mockResolvedValue(undefined),
     getToken: jest.fn().mockResolvedValue(null),
     getUser: jest.fn().mockResolvedValue(null),
     clear: jest.fn().mockResolvedValue(undefined),
@@ -342,7 +344,7 @@ describe('authSlice', () => {
       expect(state.loading).toBe(false);
       expect(state.error).toBe(null);
 
-      expect(sessionStorage.save).toHaveBeenCalledWith('mock-jwt-token', updatedUser, true);
+      expect(sessionStorage.updateUser).toHaveBeenCalledWith(updatedUser);
     });
 
     it('should handle profile update failure', async () => {
@@ -358,6 +360,21 @@ describe('authSlice', () => {
       const state = store.getState().auth;
       expect(state.error).toBe(errorMessage);
       expect(state.loading).toBe(false);
+    });
+  });
+
+  describe('applyUploadedProfile', () => {
+    it('merges the confirmed profile into Redux and the active session', async () => {
+      store.dispatch({ type: 'auth/setUser', payload: {
+        id: '1', email: 'test@example.com', name: 'Original', totalBookings: 2,
+      } });
+      await store.dispatch(applyUploadedProfile({ name: 'Updated', profileImageUrl: 'https://cdn.example/photo.jpg' }));
+      const expected = {
+        id: '1', email: 'test@example.com', name: 'Updated', totalBookings: 2,
+        profileImageUrl: 'https://cdn.example/photo.jpg',
+      };
+      expect(store.getState().auth.user).toEqual(expected);
+      expect(sessionStorage.updateUser).toHaveBeenCalledWith(expected);
     });
   });
 

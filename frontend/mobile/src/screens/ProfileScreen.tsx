@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppSelector, useAppDispatch } from '../store';
-import { logout, checkAuth, updateUserProfile } from '../store/slices/authSlice';
+import { logout, checkAuth, applyUploadedProfile } from '../store/slices/authSlice';
 import { setThemeMode } from '../store/slices/settingsSlice';
 import { uploadProfilePhoto } from '../services/profilePhotoUpload';
 import { typography, spacing, borderRadius } from '../theme';
@@ -122,16 +122,12 @@ export const ProfileScreen: React.FC = () => {
       setUploading(true);
       const updatedUser = await uploadProfilePhoto(imageUri);
 
-      await dispatch(updateUserProfile({
-        name: user?.name || '',
-        phone: user?.phone || null,
-        profileImageUrl: updatedUser.profileImageUrl || undefined,
-      })).unwrap();
+      await dispatch(applyUploadedProfile(updatedUser)).unwrap();
 
       Alert.alert('Success', 'Profile picture updated');
     } catch (error) {
       ;
-      Alert.alert('Error', 'Failed to upload photo');
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to upload photo');
     } finally {
       setUploading(false);
     }
