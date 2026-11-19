@@ -22,7 +22,10 @@ export default function BookingList() {
         <Stack direction="row" justifyContent="space-between" alignItems="start" gap={2}>
           <div><Typography variant="h6">{booking.slot?.title || booking.slot?.address || `Booking #${booking.id}`}</Typography>
             <Typography color="text.secondary">{new Date(booking.startTime).toLocaleString()} – {booking.endTime ? new Date(booking.endTime).toLocaleString() : 'Open-ended'}</Typography>
-            <Typography>₱{Number(booking.price || 0).toFixed(2)}</Typography></div>
+            <Typography>₱{Number(booking.price || 0).toFixed(2)}</Typography>
+            <Typography color="text.secondary">{booking.vehicle
+              ? `Vehicle: ${booking.vehicle.year || ''} ${booking.vehicle.make} ${booking.vehicle.model} · ${booking.vehicle.color || ''} · ${booking.vehicle.licensePlate}`
+              : 'Vehicle details unavailable'}</Typography></div>
           <Chip label={booking.status} color={booking.status === 'confirmed' || booking.status === 'active' ? 'success' : booking.status === 'pending' ? 'warning' : 'default'} />
         </Stack>
         <Button sx={{ mt: 2 }} variant="outlined" onClick={() => navigate(`/bookings/${booking.id}`)}>View booking</Button>

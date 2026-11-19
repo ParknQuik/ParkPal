@@ -535,6 +535,22 @@ describe('core mobile list loading and failure states', () => {
     expect(queryByText(/Cancellation unavailable/)).toBeNull();
   });
 
+  it('shows archived vehicle details and a neutral fallback for old bookings', async () => {
+    const booking = {
+      id: 42, slotId: 7, listingTitle: 'Garage', listingAddress: '42 Past St',
+      startTime: '2026-05-25T08:00:00.000Z', endTime: '2026-05-25T10:00:00.000Z',
+      rentalMode: 'fixed', status: 'completed', totalAmount: 150,
+    };
+    setState({ marketplace: { ...baseState.marketplace, bookings: [
+      { ...booking, vehicle: { year: 2023, make: 'Toyota', model: 'Vios', color: 'Silver', licensePlate: 'ABC-1234', isActive: false } },
+      { ...booking, id: 43, vehicle: null },
+    ] } });
+    const { getByText } = await render(<MyBookingsScreen />);
+    await fireEvent.press(getByText('Completed'));
+    expect(getByText('2023 Toyota Vios · Silver · ABC-1234')).toBeTruthy();
+    expect(getByText('Vehicle details unavailable')).toBeTruthy();
+  });
+
   it('does not show expired bookings under cancelled', async () => {
     setState({
       marketplace: {

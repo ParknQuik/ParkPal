@@ -25,6 +25,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 import { AppHeader } from '../components/AppHeader';
 import { ListLoadingState, RetryableFailureState } from '../components/ListState';
+import { getCheckInAvailability } from '../utils/checkInWindow';
 
 const PRIMARY = '#10b77f';
 
@@ -109,6 +110,7 @@ export const MyBookingsScreen: React.FC = () => {
   const [extensionAvailability, setExtensionAvailability] = useState<any>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [extending, setExtending] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   const { bookings, loading, error } = useAppSelector((state) => state.marketplace);
   const showInitialLoading = loading && !refreshing && bookings.length === 0;
@@ -125,6 +127,9 @@ export const MyBookingsScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       fetchBookings();
+      setNow(Date.now());
+      const timer = setInterval(() => setNow(Date.now()), 30_000);
+      return () => clearInterval(timer);
     }, [fetchBookings])
   );
 
@@ -860,6 +865,7 @@ export const MyBookingsScreen: React.FC = () => {
           const buttonColor = booking.status === 'completed' ? colors.accent : PRIMARY;
           const buttonText = getActionButtonText(booking.status);
           const statusLabel = getStatusLabel(booking.status);
+          const checkIn = getCheckInAvailability(booking, now);
 
           return (
             <View style={styles.bookingCard}>
@@ -883,9 +889,20 @@ export const MyBookingsScreen: React.FC = () => {
                     </View>
                   )}
                   <View style={styles.dateContainer}>
+                    <MaterialCommunityIcons name="car-outline" size={14} color={colors.textSecondary} style={styles.dateIcon} />
+                    <Text style={styles.dateText}>
+                      {booking.vehicle
+                        ? `${booking.vehicle.year || ''} ${booking.vehicle.make} ${booking.vehicle.model} · ${booking.vehicle.color || ''} · ${booking.vehicle.licensePlate}`.trim()
+                        : 'Vehicle details unavailable'}
+                    </Text>
+                  </View>
+                  <View style={styles.dateContainer}>
                     <MaterialCommunityIcons name="currency-php" size={14} color={colors.textSecondary} style={styles.dateIcon} />
                     <Text style={styles.dateText}>₱{(booking.totalAmount || 0).toFixed(2)}</Text>
                   </View>
+                  {booking.status === 'confirmed' && Boolean(checkIn.message) && (
+                    <Text style={styles.dateText}>{checkIn.message}</Text>
+                  )}
                 </View>
                 {booking.listingPhoto ? (
                   <Image source={{ uri: booking.listingPhoto }} style={styles.cardImage} contentFit="cover" transition={200} />
@@ -897,13 +914,15 @@ export const MyBookingsScreen: React.FC = () => {
               </View>
               <View style={styles.cardActions}>
                 {/* Row 1: QR + Extend (only for confirmed/active) */}
-                {(booking.status === 'confirmed' || booking.status === 'active') && new Date(booking.startTime) > new Date() && (
+                {(booking.status === 'confirmed' || (booking.status === 'active' && new Date(booking.startTime).getTime() > now)) && (
                   <View style={styles.cardActionsRow}>
                     <TouchableOpacity
                       style={[
                         styles.scanQRButton,
                         booking.status === 'active' && styles.scanQRButtonCheckout,
+                        booking.status === 'confirmed' && !checkIn.available && { opacity: 0.5 },
                       ]}
+                      disabled={booking.status === 'confirmed' && !checkIn.available}
                       onPress={() => handleScanQR(booking)}
                     >
                       <MaterialCommunityIcons name="qrcode-scan" size={16} color="#fff" />
@@ -930,7 +949,7 @@ export const MyBookingsScreen: React.FC = () => {
                   </View>
                 )}
                 {/* Row for completed/cancelled: just the action button */}
-                {((booking.status !== 'confirmed' && booking.status !== 'active') || (booking.status === 'confirmed' && new Date(booking.startTime) <= new Date())) && (
+                {(booking.status !== 'confirmed' && booking.status !== 'active') && (
                   <View style={styles.cardActionsRow}>
                     <TouchableOpacity
                       style={[styles.actionButton, { backgroundColor: buttonColor }]}

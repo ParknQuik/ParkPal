@@ -140,7 +140,9 @@ export default function BookingDetail() {
       <Typography variant="h6">{booking.slot?.title || booking.slot?.address}</Typography>
       <Typography color="text.secondary">{booking.slot?.address}</Typography>
       <Typography sx={{ mt: 1 }}>{new Date(booking.startTime).toLocaleString()} – {booking.endTime ? new Date(booking.endTime).toLocaleString() : `Open, up to ${booking.maxDuration || 12} hours`}</Typography>
-      {booking.vehicle && <Typography sx={{ mt: 1 }}>Vehicle: {booking.vehicle.year} {booking.vehicle.make} {booking.vehicle.model} · {booking.vehicle.color} · {booking.vehicle.licensePlate}</Typography>}
+      <Typography sx={{ mt: 1 }}>{booking.vehicle
+        ? `Vehicle: ${booking.vehicle.year || ''} ${booking.vehicle.make} ${booking.vehicle.model} · ${booking.vehicle.color || ''} · ${booking.vehicle.licensePlate}`
+        : 'Vehicle details unavailable'}</Typography>
       <Stack direction="row" gap={1} alignItems="center" sx={{ mt: 2 }}><Typography>Status</Typography><Chip size="small" label={booking.status} color={confirmed ? 'success' : booking.status === 'pending' ? 'warning' : 'default'} /></Stack>
       <Divider sx={{ my: 2 }} />
       <Typography fontWeight={700}>Payment</Typography>

@@ -202,7 +202,7 @@ export const marketplaceAPI = {
     api.post(`/marketplace/bookings/${bookingId}/extend`, data),
 
   // QR Code operations
-  qrCheckIn: (data: { qrData: string; bookingId?: number }) =>
+  qrCheckIn: (data: { qrData: string; bookingId?: number; userLat: number; userLon: number }) =>
     api.post('/marketplace/qr/checkin', data),
 
   qrCheckOut: (data: { sessionId: number }) =>

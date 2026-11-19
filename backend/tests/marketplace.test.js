@@ -834,6 +834,49 @@ describe('Marketplace API Tests', () => {
 
       expect(slot.status).toBe('occupied');
     });
+
+    it('requires a confirmed fixed booking within its check-in window', async () => {
+      const booking = await prisma.booking.create({
+        data: {
+          slotId: testData.slot.id,
+          userId: testData.users.driver.id,
+          startTime: new Date(Date.now() + 60 * 60 * 1000),
+          endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+          price: 50,
+          hostEarnings: 47.5,
+          status: 'pending',
+          rentalMode: 'fixed',
+        },
+      });
+      const checkIn = () => request(app)
+        .post('/api/v1/marketplace/qr/checkin')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({ qrData: qrCode, bookingId: booking.id, userLat: testData.slot.lat, userLon: testData.slot.lon });
+
+      const pending = await checkIn();
+      expect(pending.status).toBe(400);
+      expect(pending.body.error).toContain('must be confirmed');
+
+      await prisma.booking.update({ where: { id: booking.id }, data: { status: 'confirmed' } });
+      const early = await checkIn();
+      expect(early.status).toBe(400);
+      expect(early.body.error).toContain('15 minutes');
+
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { startTime: new Date(Date.now() - 2 * 60 * 60 * 1000), endTime: new Date(Date.now() - 1000) },
+      });
+      const ended = await checkIn();
+      expect(ended.status).toBe(400);
+      expect(ended.body.error).toContain('has ended');
+
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { startTime: new Date(Date.now() - 5 * 60 * 1000), endTime: new Date(Date.now() + 60 * 60 * 1000) },
+      });
+      const eligible = await checkIn();
+      expect(eligible.status).toBe(200);
+    });
   });
 
   describe('POST /api/v1/marketplace/qr/checkout', () => {

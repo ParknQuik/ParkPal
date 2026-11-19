@@ -19,6 +19,7 @@ import { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { AppHeader } from '../components/AppHeader';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
+import { getCheckInAvailability } from '../utils/checkInWindow';
 
 export const BookingConfirmed: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -26,6 +27,8 @@ export const BookingConfirmed: React.FC = () => {
   const { colors } = useTheme();
   const statusBarStyle = useStatusBarStyle();
   const { paymentId, bookingId, amount, spotName, spotAddress, startTime, endTime, paymentMethod, rentalMode } = route.params as any;
+  const [now, setNow] = useState(Date.now());
+  const checkIn = getCheckInAvailability({ status: 'confirmed', rentalMode, startTime, endTime }, now);
   const scaleAnim = new Animated.Value(0);
   const fadeAnim = new Animated.Value(0);
 
@@ -50,6 +53,11 @@ export const BookingConfirmed: React.FC = () => {
     checkOutTime: endTime ? formatTime(endTime) : 'N/A',
     totalPaid: amount ? `₱${Number(amount).toFixed(2)}` : '₱0.00',
   };
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     Animated.sequence([
@@ -385,9 +393,14 @@ export const BookingConfirmed: React.FC = () => {
 
       {/* Footer Buttons */}
       <View style={styles.footer}>
+        <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 8 }}>
+          {checkIn.message}
+        </Text>
         <TouchableOpacity
-          style={styles.scanCheckInButton}
+          style={[styles.scanCheckInButton, !checkIn.available && { opacity: 0.5 }]}
           onPress={handleScanToCheckIn}
+          disabled={!checkIn.available}
+          accessibilityState={{ disabled: !checkIn.available }}
         >
           <MaterialCommunityIcons name="qrcode-scan" size={18} color={colors.white} style={styles.scanCheckInButtonIcon} />
           <Text style={styles.scanCheckInButtonText}>Scan to Check In</Text>

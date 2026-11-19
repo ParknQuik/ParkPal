@@ -407,7 +407,20 @@ describe('Vehicles API', () => {
       vehicleId = vehicle.id;
     });
 
-    it('should delete a vehicle', async () => {
+    it('archives a vehicle while retaining linked bookings in every status', async () => {
+      const statuses = ['pending', 'confirmed', 'active', 'completed'];
+      const linked = await Promise.all(statuses.map((status, index) => prisma.booking.create({
+        data: {
+          userId: testData.users.driver.id,
+          slotId: testData.slot.id,
+          vehicleId,
+          startTime: new Date(Date.now() + (index + 1) * 3600000),
+          endTime: new Date(Date.now() + (index + 2) * 3600000),
+          price: 50,
+          hostEarnings: 45,
+          status,
+        },
+      })));
       const response = await request(app)
         .delete(`/api/v1/vehicles/${vehicleId}`)
         .set('Authorization', `Bearer ${authTokens.driver}`);
@@ -420,6 +433,44 @@ describe('Vehicles API', () => {
         .set('Authorization', `Bearer ${authTokens.driver}`);
 
       expect(check.status).toBe(404);
+      const archived = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+      expect(archived).toMatchObject({ isActive: false, isDefault: false });
+      const list = await request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${authTokens.driver}`);
+      expect(list.body.some((vehicle) => vehicle.id === vehicleId)).toBe(false);
+      const bookings = await request(app).get('/api/v1/marketplace/bookings').set('Authorization', `Bearer ${authTokens.driver}`);
+      for (const booking of linked) {
+        expect((await prisma.booking.findUnique({ where: { id: booking.id } })).vehicleId).toBe(vehicleId);
+        expect(bookings.body.find((item) => item.id === booking.id).vehicle.id).toBe(vehicleId);
+      }
+    });
+
+    it('reassigns the default to an active vehicle and restores the original plate ID', async () => {
+      await prisma.vehicle.update({ where: { id: vehicleId }, data: { isDefault: true } });
+      const replacement = await prisma.vehicle.create({ data: {
+        userId: testData.users.driver.id, make: 'Honda', model: 'Civic', year: 2022,
+        color: 'Black', licensePlate: 'DEL-002',
+      } });
+      await request(app).delete(`/api/v1/vehicles/${vehicleId}`).set('Authorization', `Bearer ${authTokens.driver}`);
+      expect((await prisma.vehicle.findUnique({ where: { id: replacement.id } })).isDefault).toBe(true);
+      const otherUser = await request(app).post('/api/v1/vehicles')
+        .set('Authorization', `Bearer ${authTokens.host}`)
+        .send({ make: 'Toyota', model: 'Corolla', year: 2024, color: 'Blue', licensePlate: 'DEL-001' });
+      expect(otherUser.status).toBe(400);
+      const restored = await request(app).post('/api/v1/vehicles')
+        .set('Authorization', `Bearer ${authTokens.driver}`)
+        .send({ make: 'Toyota', model: 'Corolla', year: 2024, color: 'Blue', licensePlate: 'del-001' });
+      expect(restored.status).toBe(201);
+      expect(restored.body).toMatchObject({ id: vehicleId, isActive: true, model: 'Corolla', isDefault: false });
+    });
+
+    it('does not allow editing or default selection after removal', async () => {
+      await request(app).delete(`/api/v1/vehicles/${vehicleId}`).set('Authorization', `Bearer ${authTokens.driver}`);
+      const edit = await request(app).put(`/api/v1/vehicles/${vehicleId}`)
+        .set('Authorization', `Bearer ${authTokens.driver}`).send({ color: 'Blue' });
+      const makeDefault = await request(app).post(`/api/v1/vehicles/${vehicleId}/default`)
+        .set('Authorization', `Bearer ${authTokens.driver}`);
+      expect(edit.status).toBe(404);
+      expect(makeDefault.status).toBe(404);
     });
 
     it('should return 404 for non-existent vehicle', async () => {

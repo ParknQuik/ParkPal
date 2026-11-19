@@ -253,7 +253,7 @@ export const getMyBookings = createAsyncThunk(
 
 export const qrCheckIn = createAsyncThunk(
   'marketplace/qrCheckIn',
-  async (data: { qrData: string; bookingId?: number }) => {
+  async (data: { qrData: string; bookingId?: number; userLat: number; userLon: number }) => {
     const response = await marketplaceAPI.qrCheckIn(data);
     return response.data;
   }
