@@ -25,7 +25,7 @@ const getTransactionIcon = (type: string, colors: ReturnType<typeof import('../c
         name: 'arrow-down-bold',
         color: colors.success,
       };
-    case 'REDEEMED':
+    case 'SPENT':
       return {
         name: 'arrow-up-bold',
         color: colors.error,
@@ -63,7 +63,7 @@ const formatType = (type: string) => {
   const upperType = type.toUpperCase();
   const typeMap: Record<string, string> = {
     EARNED: 'Earned',
-    REDEEMED: 'Redeemed',
+    SPENT: 'Spent',
     REFERRAL_BONUS: 'Referral Bonus',
     REFERRAL_REWARD: 'Referral Reward',
     EXPIRED: 'Expired',
@@ -150,7 +150,7 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
 
   const icon = getTransactionIcon(transaction.type, colors);
   const upperType = transaction.type.toUpperCase();
-  const isEarn = ['EARNED', 'REFERRAL_BONUS', 'REFERRAL_REWARD', 'BONUS'].includes(upperType);
+  const isEarn = ['EARNED', 'REFERRAL_BONUS', 'REFERRAL_REWARD', 'BONUS'].includes(upperType) || transaction.amount > 0;
   const isExpire = upperType === 'EXPIRED';
   const amountColor = isEarn ? colors.success : isExpire ? colors.warning : colors.error;
   const amountPrefix = isEarn ? '+' : isExpire ? '-' : '-';
@@ -160,19 +160,7 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
     const now = new Date();
     const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffInDays === 0) {
-      return 'Today';
-    } else if (diffInDays === 1) {
-      return 'Yesterday';
-    } else if (diffInDays < 7) {
-      return `${diffInDays} days ago`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-      });
-    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const formatTime = (dateString: string) => {
@@ -197,14 +185,14 @@ export const PointsHistoryItem: React.FC<PointsHistoryItemProps> = ({
         <View style={styles.textContent}>
           <Text style={styles.typeText}>{formatType(transaction.type)}</Text>
           <Text style={styles.descriptionText} numberOfLines={1}>
-            {transaction.description}
+            {transaction.description || 'Points transaction'}
           </Text>
           <Text style={styles.dateText}>
             {formatDate(transaction.createdAt)} at {formatTime(transaction.createdAt)}
           </Text>
           {transaction.referenceId && (
             <Text style={styles.referenceText}>
-              Ref: {transaction.referenceId}
+              Ref: {transaction.referenceType ? `${transaction.referenceType} ` : ''}{transaction.referenceId}
             </Text>
           )}
         </View>

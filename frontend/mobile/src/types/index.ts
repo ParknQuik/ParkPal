@@ -145,8 +145,7 @@ export type RootStackParamList = {
   SecurityPrivacy: undefined;
   HelpCenter: undefined;
   AddVehicleWizard: { vehicleId?: number };
-  PointsHistory: undefined;
-  Referral: undefined;
+  Perks: undefined;
 };
 
 export type MainTabParamList = {
@@ -380,23 +379,21 @@ export interface VehiclesState {
 }
 
 // Points & Rewards types
-export type PointsTransactionType = 'earn' | 'redeem' | 'expire' | 'bonus' | 'referral' | 'adjustment' | 'EARNED' | 'REDEEMED' | 'REFERRAL_BONUS' | 'REFERRAL_REWARD' | 'EXPIRED' | 'ADJUSTMENT';
-export type PointsTransactionStatus = 'pending' | 'completed' | 'cancelled';
-export type PointsTransactionSource = 'booking' | 'referral' | 'manual' | 'promotion' | 'adjustment';
+export type PointsTransactionType = 'EARNED' | 'SPENT' | 'EXPIRED' | 'ADJUSTMENT' | 'REFERRAL_BONUS' | 'REFERRAL_REWARD';
 
 export interface PointsTransaction {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   amount: number;
   balanceAfter: number;
   type: PointsTransactionType;
-  source: PointsTransactionSource;
-  referenceId?: string;
-  referenceType?: string;
-  description: string;
-  expiresAt: string;
+  source: string | null;
+  referenceId: number | null;
+  referenceType: string | null;
+  description: string | null;
+  expiresAt: string | null;
   isExpired: boolean;
-  status: PointsTransactionStatus;
+  status: string;
   createdAt: string;
 }
 
@@ -408,7 +405,7 @@ export interface Pagination {
   page: number;
   limit: number;
   total: number;
-  totalPages: number;
+  pages: number;
 }
 
 export interface PointsHistoryResponse {
@@ -429,8 +426,17 @@ export interface PointsState {
   transactions: PointsTransaction[];
   referralStats: ReferralStats | null;
   referralCode: string | null;
-  loading: boolean;
-  error: string | null;
+  pagination: Pagination | null;
+  balanceLoading: boolean;
+  balanceError: string | null;
+  historyLoading: boolean;
+  historyError: string | null;
+  historyRequestedPage: number;
+  referralStatsLoading: boolean;
+  referralStatsError: string | null;
+  codeLoading: boolean;
+  codeError: string | null;
+  requestIds: { balance: string | null; history: string | null; stats: string | null; code: string | null };
 }
 
 // Analytics types (Phase 6A)

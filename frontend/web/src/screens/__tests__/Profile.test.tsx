@@ -69,6 +69,14 @@ describe('Profile Component', () => {
   });
 
   describe('Rendering', () => {
+    it('links to Perks', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      render(<Profile />);
+      await user.click(await screen.findByRole('button', { name: 'View perks' }));
+      expect(mockNavigate).toHaveBeenCalledWith('/perks');
+    });
+
     it('should render profile title', async () => {
       localStorage.setItem('user', JSON.stringify(mockUser));
       render(<Profile />);

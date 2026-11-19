@@ -1,190 +1,120 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { PointsState, PointsBalance, PointsHistoryResponse, ReferralStats, PointsTransaction } from '../../types';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { PointsState } from '../../types';
 import { pointsAPI } from '../../services/api';
+import { checkAuth, login, logout, sessionInvalidated, setUser, signup } from './authSlice';
 
-// Define async thunks
-export const fetchBalance = createAsyncThunk(
-  'points/fetchBalance',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await pointsAPI.getBalance();
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
+const message = (error: any) => error.response?.data?.message || error.response?.data?.error || error.message || 'Request failed';
 
-export const earnPoints = createAsyncThunk(
-  'points/earnPoints',
-  async (data: { bookingId: string; amount: number }, { rejectWithValue }) => {
-    try {
-      const response = await pointsAPI.earnPoints(data.bookingId, data.amount);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
+export const fetchBalance = createAsyncThunk('points/fetchBalance', async (_, { rejectWithValue }) => {
+  try { return (await pointsAPI.getBalance()).data; }
+  catch (error) { return rejectWithValue(message(error)); }
+});
 
-export const redeemPoints = createAsyncThunk(
-  'points/redeemPoints',
-  async (data: { amount: number; bookingId?: string }, { rejectWithValue }) => {
-    try {
-      const response = await pointsAPI.redeemPoints(data.amount, data.bookingId);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
+export const fetchHistory = createAsyncThunk('points/fetchHistory', async (data: { page: number; limit: number }, { rejectWithValue }) => {
+  try { return (await pointsAPI.getHistory(data.page, data.limit)).data; }
+  catch (error) { return rejectWithValue(message(error)); }
+});
 
-export const fetchHistory = createAsyncThunk(
-  'points/fetchHistory',
-  async (data: { page: number; limit: number }, { rejectWithValue }) => {
-    try {
-      const response = await pointsAPI.getHistory(data.page, data.limit);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
+// The backend returns an existing code or creates one with the same request.
+export const generateReferralCode = createAsyncThunk('points/generateReferralCode', async (_, { rejectWithValue }) => {
+  try { return (await pointsAPI.generateReferralCode()).data; }
+  catch (error) { return rejectWithValue(message(error)); }
+});
 
-export const generateReferralCode = createAsyncThunk(
-  'points/generateReferralCode',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await pointsAPI.generateReferralCode();
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
+export const fetchReferralStats = createAsyncThunk('points/fetchReferralStats', async (_, { rejectWithValue }) => {
+  try { return (await pointsAPI.getReferralStats()).data; }
+  catch (error) { return rejectWithValue(message(error)); }
+});
 
-export const fetchReferralStats = createAsyncThunk(
-  'points/fetchReferralStats',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await pointsAPI.getReferralStats();
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
-    }
-  }
-);
-
-// Define initial state
 const initialState: PointsState = {
   balance: null,
   transactions: [],
+  pagination: null,
   referralStats: null,
   referralCode: null,
-  loading: false,
-  error: null,
+  balanceLoading: false,
+  balanceError: null,
+  historyLoading: false,
+  historyError: null,
+  historyRequestedPage: 1,
+  referralStatsLoading: false,
+  referralStatsError: null,
+  codeLoading: false,
+  codeError: null,
+  requestIds: { balance: null, history: null, stats: null, code: null },
 };
 
-// Create slice
 const pointsSlice = createSlice({
   name: 'points',
   initialState,
-  reducers: {
-    clearError: (state) => {
-      state.error = null;
-    },
-    clearReferralCode: (state) => {
-      state.referralCode = null;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
-      // Fetch Balance
-      .addCase(fetchBalance.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(logout.fulfilled, () => initialState)
+      .addCase(sessionInvalidated, () => initialState)
+      .addCase(checkAuth.rejected, () => initialState)
+      .addCase(setUser, () => initialState)
+      .addCase(login.fulfilled, () => initialState)
+      .addCase(signup.fulfilled, () => initialState)
+      .addCase(fetchBalance.pending, (state, action) => {
+        state.balanceLoading = true; state.balanceError = null; state.requestIds.balance = action.meta.requestId;
       })
-      .addCase(fetchBalance.fulfilled, (state, action: PayloadAction<PointsBalance>) => {
-        state.loading = false;
+      .addCase(fetchBalance.fulfilled, (state, action) => {
+        if (state.requestIds.balance !== action.meta.requestId) return;
+        state.balanceLoading = false;
         state.balance = action.payload;
       })
       .addCase(fetchBalance.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
+        if (state.requestIds.balance !== action.meta.requestId) return;
+        state.balanceLoading = false;
+        state.balanceError = action.payload as string;
       })
-      // Earn Points
-      .addCase(earnPoints.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(fetchHistory.pending, (state, action) => {
+        state.historyLoading = true;
+        state.historyError = null;
+        state.historyRequestedPage = action.meta.arg.page;
+        state.requestIds.history = action.meta.requestId;
       })
-      .addCase(earnPoints.fulfilled, (state, action: PayloadAction<PointsTransaction>) => {
-        state.loading = false;
-        if (state.balance) {
-          state.balance.balance += action.payload.amount;
-        }
-        state.transactions.unshift(action.payload);
-      })
-      .addCase(earnPoints.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      // Redeem Points
-      .addCase(redeemPoints.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(redeemPoints.fulfilled, (state, action: PayloadAction<PointsTransaction>) => {
-        state.loading = false;
-        if (state.balance) {
-          state.balance.balance -= action.payload.amount;
-        }
-        state.transactions.unshift(action.payload);
-      })
-      .addCase(redeemPoints.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      // Fetch History
-      .addCase(fetchHistory.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchHistory.fulfilled, (state, action: PayloadAction<PointsHistoryResponse>) => {
-        state.loading = false;
-        state.transactions = action.payload.transactions;
+      .addCase(fetchHistory.fulfilled, (state, action) => {
+        if (state.requestIds.history !== action.meta.requestId) return;
+        state.historyLoading = false;
+        state.pagination = action.payload.pagination;
+        state.transactions = action.meta.arg.page === 1
+          ? action.payload.transactions
+          : [...state.transactions, ...action.payload.transactions];
       })
       .addCase(fetchHistory.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
+        if (state.requestIds.history !== action.meta.requestId) return;
+        state.historyLoading = false;
+        state.historyError = action.payload as string;
       })
-      // Generate Referral Code
-      .addCase(generateReferralCode.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(fetchReferralStats.pending, (state, action) => {
+        state.referralStatsLoading = true; state.referralStatsError = null; state.requestIds.stats = action.meta.requestId;
       })
-      .addCase(generateReferralCode.fulfilled, (state, action: PayloadAction<{ code: string }>) => {
-        state.loading = false;
-        state.referralCode = action.payload.code;
-      })
-      .addCase(generateReferralCode.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      // Fetch Referral Stats
-      .addCase(fetchReferralStats.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchReferralStats.fulfilled, (state, action: PayloadAction<ReferralStats>) => {
-        state.loading = false;
+      .addCase(fetchReferralStats.fulfilled, (state, action) => {
+        if (state.requestIds.stats !== action.meta.requestId) return;
+        state.referralStatsLoading = false;
         state.referralStats = action.payload;
       })
       .addCase(fetchReferralStats.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
+        if (state.requestIds.stats !== action.meta.requestId) return;
+        state.referralStatsLoading = false;
+        state.referralStatsError = action.payload as string;
+      })
+      .addCase(generateReferralCode.pending, (state, action) => {
+        state.codeLoading = true; state.codeError = null; state.requestIds.code = action.meta.requestId;
+      })
+      .addCase(generateReferralCode.fulfilled, (state, action) => {
+        if (state.requestIds.code !== action.meta.requestId) return;
+        state.codeLoading = false;
+        state.referralCode = action.payload.referralCode;
+      })
+      .addCase(generateReferralCode.rejected, (state, action) => {
+        if (state.requestIds.code !== action.meta.requestId) return;
+        state.codeLoading = false;
+        state.codeError = action.payload as string;
       });
   },
 });
 
-export const { clearError, clearReferralCode } = pointsSlice.actions;
 export default pointsSlice.reducer;

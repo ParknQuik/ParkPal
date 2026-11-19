@@ -19,8 +19,7 @@ import { MyVehiclesScreen } from '../screens/MyVehiclesScreen';
 import { SecurityPrivacyScreen } from '../screens/SecurityPrivacyScreen';
 import { HelpCenterScreen } from '../screens/HelpCenterScreen';
 import { AddVehicleWizardScreen } from '../screens/AddVehicleWizardScreen';
-import { PointsHistoryScreen } from '../screens/PointsHistoryScreen';
-import { ReferralScreen } from '../screens/ReferralScreen';
+import { PerksScreen } from '../screens/PerksScreen';
 import { RootStackParamList } from '../types';
 
 export type MainStackParamList = RootStackParamList;
@@ -176,13 +175,8 @@ export const MainStack: React.FC = () => {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="PointsHistory"
-        component={PointsHistoryScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Referral"
-        component={ReferralScreen}
+        name="Perks"
+        component={PerksScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

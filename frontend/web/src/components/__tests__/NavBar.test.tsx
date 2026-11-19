@@ -42,6 +42,7 @@ describe('NavBar', () => {
   it('should show login button when not authenticated', () => {
     renderNavBar();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Color theme' })).not.toBeInTheDocument();
   });
 
   it('should show user name and avatar when authenticated', async () => {
@@ -103,7 +104,24 @@ describe('NavBar', () => {
     await user.click(avatar);
 
     expect(screen.getByText('Profile')).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
     expect(screen.getByText('Logout')).toBeInTheDocument();
+  });
+
+  it('opens Settings from the account menu', async () => {
+    const user = userEvent.setup();
+    renderNavBar({ id: 1, email: 'driver@example.com', name: 'Driver User', role: 'driver', createdAt: '2025-01-01', updatedAt: '2025-01-01' });
+    await user.click(screen.getByLabelText(/account of current user/i));
+    await user.click(screen.getByText('Settings'));
+    expect(mockNavigate).toHaveBeenCalledWith('/settings');
+  });
+
+  it('opens Perks from the account menu', async () => {
+    const user = userEvent.setup();
+    renderNavBar({ id: 1, email: 'driver@example.com', name: 'Driver User', role: 'driver', createdAt: '2025-01-01', updatedAt: '2025-01-01' });
+    await user.click(screen.getByLabelText(/account of current user/i));
+    await user.click(screen.getByText('Perks'));
+    expect(mockNavigate).toHaveBeenCalledWith('/perks');
   });
 
   it('should show a calendar icon beside My bookings', async () => {

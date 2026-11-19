@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import { AuthProvider } from '../../contexts/AuthContext';
-import { NavBar } from '../../components/NavBar';
+import Settings from '../../screens/Settings';
 import { createAppTheme } from '../theme';
 import { ThemeModeProvider } from '../ThemeModeProvider';
 
@@ -14,7 +14,7 @@ function PaletteProbe() {
 }
 
 function renderThemeApp() {
-  return render(<BrowserRouter><ThemeModeProvider><AuthProvider><NavBar /></AuthProvider><PaletteProbe /></ThemeModeProvider></BrowserRouter>);
+  return render(<BrowserRouter><ThemeModeProvider><AuthProvider><Settings /></AuthProvider><PaletteProbe /></ThemeModeProvider></BrowserRouter>);
 }
 
 describe('theme preference', () => {
@@ -40,7 +40,7 @@ describe('theme preference', () => {
     expect(screen.getByTestId('palette-mode')).toHaveTextContent('dark');
   });
 
-  it('switches modes from navigation and persists the choice', async () => {
+  it('switches modes from Settings and persists the choice', async () => {
     const user = userEvent.setup();
     renderThemeApp();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Color theme' }), 'dark');

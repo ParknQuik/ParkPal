@@ -792,6 +792,27 @@ describe('Referral System Tests', () => {
       expect(response.body.totalPointsEarned).toBe(0);
     });
 
+    it('does not count the record created for the user’s own referral code', async () => {
+      const generateResponse = await request(app)
+        .post('/api/v1/referrals/generate')
+        .set('Authorization', `Bearer ${authTokens.host}`);
+
+      expect(generateResponse.status).toBe(201);
+
+      const response = await request(app)
+        .get('/api/v1/referrals/stats')
+        .set('Authorization', `Bearer ${authTokens.host}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        totalReferrals: 0,
+        pendingReferrals: 0,
+        activeReferrals: 0,
+        completedReferrals: 0,
+        totalPointsEarned: 0,
+      });
+    });
+
     it('should require authentication', async () => {
       const response = await request(app).get('/api/v1/referrals/stats');
 

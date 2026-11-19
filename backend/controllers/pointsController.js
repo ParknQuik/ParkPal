@@ -274,9 +274,9 @@ exports.getReferralStats = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
-    // Get referrals given by user
+    // A user's own code is stored as a self-referral; it is not an invited friend.
     const referrals = await prisma.referral.findMany({
-      where: { referrerId: userId },
+      where: { referrerId: userId, referredId: { not: userId } },
     });
 
     const stats = {
