@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const { generateToken, hashPassword } = require('./auth');
+const { localMfaBypass } = require('./adminMfa');
 
 const buildUserResponse = (user) => ({
   id: user.id,
@@ -8,8 +9,11 @@ const buildUserResponse = (user) => ({
   email: user.email,
   role: user.role,
   canHost: user.canHost ?? false,
-  phone: user.phone,
-  profileImageUrl: user.profileImageUrl,
+  isPlatformOwner: user.isPlatformOwner ?? false,
+  mfaEnabled: user.mfaEnabled ?? false,
+  mustChangePassword: user.mustChangePassword ?? false,
+  phone: user.phone ?? null,
+  profileImageUrl: user.profileImageUrl ?? null,
 });
 
 const createRandomPasswordHash = async () => {
@@ -59,9 +63,14 @@ const signInWithSocialProfile = async ({
     throw Object.assign(new Error('Account is deactivated'), { statusCode: 403 });
   }
 
+  const mfaRequired = user.role === 'admin' && !localMfaBypass();
+
   return {
-    token: await generateToken(user),
+    token: await generateToken(user, { mfaVerified: !mfaRequired }),
     user: buildUserResponse(user),
+    mfaRequired: mfaRequired && user.mfaEnabled,
+    mfaEnrollmentRequired: mfaRequired && !user.mfaEnabled,
+    mustChangePassword: user.mustChangePassword ?? false,
   };
 };
 

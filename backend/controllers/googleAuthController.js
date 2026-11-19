@@ -3,10 +3,16 @@ const { OAuth2Client } = require('google-auth-library');
 const { signInWithSocialProfile } = require('../services/socialAuthService');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const getGoogleAudiences = () => [process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_WEB_CLIENT_ID].filter(Boolean);
 
 exports.googleAuth = async (req, res, next) => {
   try {
     const { code, googleToken } = req.body;
+    const audiences = getGoogleAudiences();
+
+    if ((googleToken || code) && audiences.length === 0) {
+      return res.status(503).json({ error: 'Google sign-in is not configured' });
+    }
 
     let googleUser;
 
@@ -14,7 +20,7 @@ exports.googleAuth = async (req, res, next) => {
       try {
         const ticket = await client.verifyIdToken({
           idToken: googleToken,
-          audience: process.env.GOOGLE_CLIENT_ID
+          audience: audiences
         });
         googleUser = ticket.getPayload();
       } catch (error) {
@@ -39,7 +45,7 @@ exports.googleAuth = async (req, res, next) => {
       try {
         const ticket = await client.verifyIdToken({
           idToken: tokenToVerify,
-          audience: process.env.GOOGLE_CLIENT_ID
+          audience: audiences
         });
         googleUser = ticket.getPayload();
       } catch (error) {

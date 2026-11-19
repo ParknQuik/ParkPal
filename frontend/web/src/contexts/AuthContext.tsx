@@ -10,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<'password' | 'mfa' | null>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  socialLogin: (provider: 'google' | 'apple' | 'facebook', providerToken: string, profile?: { fullName?: string; email?: string }) => Promise<'password' | 'mfa' | null>;
   logout: () => void;
   updateUser: (user: User) => void;
 }
@@ -36,6 +37,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const saveSession = (data: AuthResponse): void => {
+    setUser(data.user);
+    setToken(data.token);
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+  };
+
   const login = async (email: string, password: string): Promise<'password' | 'mfa' | null> => {
     setIsLoading(true);
     try {
@@ -44,15 +52,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         password,
       });
 
-      setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      saveSession(data);
       const needsMfa = Boolean(data.mfaRequired || data.mfaEnrollmentRequired);
       sessionStorage.setItem('admin-mfa-required', String(needsMfa));
       if (needsMfa) sessionStorage.removeItem('admin-mfa-verified');
       else sessionStorage.setItem('admin-mfa-verified', 'true');
       if (data.mustChangePassword) return 'password';
+      if (data.mustChangePassword || data.user.mustChangePassword) return 'password';
       return needsMfa ? 'mfa' : null;
     } catch (error) {
       const axiosError = error as AxiosError<{ error: string }>;
@@ -75,13 +81,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         password,
       });
 
-      setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      saveSession(data);
     } catch (error) {
       const axiosError = error as AxiosError<{ error: string }>;
       throw new Error(authErrorMessage(axiosError, 'Registration failed'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const socialLogin: AuthContextType['socialLogin'] = async (provider, providerToken, profile) => {
+    setIsLoading(true);
+    try {
+      const tokenField = { google: 'googleToken', apple: 'appleToken', facebook: 'facebookToken' }[provider];
+      const { data } = await api.post<AuthResponse>(`/auth/${provider}`, {
+        [tokenField]: providerToken,
+        ...(provider === 'apple' ? profile : {}),
+      });
+      saveSession(data);
+      const needsMfa = Boolean(data.mfaRequired || data.mfaEnrollmentRequired);
+      sessionStorage.setItem('admin-mfa-required', String(needsMfa));
+      if (needsMfa) sessionStorage.removeItem('admin-mfa-verified');
+      else sessionStorage.setItem('admin-mfa-verified', 'true');
+      if (data.mustChangePassword || data.user.mustChangePassword) return 'password';
+      return needsMfa ? 'mfa' : null;
+    } catch (error) {
+      throw new Error(authErrorMessage(error as AxiosError<{ error: string }>, `${provider[0].toUpperCase()}${provider.slice(1)} sign-in failed`));
     } finally {
       setIsLoading(false);
     }
@@ -108,6 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     register,
+    socialLogin,
     logout,
     updateUser,
   };

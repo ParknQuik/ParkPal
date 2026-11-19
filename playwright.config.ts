@@ -26,7 +26,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: `http://127.0.0.1:${process.env.SOCIAL_AUTH_E2E === '1' ? 5174 : 5173}`,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -64,9 +64,15 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm --prefix frontend/web run dev -- --host 127.0.0.1 --port 5173 --strictPort',
-    url: 'http://127.0.0.1:5173',
-    reuseExistingServer: !process.env.CI,
+    command: `npm --prefix frontend/web run dev -- --host 127.0.0.1 --port ${process.env.SOCIAL_AUTH_E2E === '1' ? 5174 : 5173} --strictPort`,
+    url: `http://127.0.0.1:${process.env.SOCIAL_AUTH_E2E === '1' ? 5174 : 5173}`,
+    env: process.env.SOCIAL_AUTH_E2E === '1' ? {
+      VITE_GOOGLE_CLIENT_ID: 'google-browser-test-client',
+      VITE_APPLE_SERVICES_ID: 'apple.browser.test',
+      VITE_APPLE_REDIRECT_URI: 'https://example.test/login',
+      VITE_FACEBOOK_APP_ID: 'facebook-browser-test-app',
+    } : undefined,
+    reuseExistingServer: !process.env.CI && process.env.SOCIAL_AUTH_E2E !== '1',
     timeout: 120_000,
   },
 });
