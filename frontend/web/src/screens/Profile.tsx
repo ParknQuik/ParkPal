@@ -84,6 +84,13 @@ const convertToJpeg = (file: File): Promise<Blob> => new Promise((resolve, rejec
 	image.src = objectUrl;
 });
 
+const profilePhotoUploadUrl = (signedUrl: string): string => {
+	const storageOrigin = 'https://storage.googleapis.com';
+	return import.meta.env.DEV && signedUrl.startsWith(`${storageOrigin}/`)
+		? `/__profile-photo-storage${signedUrl.slice(storageOrigin.length)}`
+		: signedUrl;
+};
+
 const putFile = (url: string, file: Blob, onProgress: (progress: number) => void): Promise<void> =>
 	new Promise((resolve, reject) => {
 		const request = new XMLHttpRequest();
@@ -159,7 +166,7 @@ const Profile: React.FC = () => {
 			const { data: signed } = await api.get<{ uploadUrl: string; fileName: string }>('/users/profile/upload-url', {
 				params: { fileName, contentType: 'image/jpeg' }
 			});
-			await putFile(signed.uploadUrl, jpeg, setUploadProgress);
+			await putFile(profilePhotoUploadUrl(signed.uploadUrl), jpeg, setUploadProgress);
 			const { data: updated } = await api.patch<User>('/users/profile/upload', { fileName: signed.fileName });
 			const refreshed = { ...(authUser || user!), ...updated, profileImageUrl: updated.profileImageUrl ? `${updated.profileImageUrl}${updated.profileImageUrl.includes('?') ? '&' : '?'}t=${Date.now()}` : null };
 			updateUser(refreshed);

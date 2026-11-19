@@ -31,6 +31,16 @@ export const sessionStorage = {
     await this.migrateLegacySession();
     return memorySession?.user ?? SecureStore.getItemAsync(USER_KEY);
   },
+  async updateUser(user: unknown): Promise<void> {
+    const serializedUser = JSON.stringify(user);
+    if (memorySession) {
+      memorySession.user = serializedUser;
+    } else if (await SecureStore.getItemAsync(TOKEN_KEY)) {
+      await SecureStore.setItemAsync(USER_KEY, serializedUser);
+    } else {
+      throw new Error('No active session');
+    }
+  },
   async save(token: string, user: unknown, remember = true): Promise<void> {
     await this.clear();
     const serializedUser = JSON.stringify(user);

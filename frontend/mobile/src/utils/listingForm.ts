@@ -113,6 +113,9 @@ export const uploadAndAttachListingPhotos = async (values: {
   return {
     uploadedUrls,
     hasFailures: failures.length > 0,
+    ...(failures.length > 0 ? {
+      failureMessage: failures[0] instanceof Error ? failures[0].message : 'Photo upload failed. Please try again.',
+    } : {}),
   };
 };
 

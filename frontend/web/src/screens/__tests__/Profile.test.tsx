@@ -147,16 +147,19 @@ describe('Profile Component', () => {
       expect(await screen.findByText('Choose a valid image file.')).toBeInTheDocument();
     });
 
-    it('uploads a photo, announces progress, and updates the profile on success', async () => {
-      const { fireEvent } = await import('@testing-library/react');
+    it('uploads a photo through the development proxy and confirms only successful PUTs', async () => {
+      const { act, fireEvent } = await import('@testing-library/react');
       const originalImage = globalThis.Image;
       URL.createObjectURL = vi.fn().mockReturnValue('blob:profile-photo');
       URL.revokeObjectURL = vi.fn();
       vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn() } as never);
       vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['jpeg'], { type: 'image/jpeg' })));
-      globalThis.Image = class extends originalImage {
+      globalThis.Image = class {
+        naturalWidth = 1;
+        naturalHeight = 1;
+        onload: ((event: Event) => void) | null = null;
         set src(_value: string) { this.onload?.call(this, new Event('load')); }
-      } as typeof Image;
+      } as unknown as typeof Image;
       let finishUpload: (() => void) | undefined;
       let progressHandler: ((event: ProgressEvent) => void) | null = null;
       const upload = Object.defineProperty({}, 'onprogress', {
@@ -164,15 +167,17 @@ describe('Profile Component', () => {
         set: (handler: ((event: ProgressEvent) => void) | null) => { progressHandler = handler; }
       });
       const request = { onload: null as (() => void) | null };
+      let uploadStatus = 200;
       const send = vi.fn(() => { finishUpload = () => request.onload?.(); });
       const open = vi.fn();
       const setRequestHeader = vi.fn();
       vi.stubGlobal('XMLHttpRequest', vi.fn(function () {
-        return { open, setRequestHeader, send, upload, get onload() { return request.onload; }, set onload(value) { request.onload = value; }, status: 200 };
+        return { open, setRequestHeader, send, upload, get onload() { return request.onload; }, set onload(value) { request.onload = value; }, get status() { return uploadStatus; } };
       }));
       localStorage.setItem('user', JSON.stringify(mockUser));
+      const signedUrl = 'https://storage.googleapis.com/parkpal-dev-photos/profile.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=abc%2F123';
       vi.mocked(mockApi.get).mockImplementation(async (url) => url === '/users/profile/upload-url'
-        ? { data: { uploadUrl: 'https://storage.example/upload', fileName: 'profile.jpg' } }
+        ? { data: { uploadUrl: signedUrl, fileName: 'profile.jpg' } }
         : { data: [] } as never);
       vi.mocked(mockApi.patch).mockResolvedValue({ data: { ...mockUser, profileImageUrl: 'https://cdn.example/profile.jpg' } });
 
@@ -180,22 +185,38 @@ describe('Profile Component', () => {
         render(<Profile />);
         const input = await screen.findByLabelText('Choose profile photo');
         fireEvent.change(input, { target: { files: [new File(['image'], 'profile.png', { type: 'image/png' })] } });
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/users/profile/upload-url', expect.anything()));
         await waitFor(() => expect(send).toHaveBeenCalled());
-        (progressHandler as ((event: ProgressEvent) => void) | null)?.({ lengthComputable: true, loaded: 1, total: 1 } as ProgressEvent);
+        expect(mockApi.patch).not.toHaveBeenCalled();
+        act(() => (progressHandler as ((event: ProgressEvent) => void) | null)?.({ lengthComputable: true, loaded: 1, total: 1 } as ProgressEvent));
         await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('100%'));
-        finishUpload?.();
+        expect(mockApi.patch).not.toHaveBeenCalled();
+        await act(async () => finishUpload?.());
         expect(await screen.findByText('Profile photo updated.')).toBeInTheDocument();
         expect(mockApi.get).toHaveBeenCalledWith('/users/profile/upload-url', expect.objectContaining({
           params: expect.objectContaining({ contentType: 'image/jpeg' })
         }));
-        expect(open).toHaveBeenCalledWith('PUT', 'https://storage.example/upload');
+        expect(open).toHaveBeenCalledWith('PUT', '/__profile-photo-storage/parkpal-dev-photos/profile.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=abc%2F123');
         expect(setRequestHeader).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
         expect(send).toHaveBeenCalledWith(expect.any(Blob));
         expect(mockApi.patch).toHaveBeenCalledWith('/users/profile/upload', { fileName: 'profile.jpg' });
+
+        fireEvent.change(input, { target: { files: [new File(['image'], 'second.png', { type: 'image/png' })] } });
+        await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+        uploadStatus = 403;
+        await act(async () => finishUpload?.());
+        expect(await screen.findByText('Photo upload failed. Please try again.')).toBeInTheDocument();
+        expect(mockApi.patch).toHaveBeenCalledTimes(1);
+
+        vi.stubEnv('DEV', false);
+        fireEvent.change(input, { target: { files: [new File(['image'], 'third.png', { type: 'image/png' })] } });
+        await waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+        expect(open).toHaveBeenLastCalledWith('PUT', signedUrl);
       } finally {
         globalThis.Image = originalImage;
         vi.restoreAllMocks();
         vi.unstubAllGlobals();
+        vi.unstubAllEnvs();
       }
     });
   });

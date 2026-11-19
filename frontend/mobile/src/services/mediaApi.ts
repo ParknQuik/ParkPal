@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import api from './api';
+import { photoUploadError, uploadSignedPhoto } from './signedPhotoUpload';
 
 // Use the same API URL configuration as the main api.ts
 
@@ -25,19 +26,17 @@ export interface Photo {
 const getImageUploadMetadata = (imageUri: string) => {
   const path = imageUri.split(/[?#]/)[0] || '';
   const rawExtension = path.includes('.') ? path.split('.').pop()?.toLowerCase() : undefined;
-  const extension = rawExtension && /^[a-z0-9]+$/.test(rawExtension) ? rawExtension : 'jpg';
+  const extension = rawExtension && /^[a-z0-9]+$/.test(rawExtension) ? rawExtension : '';
   const mimeTypeByExtension: Record<string, string> = {
     jpg: 'image/jpeg',
     jpeg: 'image/jpeg',
     png: 'image/png',
     webp: 'image/webp',
-    heic: 'image/heic',
-    heif: 'image/heif',
   };
 
   return {
     extension,
-    contentType: mimeTypeByExtension[extension] || 'image/jpeg',
+    contentType: mimeTypeByExtension[extension],
   };
 };
 
@@ -62,24 +61,7 @@ export const mediaAPI = {
     imageUri: string,
     contentType: string = 'image/jpeg'
   ): Promise<void> {
-    // Convert local URI to blob
-    const response = await fetch(imageUri);
-    if (!response.ok) {
-      throw new Error(`Failed to read image (${response.status})`);
-    }
-    const blob = await response.blob();
-
-    // Upload to GCS
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': contentType,
-      },
-      body: blob,
-    });
-    if (!uploadResponse.ok) {
-      throw new Error(`Image upload failed (${uploadResponse.status})`);
-    }
+    await uploadSignedPhoto(uploadUrl, imageUri, contentType);
   },
 
   /**
@@ -110,39 +92,42 @@ export const mediaAPI = {
    * Upload a listing photo to GCS
    */
   async uploadListingPhoto(listingId: number, imageUri: string): Promise<any> {
-    try {
       let uploadUri = imageUri;
       let { extension, contentType } = getImageUploadMetadata(imageUri);
 
-      if (extension === 'heic' || extension === 'heif') {
-        const convertedImage = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [],
-          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
-        );
+      if (!contentType) {
+        let convertedImage;
+        try {
+          convertedImage = await ImageManipulator.manipulateAsync(
+            imageUri, [], { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+          );
+        } catch (error) {
+          throw photoUploadError('image preparation', error);
+        }
         uploadUri = convertedImage.uri;
         extension = 'jpg';
         contentType = 'image/jpeg';
       }
       const fileName = `photo-${Date.now()}.${extension}`;
 
-      const { uploadUrl, fileName: gcsFileName } = await this.getListingPhotoUploadUrl(
-        listingId,
-        fileName,
-        contentType
-      );
+      let uploadUrl: string;
+      let gcsFileName: string;
+      try {
+        ({ uploadUrl, fileName: gcsFileName } = await this.getListingPhotoUploadUrl(listingId, fileName, contentType));
+      } catch (error) {
+        throw photoUploadError('signing', error);
+      }
 
       await this.uploadToGCS(uploadUrl, uploadUri, contentType);
 
-      const response = await api.post(`/marketplace/listings/${listingId}/photos/confirm`, {
-        fileName: gcsFileName,
-      });
-
-      return response.data;
-    } catch (error) {
-      ;
-      throw error;
-    }
+      try {
+        const response = await api.post(`/marketplace/listings/${listingId}/photos/confirm`, {
+          fileName: gcsFileName,
+        });
+        return response.data;
+      } catch (error) {
+        throw photoUploadError('confirmation', error);
+      }
   },
 
   /**
@@ -164,28 +149,34 @@ export const mediaAPI = {
    * Complete photo upload flow: request URL -> upload -> confirm
    */
   async uploadPhoto(slotId: number, imageUri: string): Promise<Photo> {
-    try {
-      // Extract file extension from URI
-      const fileExtension = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `photo-${Date.now()}.${fileExtension}`;
+      let uploadUri: string;
+      try {
+        uploadUri = (await ImageManipulator.manipulateAsync(
+          imageUri, [], { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+        )).uri;
+      } catch (error) {
+        throw photoUploadError('image preparation', error);
+      }
+      const fileName = `photo-${Date.now()}.jpg`;
 
       // Step 1: Request signed upload URL
-      const { uploadUrl, fileName: gcsFileName } = await this.requestUploadUrl(
-        slotId,
-        fileName
-      );
+      let uploadUrl: string;
+      let gcsFileName: string;
+      try {
+        ({ uploadUrl, fileName: gcsFileName } = await this.requestUploadUrl(slotId, fileName));
+      } catch (error) {
+        throw photoUploadError('signing', error);
+      }
 
       // Step 2: Upload to GCS
-      await this.uploadToGCS(uploadUrl, imageUri, `image/${fileExtension}`);
+      await this.uploadToGCS(uploadUrl, uploadUri, 'image/jpeg');
 
       // Step 3: Confirm upload and get processed photo URLs
-      const photo = await this.confirmUpload(slotId, gcsFileName);
-
-      return photo;
-    } catch (error) {
-      ;
-      throw error;
-    }
+      try {
+        return await this.confirmUpload(slotId, gcsFileName);
+      } catch (error) {
+        throw photoUploadError('confirmation', error);
+      }
   },
 
   /**

@@ -99,9 +99,20 @@ export const updateUserProfile = createAsyncThunk(
     const response = await authAPI.updateProfile(data);
     const updatedUser = response.data;
 
-    const token = await sessionStorage.getToken();
-    if (token) await sessionStorage.save(token, updatedUser, true);
+    await sessionStorage.updateUser(updatedUser);
 
+    return updatedUser;
+  }
+);
+
+export const applyUploadedProfile = createAsyncThunk(
+  'auth/applyUploadedProfile',
+  async (updatedFields: Partial<Omit<User, 'id'>> & { id?: string | number }, { getState }) => {
+    const currentUser = (getState() as { auth: AuthState }).auth.user;
+    if (!currentUser) throw new Error('No active user');
+    const updatedUser = { ...currentUser, ...updatedFields,
+      id: updatedFields.id == null ? currentUser.id : String(updatedFields.id) };
+    await sessionStorage.updateUser(updatedUser);
     return updatedUser;
   }
 );
@@ -227,6 +238,9 @@ const authSlice = createSlice({
     builder.addCase(updateUserProfile.rejected, (state, action) => {
       state.loading = false;
       state.error = action.error.message || 'Failed to update profile';
+    });
+    builder.addCase(applyUploadedProfile.fulfilled, (state, action) => {
+      state.user = action.payload;
     });
   },
 });

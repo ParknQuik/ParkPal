@@ -165,6 +165,7 @@ describe('ListYourSpot helpers', () => {
       uploadError
     );
     expect(result.hasFailures).toBe(true);
+    expect(result.failureMessage).toBe('Upload URL failed');
   });
 
   it('reports a failure when upload response has no usable public original URL', async () => {
@@ -188,6 +189,7 @@ describe('ListYourSpot helpers', () => {
     expect(result).toEqual({
       uploadedUrls: [],
       hasFailures: true,
+      failureMessage: 'Upload completed without an original photo URL',
     });
   });
 });

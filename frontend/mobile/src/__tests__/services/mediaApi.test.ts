@@ -1,6 +1,7 @@
 import { mediaAPI } from '../../services/mediaApi';
 import api from '../../services/api';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { File } from 'expo-file-system';
 
 jest.mock('../../services/api', () => ({
   __esModule: true,
@@ -11,26 +12,22 @@ jest.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
   manipulateAsync: jest.fn(),
 }));
+jest.mock('expo-file-system', () => ({ File: jest.fn(), UploadType: { BINARY_CONTENT: 'binary' } }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
 const mockedManipulate = ImageManipulator.manipulateAsync as jest.Mock;
+const mockedFile = File as unknown as jest.Mock;
+const upload = jest.fn();
 
 describe('mediaAPI.uploadListingPhoto', () => {
-  const originalFetch = global.fetch;
-
   beforeEach(() => {
     jest.clearAllMocks();
     mockedApi.get.mockResolvedValue({
       data: { uploadUrl: 'https://storage.example/signed', fileName: 'stored-photo.jpg' },
     } as never);
     mockedApi.post.mockResolvedValue({ data: { original: 'https://storage.example/photo.jpg' } } as never);
-    global.fetch = jest.fn()
-      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob(['image']) })
-      .mockResolvedValueOnce({ ok: true }) as jest.Mock;
-  });
-
-  afterAll(() => {
-    global.fetch = originalFetch;
+    mockedFile.mockImplementation(() => ({ upload }));
+    upload.mockResolvedValue({ status: 200 });
   });
 
   it.each([
@@ -44,13 +41,16 @@ describe('mediaAPI.uploadListingPhoto', () => {
       '/marketplace/listings/7/photos/upload-url',
       { params: expect.objectContaining({ contentType }) }
     );
-    expect((global.fetch as jest.Mock).mock.calls[1][1].headers).toEqual({ 'Content-Type': contentType });
+    expect(upload).toHaveBeenCalledWith('https://storage.example/signed', {
+      httpMethod: 'PUT', uploadType: 'binary', mimeType: contentType,
+      headers: { 'Content-Type': contentType },
+    });
     expect(mockedApi.post).toHaveBeenCalledWith('/marketplace/listings/7/photos/confirm', {
       fileName: 'stored-photo.jpg',
     });
   });
 
-  it.each(['heic', 'heif'])('converts %s to JPEG before upload', async (extension) => {
+  it.each(['heic', 'heif', 'gif'])('converts %s to JPEG before upload', async (extension) => {
     mockedManipulate.mockResolvedValue({ uri: 'file:///photo-converted.jpg' });
 
     await mediaAPI.uploadListingPhoto(7, `file:///photo.${extension}`);
@@ -64,26 +64,47 @@ describe('mediaAPI.uploadListingPhoto', () => {
       '/marketplace/listings/7/photos/upload-url',
       { params: expect.objectContaining({ fileName: expect.stringMatching(/\.jpg$/), contentType: 'image/jpeg' }) }
     );
-    expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe('file:///photo-converted.jpg');
+    expect(mockedFile).toHaveBeenCalledWith('file:///photo-converted.jpg');
   });
 
   it('does not confirm when the storage PUT fails', async () => {
-    (global.fetch as jest.Mock)
-      .mockReset()
-      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob(['image']) })
-      .mockResolvedValueOnce({ ok: false, status: 403 });
+    upload.mockResolvedValue({ status: 403 });
 
     await expect(mediaAPI.uploadListingPhoto(7, 'file:///photo.jpg'))
-      .rejects.toThrow('Image upload failed (403)');
+      .rejects.toThrow('Storage transfer failed (HTTP 403)');
     expect(mockedApi.post).not.toHaveBeenCalled();
   });
 
-  it('does not upload or confirm when reading the local image fails', async () => {
-    (global.fetch as jest.Mock).mockReset().mockResolvedValueOnce({ ok: false, status: 404 });
+  it('does not confirm when native file upload fails', async () => {
+    upload.mockRejectedValue(new Error('native failure at https://storage.example/signed?secret=token'));
 
-    await expect(mediaAPI.uploadListingPhoto(7, 'file:///photo.jpg'))
-      .rejects.toThrow('Failed to read image (404)');
-    expect((global.fetch as jest.Mock)).toHaveBeenCalledTimes(1);
+    const error = await mediaAPI.uploadListingPhoto(7, 'file:///photo.jpg').catch(error => error);
+    expect(error.message).toContain('storage transfer');
+    expect(error.message).not.toContain('secret=token');
     expect(mockedApi.post).not.toHaveBeenCalled();
+  });
+
+  it('accepts any successful storage response before confirming', async () => {
+    upload.mockResolvedValue({ status: 204 });
+
+    await mediaAPI.uploadListingPhoto(7, 'file:///photo.jpg');
+
+    expect(mockedApi.post).toHaveBeenCalledWith('/marketplace/listings/7/photos/confirm', {
+      fileName: 'stored-photo.jpg',
+    });
+  });
+
+  it.each(['jpg', 'png', 'webp'])('normalizes slot %s to signed JPEG and confirms after the native PUT', async (extension) => {
+    mockedApi.post.mockResolvedValueOnce({ data: { uploadUrl: 'https://storage.example/signed', fileName: 'slot-photo.jpg' } } as never)
+      .mockResolvedValueOnce({ data: { id: 1 } } as never);
+    await mediaAPI.uploadPhoto(3, `file:///photo.${extension}`);
+    expect(mockedApi.post).toHaveBeenNthCalledWith(1, '/media/upload-url', {
+      slotId: 3, fileName: expect.stringMatching(/\.jpg$/),
+    });
+    expect(mockedFile).toHaveBeenCalledWith('file:///photo-converted.jpg');
+    expect(upload).toHaveBeenCalledWith('https://storage.example/signed', expect.objectContaining({
+      mimeType: 'image/jpeg', headers: { 'Content-Type': 'image/jpeg' },
+    }));
+    expect(mockedApi.post).toHaveBeenCalledTimes(2);
   });
 });

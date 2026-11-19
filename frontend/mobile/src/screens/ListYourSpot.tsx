@@ -190,7 +190,7 @@ export const ListYourSpot: React.FC = () => {
         };
         result = await marketplaceAPI.updateListing(listingId, updateData);
 
-        let photoResult = { hasFailures: false };
+        let photoResult: { hasFailures: boolean; failureMessage?: string } = { hasFailures: false };
         if (localPhotos.length > 0) {
           photoResult = await uploadAndAttachListingPhotos({
             listingId,
@@ -207,7 +207,7 @@ export const ListYourSpot: React.FC = () => {
         if (photoResult.hasFailures) {
           Alert.alert(
             'Updated without photos',
-            'Your parking spot was updated, but one or more new photos did not upload. You can try adding them again.',
+            `Your parking spot was updated, but one or more new photos did not upload. ${photoResult.failureMessage || 'You can try adding them again.'}`,
             [{ text: 'OK', onPress: () => navigation.goBack() }]
           );
         } else {
@@ -224,7 +224,7 @@ export const ListYourSpot: React.FC = () => {
         // Upload local photos after the backend returns a listing id.
         const newListingId = result.id || result.data?.id;
 
-        let photoResult = { hasFailures: false };
+        let photoResult: { hasFailures: boolean; failureMessage?: string } = { hasFailures: false };
         if (localPhotos.length > 0 && newListingId) {
           photoResult = await uploadAndAttachListingPhotos({
             listingId: newListingId,
@@ -246,7 +246,7 @@ export const ListYourSpot: React.FC = () => {
         if (photoResult.hasFailures) {
           Alert.alert(
             'Listed without photos',
-            'Your parking spot was created, but one or more photos did not upload. You can add them by editing the listing.',
+            `Your parking spot was created, but one or more photos did not upload. ${photoResult.failureMessage || 'You can add them by editing the listing.'}`,
             [{ text: 'OK', onPress: () => navigation.goBack() }]
           );
         } else {
